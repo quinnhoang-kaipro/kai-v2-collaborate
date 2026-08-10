@@ -1,0 +1,449 @@
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --white:#FFFFFF;
+  --app-bg:#FFFDF8;
+  --stroke:#DDD6C8;
+  --midtone:#7D7469;
+  --ink:#1A1A1A;
+  --accent:#FDFF86;
+  --accent-deep:#EDEF60;
+  --error:#C0443A;
+  --success:#2E9048;
+  --sunken:#F4F0E6;
+  --t2:#5C5750;
+  --t3:#8A8470;
+  --display:'Maxeville','Space Grotesk',sans-serif;
+  --body:'Circular XX','Hanken Grotesk','Helvetica Neue',sans-serif;
+  --mono:'Maxeville Construct','Space Mono',monospace;
+}
+@font-face { font-family: 'Maxeville'; src: url('./fonts/Maxeville/Maxeville-Regular.otf') format('opentype'); font-weight: 400; font-display: block; }
+@font-face { font-family: 'Maxeville'; src: url('./fonts/Maxeville/Maxeville-Bold.otf') format('opentype'); font-weight: 700; font-display: block; }
+@font-face { font-family: 'Maxeville Construct'; src: url('./fonts/Maxeville/Maxeville-Construct.otf') format('opentype'); font-weight: 400; font-display: block; }
+@font-face { font-family: 'Maxeville Construct'; src: url('./fonts/Maxeville/Maxeville-BoldConstruct.otf') format('opentype'); font-weight: 700; font-display: block; }
+@font-face { font-family: 'Circular XX'; src: url('./fonts/Circular/CircularXX-Regular.otf') format('opentype'); font-weight: 400; font-display: block; }
+@font-face { font-family: 'Circular XX'; src: url('./fonts/Circular/CircularXX-Medium.otf') format('opentype'); font-weight: 500; font-display: block; }
+@font-face { font-family: 'Circular XX'; src: url('./fonts/Circular/CircularXX-Bold.otf') format('opentype'); font-weight: 700; font-display: block; }
+
+html,body{width:100%;height:100%;font-family:var(--body);background:var(--app-bg);color:var(--ink);-webkit-font-smoothing:antialiased;overflow:hidden}
+body{display:flex;flex-direction:row}
+/* Permanent left rail — Kai's global primary nav. Collapsed 72px width,
+   dark bg with icon + label per row. Decorative in this demo (each item
+   doesn't route anywhere), but stays fixed so the product context is
+   always visible. */
+.global-nav{flex:0 0 72px;width:72px;background:#1A1A1A;overflow:hidden;position:relative;display:flex;flex-direction:column}
+/* Top of the sidebar — white box with the Kai wordmark. Matches how Kai
+   frames the brand mark inside its dark nav (light box, ink wordmark). */
+.global-nav-logo{flex:0 0 56px;height:56px;background:var(--white,#FFFFFF);display:flex;align-items:center;justify-content:center}
+.global-nav-logo svg{height:18px;width:auto;display:block}
+/* Body — the icon+label rail. The source SVG has an arrow chevron in its
+   first ~43px; we shift the image up so that area is hidden behind
+   overflow, and the nav starts flush with the white logo box above. */
+.global-nav-body{flex:1;min-height:0;overflow:hidden;position:relative}
+/* Inline replacement for the original kai-primary-nav.svg, which wasn't
+   part of this bundle. Same 72px rail, same dark/accent treatment — icon
+   over a small mono label, active row marked with the Kai hexagon. Swap
+   the <nav class="gnav"> block below for the real SVG if you'd rather. */
+.gnav{display:flex;flex-direction:column;height:100%;padding:8px 0 10px}
+.gnav-item{display:flex;flex-direction:column;align-items:center;gap:5px;padding:11px 2px 9px;
+  color:rgba(255,255,255,.5);background:none;border:0;border-left:2px solid transparent;
+  cursor:pointer;transition:color .12s,border-color .12s,background .12s;width:100%}
+.gnav-item:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.04)}
+.gnav-item.on{color:var(--accent);border-left-color:var(--accent);background:rgba(253,255,134,.06)}
+.gnav-item svg{width:19px;height:19px;stroke:currentColor;stroke-width:1.4;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
+.gnav-item .lbl{font-family:var(--mono);font-size:7.5px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;line-height:1}
+.gnav-sp{flex:1}
+.gnav-item:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+/* When the iframe's photo-overlay modal is open, drop a matching dark scrim
+   over the shell's global nav so the dim looks continuous across the
+   iframe boundary. The iframe scrim covers everything to the right; this
+   covers the 72px nav rail to the left. Fades in/out with the modal. */
+body.kai-photo-overlay-open::before{content:'';position:fixed;top:0;bottom:0;left:0;width:72px;background:rgba(26,26,26,.68);z-index:2000;pointer-events:none;animation:kaiPoNavFade .16s ease-out}
+@keyframes kaiPoNavFade{from{opacity:0}to{opacity:1}}
+#app{display:flex;flex-direction:column;flex:1;min-width:0;height:100vh;overflow:hidden}
+
+/* ── TOP BAR ── */
+.tb{height:56px;background:var(--ink);display:flex;align-items:center;flex-shrink:0;padding:0 20px;gap:0;z-index:220;transition:height .18s ease-out;position:relative}
+body.tb-hidden .tb{overflow:hidden}
+/* Collapse chevron on the far right of the black bar */
+.tb-collapse{margin-left:10px;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:1px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.55);cursor:pointer;transition:color .12s,border-color .12s,background .12s}
+.tb-collapse:hover{color:rgba(255,255,255,.95);border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.04)}
+.tb-collapse svg{width:12px;height:12px}
+/* Reveal strip — hidden unless the top bar is collapsed */
+.tb-reveal{display:none;position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:60;width:56px;height:14px;padding:0;border:1px solid var(--stroke);border-top:0;background:var(--ink);color:rgba(255,255,255,.7);cursor:pointer;align-items:center;justify-content:center;transition:color .12s,background .12s}
+.tb-reveal:hover{color:var(--white);background:#000}
+.tb-reveal svg{width:12px;height:12px}
+/* Collapsed state — swap top bar for the reveal strip */
+body.tb-hidden .tb{height:0;padding:0;border-bottom:0}
+body.tb-hidden .tb-reveal{display:inline-flex}
+.tb-brand{display:inline-flex;align-items:center;margin-right:24px;flex-shrink:0}
+.tb-brand img{height:24px;width:auto;display:block}
+.tb-addr{font-family:var(--display);font-size:14px;font-weight:600;color:var(--white);letter-spacing:-.01em}
+/* Small mono label so the demo-only top nav reads intentional even when
+   the brand + address are gone (Kai / project meta moved into the iframe). */
+.tb-demo-label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.4);flex-shrink:0}
+.tb-addr-meta{font-family:var(--mono);font-size:9.5px;color:rgba(255,255,255,.55);letter-spacing:.08em;text-transform:uppercase;margin-left:10px}
+.tb-sp{flex:1}
+.tb-bell{position:relative;display:flex;align-items:center;color:#a8a090;cursor:pointer;margin-right:18px}
+.tb-bell svg{width:18px;height:18px;stroke:currentColor;stroke-width:1.5;fill:none}
+
+/* role switcher */
+.tb-role{position:relative;margin-right:12px}
+.tb-role-btn{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border:1.5px solid rgba(255,255,255,.25);background:transparent;color:var(--white);font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:border-color .12s}
+.tb-role-btn:hover{border-color:var(--white)}
+.tb-role.open .tb-role-btn{border-color:var(--white)}
+.tb-role-btn .who{color:var(--accent)}
+.tb-role-btn svg{width:11px;height:11px;stroke:currentColor;stroke-width:1.5;fill:none;transition:transform .15s}
+.tb-role.open svg{transform:rotate(180deg)}
+.tb-role-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;min-width:280px;background:var(--white);border:1px solid var(--stroke);box-shadow:0 10px 26px rgba(26,26,26,.18);z-index:200;padding:6px}
+.tb-role.open .tb-role-menu{display:block}
+.tb-role-opt{display:flex;align-items:flex-start;gap:10px;width:100%;padding:10px 12px;background:none;border:none;cursor:pointer;text-align:left;transition:background .1s}
+.tb-role-opt:hover{background:var(--sunken)}
+.tb-role-opt.on{background:var(--sunken)}
+.tb-role-opt .ck{flex-shrink:0;width:18px;height:18px;border:1.5px solid var(--stroke);display:flex;align-items:center;justify-content:center;color:transparent;margin-top:1px}
+.tb-role-opt.on .ck{background:var(--ink);border-color:var(--ink);color:var(--white)}
+.tb-role-opt .ck svg{width:11px;height:11px;stroke:currentColor;stroke-width:2;fill:none}
+.tb-role-opt .l{flex:1;min-width:0}
+.tb-role-opt .n{font-family:var(--display);font-size:13px;font-weight:700;color:var(--ink)}
+.tb-role-opt .d{font-size:11.5px;color:var(--t2);margin-top:2px;line-height:1.4}
+.tb-role-foot{display:flex;align-items:center;gap:8px;padding:9px 12px;border-top:1px solid var(--stroke);margin-top:4px}
+.tb-role-foot .lbl{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);flex:1}
+.tb-toggle{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-family:var(--body);font-size:12px;color:var(--ink);user-select:none}
+.tb-toggle input{display:none}
+.tb-toggle .sw{width:30px;height:18px;background:var(--stroke);position:relative;border-radius:9px;transition:background .12s}
+.tb-toggle .sw::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;background:var(--white);border-radius:50%;transition:transform .15s}
+.tb-toggle input:checked + .sw{background:var(--ink)}
+.tb-toggle input:checked + .sw::after{transform:translateX(12px)}
+
+/* primary action(s) */
+.tb-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+/* The container is left in the DOM as a legacy stub — respect its
+   `hidden` attribute so the primary CTA doesn't leak into the demo nav. */
+.tb-actions[hidden]{display:none!important}
+.btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:9px 16px;cursor:pointer;transition:all .12s;border:1.5px solid transparent;white-space:nowrap}
+.btn-primary{background:var(--accent);color:var(--ink);border-color:var(--accent)}
+.btn-primary:hover{background:var(--accent-deep);border-color:var(--accent-deep)}
+.btn-ghost{background:transparent;color:var(--white);border-color:rgba(255,255,255,.25)}
+.btn-ghost:hover{border-color:var(--white)}
+.btn-secondary{background:var(--white);color:var(--ink);border-color:var(--stroke)}
+.btn-secondary:hover{border-color:var(--ink)}
+.btn-danger{background:transparent;color:var(--error);border-color:var(--error)}
+.btn-danger:hover{background:rgba(192,68,58,.08)}
+.btn svg{width:12px;height:12px;stroke:currentColor;stroke-width:1.6;fill:none}
+.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+
+/* ── STAGE STEPPER ── */
+.stages{display:flex;align-items:stretch;background:var(--white);border-bottom:1px solid var(--stroke);flex-shrink:0;padding:0 20px}
+.stage{display:flex;align-items:center;gap:9px;padding:14px 0;flex:1;position:relative;cursor:pointer;transition:opacity .12s;min-width:0}
+.stage+.stage{padding-left:18px}
+.stage:not(:last-child)::after{content:'';position:absolute;right:-1px;top:50%;transform:translateY(-50%);width:0;height:0;border-left:8px solid var(--stroke);border-top:6px solid transparent;border-bottom:6px solid transparent;z-index:1}
+.stage-num{flex-shrink:0;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--stroke);background:var(--white);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--t3);transition:all .12s}
+.stage.done .stage-num{background:var(--midtone);border-color:var(--midtone);color:var(--white)}
+.stage.active .stage-num{background:var(--ink);border-color:var(--ink);color:var(--accent)}
+.stage.active.publish .stage-num{background:var(--success);border-color:var(--success);color:var(--white)}
+.stage-info{min-width:0;flex:1;display:flex;align-items:center;gap:10px;flex-wrap:nowrap}
+.stage-label{font-size:13px;font-weight:600;color:var(--t3);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.stage.done .stage-label{color:var(--midtone)}
+.stage.active .stage-label{color:var(--ink)}
+.stage:not(.accessible){cursor:not-allowed;opacity:.55}
+.stage:not(.accessible) .stage-num{opacity:.8}
+
+/* Branched supergroup (Construction): Labor / Material procurement render as
+   two tabs immediately to the right of the Construction block, so it reads as
+   "Step 4 · Construction: [Labor] [Materials]" — one node, two tab options. */
+.stage.stage-branched{flex:1.8;gap:12px}
+/* Override the default stage-info flex so it hugs the CONSTRUCTION title and
+   the tabs sit right next to it — no wasted horizontal space in between. */
+.stage.stage-branched .stage-info{flex:0 0 auto;padding-right:6px}
+.stage-tracks{display:flex;flex-direction:row;gap:14px;flex-shrink:0;align-items:center}
+.stage-track{display:inline-flex;align-items:center;padding:4px 0;background:transparent;border:none;cursor:pointer;transition:color .12s;white-space:nowrap}
+.stage-track:hover .stage-track-name{color:var(--ink)}
+.stage-track.locked{cursor:not-allowed;opacity:.5}
+.stage-track-name{font-size:12px;font-weight:600;color:var(--t3);line-height:1.2;transition:color .12s}
+.stage-track.active .stage-track-name{color:var(--ink);font-weight:700}
+/* Track meta labels are redundant with the parent's caption — hidden. */
+.stage-track-tag,.stage-track-sub{display:none}
+
+/* ── UPPER NAV wrapper (stepper + per-stage caption row) ─────────── */
+/* nav-top only wraps the state bar now (stepper moved into .app-toolbar).
+   No background/border of its own — the state bar (.ver-notice) provides
+   its own, and when it's hidden there's no visual footprint. */
+.nav-top{flex-shrink:0;position:relative;z-index:40}
+/* Version chip pinned to the SCOPE stepper node — sits immediately after
+   the "SCOPE / In Draft" info block so it reads as belonging to Scope, not
+   floating between Scope and Work. */
+.stage.stage-with-chip{gap:10px;justify-content:flex-start}
+.stage.stage-with-chip .stage-info{flex:0 0 auto}
+.ver-chip{position:relative;flex-shrink:0;display:inline-flex;align-items:center;cursor:default}
+.ver-chip-btn{display:inline-flex;align-items:center;gap:8px;padding:5px 6px 5px 4px;border:0;background:transparent;cursor:pointer;transition:background .12s;font-family:var(--body)}
+.ver-chip-btn:hover{background:var(--app-bg)}
+.ver-chip.open .ver-chip-btn{background:var(--app-bg)}
+.ver-chip-label{font-family:var(--display);font-size:14px;font-weight:700;color:var(--ink);letter-spacing:-.005em;line-height:1}
+/* Stepper version-status chip — same visual family as the task-status pills
+   (brighter fill, deeper text, no outline) so the whole chip vocabulary
+   reads consistently across the page. */
+.ver-chip-tag{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#2E9048;border:0;padding:2.5px 6px;line-height:1;background:#DDF1E1}
+.ver-chip-tag.archived{color:var(--midtone);background:#EDE9DE}
+.ver-chip-tag.outdated{color:#8F5A24;background:#F5E6C9}
+.ver-item-badge.outdated{color:#8F5A24;background:#F5E6C9}
+.ver-chip svg{width:11px;height:11px;color:var(--t3)}
+
+.ver-menu{display:none;position:absolute;top:calc(100% + 6px);left:0;min-width:340px;background:var(--white);border:1px solid var(--stroke);box-shadow:0 12px 28px rgba(26,26,26,.16);z-index:180;padding:6px}
+.ver-chip.open .ver-menu{display:block}
+.ver-menu-h{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);padding:8px 10px 6px}
+.ver-item{display:flex;align-items:flex-start;gap:11px;padding:9px 10px;background:none;border:1px solid transparent;text-align:left;width:100%;cursor:pointer;transition:background .1s,border-color .1s;font-family:var(--body)}
+.ver-item+.ver-item{margin-top:2px}
+.ver-item:hover{background:var(--sunken,#F4F0E6);border-color:var(--stroke)}
+.ver-item.on{background:var(--sunken,#F4F0E6);border-color:var(--ink)}
+.ver-item-node{flex-shrink:0;width:24px;display:flex;justify-content:center;padding-top:2px;position:relative}
+.ver-item-node::before{content:'';position:absolute;top:0;bottom:-11px;left:50%;transform:translateX(-50%);width:1.5px;background:var(--stroke)}
+.ver-item:last-child .ver-item-node::before{display:none}
+.ver-item-dot{width:10px;height:10px;border-radius:50%;background:var(--stroke);border:2px solid var(--white);position:relative;z-index:1}
+.ver-item.current .ver-item-dot{background:var(--success);box-shadow:0 0 0 2px rgba(46,144,72,.18)}
+.ver-item-l{flex:1;min-width:0}
+.ver-item-title{font-size:13px;font-weight:600;color:var(--ink);line-height:1.3;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.ver-item-num{font-family:var(--display);font-weight:700}
+/* Version-menu badges (v3 CURRENT, v2 OUTDATED, v1 ORIGINAL in the dropdown).
+   Same design language as the header ver-chip-tag: no outline, brighter
+   fill, deeper text. */
+.ver-item-badge{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--midtone);border:0;padding:2px 6px;line-height:1;background:#EDE9DE}
+.ver-item.current .ver-item-badge{color:#2E9048;background:#DDF1E1}
+.ver-item-badge.co{color:#8F5A24;background:#F5E6C9}
+.ver-item-meta{font-size:11.5px;color:var(--t3);margin-top:3px;line-height:1.4}
+.ver-item-meta b{color:var(--t2);font-weight:500}
+.ver-item-r{flex-shrink:0;font-family:var(--display);font-size:14px;font-weight:700;color:var(--ink);letter-spacing:-.005em;padding-left:12px;padding-top:2px}
+.ver-item:not(.current) .ver-item-r{color:var(--t2)}
+
+/* Context state bar (below the stepper). Universal home for
+   "which version / what mode / what should you do next". Was originally
+   just the archived-version banner; now also carries draft state + CTA,
+   change-order state, and view-only state. */
+.ver-notice{padding:8px 20px;background:var(--sunken,#F4F0E6);border-bottom:1px solid var(--stroke);display:flex;align-items:center;gap:10px;font-family:var(--body);font-size:12.5px;line-height:1.4;color:var(--t2);flex-shrink:0}
+/* Bar is centered vertically. The mono uppercase mode label has no
+   descenders, so it visually reads a touch higher than the body copy at
+   pure box-center alignment — nudge it down 1px so the two runs of text
+   look like they're on the same visual line. */
+.ver-notice-mode{line-height:1.4;position:relative;top:1px}
+.ver-notice[hidden]{display:none}
+/* Draft state: paint the whole bar in the accent color so it feels like an
+   active call-to-action, not a passive breadcrumb. */
+.ver-notice.is-draft{background:rgba(253,255,134,.35);border-bottom-color:var(--accent-deep,#B7A82C);color:var(--ink)}
+.ver-notice-tag{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--midtone);border:1px solid currentColor;padding:2px 7px;line-height:1;flex-shrink:0;background:var(--white)}
+.ver-notice.is-draft .ver-notice-tag{color:var(--ink);background:var(--accent);border-color:var(--accent-deep,#B7A82C)}
+.ver-notice-mode{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);flex-shrink:0}
+.ver-notice-body{flex:1;min-width:0}
+.ver-notice-body b{color:var(--ink);font-weight:600}
+.ver-notice-btn{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);background:none;border:1px solid var(--ink);padding:6px 12px;cursor:pointer;flex-shrink:0;transition:background .12s}
+.ver-notice-btn:hover{background:var(--ink);color:var(--white)}
+.ver-notice-btn.is-primary{background:var(--accent);border-color:var(--ink)}
+.ver-notice-btn.is-primary:hover{filter:brightness(.96);background:var(--accent);color:var(--ink)}
+/* ── App toolbar (Kai identity + inline stepper + CTA) ──────────────────────
+   Consolidated bar: Kai mark on the left, address, then the progress stepper
+   inline across the middle, primary CTA + avatar on the right. All on the
+   dark ink surface so the whole "which project + where in the flow" story
+   lives in a single row. */
+.app-toolbar{height:56px;background:var(--ink);display:flex;align-items:center;flex-shrink:0;position:relative;z-index:100}
+.app-toolbar .tb-mark{background:var(--app-bg);height:56px;padding:0 18px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.app-toolbar .tb-mark svg{height:18px;width:auto;display:block}
+.app-toolbar .tb-address{font-family:var(--display);font-size:15px;font-weight:700;color:var(--white);white-space:nowrap;letter-spacing:-.01em;flex-shrink:0;padding:0 44px 0 22px;height:56px;display:flex;align-items:center}
+.app-toolbar .avatar{background:#4a4a4a;color:var(--white);font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.04em;width:26px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+/* Notification bell on the right of the app-toolbar. Icon-only button with
+   subtle-dim stroke; hovers to full white. */
+.app-toolbar .app-notif{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;margin-right:14px;border:0;background:transparent;color:rgba(255,255,255,.7);cursor:pointer;transition:color .12s;flex-shrink:0}
+.app-toolbar .app-notif:hover{color:var(--white)}
+.app-toolbar .app-notif svg{width:18px;height:18px;stroke-linecap:round;stroke-linejoin:round}
+/* Group by + Filters CSS moved to the iframe's work-hdr styles. */
+/* Primary CTA — hidden in draft (state bar owns Submit for review) and when
+   viewing an outdated version; other stages show a stage-appropriate label. */
+.app-toolbar .btn-primary{height:36px;padding:0 18px;margin-right:14px;background:var(--accent);border:none;color:var(--ink);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:background .12s;white-space:nowrap}
+/* Cancel Change Order — ghost button sitting to the left of the primary.
+   Sized to match .btn-primary so the pair reads as a coordinated action set. */
+.app-toolbar .btn-ghost{height:36px;padding:0 14px;margin-right:10px;background:transparent;border:1px solid rgba(255,255,255,.35);color:var(--white);font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:border-color .12s,background .12s;white-space:nowrap}
+.app-toolbar .btn-ghost:hover{border-color:var(--white);background:rgba(255,255,255,.06)}
+.app-toolbar .btn-ghost[hidden]{display:none}
+.app-toolbar .btn-primary:hover{background:var(--accent-deep)}
+.app-toolbar .btn-primary[hidden]{display:none!important}
+/* Disabled state — used for "Submit Closeout" when not every task is marked
+   Completed yet. Muted fill, cursor:not-allowed. The .btn-tooltip-wrap below
+   still receives hover so the explanation tooltip can appear. */
+.app-toolbar .btn-primary:disabled{background:rgba(253,255,134,.35);color:rgba(26,26,26,.5);cursor:not-allowed}
+.app-toolbar .btn-primary:disabled:hover{background:rgba(253,255,134,.35)}
+/* Hover-tooltip for the disabled Submit Closeout button. Attaches to a
+   wrapping span so we can hover the wrapper (button click is dead when
+   disabled, but pointer events still bubble on the wrapper). */
+.btn-tooltip-wrap{position:relative;display:inline-block}
+.btn-tooltip-wrap .btn-tooltip{position:absolute;top:calc(100% + 8px);right:0;min-width:220px;max-width:280px;padding:8px 10px;background:#1A1A1A;color:#fff;font-family:var(--body,sans-serif);font-size:12px;line-height:1.4;font-weight:400;letter-spacing:0;text-transform:none;border:1px solid rgba(255,255,255,.12);box-shadow:0 6px 18px rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .12s ease-out;z-index:400;white-space:normal;text-align:left}
+.btn-tooltip-wrap .btn-tooltip::before{content:'';position:absolute;top:-4px;right:14px;width:8px;height:8px;background:#1A1A1A;border-left:1px solid rgba(255,255,255,.12);border-top:1px solid rgba(255,255,255,.12);transform:rotate(45deg)}
+.btn-tooltip-wrap:hover .btn-tooltip{opacity:1}
+/* Inline stepper: same DOM the shell has always rendered, restyled for the
+   dark bar. Transparent surface, white/opacity text, accent yellow for the
+   active node so it pops against ink. */
+/* Toolbar stepper — center the stages as a tight cluster in the middle
+   of the nav bar. Individual stages sit at their natural width (no
+   flex-grow); the gap between them is a compact ~40px so the group
+   reads as one progression rather than three far-apart nodes. */
+.app-toolbar .stages{flex:1;min-width:0;display:flex;align-items:stretch;justify-content:center;background:transparent;border-bottom:0;padding:0 22px;gap:40px}
+.app-toolbar .stage{padding:0;color:var(--white);flex:0 0 auto}
+.app-toolbar .stage+.stage{padding-left:0}
+/* Reposition the arrow into the middle of the 40px gap between stages. */
+.app-toolbar .stage:not(:last-child)::after{right:-24px}
+/* Terminal state — replaces the stepper with a single completion line. */
+.stages-completed{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--white);padding:0 22px}
+.stages-completed svg{width:18px;height:18px;stroke:var(--accent);flex-shrink:0}
+.stages-completed-t{font-family:var(--display);font-size:15px;font-weight:700;letter-spacing:-.005em;color:var(--white)}
+.stages-completed-sep{color:rgba(255,255,255,.4);font-size:14px}
+.stages-completed-sub{font-family:var(--body);font-size:13.5px;color:rgba(255,255,255,.72)}
+/* Toolbar stepper shape — swap the default circle for the Kai hexagon
+   mark (icons/Circle-Stepper-Main-Nav-Outlined + …-Filled). The hex
+   sits as a background image directly on .stage-num so the number
+   text (a normal in-flow child) renders on top naturally. Three
+   variants: future (outlined), done (filled white), active (filled
+   lemon). Active is always yellow — no green publish-variant. */
+.app-toolbar .stage-num{background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><path d='M21.5 18L11.5 23.5L1.5 18V7L11.5 1.5L21.5 7V18Z' stroke='rgba(255,255,255,0.55)' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'/></svg>") no-repeat center / contain !important;border:0!important;border-radius:0!important;color:rgba(255,255,255,.75)}
+.app-toolbar .stage.done .stage-num{background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><path d='M21.5 18L11.5 23.5L1.5 18V7L11.5 1.5L21.5 7V18Z' fill='rgba(255,255,255,0.92)' stroke='rgba(255,255,255,0.92)' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'/></svg>") no-repeat center / contain !important;color:var(--ink)}
+.app-toolbar .stage.active .stage-num{background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><path d='M21.5 18L11.5 23.5L1.5 18V7L11.5 1.5L21.5 7V18Z' fill='%23FDFF86' stroke='%23FDFF86' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'/></svg>") no-repeat center / contain !important;color:var(--ink)}
+.app-toolbar .stage-label{color:rgba(255,255,255,.55)}
+.app-toolbar .stage.done .stage-label{color:rgba(255,255,255,.8)}
+.app-toolbar .stage.active .stage-label{color:var(--white)}
+.app-toolbar .stage:not(:last-child)::after{border-left-color:rgba(255,255,255,.35)}
+.app-toolbar .stage-track-name{color:rgba(255,255,255,.55)}
+.app-toolbar .stage-track.active .stage-track-name{color:var(--white);font-weight:700}
+.app-toolbar .stage-track:hover .stage-track-name{color:var(--white)}
+/* Version chip (v3 · IN REVIEW etc.) sits inline in the SCOPE stage — invert
+   its palette for the dark bar. Status tags keep their bright fills. */
+.app-toolbar .ver-chip-btn:hover{background:rgba(255,255,255,.08)}
+.app-toolbar .ver-chip.open .ver-chip-btn{background:rgba(255,255,255,.12)}
+.app-toolbar .ver-chip-label{color:var(--white)}
+.app-toolbar .ver-chip svg{color:rgba(255,255,255,.55)}
+/* Caption row mirrors the stepper's flex columns so only the active stage's
+   slot fills with text — sitting directly under whichever step is active. */
+.stage-captions{display:flex;padding:0 20px}
+.stage-cap{flex:1;padding:0 12px 10px 33px;font-size:11.5px;color:var(--t2);line-height:1.45;white-space:nowrap;overflow:visible}
+.stage-cap+.stage-cap{padding-left:calc(18px + 33px)}
+.stage-cap.stage-cap-branched{flex:1.8}
+.stage-cap b{color:var(--ink);font-weight:600}
+.stage-cap:empty{padding:0}
+.stage-captions:has(.stage-cap.active) .stage-cap:not(.active):empty{padding-top:0}
+
+/* Slim secondary action bar (only rendered when there are back / secondary
+   buttons like "Send back to draft"; empty state collapses fully). */
+.actbar{background:var(--app-bg);border-bottom:1px solid var(--stroke);padding:6px 20px;display:flex;align-items:center;gap:14px;flex-shrink:0;justify-content:flex-end;min-height:0}
+.actbar.is-empty{display:none}
+.actbar-actions{display:flex;gap:8px;flex-shrink:0}
+.actbar .btn{padding:6px 12px;font-size:10px}
+.actbar .btn-primary{border-color:var(--ink)}
+.actbar .btn-secondary{border-color:var(--stroke)}
+
+/* ── IFRAME HOST ── */
+.host{flex:1;background:var(--app-bg);overflow:hidden;position:relative;min-height:0}
+.host iframe{width:100%;height:100%;border:0;display:block;background:var(--app-bg)}
+.host.locked iframe{pointer-events:none;filter:grayscale(.15)}
+.lock-overlay{position:absolute;inset:0;background:rgba(255,253,248,.65);display:none;align-items:center;justify-content:center;text-align:center;padding:40px;z-index:5;pointer-events:none}
+.host.locked .lock-overlay{display:flex}
+.lock-overlay-inner{background:var(--white);border:1px solid var(--ink);padding:28px 36px;max-width:480px;box-shadow:0 12px 36px rgba(26,26,26,.18);pointer-events:auto}
+.lock-overlay-cap{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--t3)}
+.lock-overlay-title{font-family:var(--display);font-size:20px;font-weight:700;color:var(--ink);margin-top:6px;letter-spacing:-.01em}
+.lock-overlay-body{font-size:13px;color:var(--t2);line-height:1.55;margin-top:8px;margin-bottom:18px}
+.lock-overlay-actions{display:flex;gap:10px;justify-content:flex-end}
+
+/* ── MODAL ── */
+.modal-scrim{position:fixed;inset:0;background:rgba(26,26,26,.5);opacity:0;pointer-events:none;transition:opacity .18s;z-index:340}
+.modal-scrim.open{opacity:1;pointer-events:auto}
+.modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-46%);width:480px;max-width:calc(100vw - 40px);background:var(--white);border:1px solid var(--ink);box-shadow:0 24px 64px rgba(26,26,26,.3);z-index:350;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;padding:28px}
+.modal.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%)}
+.modal-icon{width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--ink)}
+.modal-icon svg{width:22px;height:22px;stroke:currentColor;stroke-width:1.8;fill:none}
+.modal-title{font-family:var(--display);font-size:20px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+.modal-body{font-size:13.5px;color:var(--t2);line-height:1.55;margin-top:8px;margin-bottom:22px}
+.modal-body ul{margin-left:20px;margin-top:8px;margin-bottom:8px;display:flex;flex-direction:column;gap:6px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--white);font-size:13px;padding:11px 18px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:400;font-weight:500}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── SETTINGS POPOVER ── */
+.tb-set{position:relative;margin-right:12px}
+.tb-set-btn{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border:1.5px solid rgba(255,255,255,.25);background:transparent;color:var(--white);font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:border-color .12s,color .12s,background .12s;white-space:nowrap}
+.tb-set-btn svg{width:12px;height:12px;stroke:currentColor;stroke-width:1.6;fill:none}
+.tb-set-btn:hover{border-color:var(--white);background:rgba(255,255,255,.04)}
+.tb-set.open .tb-set-btn{border-color:var(--white);background:rgba(255,255,255,.06)}
+.tb-set-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;min-width:300px;background:var(--white);border:1px solid var(--stroke);box-shadow:0 10px 26px rgba(26,26,26,.18);z-index:1000;padding:14px 16px}
+.tb-set.open .tb-set-menu{display:block}
+.tb-set-h{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin-bottom:8px}
+.tb-set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0}
+.tb-set-row .ll{font-size:12.5px;color:var(--ink)}
+.tb-set-row .sub{font-size:11px;color:var(--t3);margin-top:2px}
+.tb-set-foot{margin-top:12px;padding-top:10px;border-top:1px solid var(--stroke);display:flex;justify-content:flex-end}
+.tb-set-foot .reset{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--error);background:none;border:none;cursor:pointer}
+.tb-presets{display:flex;flex-direction:column;gap:4px;max-height:300px;overflow-y:auto;margin:0 -4px}
+.tb-preset{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:none;border:1px solid transparent;cursor:pointer;text-align:left;transition:background .1s,border-color .1s}
+.tb-preset:hover{background:var(--sunken);border-color:var(--stroke)}
+.tb-preset.on{background:var(--sunken);border-color:var(--ink)}
+.tb-preset-num{flex-shrink:0;width:18px;height:18px;border-radius:50%;background:var(--stroke);color:var(--ink);font-family:var(--mono);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.tb-preset.on .tb-preset-num{background:var(--ink);color:var(--accent)}
+.tb-preset-l{flex:1;min-width:0}
+.tb-preset-n{font-size:12.5px;font-weight:600;color:var(--ink);line-height:1.3}
+.tb-preset-d{font-size:11px;color:var(--t3);margin-top:2px;line-height:1.4}
+
+
+/* ── Dispatch modal ──────────────────────────────────────────────────
+   Square everywhere except the icon badge, which is the one round thing in
+   the screenshot and reads as a stamp rather than a control. */
+#dspModal{position:fixed;inset:0;z-index:420}
+.dsp-scrim{position:absolute;inset:0;background:rgba(26,26,26,.55)}
+.dsp-card{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:520px;max-width:calc(100vw - 40px);max-height:calc(100vh - 60px);overflow-y:auto;background:var(--white,#fff);border:1px solid var(--ink,#1A1A1A);padding:26px 28px 22px;box-shadow:0 30px 70px rgba(0,0,0,.35)}
+.dsp-icon{width:56px;height:56px;margin:0 auto 18px;border-radius:50%;background:var(--accent,#FDFF86);display:flex;align-items:center;justify-content:center;color:var(--ink,#1A1A1A)}
+.dsp-icon svg{width:24px;height:24px;stroke:currentColor;stroke-width:1.6;fill:none;stroke-linejoin:round}
+.dsp-title{text-align:center;font-family:var(--display);font-size:22px;font-weight:700;color:var(--ink,#1A1A1A);margin-bottom:20px}
+.dsp-meta{border:1px solid var(--stroke,#DDD6C8);padding:14px 16px;margin-bottom:12px}
+.dsp-addr{font-family:var(--display);font-size:16px;font-weight:700;color:var(--ink,#1A1A1A);line-height:1.35}
+.dsp-ref{margin-top:5px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--midtone,#7D7469)}
+/* Assignee, and the same shape reused for each row of the bench. */
+.dsp-assignee,.dsp-row{display:flex;align-items:center;gap:13px;width:100%;padding:13px 14px;background:var(--white,#fff);border:1px solid var(--stroke,#DDD6C8);text-align:left}
+.dsp-av{flex-shrink:0;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;background:var(--ink,#1A1A1A);color:var(--white,#fff);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em}
+.dsp-who{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.dsp-name{font-family:var(--display);font-size:15px;font-weight:700;color:var(--ink,#1A1A1A);line-height:1.3}
+.dsp-role{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--midtone,#7D7469)}
+.dsp-change{flex-shrink:0;padding:8px 13px;background:var(--white,#fff);border:1px solid var(--ink,#1A1A1A);color:var(--ink,#1A1A1A);font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:background .12s}
+.dsp-change:hover{background:var(--sunken,#F4F0E6)}
+/* The bench. Scrolls, so a long market doesn't push the actions off. */
+.dsp-lbl{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--midtone,#7D7469);margin-bottom:8px}
+.dsp-list{max-height:290px;overflow-y:auto;border:1px solid var(--stroke,#DDD6C8)}
+.dsp-row{border:0;border-bottom:1px solid var(--stroke,#DDD6C8);cursor:pointer;transition:background .12s}
+.dsp-row:last-child{border-bottom:0}
+.dsp-row:hover{background:var(--app-bg,#FFFDF8)}
+.dsp-row.is-on{background:var(--accent,#FDFF86)}
+.dsp-default{flex-shrink:0;padding:3px 8px;background:var(--white,#fff);border:1px solid var(--stroke,#DDD6C8);font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--midtone,#7D7469)}
+.dsp-check{flex-shrink:0;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid var(--ink,#1A1A1A);background:var(--white,#fff)}
+.dsp-row.is-on .dsp-check{background:var(--ink,#1A1A1A)}
+.dsp-check svg{width:12px;height:12px;stroke:var(--white,#fff);stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+/* Actions right-aligned; the primary here is ink, not the accent — the yellow
+   is spent on the toolbar CTA that opened this. */
+.dsp-acts{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+.dsp-btn{padding:11px 18px;background:var(--white,#fff);border:1px solid var(--stroke,#DDD6C8);color:var(--ink,#1A1A1A);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:background .12s,border-color .12s}
+.dsp-btn:hover{border-color:var(--ink,#1A1A1A)}
+.dsp-btn.is-primary{background:var(--ink,#1A1A1A);border-color:var(--ink,#1A1A1A);color:var(--white,#fff)}
+.dsp-btn.is-primary:hover{background:#000}
+
+/* ── Brand below the demo chrome ─────────────────────────────────────
+   The body is a column now: the demo bar spans everything, and the rail and
+   the app sit in a row beneath it. That puts the white logo box level with
+   the address row rather than with the demo bar, so the Kai mark reads as the
+   product's rather than the harness's. */
+body{flex-direction:column}
+.app-shell{flex:1;display:flex;flex-direction:row;min-height:0;overflow:hidden}
+/* The rail no longer owns the full viewport height — it fills the row. */
+.global-nav{height:auto}
+/* Level with .app-toolbar (56px), and the rail's own width so the white block
+   reads as the top of the rail rather than a chip floating in it. */
+.global-nav-logo{flex:0 0 56px;width:100%}
+#app{height:auto}
+
+/* Narrower than the dispatch card: this is a sentence and two buttons. */
+.dsp-card.is-narrow{width:420px}
+.dsp-confirm-body{font-family:var(--body);font-size:14px;line-height:1.5;color:var(--ink,#1A1A1A)}
+.dsp-confirm-n{margin-top:12px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--midtone,#7D7469)}
+/* The gate reads as unavailable rather than broken — it says what's left. */
+#appApproveBtn[disabled]{opacity:.45;cursor:not-allowed}

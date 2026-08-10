@@ -1,0 +1,872 @@
+function renderArtifact(){
+  const body = document.getElementById('workBody');
+  if(!body) return;
+  // Priority: historical > copy > index. Guard both drill-in states so a
+  // stale id (e.g. a copy that was renamed/removed elsewhere) falls back
+  // to the index instead of blanking the tab.
+  if(openHistoricalId){
+    const v = VERSIONS.find(x => x.id === openHistoricalId);
+    if(!v){ openHistoricalId = null; body.innerHTML = _renderArtifactIndex(); return; }
+    body.innerHTML = _renderHistoricalDoc(v);
+    return;
+  }
+  if(openCopyId){
+    const copy = copyById(openCopyId);
+    if(!copy){ openCopyId = null; body.innerHTML = _renderArtifactIndex(); return; }
+    body.innerHTML = _renderCopyDoc(copy);
+    return;
+  }
+  body.innerHTML = _renderArtifactIndex();
+}
+function _renderArtifactIndex(){
+  return `<div class="art-index">
+    ${_renderHistoricalSection()}
+    ${_renderCopiesSection()}
+  </div>`;
+}
+function _renderHistoricalSection(){
+  // Historical artifacts = the audit trail. Each VERSION renders as a
+  // read-only card. Chronological (oldest → newest) so the story reads
+  // "Original scope → CO1 → CO2" left-to-right.
+  const ordered = VERSIONS.slice().sort((a,b) => a.num - b.num);
+  const cards = ordered.map(v => {
+    const label = versionLabel(v);
+    const tag = versionTag(v);
+    const isCurrent = v.id === currentVersionId;
+    const isOriginal = v.num === 1;
+    const isCloseout = v.kind === 'closeout';
+    // isOriginal is "Approved" only once it's been superseded by a later
+    // version — if it's still the current one (nothing approved it yet),
+    // fall through to versionMeta so an in-review submission reads as such.
+    const meta = (isOriginal && !isCurrent) ? `Approved ${v.at}` : versionMeta(v);
+    // Which visual bucket the card falls into. Original = neutral;
+    // current = ink accent bar; outdated = dimmed. Read from the
+    // computed tag (not the static v.tagCls) so terminal-state overrides
+    // like "everything is Approved" flatten the outdated state.
+    const stateCls = isCurrent ? ' is-current' : (tag.tagCls === 'outdated' ? ' is-outdated' : '');
+    const eyebrow = isCloseout ? 'Closeout document'
+                  : (isOriginal ? 'Original scope' : `Change order ${v.num - 1}`);
+    return `<button class="hist-card${stateCls}" onclick="openHistorical('${v.id}')" title="View ${esc(label)}">
+      <div class="hist-card-eyebrow">${esc(eyebrow)}</div>
+      <div class="hist-card-name">${esc(label)}</div>
+      <div class="hist-card-meta">${esc(meta)}</div>
+      <div class="hist-card-docid">${esc(_sowIdFor(v.id))}</div>
+      <div class="hist-card-foot">
+        <span class="hist-card-budget">${esc(v.budget || '')}</span>
+        ${tag.tag ? `<span class="hist-card-tag hist-tag-${esc(tag.tagCls||'')}">${esc(tag.tag)}</span>` : ''}
+      </div>
+    </button>`;
+  }).join('');
+  return `<section class="art-sec">
+    <header class="art-sec-hdr">
+      <div class="art-sec-hdr-l">
+        <h2 class="art-sec-title">Historical artifacts</h2>
+        <p class="art-sec-desc">Review the original scope and each change-order version for this project.</p>
+      </div>
+    </header>
+    <div class="hist-grid">${cards}</div>
+  </section>`;
+}
+function _renderCopiesSection(){
+  const cards = SCOPE_COPIES.map(c => {
+    const expired = copyIsExpired(c);
+    const filters = _copyFilterSummary(c);
+    const chips = filters.map(f => `<span class="copy-filter-chip">${esc(f)}</span>`).join('');
+    const metaBits = [
+      `<span>Based on ${esc(versionLabel(VERSIONS.find(v=>v.id===c.basedOnVersionId)||{num:1}))}</span>`,
+      `<span>Created ${_fmtDate(c.createdAt)}</span>`,
+      expired
+        ? `<span class="copy-expired-tag">Expired ${_fmtDate(c.expiresAt)}</span>`
+        : `<span>Expires ${_fmtDate(c.expiresAt)}</span>`,
+    ].join('');
+    return `<button class="copy-card${expired?' is-expired':''}" onclick="openCopy('${c.id}')">
+      <div class="copy-card-name">${esc(c.name)}</div>
+      <div class="copy-card-desc">${esc(c.description||'')}</div>
+      <div class="copy-card-meta">${metaBits}</div>
+      <div class="copy-card-filters">${chips}</div>
+      <div class="copy-card-actions">
+        <span class="copy-card-btn" onclick="event.stopPropagation();openCopyShare('${c.id}')">Share link</span>
+        <span class="copy-card-btn is-primary" onclick="event.stopPropagation();openCopy('${c.id}')">Open</span>
+      </div>
+    </button>`;
+  }).join('');
+  const empty = SCOPE_COPIES.length ? '' : `<div class="copy-empty">
+    <div class="copy-empty-title">No copies yet</div>
+    <div class="copy-empty-desc">Create a filtered, read-only copy to share with anyone who needs a look.</div>
+  </div>`;
+  return `<section class="art-sec">
+    <header class="art-sec-hdr">
+      <div class="art-sec-hdr-l">
+        <h2 class="art-sec-title">Shareable copies</h2>
+        <p class="art-sec-desc">Create read-only audience-doc copies from any scope version, then copy a public link when you are ready to share.</p>
+      </div>
+      <button class="art-sec-cta" onclick="openNewCopy()">
+        <svg viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        New copy
+      </button>
+    </header>
+    <div class="copy-grid">${cards}${empty}</div>
+  </section>`;
+}
+// Deterministic 8-char hex "document ID" derived from any seed string.
+// Not crypto — just a stable-looking identifier for the paper header
+// (matches the visual language of internal doc numbers).
+function _sowIdFor(seed){
+  let h = 0; const s = String(seed || '');
+  for(let i = 0; i < s.length; i++){ h = ((h << 5) - h + s.charCodeAt(i)) | 0; }
+  return 'SOW-' + Math.abs(h).toString(16).toUpperCase().padStart(8, '0').slice(0, 8);
+}
+// _renderHistoricalDoc — read-only view of a frozen version. Reuses
+// _renderCopyPaper with a synthetic "no filters" copy so we don't
+// duplicate the paper render logic. No filter strip, no Share button —
+// only a back link, meta chip, and Print.
+function _renderHistoricalDoc(v){
+  const readOnlyCopy = {
+    id:'hist_'+v.id,
+    name: versionLabel(v),
+    description:'',
+    basedOnVersionId: v.id,
+    createdAt: v.at,
+    filters:{showAmounts:true, contractor:null, renterOnly:false},
+    _isHistorical: true,
+  };
+  const tag = versionTag(v);
+  const isOriginal = v.num === 1;
+  const eyebrow = isOriginal ? 'Original scope' : `Change order ${v.num - 1}`;
+  return `<div class="copy-doc-wrap hist-doc-wrap">
+    <div class="copy-crumb hist-crumb">
+      <button class="copy-crumb-back" onclick="closeHistorical()" title="Back to artifacts">
+        <span aria-hidden="true">‹</span> Back
+      </button>
+      <span class="copy-crumb-div"></span>
+      <span class="copy-crumb-name">${esc(versionLabel(v))}</span>
+      <span class="copy-crumb-meta">${esc(eyebrow)} · Approved ${esc(v.at)}${v.budget?` · ${esc(v.budget)}`:''}</span>
+      <span class="copy-crumb-sp"></span>
+      ${tag.tag ? `<span class="hist-doc-tag hist-tag-${esc(tag.tagCls||'')}">${esc(tag.tag)}</span>` : ''}
+      <button class="hist-print-btn" onclick="window.print()" title="Print this artifact">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 5V2h7v3M4.5 12H3V6h10v6h-1.5M4.5 9h7v5h-7z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Print
+      </button>
+    </div>
+    <div class="copy-paper hist-paper">${_renderCopyPaper(readOnlyCopy)}</div>
+  </div>`;
+}
+function _renderCopyIndex(){
+  // Legacy alias — used to be the sole index; now delegates to the
+  // two-section artifact index so anything that still calls it works.
+  return _renderArtifactIndex();
+}
+
+function _copyFilterSummary(copy){
+  const parts = [];
+  parts.push(copy.filters.showAmounts ? 'Prices visible' : 'Prices hidden');
+  parts.push(copy.filters.contractor ? `Only ${copy.filters.contractor}` : 'All contractors');
+  if(copy.filters.renterOnly) parts.push('Resident-responsible only');
+  parts.push(copy.filters.includePhotos !== false ? 'Photos included' : 'Photos hidden');
+  return parts;
+}
+
+function _fmtDate(iso){
+  if(!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+}
+
+function _renderCopyDoc(copy){
+  const expired = copyIsExpired(copy);
+  const ver = VERSIONS.find(v => v.id === copy.basedOnVersionId) || VERSIONS[0];
+  // Filter strip — read-only summary of what the sender selected when
+  // creating the copy. To change filters, the sender clicks the pencil
+  // (Edit copy) which opens the create/edit modal. Rendering as plain
+  // text (no checkboxes / no dropdown) makes it obvious the doc below
+  // reflects a decision that's already been made.
+  const filterItems = _copyFilterSummary(copy)
+    .map(s => `<span class="copy-filter-static">${esc(s)}</span>`).join('');
+  const strip = `<div class="copy-filter-strip is-static">
+    <div class="copy-filter-strip-static">
+      <span class="copy-filter-strip-cap-t">
+        <svg viewBox="0 0 12 12" fill="none"><path d="M2 3h8M3 6h6M4 9h4" stroke-linecap="round"/></svg>
+        Filters
+      </span>
+      ${filterItems}
+    </div>
+  </div>`;
+  const expiredBanner = expired ? `<div class="copy-expired-banner">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="M7 4v3.5l2 1.2"/></svg>
+    <span><b>This share link expired</b> on ${_fmtDate(copy.expiresAt)}. Recipients can no longer view this copy — edit the expiration below to renew it.</span>
+  </div>` : '';
+  const paper = _renderCopyPaper(copy);
+  return `<div class="copy-doc-wrap">
+    <div class="copy-crumb">
+      <button class="copy-crumb-back" onclick="closeCopy()" title="Back to all copies">
+        <span aria-hidden="true">‹</span> Back
+      </button>
+      <span class="copy-crumb-div"></span>
+      <span class="copy-crumb-name">${esc(copy.name)}</span>
+      <button class="copy-crumb-edit" onclick="openEditCopy('${copy.id}')" title="Rename or change filters" aria-label="Edit copy">
+        <svg viewBox="0 0 14 14"><path d="M9 2.5l2.5 2.5-6 6H3v-2.5l6-6z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <span class="copy-crumb-meta">Based on ${esc(versionLabel(ver))} · ${expired?'Expired':'Expires'} ${_fmtDate(copy.expiresAt)}</span>
+      <span class="copy-crumb-sp"></span>
+      <button class="copy-share-btn" onclick="openCopyShare('${copy.id}')">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M14.5 1.5L7 9M14.5 1.5L10 14.5L7 9L1.5 6L14.5 1.5Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Share
+      </button>
+    </div>
+    ${strip}
+    <div class="copy-paper">${expiredBanner}${paper}</div>
+  </div>`;
+}
+
+function _renderCopyPaper(copy){
+  // Filter TASKS per copy's filter recipe. No editing — pure projection.
+  let scopeTasks = TASKS.slice();
+  if(copy.filters.contractor) scopeTasks = scopeTasks.filter(t => t.gc === copy.filters.contractor);
+  if(copy.filters.renterOnly) scopeTasks = scopeTasks.filter(isTenantTask);
+  const showPricing = !!copy.filters.showAmounts;
+
+  if(!scopeTasks.length){
+    return `<div style="padding:60px 40px;text-align:center">
+      <div class="art-eyebrow" style="margin-bottom:14px">Scope of work</div>
+      <div class="art-title" style="font-size:22px">No tasks match this filter</div>
+      <div class="art-sub-info" style="margin-top:8px">Adjust the filters above to include more line items.</div>
+    </div>`;
+  }
+
+  // Group tasks by room, preserving TASKS order.
+  const groups = [];
+  const seen = {};
+  scopeTasks.forEach(t => {
+    if(seen[t.room] === undefined){ seen[t.room] = groups.length; groups.push({room:t.room, items:[]}); }
+    groups[seen[t.room]].items.push(t);
+  });
+  const grandTotal = scopeTasks.reduce((s,t)=>s+dollars(t.cost), 0);
+  const grandLabor = scopeTasks.reduce((s,t)=>s+dollars(t.pcost||'$0'), 0);
+  const pricingHead = showPricing ? `<th class="art-col-num">Labor</th><th class="art-col-amt">Amount</th>` : '';
+  const rows = groups.map(g => {
+    const gTotal = g.items.reduce((s,t)=>s+dollars(t.cost), 0);
+    const gLabor = g.items.reduce((s,t)=>s+dollars(t.pcost||'$0'), 0);
+    const itemRows = g.items.map(t => {
+      const contractor = t.gc || '<span class="art-unassigned">Unassigned</span>';
+      const product = t.product && !/not selected/i.test(t.product) ? t.product : '<span class="art-muted">Product not selected</span>';
+      const priceCells = showPricing
+        ? `<td class="art-num">${t.pcost || '$0'}</td>
+           <td class="art-amt">${t.cost}</td>`
+        : '';
+      // Photos honor the copy's includePhotos filter — checkbox unchecked
+      // suppresses the entire photo strip, matching the "Include photos"
+      // filter that recipients see (or don't see) on the shared link.
+      const includePhotos = copy.filters.includePhotos !== false;
+      const photoStrip = (includePhotos && t.photos>0) ? `<div class="art-photos">
+        ${Array.from({length:t.photos}).map((_,i)=>{
+          const cap = ART_PHOTO_CAPS[i] || `Photo ${i+1}`;
+          return `<button class="art-thumb" onclick="artOpenPhoto('${t.code}',${i})" title="${esc(cap)}">${svgPhoto()}<span class="art-thumb-cap">${esc(cap)}</span></button>`;
+        }).join('')}
+      </div>` : '';
+      const detailColspan = showPricing ? 5 : 3;
+      const hasDetail = (t.desc || t.opt || product || photoStrip);
+      const selCls = (selId && TASKS.find(x=>x.id===selId)?.code===t.code) ? ' art-selected' : '';
+      const detailRow = hasDetail ? `<tr class="art-item-detail${selCls}" data-row-tid="${t.code}-detail" data-select-code="${t.code}">
+        <td class="art-id"></td>
+        <td class="art-item-wide" colspan="${detailColspan}">
+          <div class="art-desc">${t.desc || t.opt || ''}</div>
+          <div class="art-product"><span class="art-lbl">Product</span> <span>${product}</span></div>
+          ${photoStrip}
+        </td>
+      </tr>` : '';
+      return `<tr data-row-tid="${t.code}" data-select-code="${t.code}" class="art-item-main${selCls}">
+        <td class="art-id">${t.code}</td>
+        <td class="art-item"><div class="art-name">${esc(t.name)}</div></td>
+        <td class="art-gc">${contractor}</td>
+        <td class="art-num">${t.qty || '—'}</td>
+        ${priceCells}
+      </tr>${detailRow}`;
+    }).join('');
+    const grpColspan = showPricing ? 6 : 4;
+    const subRow = showPricing ? `<tr class="art-sub">
+        <td colspan="4"></td>
+        <td class="art-num art-sub-l">${money(gLabor)}</td>
+        <td class="art-amt art-sub-a">${money(gTotal)}</td>
+      </tr>` : '';
+    return `
+      <tr class="art-grp">
+        <td class="art-grp-name" colspan="${grpColspan}"><span class="art-grp-room">${g.room.toUpperCase()}</span><span class="art-grp-count-inline">${g.items.length} ${g.items.length===1?'item':'items'}</span></td>
+      </tr>
+      ${itemRows}
+      ${subRow}
+    `;
+  }).join('');
+
+  const grandRows = showPricing ? `<tfoot>
+            <tr class="art-grand">
+              <td colspan="4"></td>
+              <td class="art-num">${money(grandLabor)}</td>
+              <td class="art-amt art-grand-a">${money(grandTotal)}</td>
+            </tr>
+            <tr class="art-grand-lbl">
+              <td colspan="4"></td>
+              <td class="art-num">Labor total</td>
+              <td class="art-amt">Scope total</td>
+            </tr>
+          </tfoot>` : '';
+
+  return `
+    <div class="art-head">
+      <div class="art-head-l">
+        <div class="art-eyebrow">Scope of work · ${esc(versionLabel(VERSIONS.find(v=>v.id===copy.basedOnVersionId)||{num:1}))}</div>
+        <div class="art-title">3484 South Main Street</div>
+        <div class="art-sub-info">Atlanta, GA 30315 · Single-family renovation</div>
+      </div>
+      <div class="art-head-r">
+        ${copy._isHistorical ? '' : `<div class="art-meta">
+          <div class="art-meta-k">Prepared for</div>
+          <div class="art-meta-v">${esc(copy.name)}</div>
+        </div>
+        <div class="art-meta">
+          <div class="art-meta-k">Prepared</div>
+          <div class="art-meta-v">${_fmtDate(copy.createdAt)}</div>
+        </div>`}
+        ${(()=>{
+          // "Based on" only makes sense when the doc is derived from an
+          // earlier version — i.e. a change order (v.num > 1) or a copy
+          // that references some version. For the original scope (v1),
+          // there's nothing older to be "based on", so we omit the row.
+          const v = VERSIONS.find(x => x.id === copy.basedOnVersionId) || {num:1};
+          if(v.num <= 1) return '';
+          return `<div class="art-meta">
+            <div class="art-meta-k">Based on</div>
+            <div class="art-meta-v">${esc(versionLabel(v))}</div>
+          </div>`;
+        })()}
+        <div class="art-meta">
+          <div class="art-meta-k">Document ID</div>
+          <div class="art-meta-v art-meta-docid">${esc(_sowIdFor(copy._isHistorical ? copy.basedOnVersionId : (copy.shareToken || copy.id)))}</div>
+        </div>
+      </div>
+    </div>
+    <table class="art-table">
+      <thead>
+        <tr>
+          <th class="art-col-id">ID</th>
+          <th class="art-col-item">Item</th>
+          <th class="art-col-gc">Contractor</th>
+          <th class="art-col-num">Qty</th>
+          ${pricingHead}
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      ${grandRows}
+    </table>`;
+}
+
+/* ── Share / New / Edit copy modals ─────────────────────────────────── */
+function _ensureCopyModals(){
+  if(document.getElementById('copyShareModal')) return;
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div class="se-modal-scrim" id="copyModalScrim" onclick="closeCopyModals()"></div>
+    <div class="se-modal copy-modal" id="copyShareModal">
+      <div class="se-modal-cap">Share scope copy</div>
+      <div class="se-modal-title" id="copyShareTitle">Copy name</div>
+      <div class="copy-share-body" id="copyShareBody"></div>
+      <div class="se-modal-actions">
+        <button class="se-btn se-btn-secondary" onclick="closeCopyModals()">Close</button>
+      </div>
+    </div>
+    <div class="se-modal copy-modal" id="copyFormModal">
+      <div class="se-modal-cap" id="copyFormCap">New copy</div>
+      <div class="se-modal-title" id="copyFormTitle">Create a new scope copy</div>
+      <div class="copy-form-body" id="copyFormBody"></div>
+      <div class="se-modal-actions">
+        <button class="se-btn se-btn-secondary" onclick="closeCopyModals()">Cancel</button>
+        <button class="se-btn se-btn-primary" id="copyFormSave" onclick="saveCopyForm()">Save</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+}
+function closeCopyModals(){
+  const s = document.getElementById('copyModalScrim');
+  const sh = document.getElementById('copyShareModal');
+  const fm = document.getElementById('copyFormModal');
+  if(s) s.classList.remove('open');
+  if(sh) sh.classList.remove('open');
+  if(fm) fm.classList.remove('open');
+  _copyFormEditingId = null;
+}
+function openCopyShare(id){
+  const c = copyById(id); if(!c) return;
+  _ensureCopyModals();
+  const link = `https://kaiizen.app/scope/${c.shareToken}`;
+  const previewHref = `ScopeCopy_Recipient.html?token=${encodeURIComponent(c.shareToken)}`;
+  const expiredHref = previewHref + '&expired=1';
+  const expired = copyIsExpired(c);
+  const summary = _copyFilterSummary(c).map(s => `<span class="copy-share-summary-i">${esc(s)}</span>`).join('');
+  document.getElementById('copyShareTitle').textContent = c.name;
+  document.getElementById('copyShareBody').innerHTML = `
+    <div class="copy-share-section">
+      <span class="copy-share-lbl">Shareable link</span>
+      <div class="copy-link-row">
+        <input class="copy-link" id="copyShareLink" value="${esc(link)}" readonly onclick="this.select()">
+        <button class="copy-link-btn" onclick="copyLinkToClipboard()">Copy link</button>
+      </div>
+      <span class="copy-share-note">Anyone with this link can view the copy. No login required.</span>
+    </div>
+    <div class="copy-share-section">
+      <span class="copy-share-lbl">Expiration</span>
+      <div class="copy-share-exp">
+        <span class="copy-share-exp-v${expired?' is-expired':''}">${expired?'Expired':'Expires'} ${_fmtDate(c.expiresAt)}</span>
+      </div>
+    </div>
+    <div class="copy-share-section">
+      <span class="copy-share-lbl">Recipient will see</span>
+      <div class="copy-share-summary">${summary}</div>
+    </div>
+    <div class="copy-share-section">
+      <span class="copy-share-lbl">Preview the recipient view</span>
+      <div class="copy-share-preview">
+        <a href="${previewHref}" target="_blank" rel="noopener">Open recipient preview →</a>
+        <a href="${expiredHref}" target="_blank" rel="noopener">Preview as expired →</a>
+      </div>
+    </div>`;
+  document.getElementById('copyModalScrim').classList.add('open');
+  document.getElementById('copyShareModal').classList.add('open');
+}
+function copyLinkToClipboard(){
+  const input = document.getElementById('copyShareLink'); if(!input) return;
+  const val = input.value;
+  const done = ()=>toast('Link copied');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(val).then(done, ()=>{
+      input.select(); try{ document.execCommand('copy'); }catch(_){} done();
+    });
+  } else {
+    input.select(); try{ document.execCommand('copy'); }catch(_){} done();
+  }
+}
+function extendCopyExpiration(id, val){
+  if(!val) return;
+  const c = copyById(id); if(!c) return;
+  if(val === 'none'){ c.expiresAt = '2099-12-31'; toast('Expiration removed'); }
+  else { c.expiresAt = _addDays(_todayIso(), parseInt(val,10)); toast(`Expiration extended by ${val} days`); }
+  openCopyShare(id);   // re-render modal
+  renderArtifact();
+}
+
+/* ── New / Edit form ── */
+let _copyFormEditingId = null;
+function openNewCopy(){ _openCopyForm(null); }
+function openEditCopy(id){ _openCopyForm(id); }
+function _openCopyForm(id){
+  _ensureCopyModals();
+  _copyFormEditingId = id;
+  const existing = id ? copyById(id) : null;
+  const defaults = existing || {
+    name:'', description:'', basedOnVersionId:currentVersionId,
+    filters:{showAmounts:true, contractor:null, renterOnly:false, includePhotos:true},
+  };
+  // Migrate older copies that were created before includePhotos was
+  // introduced — default them to true so the checkbox reflects reality.
+  if(defaults.filters && typeof defaults.filters.includePhotos === 'undefined'){
+    defaults.filters.includePhotos = true;
+  }
+  document.getElementById('copyFormCap').textContent = existing ? 'Edit copy' : 'New copy';
+  document.getElementById('copyFormTitle').textContent = existing ? 'Edit scope copy' : 'Create a new scope copy';
+  document.getElementById('copyFormSave').textContent = existing ? 'Save changes' : 'Create copy';
+  const verOpts = VERSIONS.map(v => `<option value="${v.id}"${v.id===defaults.basedOnVersionId?' selected':''}>${esc(versionLabel(v))} · ${esc(v.at)}</option>`).join('');
+  const contractorOpts = ['<option value="">All contractors</option>']
+    .concat(CONTRACTORS.map(c => `<option value="${esc(c)}"${c===defaults.filters.contractor?' selected':''}>${esc(c)}</option>`))
+    .join('');
+  document.getElementById('copyFormBody').innerHTML = `
+    <div class="copy-form-row">
+      <span class="copy-form-lbl">Name</span>
+      <input class="copy-form-input" id="copyFormName" placeholder="e.g. Apex Carpentry — kitchen bid" value="${esc(defaults.name)}">
+    </div>
+    <div class="copy-form-row">
+      <span class="copy-form-lbl">Based on version</span>
+      <select class="copy-form-sel" id="copyFormVer">${verOpts}</select>
+    </div>
+    <div class="copy-form-row">
+      <span class="copy-form-lbl">Contractor filter</span>
+      <select class="copy-form-sel" id="copyFormGc">${contractorOpts}</select>
+    </div>
+    <div class="copy-form-row copy-form-row-inline">
+      <label class="copy-filter-chk">
+        <span class="box-halo"><input type="checkbox" id="copyFormShowAmt"${defaults.filters.showAmounts?' checked':''}></span>
+        <span class="copy-filter-chk-lbl">Show dollar amounts</span>
+      </label>
+      <label class="copy-filter-chk">
+        <span class="box-halo"><input type="checkbox" id="copyFormRenter"${defaults.filters.renterOnly?' checked':''}></span>
+        <span class="copy-filter-chk-lbl">Resident-responsible only</span>
+      </label>
+      <label class="copy-filter-chk">
+        <span class="box-halo"><input type="checkbox" id="copyFormPhotos"${defaults.filters.includePhotos?' checked':''}></span>
+        <span class="copy-filter-chk-lbl">Include photos</span>
+      </label>
+    </div>`;
+  document.getElementById('copyModalScrim').classList.add('open');
+  document.getElementById('copyFormModal').classList.add('open');
+  setTimeout(()=>{ const el=document.getElementById('copyFormName'); if(el) el.focus(); }, 20);
+}
+function saveCopyForm(){
+  const name = document.getElementById('copyFormName').value.trim() || 'Untitled copy';
+  const ver  = document.getElementById('copyFormVer').value;
+  const gc   = document.getElementById('copyFormGc').value || null;
+  const showAmt = document.getElementById('copyFormShowAmt').checked;
+  const renter  = document.getElementById('copyFormRenter').checked;
+  const photos  = document.getElementById('copyFormPhotos').checked;
+  // Description field was removed from the form — preserve any existing
+  // description on edit, default to empty on new.
+  if(_copyFormEditingId){
+    const c = copyById(_copyFormEditingId);
+    if(c){
+      c.name = name; c.basedOnVersionId = ver;
+      c.filters = {showAmounts:showAmt, contractor:gc, renterOnly:renter, includePhotos:photos};
+    }
+    closeCopyModals();
+    renderArtifact();
+    toast('Copy updated');
+  } else {
+    const newId = _copyId();
+    SCOPE_COPIES.push({
+      id:newId, name, description:'', basedOnVersionId:ver,
+      createdAt:_todayIso(), shareToken:_copyToken(),
+      expiresAt:_addDays(_todayIso(), 30),
+      filters:{showAmounts:showAmt, contractor:gc, renterOnly:renter, includePhotos:photos},
+    });
+    closeCopyModals();
+    openCopy(newId);
+    toast('Copy created');
+  }
+}
+
+/* ── Room metadata (dimensions + walkthrough notes) : fake but consistent ── */
+const ROOM_META = {
+  'Kitchen':     {dims:'14′ × 16′ · 224 SF · 9′ ceiling', light:'East-facing windows, bright AM', notes:[
+    {who:'Field agent',when:'Apr 18 · 9:42a',body:'Cabinet base near sink showing water damage. Counters scratched, laminate edges lifting. Walls in good condition.'},
+    {who:'Designer',when:'Apr 22 · 11:00a',body:'Stick with white shaker direction. Quartz over granite. Use Daltile subway 3×6 matte for backsplash.'},
+  ]},
+  'Living Room': {dims:'15′ × 18′ · 270 SF · 9′ ceiling', light:'South-facing bay window, full sun midday', notes:[
+    {who:'Field agent',when:'Apr 18 · 9:55a',body:'Carpet stained, edges peeling at transition strip. Walls have nail holes throughout.'},
+  ]},
+  'Master Bath': {dims:'8′ × 10′ · 80 SF · 8′ ceiling', light:'North-facing small window', notes:[
+    {who:'Field agent',when:'Apr 19 · 10:12a',body:'Shower grout failing, tile chipped near drain. Vanity dated, plumbing roughed for double sink.'},
+    {who:'Designer',when:'Apr 22 · 11:15a',body:'Homeowner approved 48" double vanity allowance. Awaiting final selection from 3 shortlisted units.'},
+  ]},
+  'Bathroom':    {dims:'6′ × 9′ · 54 SF · 8′ ceiling', light:'No window (vent fan only)', notes:[
+    {who:'Field agent',when:'Apr 19 · 10:30a',body:'Vanity in decent shape, refacing only. Floor tile worn but structurally sound.'},
+  ]},
+  'Master Bed':  {dims:'13′ × 15′ · 195 SF · 9′ ceiling', light:'East-facing window + ceiling fan', notes:[
+    {who:'Field agent',when:'Apr 18 · 10:15a',body:'Carpet in usable shape but homeowner wants LVP throughout. Closet has no shelving.'},
+  ]},
+  'Bedroom 2':   {dims:'11′ × 12′ · 132 SF · 9′ ceiling', light:'West-facing window', notes:[
+    {who:'Field agent',when:'Apr 18 · 10:25a',body:'Repaint only. No other work needed.'},
+  ]},
+  'Garage':      {dims:'20′ × 20′ · 400 SF · 9′ ceiling', light:'No windows, fluorescent overhead', notes:[
+    {who:'Field agent',when:'Apr 18 · 10:40a',body:'Door opener noisy, leaking oil. Sensors misaligned.'},
+  ]},
+};
+
+// Drawing-variant gallery: full-scope photo overview. Unsorted section at top,
+// then per-room sections with group photos + task subsections. Ported from the
+// Kai Web Right-Panel prototype.
+function galArrowUp(){ return `<svg viewBox="0 0 12 12" fill="none"><path d="M3 7.5L6 4.5l3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
+function galArrowDn(){ return `<svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5l3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
+function galPlusSvg(){ return `<svg viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`; }
+function galBcArrow(){ return `<svg viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
+function galCheckSvg(){ return `<svg viewBox="0 0 14 14" fill="none"><path d="M3 7.5l2.5 2.5L11 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
+function drawingPhotoBox(p){
+  const m=photoMeta(p.seed||0);
+  const scopeTag = p.kind==='task' ? 'Task' : (p.kind==='unsorted' ? 'Unsorted' : 'Group');
+  const isUnsorted = p.kind==='unsorted';
+  return `<div class="ds-photo${isUnsorted?' ds-photo-unsorted':''}" data-pid="${p.id}" onclick="openGalleryPhoto(${p.id})">
+    <button class="ds-check" onclick="event.stopPropagation();toggleGalleryPhotoSel(${p.id})" aria-label="Select photo">${galCheckSvg()}</button>
+    <div class="ds-hover">
+      <div class="ds-hover-top"><span class="ds-hover-tag">${scopeTag}</span></div>
+      <div class="ds-hover-info">
+        <span class="ds-hover-who">${m.who}</span>
+        <span class="ds-hover-sub">${m.source} · ${m.date}</span>
+      </div>
+    </div>
+  </div>`;
+}
+// ── Photo Overlay Modal (poModal) ──────────────────────────────────
+// Full-screen photo + task detail modal. Ported from Compare prototype.
+// Opens from every photo click site (Gallery tiles, Pano cells,
+// Progress timeline cells, activity-page thumbnails). Artifact-tab
+// thumbnails use the separate artOpenPhoto() → #artLightbox path.
+let __poCurrentPid = null;
+function _poEnsureDom(){
+  if(document.getElementById('poModal')) return;
+  const el = document.createElement('div');
+  el.id = 'poModal';
+  el.innerHTML = `
+    <div class="po-scrim" onclick="closePoModal()"></div>
+    <div class="po-card" id="poCard" role="dialog" aria-modal="true">
+      <div class="po-left" id="poLeft"></div>
+      <div class="po-right" id="poRight">
+        <button class="po-close" onclick="closePoModal()" aria-label="Close">
+          <svg viewBox="0 0 14 14"><path d="M3 3l8 8M11 3l-8 8" stroke-linecap="round"/></svg>
+        </button>
+        <div class="po-detail" id="poDetail"></div>
+        <div class="po-footer" id="poFooter"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+}
+function closePoModal(){
+  const el = document.getElementById('poModal');
+  if(el) el.classList.remove('is-open');
+  document.body.style.overflow = '';
+  __poCurrentPid = null;
+  try{ window.parent && window.parent.postMessage({type:'kai-photo-overlay', open:false}, '*'); }catch(_){}
+}
+document.addEventListener('keydown', e => {
+  const el = document.getElementById('poModal');
+  if(!el || !el.classList.contains('is-open')) return;
+  if(e.key === 'Escape'){ closePoModal(); return; }
+  if(e.key === 'ArrowLeft'){ poStepPhoto(-1); return; }
+  if(e.key === 'ArrowRight'){ poStepPhoto(1); return; }
+});
+// Given the current photo, find sibling photos on the same task so
+// prev/next chevrons walk through them in order.
+function _poSiblingsFor(photo){
+  if(!photo) return [];
+  if(photo.kind === 'task'){
+    return (PHOTOS || []).filter(p => p.kind === 'task' && p.task === photo.task)
+      .sort((a,b) => (a.id||0) - (b.id||0));
+  }
+  if(photo.kind === 'group'){
+    return (PHOTOS || []).filter(p => p.kind === 'group' && p.room === photo.room)
+      .sort((a,b) => (a.id||0) - (b.id||0));
+  }
+  return (PHOTOS || []).filter(p => p.kind === photo.kind).sort((a,b) => (a.id||0) - (b.id||0));
+}
+function poStepPhoto(dir){
+  const cur = (PHOTOS || []).find(p => p.id === __poCurrentPid);
+  if(!cur) return;
+  const sibs = _poSiblingsFor(cur);
+  const idx = sibs.findIndex(p => p.id === cur.id);
+  if(idx < 0) return;
+  const next = sibs[(idx + dir + sibs.length) % sibs.length];
+  if(next) openGalleryPhoto(next.id);
+}
+function _poCollapseToggle(){
+  const wrap = document.querySelector('#poLeft .po-strip-wrap');
+  if(!wrap) return;
+  const btn = document.querySelector('#poLeft .po-cap-collapse');
+  const collapsed = wrap.style.display === 'none';
+  wrap.style.display = collapsed ? '' : 'none';
+  if(btn) btn.innerHTML = collapsed
+    ? '<svg viewBox="0 0 12 12" fill="none"><path d="M3 8l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Collapse'
+    : '<svg viewBox="0 0 12 12" fill="none"><path d="M3 5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Expand';
+}
+function _poRenderLeft(photo, task){
+  const walk = (photo.walk && typeof walkFor === 'function') ? walkFor(photo.walk) : null;
+  // Only surface milestone walk names on the hero — Progress walks are
+  // context noise (their date carries enough meaning) so skip the chip.
+  const isMilestoneWalk = walk && !/^Progress/i.test(walk.short || '');
+  const walkTag = isMilestoneWalk ? `<span class="po-hero-walk"><span class="po-hero-walk-dot" style="background:${walk.color}"></span>${esc(walk.short)}</span>` : '';
+  const bg = _photoBg(photo, 0);
+  // Hero image: prefer a real URL when the demo has one, else fallback SVG placeholder.
+  // photo.src first: a file added through the manager is the one case where
+  // we hold the actual image, and the hero is where you'd most want to see it.
+  const heroUrl = (photo.src || photo.url || (task && task.photoUrls && task.photoUrls[(task._poIdx||0)])) || null;
+  const heroInner = heroUrl
+    ? `<img class="po-hero-img" src="${heroUrl}" alt="" onerror="this.replaceWith(Object.assign(document.createElementNS('http://www.w3.org/2000/svg','svg'),{}))">`
+    : `<div class="po-hero-svg">${svgPhoto()}</div>`;
+  // Task photo strip — every photo on this task, walk-tagged.
+  const taskCode = task ? task.code : null;
+  // Most-recent-first by the walk's date. WALKS is stored in chronological
+  // order, so use the walk-index descending as a stable proxy for "newest
+  // date first"; fall back to id for photos whose walk isn't in WALKS.
+  const _walkIdx = wid => {
+    const i = (WALKS || []).findIndex(w => w.id === wid);
+    return i < 0 ? -1 : i;
+  };
+  const _photoRecency = (a,b) => {
+    const wi = _walkIdx(b.walk) - _walkIdx(a.walk);
+    if(wi !== 0) return wi;
+    return (b.id||0) - (a.id||0);
+  };
+  const taskPhotos = taskCode ? (PHOTOS || []).filter(p => p.kind === 'task' && p.task === taskCode).sort(_photoRecency) : [];
+  const groupPhotos = task ? (PHOTOS || []).filter(p => p.kind === 'group' && p.room === task.room).sort(_photoRecency) : [];
+  const thumbBg = p => _photoBg(p, 0);
+  const thumbHtml = p => {
+    return `<button class="po-thumb${p.id === photo.id ? ' is-current' : ''}" style="background:${thumbBg(p)}" onclick="openGalleryPhoto(${p.id})"></button>`;
+  };
+  const taskStripHtml = taskPhotos.length
+    ? `<div class="po-strip-group">
+         <div class="po-strip-title">${task ? esc(task.name) : 'Photos'} · ${taskPhotos.length} ${taskPhotos.length===1?'photo':'photos'}</div>
+         <div class="po-strip">${taskPhotos.map(thumbHtml).join('')}</div>
+       </div>` : '';
+  const groupStripHtml = groupPhotos.length
+    ? `<div class="po-strip-group">
+         <div class="po-strip-title">Group · ${groupPhotos.length} ${groupPhotos.length===1?'photo':'photos'}</div>
+         <div class="po-strip">${groupPhotos.map(thumbHtml).join('')}</div>
+       </div>` : '';
+  const stripWrap = (taskStripHtml || groupStripHtml)
+    ? `<div class="po-strip-wrap">${taskStripHtml}${groupStripHtml}</div>` : '';
+  // Cap bar meta
+  const idx = _poSiblingsFor(photo).findIndex(p => p.id === photo.id);
+  const total = _poSiblingsFor(photo).length;
+  /* Read the photo rather than the walk. The author is photo.by — an upload's
+     author isn't whoever ran the nearest walk, and a photo added in the
+     manager has no walk at all, which used to caption it "Field agent · ·
+     Camera". Date falls back to when it landed, and the last field names how
+     it got here instead of always claiming a camera. */
+  const _capBy   = photo.by || (walk ? walk.conductor : 'Field agent');
+  const _capDate = walk && walk.date
+    ? walk.date
+    : (photo.addedAt
+        ? new Date(photo.addedAt).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})
+        : '');
+  const _capSrc  = photo.source === 'uploaded' ? 'Upload' : 'Camera';
+  const capMeta = `<b>${esc(_capBy)}</b><span class="po-cap-sep">·</span>${esc(_capDate)}<span class="po-cap-sep">·</span>${idx+1} of ${total}<span class="po-cap-sep">·</span>${_capSrc}`;
+  const left = document.getElementById('poLeft');
+  left.innerHTML = `
+    <div class="po-hero-col">
+      <div class="po-hero" style="background:${bg}">
+        ${walkTag}
+        ${heroInner}
+        ${total > 1 ? `<button class="po-nav prev" onclick="poStepPhoto(-1)" aria-label="Previous"><svg viewBox="0 0 12 12"><path d="M7.5 2l-3 4 3 4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : ''}
+        ${total > 1 ? `<button class="po-nav next" onclick="poStepPhoto(1)" aria-label="Next"><svg viewBox="0 0 12 12"><path d="M4.5 2l3 4-3 4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : ''}
+      </div>
+      <div class="po-cap">
+        <div class="po-cap-l">${capMeta}</div>
+      </div>
+    </div>
+    ${stripWrap}`;
+}
+function _poRenderRight(photo, task){
+  if(!task){
+    document.getElementById('poDetail').innerHTML = `
+      <div class="po-section">
+        <div class="po-header-title">Unsorted photo</div>
+        <div class="po-grid">
+          <span class="po-grid-lbl">Photo ID</span><span class="po-grid-val mono">#${photo.id}</span>
+          <span class="po-grid-lbl">Kind</span><span class="po-grid-val">${esc(photo.kind || 'unsorted')}</span>
+        </div>
+      </div>`;
+    document.getElementById('poFooter').innerHTML = '';
+    return;
+  }
+  const walk = (photo.walk && typeof walkFor === 'function') ? walkFor(photo.walk) : null;
+  const room = task.room;
+  const roomColor = (typeof ROOM_COLORS !== 'undefined' && ROOM_COLORS[room]) ? ROOM_COLORS[room] : 'var(--midtone)';
+  // Status pill — read from STATUS + approved set (same normalisation the sidebar uses).
+  const isApproved = approved.has(task.id);
+  let statusKey = 'not_started';
+  if(task.editRequested) statusKey = 'needs_rework';
+  else if(isApproved) statusKey = 'complete';
+  else if(STATUS[task.status]) statusKey = task.status;
+  const statusMeta = STATUS[statusKey] || STATUS.not_started;
+  const statusColor = statusKey === 'complete' ? 'var(--success)'
+    : statusKey === 'needs_rework' ? 'var(--error)'
+    : statusKey === 'in_progress' ? 'var(--progress,#2E5A87)'
+    : 'var(--t2)';
+  // Financials
+  const laborNum = _parseDollars(task.rate);
+  const qtyNum = _parseQtyNum(task.qty);
+  const laborTotal = laborNum * qtyNum;
+  const matTotal = _parseDollars(task.pcost);
+  const taskTotal = _parseDollars(task.cost);
+  // Materials list — use taskOptions if available, else primary product only.
+  let materials = [];
+  if(typeof taskOptions === 'function'){
+    const opts = taskOptions(task) || [];
+    opts.forEach(o => (o.products || []).forEach(p => {
+      if(p && p.product) materials.push({name:p.product, pcost:p.pcost || ''});
+    }));
+  }
+  if(!materials.length && task.product){
+    materials.push({name:task.product, pcost:task.pcost || ''});
+  }
+  const materialsHtml = materials.length
+    ? materials.map(m => `
+        <span class="po-grid-lbl">${esc(m.name)}</span>
+        <span class="po-grid-val mono">${esc(m.pcost || '—')}</span>`).join('')
+    : `<span class="po-grid-lbl" style="color:var(--t3);font-style:italic">No materials</span><span></span>`;
+  // Synthesized activity feed
+  const activity = [];
+  if(walk) activity.push({dot:'green', who: walk.conductor || 'Field agent', action: ` captured photo on ${walk.label}`, time: walk.date});
+  if(task.gc) activity.push({dot:'blue', who: task.gc, action: ' assigned to task', time: 'Apr 21, 2026'});
+  if(isApproved) activity.push({dot:'green', who: 'Admin', action: ' approved the task', time: 'Recently'});
+  if(task.editRequested) activity.push({dot:'red', who: 'Admin', action: ' requested edit', time: 'Recently'});
+  const activityHtml = activity.map(a => `
+    <div class="po-tl-item">
+      <div class="po-tl-dot ${a.dot||''}"></div>
+      <div class="po-tl-who">${esc(a.who)}<span class="po-tl-action">${esc(a.action)}</span></div>
+      <div class="po-tl-time">${esc(a.time)}</div>
+    </div>`).join('');
+  document.getElementById('poDetail').innerHTML = `
+    <div class="po-section" style="padding-top:24px">
+      <div class="po-header-title">${esc(task.name)}</div>
+      <div class="po-header-group">${esc(room)}</div>
+      <div class="po-header-totalrow">
+        <span class="po-header-totalrow-total"><span class="po-header-totalrow-lbl">Task total</span><span class="po-header-totalrow-val">${esc(task.cost || _fmtDollars(taskTotal))}</span></span>
+        <a class="po-header-totalrow-edit" href="#" onclick="event.preventDefault();closePoModal();if(typeof selectTask==='function')selectTask(${task.id});">Go to Editor →</a>
+      </div>
+    </div>
+    <div class="po-section">
+      <div class="po-section-title">Photo info</div>
+      <div class="po-grid">
+        <span class="po-grid-lbl">Status</span><span class="po-grid-val status" style="color:${statusColor}">${esc(statusMeta.label)}</span>
+        <span class="po-grid-lbl">Walk date</span><span class="po-grid-val mono">${walk ? esc(walk.date) : '—'}</span>
+        <span class="po-grid-lbl">Field user</span><span class="po-grid-val">${walk ? esc(walk.conductor) : '—'}</span>
+        <span class="po-grid-lbl">Source</span><span class="po-grid-val">${(photo.id % 2 === 0) ? 'Taken by Phone' : 'Upload from Computer'}</span>
+      </div>
+    </div>
+    <div class="po-section">
+      <div class="po-section-title">Task info</div>
+      <div class="po-grid">
+        <span class="po-grid-lbl">Task ID</span><span class="po-grid-val mono">${esc(task.code)}</span>
+        <span class="po-grid-lbl">Contractor</span><span class="po-grid-val">${esc(task.gc || 'Unassigned')}</span>
+        <span class="po-grid-lbl">Labor <span style="color:var(--t3);font-size:11.5px">· ${esc(task.qty || '—')} × ${esc(task.rate || '—')}</span></span>
+        <span class="po-grid-val mono">${_fmtDollars(laborTotal)}</span>
+        ${materialsHtml}
+      </div>
+    </div>
+    <div class="po-section">
+      <div class="po-section-title">Notes</div>
+      ${task.desc ? `<div class="po-note-box">${esc(task.desc)}<div class="po-note-meta">Task description</div></div>` : '<div style="color:var(--t3);font-size:12px;font-style:italic">No notes yet.</div>'}
+    </div>`;
+  document.getElementById('poFooter').innerHTML = `
+    <button class="po-btn danger po-btn-icononly" onclick="closePoModal();if(typeof toast==='function')toast('Delete flow — not wired')" title="Delete" aria-label="Delete">
+      <svg viewBox="0 0 14 14"><path d="M2 3.5h10M5.5 3.5V2.5h3v1M6 6v4M8 6v4M3.5 3.5l.5 8h6l.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="po-btn" onclick="closePoModal();if(typeof openEditRequest==='function')openEditRequest(${task.id})">
+      <svg viewBox="0 0 14 14"><path d="M9.5 2.5l2 2-7 7H2.5v-2l7-7z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Request edit
+    </button>
+    <button class="po-btn primary" onclick="if(typeof toggleApprove==='function')toggleApprove(${task.id});closePoModal()">
+      <svg viewBox="0 0 14 14"><path d="M3 7.5l3 3 5-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      ${isApproved ? 'Approved' : 'Approve'}
+    </button>`;
+}
+function openGalleryPhoto(pid){
+  _poEnsureDom();
+  const photo = (PHOTOS || []).find(p => p.id === pid);
+  if(!photo){ if(typeof toast === 'function') toast('Photo not found'); return; }
+  __poCurrentPid = pid;
+  // Find the task the photo belongs to (task photos have p.task === t.code; group photos have no task).
+  const task = photo.kind === 'task'
+    ? TASKS.find(t => t.code === photo.task)
+    : (photo.kind === 'group' ? TASKS.find(t => t.room === photo.room) : null);
+  _poRenderLeft(photo, task);
+  _poRenderRight(photo, task);
+  const el = document.getElementById('poModal');
+  el.classList.add('is-open');
+  document.body.style.overflow = 'hidden';
+  // Tell shell to dim its global nav so the scrim looks continuous across
+  // the iframe boundary.
+  try{ window.parent && window.parent.postMessage({type:'kai-photo-overlay', open:true}, '*'); }catch(_){}
+}
+function toggleGalleryPhotoSel(pid){ if(typeof toast==='function') toast('Selection UI coming next'); }
+function openAddGalleryModal(target){
+  const label = target.kind==='unsorted' ? 'Unsorted' : (target.kind==='group' ? target.room + ' (group)' : target.room + ' · ' + target.task);
+  if(typeof toast==='function') toast('Add photos to ' + label + ' — upload flow next');
+}
+function toggleGalSection(key){
+  mediaCollapsed.has(key) ? mediaCollapsed.delete(key) : mediaCollapsed.add(key);
+  renderGallery();
+}
