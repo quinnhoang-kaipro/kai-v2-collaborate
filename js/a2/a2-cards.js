@@ -9,6 +9,46 @@
    the panel — no IIFE, so any module can call any other.
    ════════════════════════════════════════════════════════════════════ */
 /* ── one margin card ── */
+/* ── collapsed / expanded ────────────────────────────────────────────
+   With every change revealed there are two dozen cards against a dozen rows,
+   and layoutCards has to push them down to stop them overlapping — so a card
+   ends up nowhere near the line it annotates and stops reading as attached to
+   it. Collapsed, a card is one line tall, so the stack fits beside the rows it
+   belongs to and the leader lines land where they should.
+
+   Accordion rather than free toggling: one card open at a time is what keeps
+   the stack short enough for the rest to stay attached. */
+let a2CardOpen = null;   // ch._ord of the expanded card, or null
+
+function a2ToggleCard(ord){
+  a2CardOpen = (a2CardOpen === ord) ? null : ord;
+  applyCardOpen();
+  requestAnimationFrame(layoutCards);
+}
+function applyCardOpen(){
+  CARDS.forEach(c => c.el.classList.toggle('is-collapsed', a2CardOpen !== c.ch._ord));
+}
+
+/* The single line a collapsed card shows: the first field that moved, with a
+   count of any others. Enough to scan the lane without opening anything. */
+function cardPeek(ch){
+  const r = (ch.rows && ch.rows[0]);
+  if(!r) return '';
+  const clip = (v, n) => { v = String(v == null ? '' : v); return v.length > n ? v.slice(0, n - 1) + '\u2026' : v; };
+  const more = (ch.rows.length > 1) ? `<span class="a2-mc-peek-n">+${ch.rows.length - 1}</span>` : '';
+  let txt;
+  if(r.add !== undefined){
+    txt = `<span class="a2-mc-add">${a2Esc(clip(r.add, 40))}</span>`;
+  } else if(r.remove !== undefined){
+    txt = `<span class="a2-strike">${a2Esc(clip(r.remove, 40))}</span>`;
+  } else {
+    txt = `<span class="a2-mc-peek-f">${a2Esc(clip(r.field, 12))}</span>`
+        + `<span class="a2-mc-arrow">\u2192</span><b>${a2Esc(clip(r.to, 22))}</b>`
+        + (r.delta ? ` <span class="a2-mc-new is-pos">(${a2Esc(r.delta)})</span>` : '');
+  }
+  return txt + more;
+}
+
 function cardHtml(t, ch){
   const ct = CT[ch.ct], ver = VER[ch.ver];
   const rowsHtml = ch.rows.map(r=>{
@@ -31,8 +71,20 @@ function cardHtml(t, ch){
       <span class="a2-mc-when">${a2Esc(ver.date)}</span>
     </div>
     <div class="a2-mc-task"><b>${a2Esc(t.name)}</b> <span class="a2-tid">· ${a2Esc(t.code)}</span></div>
-    ${rowsHtml}
-    <div class="a2-mc-who"><span class="a2-mc-av">${initials(ch.who)}</span><b>${a2Esc(ch.who)}</b> · ${a2Esc(ver.label)}<span class="a2-role">${a2Esc(ch.role)}</span></div>`;
+    <!-- Collapsed head: the type swatch, the line, and the date on one row, so
+         a collapsed card is two lines rather than three. Every 20px of card
+         height is 20px of drift away from the row it points at. -->
+    <div class="a2-mc-chead">
+      <span class="a2-swatch"></span>
+      <b>${a2Esc(t.name)}</b>
+      <span class="a2-tid">${a2Esc(t.code)}</span>
+      <span class="a2-mc-cwhen">${a2Esc(ver.date.replace(/,? \d{4}$/, ''))}</span>
+    </div>
+    <div class="a2-mc-peek">${cardPeek(ch)}</div>
+    <div class="a2-mc-body">
+      ${rowsHtml}
+      <div class="a2-mc-who"><span class="a2-mc-av">${initials(ch.who)}</span><b>${a2Esc(ch.who)}</b> · ${a2Esc(ver.label)}<span class="a2-role">${a2Esc(ch.role)}</span></div>
+    </div>`;
 }
 function buildCards(){
   const lane = document.getElementById('a2Margin');
@@ -48,8 +100,10 @@ function buildCards(){
     CARDS.push({el, code:t.code, ch});
     el.addEventListener('mouseenter', ()=>spotRow(t.code, true, el));
     el.addEventListener('mouseleave', ()=>spotRow(t.code, false, el));
+    el.addEventListener('click', ()=>a2ToggleCard(ch._ord));
   });
   applyCardVisibility();
+  applyCardOpen();   // buildCards runs on every re-render; keep the open one open
 }
 /* A card shows once the playhead has passed its change; a changed line dims
    until then. */
