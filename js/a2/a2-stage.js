@@ -17,6 +17,10 @@
    on IS_DRAFT_STAGE — that one is only set for edit and submitted, and would
    miss the review step.
    ════════════════════════════════════════════════════════════════════ */
+/* True when the scope on screen has not been approved yet — read by the
+   scrubber, which otherwise labels every band and milestone "approved". */
+let A2_SCOPE_UNAPPROVED = false;
+
 (function a2TrimToStage(){
   // Every stage before the scope goes live. A change order is a change against
   // a published scope, so none of these can have one — including the two
@@ -26,6 +30,7 @@
   const PRE_APPROVAL = ['edit', 'submitted', 'reviewing', 'review-done', 'awaiting-pub'];
   const stage = (typeof STAGE_ID !== 'undefined') ? STAGE_ID : '';
   if(!PRE_APPROVAL.includes(stage)) return;
+  A2_SCOPE_UNAPPROVED = true;
 
   // Keep the Scope phase's own history and drop only the change orders. The
   // scope-building edits are things that really did happen while authoring it,

@@ -36,6 +36,13 @@ function a2Jit(s){
 
 let POS  = [];   // POS[m] = where playhead position m sits on the bar, 0..100
 let APPR = {};   // APPR[m] = the version approved at m, for the milestone ticks
+let TSPAN = null;// {T0, span} — the calendar the bar is drawn on, for dated marks
+
+/* a2-stage.js sets this when the scope on screen has not been approved yet.
+   Guarded so the scrubber still works if that module isn't loaded. */
+function a2Unapproved(){
+  return (typeof A2_SCOPE_UNAPPROVED !== 'undefined') && A2_SCOPE_UNAPPROVED;
+}
 
 function buildTimePos(){
   const N = ORDERED.length;
@@ -117,7 +124,7 @@ function buildScrubber(){
     const right = (i+1 < segs.length) ? (POS[Math.min(segs[i+1].start, N)] || 0) : 100;
     const jump  = s.end;
     return `<button class="a2-tl-group" type="button" data-ver="${s.ver}" style="left:${left.toFixed(3)}%;width:${Math.max(0,right-left).toFixed(3)}%"
-      onclick="a2SetT(${jump})" title="${a2Esc(VER[s.ver].label)} · approved ${a2Esc(VER[s.ver].date)}">${a2Esc(VER[s.ver].label)}</button>`;
+      onclick="a2SetT(${jump})" title="${a2Esc(VER[s.ver].label)} · ${a2Unapproved() ? 'in draft — not approved yet' : `approved ${a2Esc(VER[s.ver].date)}`}">${a2Esc(VER[s.ver].label)}</button>`;
   }).join('');
   document.getElementById('a2Scrub').innerHTML = `
     <div class="a2-tl-hdr">
@@ -196,7 +203,10 @@ function updateScrubber(){
   }
   date = a2AsOfDate();
   // Sitting on one of the three approvals is worth saying out loud.
-  const appr = APPR[timeT] ? `<span class="a2-cl-appr">Approved</span>` : '';
+  // The milestone chip marks the change that closed a version — but only once
+  // that version has actually been approved. In draft it would be asserting the
+  // thing the stage is still waiting for.
+  const appr = (APPR[timeT] && !a2Unapproved()) ? `<span class="a2-cl-appr">Approved</span>` : '';
   SREFS.label.innerHTML = `<span class="a2-cl-dot" style="--mk:${dot}"></span><span class="a2-cl-txt">${a2Esc(txt)}</span>${appr}<span class="a2-cl-date">${a2Esc(date)}</span><span class="a2-tl-idx">${timeT} / ${N}</span>`;
   SREFS.prev.disabled = timeT <= 0;
   SREFS.next.disabled = timeT >= N;

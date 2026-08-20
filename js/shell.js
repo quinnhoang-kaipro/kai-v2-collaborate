@@ -691,7 +691,8 @@ function syncAppApproveBtn(){
   btn.disabled = false;
   // Every other state keeps the approve path the button was born with.
   btn.onclick = triggerIframeApprove;
-  if(proj === 'edit')           btn.textContent = 'Submit Scope';
+  // Step 2 only — Step 1 (empty scope) returned above with 'Dispatch'.
+  if(proj === 'edit')           btn.textContent = 'Hand off Scope';
   else if(proj === 'review-done')btn.textContent = 'Send to publish';
   else if(proj === 'awaiting-pub')btn.textContent = 'Approve & publish';
   else if(proj === 'published') btn.textContent = 'Submit closeout';
