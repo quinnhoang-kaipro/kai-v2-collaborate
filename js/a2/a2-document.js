@@ -1,7 +1,7 @@
 /* ════════════════════════════════════════════════════════════════════
    ARTIFACT 2 · DOCUMENT · the page frame and the paper
-   shellHtml() is the whole tab's markup — controls card, paper, margin lane,
-   legend, timebar shell. renderDoc() fills the table AS OF the playhead.
+   shellHtml() is the whole tab's markup — version cards, paper, margin lane,
+   timebar shell. renderDoc() fills the table AS OF the playhead.
    Row selection lives here too, since it is a property of the paper.
 
    Part of the Artifact 2 tab, split across js/a2/*.js. These are plain
@@ -9,8 +9,8 @@
    the panel — no IIFE, so any module can call any other.
    ════════════════════════════════════════════════════════════════════ */
 /* ════════════ SHELL ════════════
-   Controls card + paper + gutter + legend, all inside one scroller, with the
-   scrubber pinned below — the Artifact tab's stacked-page proportions. */
+   Version cards + paper + annotation gutter, all inside one scroller, with
+   the scrubber pinned below — the Artifact tab's stacked-page proportions. */
 function shellHtml(){
   return `<div class="a2-root" id="a2Root">
     <div class="a2-scroll" id="a2Scroll">
@@ -96,7 +96,10 @@ function renderDoc(){
       const labv = valueAsOf(t,'Labor', t.labor);
       const amtv = valueAsOf(t,'Amount', t.amount);
       const gcHtml = gcv.val ? a2Esc(gcv.val) : `<span class="a2-gc-none">Unassigned</span>`;
-      const cls = ['a2-row', isGone?'is-removed':''].filter(Boolean).join(' ');
+      // EXPERIMENT (a2-expand.js): the opened line and its detail row keep full
+      // opacity while the rest of the document fades back.
+      const isOpen = (typeof a2Expanded !== 'undefined') && a2Expanded === t.code;
+      const cls = ['a2-row', isGone?'is-removed':'', isOpen?'is-open':''].filter(Boolean).join(' ');
       const badge  = t.added ? '<span class="a2-badge is-added">New line</span>' : '';
       const rbadge = isGone  ? '<span class="a2-badge is-removed">Removed</span>' : '';
       out.push(`<tr class="${cls}" data-a2-code="${a2Esc(t.code)}" onclick="a2Select('${a2Esc(t.code)}')">
@@ -115,16 +118,20 @@ function renderDoc(){
       const mods = modsAsOf(t);
       const modsHtml = mods.length
         ? `<div class="a2-mods">${mods.map(x=>`<span class="a2-mod ${x.isNew?'is-new':''}">${a2Esc(x.m)}</span>`).join('')}</div>` : '';
-      out.push(`<tr class="a2-row a2-detail" data-a2-detail="${a2Esc(t.code)}" onclick="a2Select('${a2Esc(t.code)}')">
+      out.push(`<tr class="a2-row a2-detail${isOpen?' is-open':''}" data-a2-detail="${a2Esc(t.code)}" onclick="a2Select('${a2Esc(t.code)}')">
         <td colspan="6">
           <div class="a2-desc">${a2Esc(t.desc)}</div>
           <div class="a2-prod"><span class="a2-lbl">Product</span> <span>${a2Esc(prodv.val)}</span></div>
           ${modsHtml}
         </td>
       </tr>`);
+      // EXPERIMENT (a2-expand.js): the Editor's modules for this task, inline.
+      if(isOpen && typeof a2ExpandRowHtml === 'function') out.push(a2ExpandRowHtml(t));
     });
   });
-  document.getElementById('a2Body').innerHTML = out.join('');
+  const bodyEl = document.getElementById('a2Body');
+  bodyEl.innerHTML = out.join('');
+  bodyEl.classList.toggle('is-expanded', !!(typeof a2Expanded !== 'undefined' && a2Expanded));
   renderTotal(roomCount);
   applySelection();   // the rows were just replaced; re-mark the selected line
 }
@@ -141,7 +148,7 @@ function selectRow(code){
   applySelection();
 }
 /* Running total at the current playhead, in the paper's own footer — the
-   same figure the controls card reports, stated where a scope document
+   same figure the version cards report, stated where a scope document
    states it. */
 function renderTotal(rooms){
   const foot = document.getElementById('a2Foot');

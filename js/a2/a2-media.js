@@ -48,6 +48,10 @@ function a2MediaBtn(kind, key, n){
 function a2NameHtml(t){
   const real = (typeof TASKS !== 'undefined') ? TASKS.find(x => x.code === t.code) : null;
   if(!real || typeof selectTask !== 'function') return `<span class="a2-name-txt">${a2Esc(t.name)}</span>`;
-  return `<button class="a2-name-txt a2-open" type="button" title="Open ${a2Esc(t.name)} in the Editor — current state"
-    onclick="event.stopPropagation();a2OpenInEditor(${real.id})">${a2Esc(t.name)}<svg class="a2-open-chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2.5l4 3.5-4 3.5"/></svg></button>`;
+  // EXPERIMENT (a2-expand.js): expands the Editor's own modules in place rather
+  // than navigating to the Editor tab, so you keep your place in the history.
+  // window.a2OpenInEditor still exists if we want the jump back.
+  const open = (typeof a2Expanded !== 'undefined') && a2Expanded === t.code;
+  return `<button class="a2-name-txt a2-open${open?' is-open':''}" type="button" title="${open?'Collapse':'Show this task from the Editor, inline'}"
+    onclick="event.stopPropagation();a2ToggleExpand('${a2Esc(t.code)}',event)">${a2Esc(t.name)}<svg class="a2-open-chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2.5l4 3.5-4 3.5"/></svg></button>`;
 }

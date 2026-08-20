@@ -49,6 +49,11 @@ function syncTight(){
 function renderArtifact2(){
   const body = document.getElementById('workBody');
   if(!body) return;
+  // This rebuilds the whole tab, and renderAll() calls it for any edit made
+  // anywhere in the panel — including from the Editor modules embedded in an
+  // expanded line. Losing the reader's scroll position on every keystroke made
+  // the surface feel broken, so carry it across the rebuild.
+  const prevScroll = (document.getElementById('a2Scroll') || {}).scrollTop || 0;
   buildOrdered();
   body.innerHTML = shellHtml();
   const root = document.getElementById('a2Root');
@@ -61,6 +66,10 @@ function renderArtifact2(){
   updateAsof();
   requestAnimationFrame(layoutCards);
   startWatch();
+  if(prevScroll){
+    const sc = document.getElementById('a2Scroll');
+    if(sc){ sc.scrollTop = prevScroll; requestAnimationFrame(() => { sc.scrollTop = prevScroll; }); }
+  }
   // A font swap changes card heights, so the stack has to settle again.
   if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ if(document.getElementById('a2Root')) layoutCards(); });
 }
