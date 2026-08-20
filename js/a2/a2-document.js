@@ -42,7 +42,10 @@ function shellHtml(){
                   <th class="a2-c-num a2-r">Qty</th>
                   <th class="a2-c-num a2-r">Labor</th>
                   <th class="a2-c-amt a2-r">Amount</th>
-                  <th class="a2-c-media"><span class="a2-sr">Photos &amp; notes</span></th>
+                  <!-- Named only in the wide state: while the scope list is showing
+                       this column is 28px of photo icon, which "Latest photo"
+                       would not fit. The screen-reader label covers that case. -->
+                  <th class="a2-c-media"><span class="a2-sr">Photos &amp; notes</span><span class="a2-c-media-lbl">Latest photo</span></th>
                 </tr>
               </thead>
               <tbody id="a2Body"></tbody>

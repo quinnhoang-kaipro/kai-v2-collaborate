@@ -53,6 +53,11 @@
    list is showing; widens to hold the photo once it is hidden. Width lives on
    the <th> so the column sizes once for the whole table. */
 body.sb-collapsed .a2-c-media{width:184px}
+/* The column is only named once it is wide enough to hold a name. In icon mode
+   the .a2-sr label carries it for assistive tech instead. */
+.a2-c-media-lbl{display:none}
+body.sb-collapsed .a2-c-media-lbl{display:inline}
+body.sb-collapsed .a2-c-media .a2-sr{display:none}
 body.sb-collapsed .a2-media-cell{white-space:normal;padding-top:12px!important;padding-bottom:12px!important}
 
 .a2-pc{display:flex;flex-direction:column;gap:5px;text-align:left}
