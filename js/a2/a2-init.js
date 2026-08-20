@@ -93,3 +93,7 @@ window.renderArtifact2 = renderArtifact2;
 window.a2SetT = setT;
 window.a2Select = selectRow;
 window.a2JumpVer = function(v){ setT(verEnd(v)); };   // land on that version as approved
+/* Read by the shell's hand-off modal, which lives outside this iframe and so
+   cannot see REVIEWS/REVIEWERS directly. Defaults to the version being worked
+   on — the first in the ladder, which a2-stage.js keeps in the draft stages. */
+window.a2ReviewState = function(v){ return reviewStateOf(v || VER_ORDER[0]); };

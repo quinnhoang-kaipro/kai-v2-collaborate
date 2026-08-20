@@ -1233,6 +1233,34 @@ function setProjectStage(s){
   render();
 }
 
+/* Who has signed the scope off and who still owes it, for the hand-off modal.
+   The roster lives with the scope data inside the panel iframe, so it is read
+   across through the export rather than kept a second time here — two copies
+   of the same team would drift the moment either changed. Returns '' if the
+   panel is not up yet, and the modal simply goes without. */
+function reviewRosterHtml(){
+  let st = null;
+  try{
+    const ifr = document.getElementById('iframe') || document.querySelector('iframe');
+    if(ifr && ifr.contentWindow && typeof ifr.contentWindow.a2ReviewState === 'function'){
+      st = ifr.contentWindow.a2ReviewState();
+    }
+  }catch(e){ return ''; }
+  if(!st || !st.total) return '';
+  const row = (p, done) => `
+    <div class="rv-row${done?' is-done':''}">
+      <span class="rv-mark">${done ? ICONS.check : ''}</span>
+      <span class="rv-who"><b>${p.who}</b><span class="rv-role">${p.role}</span></span>
+      <span class="rv-when">${done ? p.date : 'Not yet reviewed'}</span>
+    </div>`;
+  return `
+    <div class="rv-list">
+      <div class="rv-hdr">Reviewed by ${st.signed.length} of ${st.total}</div>
+      ${st.signed.map(p => row(p, true)).join('')}
+      ${st.pending.map(p => row(p, false)).join('')}
+    </div>`;
+}
+
 function submitForReview(){
   openModal({
     icon:'check',
@@ -1242,7 +1270,7 @@ function submitForReview(){
     // is that everyone else needs to ask for access while it sits in the queue.
     // The field-agent recall clause that used to hang off the end is gone: the
     // first sentence now covers it, and better.
-    body:`Once handed off, you can make edits and hand off again as long as the doc hasn't been approved. The rest of your team would need to request edit access while the scope is waiting for approval.`,
+    body:`Once handed off, you can make edits and hand off again as long as the doc hasn't been approved. The rest of your team would need to request edit access while the scope is waiting for approval.${reviewRosterHtml()}`,
     confirm:'Hand off',
     onConfirm:()=>{
       setProjectStage('submitted');

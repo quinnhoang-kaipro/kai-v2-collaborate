@@ -61,9 +61,26 @@
    approval diamonds use. These are the only marks on the bar that take the
    pointer, so the name is reachable on hover; a press still falls through to
    the wrap and scrubs. */
-.a2-tl-sign{position:absolute;top:12px;width:10px;height:10px;margin-left:-5px;box-sizing:border-box;border-radius:50%;background:var(--white);border:1px solid var(--stroke);color:var(--midtone);display:flex;align-items:center;justify-content:center;z-index:2;cursor:pointer;transition:background .14s,border-color .14s,color .14s}
+.a2-tl-sign{position:absolute;top:12px;width:10px;height:10px;margin-left:-5px;padding:0;box-sizing:border-box;-webkit-appearance:none;appearance:none;border-radius:50%;background:var(--white);border:1px solid var(--stroke);color:var(--midtone);display:flex;align-items:center;justify-content:center;z-index:2;cursor:pointer;transition:background .14s,border-color .14s,color .14s,box-shadow .14s}
 .a2-tl-sign svg{display:block;width:6px;height:6px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .a2-tl-sign.is-revealed{background:var(--ink);border-color:var(--ink);color:var(--white)}
+.a2-tl-sign:hover,.a2-tl-sign.is-open{box-shadow:0 0 0 3px rgba(26,26,26,.12)}
+.a2-tl-sign:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+/* The popover a check opens. Anchored above the lane rather than below it —
+   the bar is pinned to the bottom of the panel, so there is nothing below to
+   open into. `left` and the arrow offset are both set by the JS, which clamps
+   the box inside the wrap so a check at either end still reads. */
+.a2-sign-pop{position:absolute;bottom:calc(100% - 10px);z-index:40;display:flex;align-items:center;gap:9px;padding:7px 11px;background:var(--white);border:1px solid var(--stroke);border-radius:7px;box-shadow:0 6px 20px rgba(26,26,26,.16);white-space:nowrap;cursor:default}
+.a2-sign-pop[hidden]{display:none}
+.a2-sign-pop::after{content:'';position:absolute;top:100%;left:var(--a2-arrow,50%);width:8px;height:8px;margin-left:-4px;margin-top:-4px;background:var(--white);border-right:1px solid var(--stroke);border-bottom:1px solid var(--stroke);transform:rotate(45deg)}
+.a2-sp-av{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--white);font-family:var(--mono);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;letter-spacing:.02em}
+.a2-sp-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.a2-sp-who{display:flex;align-items:baseline;gap:6px}
+.a2-sp-who b{font-size:11.5px;color:var(--ink);font-weight:600}
+.a2-sp-role{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.a2-sp-act{font-size:10.5px;color:var(--t2)}
+.a2-sp-date{flex-shrink:0;font-size:10.5px;font-weight:600;color:var(--t2);padding-left:4px;border-left:1px solid var(--stroke);align-self:stretch;display:flex;align-items:center;padding-left:9px}
 
 /* ── version bands ──
    The three change orders as spans of the timeline rather than buttons: a

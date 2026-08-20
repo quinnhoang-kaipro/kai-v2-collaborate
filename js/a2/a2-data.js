@@ -63,6 +63,16 @@ const VER_ORDER = ['orig','co1','co2'];
    to approval, not on the approval date itself. The scrubber draws each one as
    a check in its own lane under the rail, and the dates are what place it —
    these fall inside the Apr 2 → Apr 30 span the bar is drawn on. */
+/* The roster a scope goes out to for sign-off. REVIEWS below records only the
+   people who actually signed, so anyone here without an entry there has not
+   yet — which is the half the hand-off modal needs in order to say who is
+   still outstanding. */
+const REVIEWERS = [
+  {who:'T. Okafor',  role:'Manager'},
+  {who:'S. Patel',   role:'Ops'},
+  {who:'D. Reyes',   role:'Designer'},
+  {who:'M. Alvarez', role:'Field Agent'},
+];
 const REVIEWS = [
   {ver:'orig', who:'S. Patel',  role:'Ops',      date:'Apr 10, 2026'},
   {ver:'orig', who:'T. Okafor', role:'Manager',  date:'Apr 11, 2026'},

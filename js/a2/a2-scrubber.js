@@ -129,6 +129,63 @@ function a2Signoffs(){
   return REVIEWS.filter(r => VER[r.ver] && VER_ORDER.indexOf(r.ver) !== -1 && a2PctOf(r.date) != null);
 }
 
+/* Who has signed a version and who still owes it. REVIEWERS is the roster the
+   scope goes out to; REVIEWS records only the people who actually signed, so
+   the ones missing from it are the outstanding ones. Both halves are needed
+   together — "two of four" is the useful fact, and neither list says it alone.
+   The shell's hand-off modal reads this through window.a2ReviewState.
+
+   Named differently from that export on purpose: a top-level `function` in a
+   classic script becomes a window property, so exporting a wrapper under the
+   same name would overwrite this one and the wrapper would call itself. */
+function reviewStateOf(ver){
+  const roster = (typeof REVIEWERS === 'undefined') ? [] : REVIEWERS;
+  const done   = (typeof REVIEWS   === 'undefined') ? [] : REVIEWS.filter(r => r.ver === ver);
+  const signed = roster.map(p => {
+    const hit = done.find(r => r.who === p.who);
+    return hit ? {who:p.who, role:p.role, date:hit.date} : null;
+  }).filter(Boolean);
+  const pending = roster.filter(p => !done.some(r => r.who === p.who));
+  return {ver, label:(VER[ver]||{}).label || ver, signed, pending, total:roster.length};
+}
+
+/* ── the sign-off popover ──
+   A check is small and the lane is unlabelled, so on its own it does not say
+   what it is. Pressing one opens the full sentence anchored underneath it.
+   Clamped to the wrap so a check at either end of the bar still reads. */
+function closeSignPop(){
+  const p = document.getElementById('a2SignPop');
+  if(p) p.hidden = true;
+  document.querySelectorAll('#a2Scrub .a2-tl-sign.is-open').forEach(s => s.classList.remove('is-open'));
+}
+function openSignPop(sg){
+  const pop = document.getElementById('a2SignPop');
+  if(!pop || !SREFS) return;
+  const wasOpen = sg.classList.contains('is-open');
+  closeSignPop();
+  if(wasOpen) return;                 // pressing the open one closes it again
+  const d = sg.dataset;
+  pop.innerHTML = `<span class="a2-sp-av">${a2Esc(d.init)}</span>`
+    + `<span class="a2-sp-txt"><span class="a2-sp-who"><b>${a2Esc(d.who)}</b><span class="a2-sp-role">${a2Esc(d.role)}</span></span>`
+    + `<span class="a2-sp-act">Marked ${a2Esc(d.ver)} as reviewed</span></span>`
+    + `<span class="a2-sp-date">${a2Esc(d.date)}</span>`;
+  pop.hidden = false;
+  sg.classList.add('is-open');
+  const wrapW = SREFS.wrap.clientWidth, popW = pop.offsetWidth;
+  const centre = (+d.p / 100) * wrapW;
+  const left = Math.max(0, Math.min(Math.max(0, wrapW - popW), centre - popW/2));
+  pop.style.left = left + 'px';
+  pop.style.setProperty('--a2-arrow', (centre - left) + 'px');
+}
+/* Registered once at load, not per build: buildScrubber runs on every render
+   and would otherwise stack a listener each time. */
+document.addEventListener('pointerdown', e=>{
+  if(!e.target || !e.target.closest) return;
+  if(e.target.closest('.a2-tl-sign') || e.target.closest('.a2-sign-pop')) return;
+  closeSignPop();
+});
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape') closeSignPop(); });
+
 /* ════════════ SCRUBBER ════════════
    Built once so a pointer-drag survives the re-render of everything else;
    only the dynamic bits update as the playhead moves. */
@@ -148,8 +205,10 @@ function buildScrubber(){
   const signs = a2Signoffs().map(r=>{
     const pct = a2PctOf(r.date);
     const ttl = `${r.who} · ${r.role} marked ${VER[r.ver].label} as reviewed · ${r.date}`;
-    return `<div class="a2-tl-sign" data-p="${pct.toFixed(3)}" style="left:${pct.toFixed(3)}%" title="${a2Esc(ttl)}"
-      ><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2.2 5.3 4.2 7.3 7.8 3.2"/></svg></div>`;
+    return `<button class="a2-tl-sign" type="button" data-p="${pct.toFixed(3)}" data-who="${a2Esc(r.who)}"
+      data-role="${a2Esc(r.role)}" data-ver="${a2Esc(VER[r.ver].label)}" data-date="${a2Esc(r.date)}"
+      data-init="${a2Esc(initials(r.who))}" style="left:${pct.toFixed(3)}%" title="${a2Esc(ttl)}" aria-label="${a2Esc(ttl)}"
+      ><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2.2 5.3 4.2 7.3 7.8 3.2"/></svg></button>`;
   }).join('');
   // Bands come from the version bounds, so the Scope band covers the run of
   // changes that built the scope rather than collapsing to a point at 0.
@@ -179,6 +238,7 @@ function buildScrubber(){
         ${signs}
         <div class="a2-tl-thumb" id="a2TlThumb"></div>
       </div>
+      <div class="a2-sign-pop" id="a2SignPop" hidden></div>
     </div>
     <div class="a2-tl-groups">${groups}</div>`;
   SREFS = {
@@ -205,6 +265,12 @@ function buildScrubber(){
     return best;
   };
   SREFS.wrap.addEventListener('pointerdown', e=>{
+    // A check is a thing to open, not a place to scrub to. It sits in its own
+    // lane below the rail, so pressing one is never an attempt to move the
+    // playhead — swallow it and show who signed instead.
+    const sg = e.target.closest && e.target.closest('.a2-tl-sign');
+    if(sg){ openSignPop(sg); return; }
+    closeSignPop();
     dragging = true;
     try{ SREFS.wrap.setPointerCapture(e.pointerId); }catch(_){}
     const m = toM(e.clientX); (m !== timeT) ? setT(m) : updateScrubber();
