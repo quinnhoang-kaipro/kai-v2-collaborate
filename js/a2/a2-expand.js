@@ -56,28 +56,29 @@ function a2ExpandRowHtml(t){
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   PHOTO RAIL  ·  EXPERIMENT (part 2)
-   A third lane, right of the paper, holding one photo per line — aligned to
-   the line it belongs to, the same way the change cards align on the left.
-   So a row reads left to right: what changed, the line itself, what it looks
-   like. Only exists when the scope list is hidden; that's the width it spends.
+   PHOTO COLUMN  ·  EXPERIMENT (part 2)
+   The photo lives in the table's last column, not in a lane beside it — so it
+   aligns with its row by construction and there is no measured layout to keep
+   honest. (An earlier version was an absolutely-positioned lane like the change
+   cards; a table cell does the same job for free.)
 
-   Positioning mirrors layoutCards exactly: offsets are rect deltas against
-   the lane, and items stack downward so two photos never overlap. Which means
-   a photo can drift below its row when the one above it is taller than the
-   gap — same tradeoff the cards already make.
+   The column has two states, driven by whether the scope list is showing:
+     · scope visible — just the small photo icon, as before
+     · scope hidden  — the photo itself, with its date and a More link
+   More opens the shared Photos + Notes drawer on that line.
 
    HONEST CAVEAT about "changes as you scrub". The seeded walks are dated
    Jan 8 – Mar 15 2026, but the change history runs Apr 12 – Apr 30 2026 — so
    every photo predates every version, and a true "latest photo on or before
    the playhead date" filter would return the same Mar 15 shot at every
-   position. The pane would look broken. So the playhead's FRACTION through the
-   change list selects how far through that line's chronological photos we are:
-   park at the start and you see the initial walk, scrub to the present and you
-   see the closeout. It reads exactly like the real thing, but it is a stand-in
-   for date logic. Real fix is re-dating WALKS in data.js to straddle the
-   change orders.
+   position. So the playhead's FRACTION through the change list selects how far
+   through that line's chronological photos we are: park at the start and you
+   see the initial walk, scrub to the present and you see the closeout. It reads
+   exactly like the real thing, but it is a stand-in for date logic. Real fix is
+   re-dating WALKS in data.js to straddle the change orders.
    ════════════════════════════════════════════════════════════════════ */
+
+function a2ScopeHidden(){ return document.body.classList.contains('sb-collapsed'); }
 
 /* Rank a photo by where its walk sits in the project's chronology. */
 function a2WalkRank(p){
@@ -96,48 +97,40 @@ function a2PhotoAsOf(code){
   return pool[Math.min(pool.length - 1, Math.round(frac * (pool.length - 1)))];
 }
 
-function buildPhotoRail(){
-  const rail = document.getElementById('a2PhotoRail');
-  if(!rail) return;
-  rail.innerHTML = '';
-  document.querySelectorAll('#a2Body tr[data-a2-code]').forEach(row => {
-    const code = row.dataset.a2Code;
-    const p = a2PhotoAsOf(code);
-    if(!p) return;
-    const t = (typeof TASKS !== 'undefined') ? TASKS.find(x => x.code === code) : null;
-    const el = document.createElement('div');
-    el.className = 'a2-prow';
-    el.dataset.code = code;
-    el.innerHTML = (typeof _pgdPhotoFigHtml === 'function')
-      ? _pgdPhotoFigHtml(p, 0, t ? t.name : (p.room || 'Project'), t ? t.name : null)
-      : '';
-    // Hovering a photo spotlights its line, same as hovering a card.
-    el.addEventListener('mouseenter', () => spotRow(code, true, el));
-    el.addEventListener('mouseleave', () => spotRow(code, false, el));
-    // Recede with the document when another line is expanded.
-    if(a2Expanded && a2Expanded !== code) el.classList.add('is-dim');
-    rail.appendChild(el);
-  });
-  layoutPhotos();
+/* What goes in the media cell. Returns '' when the line has no photos, so the
+   column is simply empty rather than offering a door onto nothing. */
+function a2MediaCellHtml(t){
+  const n = a2TaskPhotoCount(t.code);
+  if(!a2ScopeHidden()) return a2MediaBtn('task', t.code, n);   // icon only
+  const p = a2PhotoAsOf(t.code);
+  if(!p) return '';
+  const walk = (p.walk && typeof walkFor === 'function') ? walkFor(p.walk) : null;
+  const date = walk ? walk.date : '';
+  const bg   = (typeof _photoBg === 'function') ? _photoBg(p, 0) : 'var(--stroke)';
+  const open = (typeof openGalleryPhoto === 'function')
+    ? `onclick="event.stopPropagation();openGalleryPhoto(${p.id})"` : '';
+  const more = (typeof openMediaDrawer === 'function')
+    ? `<button class="a2-pc-more" type="button" title="All photos and notes for this line"
+         onclick="event.stopPropagation();openMediaDrawer('task','${a2Esc(t.code)}','photos')">More</button>` : '';
+  return `<div class="a2-pc">
+    <div class="a2-pc-img" style="background:${bg}" ${open} title="${a2Esc(walk ? walk.label : 'Photo')}"></div>
+    <div class="a2-pc-foot">
+      <span class="a2-pc-date">${a2Esc(date)}</span>
+      ${more}
+    </div>
+  </div>`;
 }
 
-function layoutPhotos(){
-  const rail = document.getElementById('a2PhotoRail');
-  if(!rail) return;
-  const railTop = rail.getBoundingClientRect().top;
-  const GAP = 10;
-  let cursor = 0;
-  rail.querySelectorAll('.a2-prow').forEach(el => {
-    const row = document.querySelector('#a2Body tr[data-a2-code="' + el.dataset.code + '"]');
-    if(!row){ el.style.display = 'none'; return; }
-    el.style.display = '';
-    const top = Math.max(row.getBoundingClientRect().top - railTop, cursor);
-    el.style.top = top + 'px';
-    cursor = top + el.offsetHeight + GAP;
-  });
-  // Absolutely-positioned children only, so the lane needs a height of its own.
-  rail.style.minHeight = cursor ? cursor + 'px' : '';
-}
-
-/* renderDoc calls this after replacing the table. */
-function renderA2Photo(){ buildPhotoRail(); }
+/* The cell's two states differ, so the table has to be rebuilt when the scope
+   list opens or closes. panel-init.js dispatches a window resize on toggle,
+   which is the only signal available — nothing else fires. */
+let a2WasHidden = null;
+window.addEventListener('resize', () => {
+  const now = a2ScopeHidden();
+  if(now === a2WasHidden) return;
+  a2WasHidden = now;
+  if(!document.getElementById('a2Root')) return;
+  renderDoc();
+  buildCards();
+  requestAnimationFrame(layoutCards);
+});

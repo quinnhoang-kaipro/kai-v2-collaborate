@@ -41,24 +41,31 @@
 .a2-open.is-open .a2-open-chev{opacity:.6;transform:rotate(90deg)}
 .a2-open-chev{transition:opacity .12s,transform .12s}
 
-/* ── LANES: cards left, paper centre, photos right (experiment part 2) ──
+/* ── LANES: cards left, document centre (experiment part 2) ──────────
    The card lane moved to the left of the paper, so its connector has to point
    right — the pseudo-elements in panel.css put the leader line and dot on the
    card's left edge, which now faces away from the document. */
 .a2-card::before{left:auto;right:-24px}
 .a2-card::after{left:auto;right:-27px}
 
-/* ── PHOTO LANE ──────────────────────────────────────────────────────
-   Absolutely-positioned items aligned per row by layoutPhotos(), same as the
-   card lane. Only present when the scope list is hidden. */
-.a2-photorail{display:none}
-body.sb-collapsed .a2-photorail{display:block;width:180px;flex-shrink:0;position:relative;min-height:120px}
-body.sb-collapsed .a2-root.is-tight .a2-photorail{display:none}   /* no width to spare */
-.a2-prow{position:absolute;left:0;right:0;transition:opacity .18s}
-.a2-prow .pgd-photo-fig{flex:none;width:100%;gap:4px}
-.a2-prow .pgd-photo{width:100%}
-.a2-prow .pgd-photo-date{font-size:10.5px}
-/* Fades with the document when a line is expanded, so the open line's photo is
-   the only one at full strength. Set in JS (buildPhotoRail) — the rail is a
-   sibling of .a2-paper, not of #a2Body, so no selector reaches it from there. */
-.a2-prow.is-dim{opacity:.2}
+/* ── PHOTO COLUMN ────────────────────────────────────────────────────
+   The table's last column. Narrow enough for just the icon while the scope
+   list is showing; widens to hold the photo once it is hidden. Width lives on
+   the <th> so the column sizes once for the whole table. */
+body.sb-collapsed .a2-c-media{width:184px}
+body.sb-collapsed .a2-media-cell{white-space:normal;padding-top:12px!important;padding-bottom:12px!important}
+
+.a2-pc{display:flex;flex-direction:column;gap:5px;text-align:left}
+.a2-pc-img{width:100%;aspect-ratio:4/3;cursor:pointer;transition:box-shadow .12s,transform .12s}
+.a2-pc-img:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(26,26,26,.14)}
+/* Date and More share one line — the date anchors left, More trails right. */
+.a2-pc-foot{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.a2-pc-date{font-family:var(--body);font-size:11.5px;color:var(--t2);white-space:nowrap}
+.a2-pc-more{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--t3);background:none;border:0;padding:0;cursor:pointer;
+  flex-shrink:0;transition:color .12s}
+.a2-pc-more:hover{color:var(--ink);text-decoration:underline;text-underline-offset:2px}
+.a2-pc-more:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+/* Recedes with the document when another line is expanded. */
+#a2Body.is-expanded > tr:not(.is-open) .a2-pc{opacity:.35}

@@ -87,9 +87,6 @@ function layoutCards(){
   // The lane is absolutely-positioned children only, so it has no height of
   // its own — give it one so a long card stack can't spill past the page.
   lane.style.minHeight = cursor ? cursor + 'px' : '';
-  // EXPERIMENT (a2-expand.js): the photo lane is measured the same way, so it
-  // has to settle whenever the card lane does.
-  if(typeof layoutPhotos === 'function') layoutPhotos();
 }
 
 /* ── highlight the row a card points to, and vice versa ── */

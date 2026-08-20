@@ -62,11 +62,6 @@ function shellHtml(){
               <tfoot id="a2Foot"></tfoot>
             </table>
           </div>
-          <!-- EXPERIMENT (a2-expand.js): photo rail. Furthest right so it never
-               disturbs the card lane's measured stacking. CSS-gated on
-               body.sb-collapsed — it only exists when hiding the scope list
-               freed up the width to spend on it. -->
-          <div class="a2-photorail" id="a2PhotoRail"></div>
         </div>
 
       </div>
@@ -123,7 +118,7 @@ function renderDoc(){
         <td class="a2-num">${a2Esc(qtyv.val)}</td>
         <td class="a2-num">${a2Esc(labv.val)}</td>
         <td class="a2-amt">${a2Esc(amtv.val)}</td>
-        <td class="a2-media-cell">${a2MediaBtn('task', t.code, a2TaskPhotoCount(t.code))}</td>
+        <td class="a2-media-cell">${(typeof a2MediaCellHtml === 'function') ? a2MediaCellHtml(t) : a2MediaBtn('task', t.code, a2TaskPhotoCount(t.code))}</td>
       </tr>`);
       const prodv = valueAsOf(t,'Product', t.product);
       const mods = modsAsOf(t);
@@ -143,7 +138,6 @@ function renderDoc(){
   const bodyEl = document.getElementById('a2Body');
   bodyEl.innerHTML = out.join('');
   bodyEl.classList.toggle('is-expanded', !!(typeof a2Expanded !== 'undefined' && a2Expanded));
-  if(typeof renderA2Photo === 'function') renderA2Photo();   // EXPERIMENT
   renderTotal(roomCount);
   applySelection();   // the rows were just replaced; re-mark the selected line
 }
