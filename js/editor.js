@@ -293,7 +293,7 @@ function taskActivityFeed(t){
     return now >= want;
   };
   at(0, 'Event',           'Task created',                 'Jan 6, 2026',  'T. Okafor', 'decision');
-  at(1, 'Event',           'Submitted for review',         'Jan 9, 2026',  'T. Okafor', 'decision');
+  at(1, 'Event',           'Handed off for review',         'Jan 9, 2026',  'T. Okafor', 'decision');
   at(2, 'Approval status', 'Task reviewed',                'Jan 14, 2026', 'S. Patel',  'decision');
   at(3, 'Approval status', 'Task approved',                'Jan 16, 2026', 'T. Okafor', 'decision');
   at(3, 'Task status',     'Status → <b>Not started</b>',  'Jan 20, 2026', agent);

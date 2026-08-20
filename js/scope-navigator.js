@@ -267,7 +267,7 @@ function submitScopeChanges(){
     const label = btn.querySelector('span');
     if(label) label.textContent = 'Edit';
   }
-  if(typeof toast === 'function') toast('Scope changes submitted for review');
+  if(typeof toast === 'function') toast('Scope changes handed off for review');
 }
 function attDots(t){
   const keys=taskKeys(t);

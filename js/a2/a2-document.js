@@ -120,14 +120,20 @@ function renderDoc(){
         <td class="a2-num">${a2Esc(qtyv.val)}</td>
         <td class="a2-num">${a2Esc(labv.val)}</td>
         <td class="a2-amt">${a2Esc(amtv.val)}</td>
-        <td class="a2-media-cell">${(typeof a2MediaCellHtml === 'function') ? a2MediaCellHtml(t) : a2MediaBtn('task', t.code, a2TaskPhotoCount(t.code))}</td>
+        <!-- rowspan 2: the photo is taller than the name/option lines, and left in
+             this row alone it stretched the row and pushed the description row
+             down — the description floated a photo's height away from the name
+             it belongs to. Spanning both rows lets the photo occupy the line's
+             whole block while the text keeps its own rhythm. The detail row's
+             td is colspan 5 to match. -->
+        <td class="a2-media-cell" rowspan="2">${(typeof a2MediaCellHtml === 'function') ? a2MediaCellHtml(t) : a2MediaBtn('task', t.code, a2TaskPhotoCount(t.code))}</td>
       </tr>`);
       const prodv = valueAsOf(t,'Product', t.product);
       const mods = modsAsOf(t);
       const modsHtml = mods.length
         ? `<div class="a2-mods">${mods.map(x=>`<span class="a2-mod ${x.isNew?'is-new':''}">${a2Esc(x.m)}</span>`).join('')}</div>` : '';
       out.push(`<tr class="a2-row a2-detail${isOpen?' is-open':''}" data-a2-detail="${a2Esc(t.code)}" onclick="a2RowClick('${a2Esc(t.code)}',event)">
-        <td colspan="6">
+        <td colspan="5">
           <div class="a2-desc">${a2Esc(t.desc)}</div>
           <div class="a2-prod"><span class="a2-lbl">Product</span> <span>${a2Esc(prodv.val)}</span></div>
           ${modsHtml}

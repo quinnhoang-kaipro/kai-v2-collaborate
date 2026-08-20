@@ -32,7 +32,7 @@ const ROLES = [
 
 const STAGES = [
   {id:'edit',          name:'Edit',           sub:'Draft',                 iframe:'ProjectReview_ScopePanel_ShopEdit.html'},
-  {id:'submitted',     name:'Submit',         sub:'Locked',                iframe:'ProjectReview_ScopePanel_ShopEdit.html'},
+  {id:'submitted',     name:'Hand off',       sub:'Locked',                iframe:'ProjectReview_ScopePanel_ShopEdit.html'},
   {id:'reviewing',     name:'Review',         sub:'Admin reviewing',       iframe:'ProjectReview_ScopePanel_ShopEdit.html'},
   {id:'review-done',   name:'Review finished',sub:'Awaiting publish',      iframe:'ProjectReview_ScopePanel_ShopEdit.html'},
   {id:'awaiting-pub',  name:'Awaiting publish',sub:'Manager to review',    iframe:'ProjectReview_ScopePanel_ShopEdit.html'},
@@ -121,9 +121,9 @@ function homeStage(role, projectStage){
 const PRESETS = [
   {id:'empty-draft',        step:1, name:'Empty draft',                desc:'Fresh project, no tasks. Start building the scope from scratch.',
     state:{role:'admin', projectStage:'edit', viewStage:'edit', scopeSeed:'empty'}},
-  {id:'populated-draft',    step:2, name:'Populated draft',            desc:'Scope pre-built with tasks across all rooms. Ready to submit for review.',
+  {id:'populated-draft',    step:2, name:'Populated draft',            desc:'Scope pre-built with tasks across all rooms. Ready to hand off for review.',
     state:{role:'admin', projectStage:'edit', viewStage:'edit', scopeSeed:'full'}},
-  {id:'mid-review',         step:3, name:'Submitted, admin reviewing', desc:'Scope has been submitted and admin is actively reviewing tasks.',
+  {id:'mid-review',         step:3, name:'Handed off, admin reviewing', desc:'Scope has been handed off and admin is actively reviewing tasks.',
     state:{role:'admin', projectStage:'reviewing', viewStage:'reviewing', scopeSeed:'full'}},
   // Only relevant when the 2-step approval flow is on — filtered out by renderPresets otherwise.
   {id:'awaiting-publish',   step:4, name:'Review complete, awaiting publish', desc:'Admin approved the review. Manager needs to approve and publish (2-step).', twoStepOnly:true,
@@ -243,7 +243,7 @@ let currentVersionId = 'v3';
 function v3StatusTag(){
   const proj = state.projectStage;
   if(proj==='edit')       return {tag:'In Draft',  tagCls:'archived'};
-  if(proj==='submitted')  return {tag:'Submitted', tagCls:'outdated'};
+  if(proj==='submitted')  return {tag:'Handed off', tagCls:'outdated'};
   if(proj==='reviewing' || proj==='review-done' || proj==='awaiting-pub')
                           return {tag:'In Review', tagCls:'outdated'};
   if(proj==='published' || proj==='closeout')
@@ -477,8 +477,8 @@ function renderVersionNotice(){
     notice.innerHTML = `
       <span class="ver-notice-tag">v3 draft</span>
       <span class="ver-notice-mode">Editing</span>
-      <span class="ver-notice-body">Submit changes to admin for review when you're done.</span>
-      <button class="ver-notice-btn is-primary" onclick="submitScopeForReview()">Submit for review</button>`;
+      <span class="ver-notice-body">Hand off changes to admin for review when you're done.</span>
+      <button class="ver-notice-btn is-primary" onclick="submitScopeForReview()">Hand off for review</button>`;
     return;
   }
   if(inReview){
@@ -503,12 +503,12 @@ function renderVersionNotice(){
         <span class="ver-notice-tag">v3 current</span>
         <span class="ver-notice-mode">Editing</span>
         <span class="ver-notice-body">Changes are sent to admin for review as a change order.</span>
-        <button class="ver-notice-btn is-primary" onclick="submitScopeForReview()">Submit for review</button>`;
+        <button class="ver-notice-btn is-primary" onclick="submitScopeForReview()">Hand off for review</button>`;
     } else {
       notice.innerHTML = `
         <span class="ver-notice-tag">v3 current</span>
         <span class="ver-notice-mode">View-only</span>
-        <span class="ver-notice-body">This scope is approved. To make changes, we'll create a draft copy you can submit to admin for review.</span>
+        <span class="ver-notice-body">This scope is approved. To make changes, we'll create a draft copy you can hand off to admin for review.</span>
         <button class="ver-notice-btn" onclick="duplicateAndEdit()">Duplicate &amp; edit</button>`;
     }
     return;
@@ -902,7 +902,7 @@ function subStatusMeta(sgId){
 /* ── stage status text + style for the action bar ── */
 const STATUS_META={
   edit:        {cls:'draft',       label:'Draft'},
-  submitted:   {cls:'submitted',   label:'Submitted'},
+  submitted:   {cls:'submitted',   label:'Handed off'},
   reviewing:   {cls:'review',      label:'In review'},
   'review-done':{cls:'review-done',label:'Review finished'},
   'awaiting-pub':{cls:'review-done',label:'Awaiting publish'},
@@ -928,7 +928,7 @@ function renderActBar(){
 }
 
 function messageFor(role, stage){
-  if(stage==='edit') return `Build and refine the scope. Submit for review when ready.`;
+  if(stage==='edit') return `Build and refine the scope. Hand off for review when ready.`;
   if(stage==='submitted') return `Scope is locked. Recall to keep editing.`;
   if(stage==='reviewing') return state.twoStep
     ? `Admin reviews each task. Hand off to manager when done.`
@@ -964,7 +964,7 @@ function renderActions(){
   const wrap=document.getElementById('tbActions');
   let main='';
   if(viewStage==='edit' && (state.role==='admin' || state.role==='field_agent')){
-    main = btn('primary','Submit for review','submitForReview()');
+    main = btn('primary','Hand off for review','submitForReview()');
   } else if(viewStage==='submitted' && state.role==='admin'){
     main = btn('primary','Begin review','beginReview()');
   } else if(viewStage==='reviewing' && state.role==='admin'){
@@ -1147,7 +1147,7 @@ function computeLock(){
     if(viewingOutdated) return outdatedScopeLock();
     return {
       cap:'Scope is locked',
-      title:'This scope has been submitted',
+      title:'This scope has been handed off',
       body:`Live editing is paused while the scope is in <b>${STATUS_META[state.projectStage]?.label||state.projectStage}</b>. ${state.projectStage==='submitted'?'Recall it to the draft to keep editing, or:':''}`,
       actions: state.projectStage==='submitted'
         ? `<button class="btn btn-secondary" onclick="recallToDraft()">Recall to draft</button> <button class="btn btn-primary" onclick="jumpStage('${state.projectStage}')">Go back to current step</button>`
@@ -1160,8 +1160,8 @@ function computeLock(){
     return {
       cap:'Not ready for review',
       title:'Scope still in draft',
-      body:`The scope hasn't been submitted yet. Submit it from the Edit stage to begin review.`,
-      actions:`<button class="btn btn-secondary" onclick="jumpStage('edit')">Go to Edit</button> <button class="btn btn-primary" onclick="submitForReview()">Submit now</button>`,
+      body:`The scope hasn't been handed off yet. Hand it off from the Edit stage to begin review.`,
+      actions:`<button class="btn btn-secondary" onclick="jumpStage('edit')">Go to Edit</button> <button class="btn btn-primary" onclick="submitForReview()">Hand off now</button>`,
     };
   }
   // Publish lock ONLY fires when the project hasn't reached publish yet — not
@@ -1236,22 +1236,22 @@ function setProjectStage(s){
 function submitForReview(){
   openModal({
     icon:'check',
-    title:'Submit scope for review?',
+    title:'Hand off scope for review?',
     // The old copy said the scope locks outright, which isn't what happens —
     // you keep editing and re-submitting right up until approval; what changes
     // is that everyone else needs to ask for access while it sits in the queue.
     // The field-agent recall clause that used to hang off the end is gone: the
     // first sentence now covers it, and better.
-    body:`Once submitted, you can make edits and submit again as long as the doc hasn't been approved. The rest of your team would need to request edit access while the scope is waiting for approval.`,
-    confirm:'Submit',
+    body:`Once handed off, you can make edits and hand off again as long as the doc hasn't been approved. The rest of your team would need to request edit access while the scope is waiting for approval.`,
+    confirm:'Hand off',
     onConfirm:()=>{
       setProjectStage('submitted');
-      toast('Submitted for review');
+      toast('Handed off for review');
     }
   });
 }
 function recallToDraft(){
-  if(state.projectStage!=='submitted'){ toast('Can only recall while submitted, before review starts.'); return; }
+  if(state.projectStage!=='submitted'){ toast('Can only recall while handed off, before review starts.'); return; }
   setProjectStage('edit');
   toast('Returned to draft');
 }
@@ -1263,7 +1263,7 @@ function sendBackToDraft(){
   openModal({
     icon:'arrow',
     title:'Send back to draft?',
-    body:'This unlocks the scope for editing. Anyone with edit access can keep building until it\'s re-submitted.',
+    body:'This unlocks the scope for editing. Anyone with edit access can keep building until it\'s handed off again.',
     confirm:'Send back',
     onConfirm:()=>{
       setProjectStage('edit');
