@@ -15,6 +15,7 @@ function renderWork(){
   }
   if(workMode==='shop'){ renderShop(); return; }
   if(workMode==='artifact'){ renderArtifact(); return; }
+  if(workMode==='artifact2'){ renderArtifact2(); return; }
   if(workMode==='pano'){ renderPano(); return; }
   const sel=selId?TASKS.find(t=>t.id===selId):null;
   const modeLabel=WORK_MODES.find(m=>m.id===workMode).label;

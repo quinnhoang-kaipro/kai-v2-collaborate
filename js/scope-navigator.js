@@ -1023,6 +1023,13 @@ function _decisionVerb(){
   const mode = (typeof PROJ_MODE !== 'undefined') ? PROJ_MODE : '';
   return (st === 'awaiting-pub' || mode === 'closeout') ? 'approve' : 'review';
 }
+/* Step 7 (closeout sign-off) drops the confirm/with-note menu: the approve
+   control is a single button that commits on click, and a success modal
+   offers the note afterwards. The review stages (steps 3 and 4) keep the
+   two-item menu, so this is gated to closeout alone. */
+function _decisionDirect(){
+  return (typeof PROJ_MODE !== 'undefined') && PROJ_MODE === 'closeout';
+}
 /* Re-render after a decision. renderAll covers the task rows and group
    headers, but the scope-level control sits in the sidebar header, which
    only renderStateBar fills — without it the scope box or button keeps
@@ -1139,12 +1146,30 @@ function apApproveWithNote(kind, key){
 /* Abandoning the drawer abandons the approval with it. */
 function apClearPendingApproval(){ apPendingApproval = null; }
 
-/* The button. Unapproved it opens the menu; approved it is a label. */
-function _approveCtrlHtml(done, menuKey, onConfirm, onNote, doneTitle){
+/* ── Direct approve (step 7) ──────────────────────────────────────
+   Closeout skips the menu: the button commits the approval outright. The
+   per-level approve helpers already fire their own toast, so there's nothing
+   more to do here. `kind` is 'task'|'group'|'scope' and `key` is the task id,
+   group key, or '' for scope. */
+function apApproveDirect(kind, key){
+  apMenuKey = null;
+  if(kind === 'task')      apApproveTask(Number(key));
+  else if(kind === 'group')apApproveGroup(key);
+  else                     apApproveScope();
+}
+
+/* The button. Unapproved it opens the menu; approved it is a label. In
+   closeout (`onDirect` set + _decisionDirect) it commits on click instead. */
+function _approveCtrlHtml(done, menuKey, onConfirm, onNote, doneTitle, onDirect){
   const w = _decisionWords();
   if(done){
     return `<span class="ap-ctrl is-done" title="${esc(doneTitle)}">
       <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7"/></svg>${w.done}
+    </span>`;
+  }
+  if(_decisionDirect() && onDirect){
+    return `<span class="ap-wrap">
+      <button type="button" class="ap-ctrl" onclick="event.stopPropagation();${onDirect}">${w.action}</button>
     </span>`;
   }
   const open = apMenuKey === menuKey;
@@ -1167,7 +1192,8 @@ function _approveCtrlHtml(done, menuKey, onConfirm, onNote, doneTitle){
 function taskDecisionHtml(t){
   if(!_isDecisionStage()) return '';
   return _approveCtrlHtml(_decisionSet().has(t.id), 'task:' + t.id,
-    `apApproveTask(${t.id})`, `apApproveWithNote('task','${t.id}')`, _decisionWords().done);
+    `apApproveTask(${t.id})`, `apApproveWithNote('task','${t.id}')`, _decisionWords().done,
+    `apApproveDirect('task','${t.id}')`);
 }
 function groupDecisionHtml(g){
   if(!_isDecisionStage() || !g.items.length) return '';
@@ -1177,7 +1203,8 @@ function groupDecisionHtml(g){
   // can rest in — the button stays live until the last one lands.
   return _approveCtrlHtml(_decisionState(g.items) === 'all', 'group:' + g.key,
     `apApproveGroup('${key}')`, `apApproveWithNote('group','${key}')`,
-    `${total} task${total === 1 ? '' : 's'} ${_decisionWords().past}`);
+    `${total} task${total === 1 ? '' : 's'} ${_decisionWords().past}`,
+    `apApproveDirect('group','${key}')`);
 }
 function scopeDecisionHtml(){
   if(!_isDecisionStage()) return '';
@@ -1185,7 +1212,8 @@ function scopeDecisionHtml(){
   if(!list.length) return '';
   return _approveCtrlHtml(_decisionState(list) === 'all', 'scope',
     'apApproveScope()', `apApproveWithNote('scope','')`,
-    `${list.length} task${list.length === 1 ? '' : 's'} ${_decisionWords().past}`);
+    `${list.length} task${list.length === 1 ? '' : 's'} ${_decisionWords().past}`,
+    `apApproveDirect('scope','')`);
 }
 /* The stage CTA is a gate now, not the action: it can't fire until every task
    carries the decision, and it says how far along you are until then. */
@@ -1734,6 +1762,18 @@ function productLineTotal(p){
   const labor = (typeof _parseDollars === 'function') ? _parseDollars(p.labor) : (parseFloat(String(p.labor || '0').replace(/[^0-9.-]/g,'')) || 0);
   return q * (parts + labor);
 }
+/* Per-line-item (product) delta vs the approved snapshot. Uses the options tree
+   captured by _snapshotOptions so a single line's qty/parts/labor edit shows its
+   own +/- amount, matching the task/group/scope rollups. Returns 0 when there's
+   no snapshot (draft) or the line is unchanged, so deltaChipHtml renders nothing. */
+function productLineDelta(t, o, p){
+  const orig = (typeof __TASK_ORIGINALS !== 'undefined') ? __TASK_ORIGINALS[t && t.id] : null;
+  if(!orig || !Array.isArray(orig.options)) return 0;
+  const so = orig.options.find(x => x.id === o.id); if(!so) return 0;
+  const sp = (so.products || []).find(x => x.id === p.id);
+  if(!sp) return productLineTotal(p);   // line added since approval — the whole amount is new
+  return productLineTotal(p) - productLineTotal(sp);
+}
 // Recompute one option's cost from the sum of its products' line totals,
 // then roll every option's cost back up into the task total — same
 // change-order / snapshot-delta plumbing commitTaskOption used to own.
@@ -2004,28 +2044,10 @@ function _coTaskChanges(t){
   }
   return out;
 }
-function _coChangeSummaryHtml(t){
-  const o = (typeof __TASK_ORIGINALS !== 'undefined') ? __TASK_ORIGINALS[t.id] : null;
-  const changes = _coTaskChanges(t);
-  if(!o || (!changes.length && !taskDelta(t))) return '';
-  const delta = taskDelta(t);
-  const newCost = _parseDollars(o.cost) + delta;
-  const arrow = `<svg class="co-chg-arrow" viewBox="0 0 12 10" aria-hidden="true"><path d="M1 5h9M7 2l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-  const rows = changes.map(c => `<li class="co-chg">
-      <span class="co-chg-field">${esc(c.label)}</span>
-      <span class="co-chg-from">${esc(c.from) || 'empty'}</span>${arrow}<span class="co-chg-to">${esc(c.to) || 'empty'}</span>
-    </li>`).join('');
-  const totalRow = delta ? `<div class="co-chg-total">
-      <span class="co-chg-total-lbl">New total</span>
-      <span class="co-chg-from">${esc(o.cost || '$0')}</span>${arrow}<span class="co-chg-to">$${Math.round(newCost).toLocaleString()}</span>
-      ${deltaChipHtml(delta)}
-    </div>` : '';
-  return `<div class="co-chg-summary">
-    <div class="co-chg-head"><b>Change Order</b> · ${changes.length} ${changes.length === 1 ? 'change' : 'changes'}</div>
-    <ul class="co-chg-list">${rows}</ul>
-    ${totalRow}
-  </div>`;
-}
+/* _coChangeSummaryHtml (the itemized Change Order card) was removed — the
+   Editor banner now shows a compact draft message instead. _coTaskChanges
+   above is still used to detect whether a task has staged changes (which
+   message to show); it no longer feeds a rendered summary. */
 function deltaChipHtml(d){
   if(!d) return '';
   const cls = d > 0 ? 'is-over' : 'is-under';
@@ -2244,6 +2266,35 @@ function openGroupDrawer(room,tab){
   document.getElementById('drawer-scrim').classList.add('open');
   dwTab(dwActiveTab);
 }
+/* ── Media drawer (Photos + Notes) ───────────────────────────────────
+   Artifact 2 opens the same #drawer as everything else, but as a two-tab
+   media drawer rather than the notes-only one. `media` on dwCtx is what
+   dwTab keys off: it renders the tab bar and allows the photos tab. No
+   History tab — Artifact 2 IS the history, so a history tab inside it would
+   answer a question the page already answered.
+
+   `kind` is 'task' (key = a task code, which is what Artifact 2's snapshot
+   carries instead of an id) or 'room' (key = the room name). */
+function openMediaDrawer(kind, key, tab){
+  if(kind === 'task'){
+    const t = TASKS.find(x => x.code === key); if(!t) return;
+    dwCtx = {type:'task', id:t.id, media:true};
+    document.getElementById('dwTask').textContent = `${t.room} · ${t.code}`;
+    document.getElementById('dwTitle').textContent = t.name;
+  } else {
+    const items = TASKS.filter(t => t.room === key);
+    dwCtx = {type:'room', room:key, media:true};
+    document.getElementById('dwTask').textContent = `Room · ${items.length} ${items.length===1?'task':'tasks'}`;
+    document.getElementById('dwTitle').textContent = key;
+  }
+  // The composer is off in a media drawer, so none of its state applies —
+  // but reset it anyway so reopening a normal drawer afterwards starts clean.
+  dwNoteResetEditState();
+  dwNoteHidden = true;
+  dwTab(tab || 'photos');
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer-scrim').classList.add('open');
+}
 function closeDrawer(){
   document.getElementById('drawer').classList.remove('open');
   document.getElementById('drawer-scrim').classList.remove('open');
@@ -2258,17 +2309,70 @@ function closeDrawer(){
    with it. The `tab` argument is kept because a dozen call sites pass 'notes'
    and the state is still worth tracking if a second tab ever returns. */
 function dwTab(tab){
-  dwActiveTab = tab || 'notes';
+  const media = !!(dwCtx && dwCtx.media);
+  dwActiveTab = tab || (media ? 'photos' : 'notes');
+  const tabs = document.getElementById('dwTabs');
+  if(tabs) tabs.innerHTML = media ? dwTabBarHtml() : '';
   if(!dwCtx) return;
   const body = document.getElementById('dwBody');
+  if(media && dwActiveTab === 'photos'){
+    body.innerHTML = dwPhotos();
+    return;
+  }
+  // A media drawer's notes tab is read-only: it hangs off a historical
+  // document, and writing a note against a past version isn't a thing that
+  // surface can honour.
   if(dwCtx.type === 'task'){
     const t = TASKS.find(x => x.id === dwCtx.id); if(!t) return;
-    body.innerHTML = dwNotes(taskNotes(t));
+    body.innerHTML = dwNotes(taskNotes(t), {readOnly:media});
   } else if(dwCtx.type === 'scope'){
-    body.innerHTML = dwNotes(scopeNotesPool());
+    body.innerHTML = dwNotes(scopeNotesPool(), {readOnly:media});
   } else {
-    body.innerHTML = dwNotes(groupNotesForRoom(dwCtx.room));
+    body.innerHTML = dwNotes(groupNotesForRoom(dwCtx.room), {readOnly:media});
   }
+}
+/* Counts live on the tabs so you can see there's nothing behind one before
+   paying a click for it. */
+function dwTabBarHtml(){
+  const pn = dwMediaPhotos().length;
+  const nn = dwMediaNotes().length;
+  const tab = (id, label, n) =>
+    `<button class="dw-tab${dwActiveTab===id?' active':''}" data-dw="${id}" onclick="dwTab('${id}')">${label}${n?`<span class="n">${n}</span>`:''}</button>`;
+  return tab('photos','Photos',pn) + tab('notes','Notes',nn);
+}
+/* The photos behind the current context: a task's own shots, or every shot
+   filed against a room (its group scans plus each task's). */
+function dwMediaPhotos(){
+  if(!dwCtx || typeof PHOTOS === 'undefined') return [];
+  if(dwCtx.type === 'task'){
+    const t = TASKS.find(x => x.id === dwCtx.id);
+    return t ? PHOTOS.filter(p => p.kind === 'task' && p.task === t.code) : [];
+  }
+  const room = dwCtx.room;
+  return PHOTOS.filter(p => p.room === room && (p.kind === 'group' || p.kind === 'task'));
+}
+function dwMediaNotes(){
+  if(!dwCtx) return [];
+  if(dwCtx.type === 'task'){
+    const t = TASKS.find(x => x.id === dwCtx.id);
+    return t ? taskNotes(t) : [];
+  }
+  return (typeof groupNotesForRoom === 'function') ? groupNotesForRoom(dwCtx.room) : [];
+}
+/* Photo grid. Reuses _pgdPhotoFigHtml so a tile in the drawer is the same
+   tile as everywhere else — same provenance chip, hover meta, and date. */
+function dwPhotos(){
+  const photos = dwMediaPhotos();
+  if(!photos.length) return `<div class="dw-empty">No photos here yet.</div>`;
+  const t = (dwCtx.type === 'task') ? TASKS.find(x => x.id === dwCtx.id) : null;
+  // hideTag drops the chip that would only repeat the drawer's own title.
+  const hideTag = t ? t.name : dwCtx.room;
+  const cells = photos.map((p, i) => {
+    const label = (p.kind === 'group') ? (p.room || 'Project')
+                : (t ? t.name : ((TASKS.find(x => x.code === p.task) || {}).name || p.room));
+    return _pgdPhotoFigHtml(p, i, label, hideTag);
+  }).join('');
+  return `<div class="dw-photo-grid">${cells}</div>`;
 }
 
 /* ── notes (shared, by list) ─────────────────────────────────────
@@ -2499,7 +2603,7 @@ function dwSaveNote(){
     try{ run(); }catch(e){ console.error('approve-with-note failed', e); }
   }
 }
-function dwNotes(notes){
+function dwNotes(notes, opts){
   // Prepend any user-saved notes so freshly-added entries surface first.
   let all = notes || [];
   // The user's own notes are prepended, so any merged-list index below
@@ -2618,7 +2722,8 @@ function dwNotes(notes){
       <button class="dw-note-save" onclick="event.stopPropagation();dwSaveNote()">Save note</button>
     </div>
   </div>`;
-  return `<div class="dw-notes-wrap"><div class="dw-notes-list">${listHtml}</div>${composerHtml}</div>`;
+  const readOnly = !!(opts && opts.readOnly);
+  return `<div class="dw-notes-wrap"><div class="dw-notes-list">${listHtml}</div>${readOnly ? '' : composerHtml}</div>`;
 }
 /* task notes : sized to t.notes count */
 function taskNotes(t){
@@ -2661,7 +2766,7 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDrawer(); });
 
 /* ════════════ WORK SURFACE ════════════ */
 const _urlTab = new URLSearchParams(window.__KAI_QS || window.location.search).get('tab');
-let workMode = ['gallery','floorplan','shop','artifact','progress','pano'].includes(_urlTab) ? _urlTab : 'shop';   // 'gallery' | 'floorplan' | 'shop' | 'artifact' | 'progress' | 'pano'
+let workMode = ['gallery','floorplan','shop','artifact','artifact2','progress','pano'].includes(_urlTab) ? _urlTab : 'shop';   // 'gallery' | 'floorplan' | 'shop' | 'artifact' | 'artifact2' | 'progress' | 'pano'
 // Tab ids intentionally kept as 'pano' / 'progress' (URL routing, body
 // classes, and postMessage payloads all key off them). Only the display
 // labels changed: Pano → "Progress" (compare-walks timeline is what the
@@ -2679,6 +2784,7 @@ const _WORK_MODES_ALL = [
   {id:'floorplan',label:'Measurements'},   // id stays: it's the URL param and dispatch key
   {id:'pano',     label:'Progress'},
   {id:'artifact', label:'Artifact'},
+  {id:'artifact2',label:'Artifact 2'},   // scope change history — js/artifact2.js
 ];
 const _projModeParam = new URLSearchParams(window.__KAI_QS || window.location.search).get('projMode');
 const WORK_MODES = _projModeParam === 'closeout-approved'
@@ -2784,7 +2890,13 @@ function renderWorkHdr(){
     : '';
   // Copies model owns its own Share affordances (per-copy Share button in the
   // doc-view crumb + per-card Share in the index), so the work-hdr is bare.
-  document.getElementById('workHdr').innerHTML = `<div class="wmode-tabs">${tabs}</div>${scopeTools}`;
+  // Sits ahead of the tabs and only shows while the sidebar is collapsed —
+  // CSS-gated on body.sb-collapsed, since collapsing doesn't re-render this.
+  const showScope = `<button class="sb-show-scope" onclick="expandSidebar()" title="Show the scope list" aria-label="Show scope">
+    Show scope
+    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5 8 6l-3.5 3.5"/></svg>
+  </button>`;
+  document.getElementById('workHdr').innerHTML = `${showScope}<div class="wmode-tabs">${tabs}</div>${scopeTools}`;
   // Rebuild the af menu contents now that the button is back in the DOM.
   if(typeof renderFilter === 'function') renderFilter();
 }
@@ -2802,121 +2914,6 @@ function needsProduct(t){
 }
 function tasksNeedingProduct(){ return TASKS.filter(needsProduct); }
 
-/* ── PRODUCT CATALOG : per task category, three tiers ── */
-function productPool(t){
-  // Generic pool sized to the task; in production this is a real catalog query.
-  // Tier order: team (template/manager picks) → similar (matches description+budget) → other.
-  const base=(t.name||'').toLowerCase();
-  const cat=
-    /cabinet/.test(base)?'cabinet':
-    /counter|quartz/.test(base)?'counter':
-    /backsplash|tile/.test(base)?'tile':
-    /appliance/.test(base)?'appliance':
-    /floor|lvp|carpet|hardwood/.test(base)?'floor':
-    /paint/.test(base)?'paint':
-    /vanity/.test(base)?'vanity':
-    /shower/.test(base)?'shower':
-    /toilet/.test(base)?'toilet':
-    /\bopener\b/.test(base)?'mech':
-    /closet/.test(base)?'storage':
-    'generic';
-  const POOLS={
-    cabinet:[
-      {tier:'team',brand:'Diamond NOW',name:'Arcadia White Shaker Stock Cabinet',sku:'1003-432-100',unit:'LF',price:344,stock:'in',tags:['Template pick','Approved finish']},
-      {tier:'team',brand:'KraftMaid',name:'Putnam Maple Dove White',sku:'KM-23-PTNDOV',unit:'LF',price:389,stock:'in',tags:['Manager pick']},
-      {tier:'similar',brand:'Hampton Bay',name:'Designer Series Melvern White',sku:'1005-201-110',unit:'LF',price:298,stock:'in',tags:['Under budget']},
-      {tier:'similar',brand:'Project Source',name:'White Shaker Stock Cabinet 30x12',sku:'PS-WHTSH-3012',unit:'LF',price:262,stock:'low',tags:['Under budget']},
-      {tier:'other',brand:'Lifeart',name:'Anchester Shaker White',sku:'LA-AS-SHW',unit:'LF',price:412,stock:'in'},
-      {tier:'other',brand:'JK Cabinetry',name:'Mocha Shaker Maple',sku:'JK-MS-MAP',unit:'LF',price:455,stock:'in'},
-    ],
-    counter:[
-      {tier:'team',brand:'Hardwood Reflections',name:'5 ft. Saman Butcher Block with Live Edge & Blue Epoxy River',sku:'1530RIVBLSAM-60',unit:'ea',price:480,listPrice:564,stock:'in',tags:['Recommended','Designer pick'],coveragePerUnit:5,
-        image:'butcher_hero.png',
-        photos:[
-          'butcher_hero.png',
-          'butcher_1.jpg',
-          'butcher_2.jpg',
-          'butcher_3.jpg',
-          'butcher_4.jpg',
-        ],
-        source:'Home Depot',
-        sourceUrl:'https://www.homedepot.com/p/HARDWOOD-REFLECTIONS-5-ft-L-x-30-in-D-UV-Finished-Saman-Solid-Wood-Butcher-Block-Desktop-Countertop-with-Live-Edge-and-Blue-Epoxy-River-1530RIVBLSAM-60/313896119',
-        about:'Produce a rich accent to your home with this Hardwood Reflections butcher block countertop in UV-finished saman with a live edge and a signature blue epoxy river running through the center. 100% solid saman wood, factory-finished and ready to install as a kitchen countertop, island top, or desktop.',
-        highlights:['60 in. L × 30 in. D × 1.5 in. T actual dimensions','100% solid saman hardwood','UV-cured factory finish, no sealing needed on install','Live-edge sides with a hand-poured blue epoxy river','Ships direct — free returns in-store within 90 days'],
-        includes:'One 60 in. × 30 in. finished butcher block slab. Install hardware and adhesive sold separately.',
-        specs:{'Actual size':'60 × 30 × 1.5 in.','Material':'Saman solid wood','Finish':'UV cured, factory','Edge':'Live edge with blue epoxy river','Model #':'1530RIVBLSAM-60','Internet #':'313896119','Warranty':'Manufacturer 1-year limited'},
-      },
-      {tier:'team',brand:'MSI',name:'Calacatta Laza Quartz Slab (Polished)',sku:'CALAZA-PRE',unit:'SF',price:74,stock:'in',tags:['Template pick']},
-      {tier:'team',brand:'Silestone',name:'Eternal Calacatta Gold',sku:'SI-CALG-PRE',unit:'SF',price:82,stock:'in',tags:['Designer pick']},
-      {tier:'similar',brand:'Q Premium',name:'Aurora Quartz',sku:'QP-AUR',unit:'SF',price:68,stock:'in',tags:['Under budget']},
-      {tier:'similar',brand:'Stonemark',name:'Frost N Quartz',sku:'SM-FRN',unit:'SF',price:71,stock:'in'},
-      {tier:'other',brand:'Caesarstone',name:'Pure White 1141',sku:'CAS-1141',unit:'SF',price:96,stock:'in'},
-      {tier:'other',brand:'LG Viatera',name:'Minuet Quartz',sku:'LG-MIN',unit:'SF',price:79,stock:'in'},
-    ],
-    tile:[
-      {tier:'team',brand:'Daltile',name:'Rittenhouse Arctic White 3x6 Matte',sku:'1000-114-029',unit:'SF',price:26,stock:'in',tags:['Template pick']},
-      {tier:'team',brand:'MSI',name:'Highland Park Whisper White 3x6',sku:'MS-HPW-WW36',unit:'SF',price:28,stock:'in'},
-      {tier:'similar',brand:'Bedrosians',name:'Cloe Glossy White 3x6',sku:'BD-CLOE-W',unit:'SF',price:22,stock:'in',tags:['Under budget']},
-      {tier:'similar',brand:'Floor & Decor',name:'White Glossy Subway 3x6',sku:'FD-WGS-36',unit:'SF',price:18,stock:'in',tags:['Under budget']},
-      {tier:'other',brand:'American Olean',name:'Bright White 3x6 Glossy',sku:'AO-BW36',unit:'SF',price:24,stock:'in'},
-      {tier:'other',brand:'Cancos',name:'Manhattan Bevel White 3x6',sku:'CN-MAN-36',unit:'SF',price:32,stock:'in'},
-    ],
-    appliance:[
-      {tier:'team',brand:'GE Profile',name:'4-Piece Stainless Suite (Range, OTR, DW, Fridge)',sku:'PROFSUITE-SS',unit:'suite',price:3950,stock:'in',tags:['Template pick','Bundle']},
-      {tier:'team',brand:'Whirlpool',name:'4-Piece Stainless Suite',sku:'WHP-4SS',unit:'suite',price:3620,stock:'in'},
-      {tier:'similar',brand:'Frigidaire',name:'Gallery 4-Piece Stainless Suite',sku:'FG-GALSS',unit:'suite',price:3210,stock:'in',tags:['Under budget']},
-      {tier:'similar',brand:'Samsung',name:'Smart Stainless 4-Piece Suite',sku:'SAM-4SS',unit:'suite',price:4180,stock:'low'},
-      {tier:'other',brand:'KitchenAid',name:'Pro Stainless 4-Piece Suite',sku:'KA-PR4-SS',unit:'suite',price:5340,stock:'in'},
-    ],
-    floor:[
-      {tier:'team',brand:'Shaw',name:'Paragon Mix Plus LVP, Aluminum 9x59',sku:'SH-PAR-AL',unit:'SF',price:8.60,stock:'in',tags:['Template pick']},
-      {tier:'team',brand:'Mohawk',name:'SmartStrand Silk Berber, Cape May',sku:'MH-SS-CM',unit:'SY',price:42,stock:'in'},
-      {tier:'similar',brand:'LifeProof',name:'Sterling Oak LVP 7.1in',sku:'LP-STO-71',unit:'SF',price:6.20,stock:'in',tags:['Under budget']},
-      {tier:'similar',brand:'CoreLuxe',name:'Calais Oak Engineered LVP',sku:'CL-CAL-LVP',unit:'SF',price:5.80,stock:'low',tags:['Under budget']},
-      {tier:'other',brand:'Pergo',name:'Outlast+ Vintage Pewter Oak',sku:'PRG-VPO',unit:'SF',price:9.40,stock:'in'},
-    ],
-    paint:[
-      {tier:'team',brand:'Sherwin-Williams',name:'Agreeable Gray 7029 Satin (Gallon)',sku:'SW-7029-SAT',unit:'gal',price:78,stock:'in',tags:['Template color']},
-      {tier:'team',brand:'Sherwin-Williams',name:'Pure White 7005 Satin (Gallon)',sku:'SW-7005-SAT',unit:'gal',price:78,stock:'in',tags:['Template color']},
-      {tier:'similar',brand:'Behr',name:'Marquee Ultra Pure White Satin',sku:'BH-MQ-UPW',unit:'gal',price:62,stock:'in',tags:['Under budget']},
-      {tier:'similar',brand:'Benjamin Moore',name:'Aura Decorators White Satin',sku:'BM-AURA-DW',unit:'gal',price:84,stock:'in'},
-      {tier:'other',brand:'Glidden',name:'Diamond Pure White Satin',sku:'GL-DP-WS',unit:'gal',price:48,stock:'in'},
-    ],
-    vanity:[
-      {tier:'team',brand:'Home Decorators',name:'Sonoma 48" Double Vanity Pebble Grey',sku:'HD-SON48-PG',unit:'ea',price:1620,stock:'in',tags:['Designer pick']},
-      {tier:'team',brand:'James Martin',name:'Brookfield 48" Double Vanity Burnished Mahogany',sku:'JM-BRK48-BM',unit:'ea',price:2160,stock:'in'},
-      {tier:'similar',brand:'OVE Decors',name:'Edenderry 48" Double Vanity Dove Gray',sku:'OV-ED48-DG',unit:'ea',price:1180,stock:'in',tags:['Under budget']},
-      {tier:'other',brand:'Avanity',name:'Loft 48" Double Vanity Dark Walnut',sku:'AV-LOFT48-DW',unit:'ea',price:1840,stock:'in'},
-    ],
-    shower:[
-      {tier:'team',brand:'Daltile',name:'Modern Hex Carbon Black Mosaic Floor',sku:'1002-301-200',unit:'SF',price:28,stock:'in',tags:['Designer pick']},
-      {tier:'team',brand:'MSI',name:'Calacatta Gold 12x24 Polished Wall',sku:'MS-CG-1224P',unit:'SF',price:36,stock:'in',tags:['Designer pick']},
-      {tier:'similar',brand:'Florida Tile',name:'Pietra Art Carrara 12x24 Honed',sku:'FT-PAC-1224H',unit:'SF',price:24,stock:'in',tags:['Under budget']},
-      {tier:'other',brand:'Marazzi',name:'Travisano Bianco 12x24 Polished',sku:'MZ-TV-BL1224',unit:'SF',price:42,stock:'in'},
-    ],
-    toilet:[
-      {tier:'team',brand:'Kohler',name:'Cimarron Comfort Height Elongated',sku:'K-3589-0',unit:'ea',price:540,stock:'in',tags:['Template pick']},
-      {tier:'similar',brand:'American Standard',name:'Champion 4 Elongated',sku:'AS-CH4-EL',unit:'ea',price:368,stock:'in',tags:['Under budget']},
-      {tier:'other',brand:'TOTO',name:'Drake II Elongated 1.28GPF',sku:'TT-DR2-128',unit:'ea',price:712,stock:'in'},
-    ],
-    mech:[
-      {tier:'team',brand:'Chamberlain',name:'B970T Smart Belt Drive Opener',sku:'CH-B970T',unit:'ea',price:520,stock:'in',tags:['Template pick']},
-      {tier:'similar',brand:'LiftMaster',name:'8500W Wall Mount Smart',sku:'LM-8500W',unit:'ea',price:610,stock:'in'},
-      {tier:'other',brand:'Genie',name:'StealthDrive Connect Belt Drive',sku:'GN-STDC',unit:'ea',price:380,stock:'in'},
-    ],
-    storage:[
-      {tier:'team',brand:'ClosetMaid',name:'ShelfTrack 5-8 ft Closet Kit, White',sku:'CM-ST-58W',unit:'kit',price:460,stock:'in',tags:['Template pick']},
-      {tier:'similar',brand:'Rubbermaid',name:'HomeFree 4-8 ft Closet Kit',sku:'RB-HF-48',unit:'kit',price:320,stock:'in',tags:['Under budget']},
-      {tier:'other',brand:'Easy Track',name:'Deluxe Starter Closet White',sku:'ET-DSC-W',unit:'kit',price:620,stock:'in'},
-    ],
-    generic:[
-      {tier:'team',brand:'Vendor A',name:'Template-selected product',sku:'TPL-A-001',unit:t.qty?String(t.qty).replace(/[\d.\s]/g,'').trim()||'ea':'ea',price:Math.round(dollars(t.cost||0)*0.6/Math.max(1,parseFloat(t.qty)||1)),stock:'in',tags:['Template pick']},
-      {tier:'similar',brand:'Vendor B',name:'Similar option',sku:'SIM-B-002',unit:'ea',price:Math.round(dollars(t.cost||0)*0.55),stock:'in',tags:['Under budget']},
-      {tier:'other',brand:'Vendor C',name:'Other option',sku:'OTH-C-003',unit:'ea',price:Math.round(dollars(t.cost||0)*0.7),stock:'in'},
-    ],
-  };
-  return POOLS[cat]||POOLS.generic;
-}
 
 /* ── Cart state : taskId → { product, qty } ── */
 const cart = {};   // taskId → { product, qty }

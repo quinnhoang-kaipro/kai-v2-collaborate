@@ -260,6 +260,12 @@ function _tabEmptyHtml(mode){
       desc: 'Finish building the scope and submit it for review. The approved artifact with line items, prices, and totals will live here.',
       hint: 'Submit the scope for review from the top-right button',
     },
+    artifact2: {
+      icon: '<path d="M5 3h11l4 4v14H5z"/><path d="M15 3v5h5M9 12h7M9 16h4"/>',
+      title: 'No change history yet',
+      desc: 'Once a scope is approved and change orders start landing, every edit shows up here as a redline on the document with a margin card naming who changed what.',
+      hint: 'Change history begins at the first approved scope',
+    },
   };
   const s = specs[mode] || specs.shop;
   const cta = s.cta ? `<button class="tab-empty-cta" onclick="${s.cta.action}"><svg viewBox="0 0 14 14" fill="none"><path d="M7 3v8M3 7h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>${s.cta.label}</button>` : '';

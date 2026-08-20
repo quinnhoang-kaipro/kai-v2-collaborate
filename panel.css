@@ -966,6 +966,42 @@ body:not(.draft-stage) .grp-dup{display:none}
 .handle .grip span{width:3px;height:3px;border-radius:50%;background:var(--t3)}
 body.col-resizing{cursor:col-resize;user-select:none}
 
+/* ── COLLAPSED SIDEBAR ──────────────────────────────────────────────────
+   Dragging the handle past the left edge shuts the scope list entirely so
+   the work surface can use the full panel. The sidebar's min-width has to be
+   released for the flex-basis:0 to actually take, and the handle steps aside
+   for the .sb-reveal tab — there is nothing left to resize until it reopens. */
+/* The width itself is set inline by the drag code (it has to win over the
+   inline flex-basis the drag leaves behind); this releases the min-width
+   that would otherwise hold the sidebar open at 360px. */
+body.sb-collapsed .sidebar{min-width:0;border-right:0}
+body.sb-collapsed .handle{display:none}
+/* Hide scope — far right of the sidebar's utility bar. Same end state as
+   dragging the handle off the left edge. */
+.sb-hide-scope{
+  display:inline-flex;align-items:center;gap:5px;flex-shrink:0;align-self:center;
+  height:24px;padding:0 8px 0 6px;
+  background:var(--white);border:1px solid var(--stroke);color:var(--t2);cursor:pointer;
+  font-family:var(--body);font-size:11px;font-weight:600;letter-spacing:.02em;line-height:1;white-space:nowrap;
+  transition:background .12s,color .12s,border-color .12s;
+}
+.sb-hide-scope:hover{background:var(--sunken);color:var(--ink);border-color:var(--ink)}
+.sb-hide-scope svg{width:11px;height:11px;flex-shrink:0}
+
+/* Show scope — leads the work-surface tab bar, but only while the sidebar is
+   shut. Reads as a peer of the tabs (same mono caps) with a border, so it
+   scans as an action rather than a seventh tab. */
+.sb-show-scope{display:none}
+body.sb-collapsed .sb-show-scope{
+  display:inline-flex;align-items:center;gap:5px;flex-shrink:0;
+  height:26px;margin-right:12px;padding:0 8px 0 10px;
+  background:var(--white);border:1px solid var(--stroke);color:var(--t2);cursor:pointer;
+  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;
+  transition:background .12s,color .12s,border-color .12s;
+}
+body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink);border-color:var(--ink)}
+.sb-show-scope svg{width:11px;height:11px;flex-shrink:0}
+
 /* ════════════════════════════════════════════════
    RIGHT : WORK SURFACE (placeholder until panels built)
    ════════════════════════════════════════════════ */
@@ -2737,6 +2773,27 @@ body.art-lb-open #artLightbox{pointer-events:auto}
 .dw-close:hover{border-color:var(--ink);color:var(--ink)}
 .dw-close svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.6}
 .dw-body{flex:1;overflow-y:auto;padding:18px}
+/* ── Drawer tab bar ──────────────────────────────────────────────────
+   The notes-only drawer every other surface opens leaves #dwTabs empty and
+   :empty hides it, so those drawers keep the head they had. Artifact 2 opens
+   the same drawer as a media drawer and fills it with Photos / Notes — the
+   read-only pair, no History: that whole story is the paper behind it. */
+#dwTabs:empty{display:none}
+.dw-tabs{display:flex;padding:0 18px;border-top:1px solid var(--stroke)}
+.dw-tab{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--t3);background:none;border:none;padding:10px 0;margin-right:22px;cursor:pointer;position:relative;transition:color .12s}
+.dw-tab:hover{color:var(--ink)}
+.dw-tab.active{color:var(--ink)}
+.dw-tab.active::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--ink)}
+.dw-tab .n{font-family:var(--mono);font-size:9px;color:var(--t3);margin-left:5px}
+.dw-tab.active .n{color:var(--t2)}
+/* The photos tab reuses the app's own photo tile (_pgdPhotoFigHtml), so it
+   only needs the grid: the drawer is narrow, so two up rather than the wide
+   scrolling strip those tiles sit in elsewhere. */
+.dw-photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dw-photo-grid .pgd-photo-fig{flex:none;min-width:0}
+.dw-photo-grid .pgd-photo{width:auto;flex:none}
+
 
 /* photos grid */
 /* notes */
@@ -3854,3 +3911,259 @@ body.draft-stage .task.is-missing .task-amt{color:var(--t3)}
    "Contractor" and "Description", which name fields inside a module rather
    than the module itself. */
 .sec-taskcard-options-hdr>.sec-taskcard-lbl{font-size:11px;letter-spacing:.06em;color:var(--t2)}
+
+
+/* ════════════════════════════════════════════════════════════════════
+   ARTIFACT 2 · SCOPE CHANGE HISTORY  (js/artifact2.js)
+   Ported from ProjectReview_ChangeHistory_1.html, then re-proportioned to
+   match the Artifact tab's layout language (ProjectReview_ScopePanel's
+   .art-page-stacked): a sunken controls card in the page gutters, the paper
+   claiming the rest of the width beneath it, and one narrow annotation
+   gutter on the right — instead of the standalone page's centered paper
+   floating between two wide margins.
+
+   Every class is `a2-` prefixed: the source file reused generic names
+   (.art-table, .art-row, .art-head, .chip …) that already mean something
+   else in this stylesheet.
+
+   One structural difference from the standalone page: it scrolled the window
+   and docked the scrubber with position:fixed. Here .a2-root fills
+   #workBody, .a2-scroll is its own scroller (controls card + paper + legend
+   all scroll together, as on the Artifact tab), and the scrubber is a flex
+   row pinned to the bottom of the root.
+   ════════════════════════════════════════════════════════════════════ */
+.a2-root{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  font-family:var(--body);color:var(--ink);
+  /* change-type accents */
+  --ct-value:#1F5B6B;      /* value / cost */
+  --ct-contractor:#1F76B8; /* contractor */
+  --ct-modifier:#8F5A24;   /* modifier */
+  --ct-product:#5B4B8A;    /* product */
+  --ct-added:#2E9048;      /* line added */
+  --ct-removed:#C0443A;    /* line removed */
+  --a2-gutter:250px;       /* annotation lane; narrowed on tight panels */
+  --a2-sel:rgba(253,255,134,.22);   /* selected / flagged line wash */
+}
+.a2-root.is-tight{--a2-gutter:238px}
+
+/* ── the page : one scroller holding the version cards and the paper ── */
+.a2-scroll{flex:1;min-height:0;overflow:auto}
+.a2-page{padding:18px 24px 56px;display:flex;flex-direction:column;gap:14px}
+.a2-root.is-tight .a2-page{padding:14px 16px 44px}
+
+/* ── VERSION CARDS : the Artifact tab's own .hist-card grid, reused here so
+   both surfaces present a scope's history the same way. Clicking one scrubs
+   the playhead to that version; the one the playhead sits in gets a ring. ── */
+.a2-root .hist-grid{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.a2-root .hist-card{min-height:0;gap:6px;padding:14px 16px 12px}
+.a2-root .hist-card.is-asof{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.a2-root.is-tight .hist-grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.a2-root.is-tight .hist-card{padding:11px 12px 10px}
+.a2-root.is-tight .hist-card-name{font-size:14px}
+.a2-root.is-tight .hist-card-meta{font-size:11.5px}
+.a2-root.is-tight .hist-card-docid{font-size:9px}
+.a2-root.is-tight .hist-card-budget{font-size:13px}
+
+/* ── the paper + its annotation gutter ── */
+.a2-stage{display:flex;gap:12px;align-items:flex-start;position:relative}
+.a2-paper{flex:1;min-width:0;background:var(--white);border:1px solid var(--stroke);overflow:hidden}
+.a2-margin{width:var(--a2-gutter);flex-shrink:0;position:relative;min-height:120px}
+
+.a2-head{display:flex;justify-content:space-between;align-items:flex-start;gap:28px;padding:32px 34px 26px;border-bottom:1px solid var(--stroke)}
+.a2-head-l{flex:1;min-width:0}
+.a2-eyebrow{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);margin-bottom:13px}
+.a2-doc-title{font-family:var(--display);font-size:25px;font-weight:700;color:var(--ink);letter-spacing:-.015em;line-height:1.15;word-break:normal;overflow-wrap:normal}
+.a2-doc-sub{font-size:14.5px;color:var(--t2);margin-top:6px}
+.a2-head-r{display:flex;flex-direction:column;gap:12px;flex-shrink:0;text-align:right;min-width:170px}
+.a2-meta-k{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3)}
+.a2-meta-v{font-size:14px;color:var(--ink);margin-top:3px}
+.a2-root.is-tight .a2-head{padding:22px 20px 18px;gap:16px}
+.a2-root.is-tight .a2-doc-title{font-size:20px}
+.a2-root.is-tight .a2-doc-sub{font-size:13px}
+.a2-root.is-tight .a2-head-r{min-width:130px;gap:9px}
+.a2-root.is-tight .a2-meta-v{font-size:12.5px}
+
+/* the line-item table */
+.a2-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:14.5px}
+.a2-table thead th{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);text-align:left;padding:13px 11px;border-bottom:1px solid var(--stroke);background:var(--app-bg);white-space:nowrap}
+.a2-table thead th.a2-r{text-align:right}
+.a2-c-item{width:auto;padding-left:22px!important}
+.a2-c-gc{width:126px}
+.a2-c-num{width:72px}
+.a2-c-amt{width:92px}
+.a2-c-media{width:36px;padding-right:22px!important}
+/* Header for the media column is a glyph column — labelled for screen
+   readers only, since a word there would out-shout the icon it sits over. */
+.a2-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.a2-root.is-tight .a2-table{font-size:13px}
+.a2-root.is-tight .a2-table thead th{padding:11px 8px}
+.a2-root.is-tight .a2-c-item{padding-left:16px!important}
+.a2-root.is-tight .a2-c-gc{width:100px}
+.a2-root.is-tight .a2-c-num{width:56px}
+.a2-root.is-tight .a2-c-amt{width:78px}
+.a2-root.is-tight .a2-c-media{width:28px;padding-right:16px!important}
+
+.a2-grp td{padding:22px 11px 10px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);border-bottom:1px solid var(--ink);background:var(--white)}
+.a2-grp .a2-gname{padding-left:22px!important;padding-right:11px!important}
+.a2-grp .a2-gcount{color:var(--t3);font-weight:700;margin-left:14px;white-space:nowrap}
+.a2-grp .a2-gcount::before{content:'· ';margin-right:2px}
+.a2-row td{padding:15px 11px 6px;vertical-align:top;border-bottom:0;position:relative}
+.a2-row.a2-detail td{padding:0 11px 16px;border-bottom:1px solid rgba(0,0,0,.05)}
+.a2-row .a2-item{padding-left:22px!important}
+/* The line code reads as an eyebrow over the name rather than its own
+   column — same information, none of the horizontal budget. */
+.a2-row .a2-id{font-size:11px;font-weight:500;color:var(--t3);letter-spacing:.04em;white-space:nowrap;margin-bottom:2px}
+.a2-name{font-size:15px;font-weight:600;color:var(--ink);display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.a2-opt{font-size:12.5px;color:var(--t2);margin-top:3px}
+/* Detail rows span the whole table now, so their own indent is what lines
+   them up under the name above. */
+.a2-desc{font-size:14px;color:var(--t2);line-height:1.55;max-width:64ch;padding-left:22px}
+.a2-prod{font-size:13.5px;color:var(--t2);display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;margin-top:7px;padding-left:22px}
+.a2-lbl{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.a2-gc{font-size:14px;color:var(--ink)}
+.a2-gc-none{color:var(--error);font-style:italic}
+.a2-num{text-align:right;font-size:14px;color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums}
+.a2-amt{text-align:right;font-family:var(--display);font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums}
+/* Media column: rightmost, glyph-only, flush with the paper's right gutter. */
+.a2-media-cell{text-align:right;padding-right:22px!important;vertical-align:top;white-space:nowrap}
+.a2-mods{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;padding-left:22px}
+.a2-mod{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--midtone);border:1px solid var(--stroke);padding:2px 6px;line-height:1.2}
+.a2-mod.is-new{color:var(--ct-modifier);border-color:var(--ct-modifier);background:#F7EEDF}
+.a2-root.is-tight .a2-name{font-size:13.5px;gap:6px}
+.a2-root.is-tight .a2-opt{font-size:11.5px}
+.a2-root.is-tight .a2-desc{font-size:12.5px;padding-left:16px}
+.a2-root.is-tight .a2-prod{font-size:12px;padding-left:16px}
+.a2-root.is-tight .a2-mods{padding-left:16px}
+.a2-root.is-tight .a2-row td{padding:12px 8px 5px}
+.a2-root.is-tight .a2-row.a2-detail td{padding:0 8px 13px}
+.a2-root.is-tight .a2-row .a2-item{padding-left:16px!important}
+.a2-root.is-tight .a2-row .a2-id{font-size:10px}
+.a2-root.is-tight .a2-media-cell{padding-right:16px!important}
+.a2-root.is-tight .a2-gc,.a2-root.is-tight .a2-num{font-size:12.5px}
+.a2-root.is-tight .a2-amt{font-size:13.5px}
+.a2-root.is-tight .a2-grp td{padding:17px 8px 8px;font-size:10.5px}
+.a2-root.is-tight .a2-grp .a2-gname{padding-left:16px!important;padding-right:8px!important}
+
+/* grand total — the running budget at the current playhead, mirroring the
+   Artifact tab's .art-grand footer */
+.a2-table tfoot .a2-total td{padding:20px 11px 6px;border-top:2px solid var(--ink);border-bottom:0}
+.a2-table tfoot .a2-total-lbl td{padding:0 11px 22px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);text-align:right;border:0}
+.a2-total-a{text-align:right;font-family:var(--display);font-size:22px;font-weight:700;color:var(--success);font-variant-numeric:tabular-nums}
+.a2-total-k{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);padding-left:22px!important}
+.a2-root.is-tight .a2-total-a{font-size:18px}
+.a2-root.is-tight .a2-total-k{padding-left:16px!important}
+.a2-root.is-tight .a2-table tfoot .a2-total td{padding:16px 8px 5px}
+.a2-root.is-tight .a2-table tfoot .a2-total-lbl td{padding:0 8px 18px}
+
+/* Selection. Clicking a line washes it and its detail row in lemon and puts
+   an accent rail down its left edge — the Artifact tab's .art-selected
+   treatment. Nothing marks a line as *changed* in the document itself: that
+   is the margin card's job, and a rail on every changed row left the page
+   looking striped before anything was even selected. */
+.a2-row{cursor:pointer}
+.a2-row.is-sel td{background:var(--a2-sel)}
+.a2-row.is-sel:not(.a2-detail) td:first-child::before{content:'';position:absolute;left:0;top:6px;bottom:0;width:3px;background:var(--accent-deep)}
+.a2-row.a2-detail.is-sel td{border-bottom-color:var(--accent-deep)}
+.a2-badge{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.08em;padding:2px 5px;line-height:1.2;flex-shrink:0}
+.a2-badge.is-added{color:var(--ct-added);border:1px solid var(--ct-added);background:var(--success-fill)}
+.a2-badge.is-removed{color:var(--ct-removed);border:1px solid var(--ct-removed);background:var(--error-fill)}
+/* ── media icon (Artifact 2) ─────────────────────────────────────────
+   Sits on a group header and on any line that has photos, opening the shared
+   side drawer. Quiet by default and inked on hover: the page's job is the
+   redlines, so a control that appears on most rows can't compete with them.
+   Glyph only — its presence is the signal that there is something to open;
+   the count stays in the tooltip rather than adding a second number to a row
+   that already carries four. */
+.a2-media{flex-shrink:0;display:inline-flex;align-items:center;border:0;background:transparent;
+  padding:0;cursor:pointer;color:var(--t3);transition:color .12s;vertical-align:middle}
+.a2-media svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.a2-media:hover,.a2-media:focus-visible{color:var(--ink)}
+.a2-media:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+/* On the group header the glyph steps down with the header's own smaller
+   uppercase mono scale. */
+.a2-grp .a2-media svg{width:14px;height:14px}
+
+.a2-row.is-removed .a2-name-txt{text-decoration:line-through;color:var(--t3)}
+/* ── line name as the doorway to the Editor ──────────────────────────
+   A button that inherits the name's own type, so at rest it is the name and
+   nothing else. Hover adds the underline and reveals the chevron — the whole
+   affordance costs zero pixels until the pointer is on it. */
+.a2-open{font:inherit;color:inherit;letter-spacing:inherit;background:none;border:0;padding:0;margin:0;
+  cursor:pointer;display:inline-flex;align-items:center;gap:3px;text-align:left}
+.a2-open:hover{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.a2-open-chev{width:10px;height:10px;flex-shrink:0;stroke:currentColor;stroke-width:1.8;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;opacity:0;transition:opacity .12s}
+.a2-open:hover .a2-open-chev,.a2-open:focus-visible .a2-open-chev{opacity:.5}
+.a2-open:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+/* A removed line still opens, but the strike-through belongs to the text, not
+   to the hover underline the button adds. */
+.a2-row.is-removed .a2-open{text-decoration:line-through;color:var(--t3)}
+
+.a2-row.is-removed td{opacity:.72}
+.a2-row.is-dim{opacity:.4;transition:opacity .15s}
+/* Hovering a margin card flags the line it points at — same wash as
+   selection, since it answers the same question: which line is this about. */
+.a2-row.is-spot td{background:var(--a2-sel)}
+
+/* ── MARGIN TRACK-CHANGES CARDS ── */
+.a2-card{position:absolute;left:24px;right:0;background:var(--white);border:1px solid var(--stroke);padding:10px 12px 11px;box-shadow:0 1px 0 rgba(0,0,0,.03),0 6px 14px rgba(0,0,0,.07);transition:box-shadow .14s,transform .14s,opacity .18s;z-index:4}
+.a2-card.is-hidden{opacity:0;pointer-events:none;transform:scale(.96)}
+/* connector : a hairline back to the paper edge, ending in a dot on the line */
+.a2-card::before{content:'';position:absolute;top:15px;left:-24px;width:24px;height:1px;background:var(--mk,var(--stroke))}
+.a2-card::after{content:'';position:absolute;top:12px;left:-27px;width:7px;height:7px;border-radius:50%;background:var(--mk,var(--ink));border:1.5px solid var(--white);box-shadow:0 0 0 1px var(--mk,var(--ink))}
+.a2-card:hover{box-shadow:0 1px 0 rgba(0,0,0,.03),0 10px 22px rgba(0,0,0,.14);transform:translateY(-1px);z-index:20}
+.a2-card.is-spot{box-shadow:0 0 0 2px var(--mk),0 10px 22px rgba(0,0,0,.16);z-index:25}
+.a2-mc-head{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.a2-mc-ct{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mk,var(--ink))}
+.a2-mc-ct .a2-swatch{width:8px;height:8px;border-radius:50%;background:var(--mk,var(--ink))}
+.a2-mc-when{margin-left:auto;font-size:10.5px;color:var(--t3);white-space:nowrap}
+.a2-mc-task{font-size:11.5px;color:var(--t2);margin-bottom:8px;line-height:1.3}
+.a2-mc-task b{color:var(--ink);font-weight:600}
+.a2-mc-task .a2-tid{font-size:10.5px;color:var(--t3);letter-spacing:.03em}
+.a2-mc-change{display:flex;align-items:baseline;flex-wrap:wrap;gap:5px 8px;font-size:12.5px;padding:5px 0}
+.a2-mc-change+.a2-mc-change{border-top:1px dashed var(--stroke)}
+.a2-mc-field{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);flex-basis:100%;margin-bottom:-2px}
+.a2-mc-old{color:var(--t3);text-decoration:line-through}
+.a2-mc-arrow{color:var(--mk,var(--t3))}
+.a2-mc-new{color:var(--ink);font-weight:700}
+.a2-mc-new.is-pos{color:var(--success)}
+.a2-mc-add,.a2-mc-remove{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink);font-weight:600}
+.a2-mc-remove{color:var(--t2)}
+.a2-mc-remove .a2-strike{text-decoration:line-through;color:var(--t3);font-weight:400}
+.a2-mc-badge{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;line-height:1.2}
+.a2-mc-badge.is-added{color:var(--ct-added);border:1px solid var(--ct-added);background:var(--success-fill)}
+.a2-mc-badge.is-removed{color:var(--ct-removed);border:1px solid var(--ct-removed);background:var(--error-fill)}
+.a2-mc-who{margin-top:8px;padding-top:7px;border-top:1px solid var(--stroke);font-size:10.5px;color:var(--t3);display:flex;align-items:center;gap:7px}
+.a2-mc-av{width:18px;height:18px;border-radius:50%;background:var(--ink);color:var(--white);font-size:8.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.a2-mc-who b{color:var(--t2);font-weight:600}
+.a2-mc-who .a2-role{margin-left:auto;font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+
+/* ── TIME SCRUBBER — pinned to the bottom of the root ── */
+.a2-timebar{flex-shrink:0;background:#F7F5F0;border-top:1px solid var(--stroke);box-shadow:0 -6px 22px rgba(26,26,26,.07);z-index:30}
+.a2-timebar-inner{padding:8px 24px 10px;display:flex;flex-direction:column;gap:5px}
+.a2-root.is-tight .a2-timebar-inner{padding:8px 16px 10px}
+.a2-tl-hdr{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.a2-tl-title{font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;font-weight:700;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.a2-steps{display:inline-flex;gap:4px}
+.a2-step-btn{width:22px;height:22px;border-radius:999px;background:var(--white);border:1px solid var(--stroke);color:var(--t2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;transition:background .12s,color .12s,border-color .12s}
+.a2-step-btn svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.a2-step-btn:hover:not(:disabled){background:var(--sunken);color:var(--ink);border-color:var(--midtone)}
+.a2-step-btn:disabled{opacity:.35;cursor:not-allowed}
+.a2-tl-label{font-size:11.5px;color:var(--ink);font-weight:600;min-width:0;overflow:hidden;white-space:nowrap;text-align:right;flex:1;display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.a2-cl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--mk,var(--t3))}
+.a2-cl-txt{overflow:hidden;text-overflow:ellipsis}
+.a2-cl-date{font-weight:500;color:var(--t2);flex-shrink:0}
+.a2-tl-idx{font-family:var(--mono);font-size:10px;color:var(--t3);font-weight:400;margin-left:2px;flex-shrink:0}
+.a2-tl-wrap{position:relative;padding:8px 0;cursor:pointer;touch-action:none;user-select:none}
+.a2-tl-track{position:relative;height:6px;border-radius:999px;background:var(--sunken);border:1px solid var(--stroke)}
+.a2-tl-fill{position:absolute;left:0;top:0;bottom:0;background:var(--midtone);border-radius:999px 0 0 999px;transition:width .1s ease}
+.a2-tl-thumb{position:absolute;top:50%;width:15px;height:15px;border-radius:50%;background:var(--ink);border:2px solid var(--white);box-shadow:0 0 0 1px var(--ink),0 1px 3px rgba(0,0,0,.25);transform:translate(-50%,-50%);pointer-events:none;z-index:3;transition:left .1s ease}
+.a2-tl-tick{position:absolute;top:-3px;width:2px;height:12px;transform:translateX(-1px);z-index:1;pointer-events:none;border-radius:1px;opacity:.35;background:var(--mk,var(--ink));transition:opacity .12s,height .12s,top .12s}
+.a2-tl-tick.is-revealed{opacity:1}
+.a2-tl-tick.is-current{height:16px;top:-5px;width:2.6px;z-index:2}
+.a2-tl-groups{position:relative;height:22px;margin-top:2px}
+.a2-tl-group{position:absolute;top:0;font-size:9.5px;line-height:22px;color:var(--t3);padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;box-sizing:border-box;border-left:1px solid var(--stroke);letter-spacing:.02em;cursor:pointer;transition:background .12s,color .12s;font-family:var(--mono);font-weight:700;text-transform:uppercase;background:none}
+.a2-tl-group:first-child{border-left:none}
+.a2-tl-group:hover{color:var(--ink);background:rgba(0,0,0,.04)}
+.a2-tl-group.is-current{color:var(--ink);background:var(--sunken);border-radius:3px}

@@ -48,11 +48,24 @@ body{display:flex;flex-direction:row}
   color:rgba(255,255,255,.5);background:none;border:0;border-left:2px solid transparent;
   cursor:pointer;transition:color .12s,border-color .12s,background .12s;width:100%}
 .gnav-item:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.04)}
-.gnav-item.on{color:var(--accent);border-left-color:var(--accent);background:rgba(253,255,134,.06)}
-.gnav-item svg{width:19px;height:19px;stroke:currentColor;stroke-width:1.4;fill:none;
+.gnav-item.on{color:var(--accent)}
+.gnav-ico{position:relative;display:flex;align-items:center;justify-content:center;width:32px;height:32px}
+/* Active row is framed by a yellow viewfinder — Kai's scan/reticle motif. Four
+   L-shaped corner brackets drawn with corner-anchored gradients (no extra markup). */
+.gnav-item.on .gnav-ico::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    linear-gradient(var(--accent),var(--accent)) left top/9px 2px no-repeat,
+    linear-gradient(var(--accent),var(--accent)) left top/2px 9px no-repeat,
+    linear-gradient(var(--accent),var(--accent)) right top/9px 2px no-repeat,
+    linear-gradient(var(--accent),var(--accent)) right top/2px 9px no-repeat,
+    linear-gradient(var(--accent),var(--accent)) left bottom/9px 2px no-repeat,
+    linear-gradient(var(--accent),var(--accent)) left bottom/2px 9px no-repeat,
+    linear-gradient(var(--accent),var(--accent)) right bottom/9px 2px no-repeat,
+    linear-gradient(var(--accent),var(--accent)) right bottom/2px 9px no-repeat}
+.gnav-item svg{height:20px;width:auto;max-width:24px;stroke:currentColor;stroke-width:1.4;fill:none;
   stroke-linecap:round;stroke-linejoin:round}
 .gnav-item .lbl{font-family:var(--mono);font-size:7.5px;font-weight:700;letter-spacing:.07em;
-  text-transform:uppercase;line-height:1}
+  text-transform:uppercase;line-height:1.25;text-align:center;padding:0 2px}
 .gnav-sp{flex:1}
 .gnav-item:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 /* When the iframe's photo-overlay modal is open, drop a matching dark scrim

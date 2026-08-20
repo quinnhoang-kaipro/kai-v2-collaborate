@@ -34,7 +34,6 @@ function _renderHistoricalSection(){
     const tag = versionTag(v);
     const isCurrent = v.id === currentVersionId;
     const isOriginal = v.num === 1;
-    const isCloseout = v.kind === 'closeout';
     // isOriginal is "Approved" only once it's been superseded by a later
     // version — if it's still the current one (nothing approved it yet),
     // fall through to versionMeta so an in-review submission reads as such.
@@ -44,10 +43,9 @@ function _renderHistoricalSection(){
     // computed tag (not the static v.tagCls) so terminal-state overrides
     // like "everything is Approved" flatten the outdated state.
     const stateCls = isCurrent ? ' is-current' : (tag.tagCls === 'outdated' ? ' is-outdated' : '');
-    const eyebrow = isCloseout ? 'Closeout document'
-                  : (isOriginal ? 'Original scope' : `Change order ${v.num - 1}`);
+    // No eyebrow: the card's own name already says which version it is, so
+    // "Original scope" over "Scope" only restated it.
     return `<button class="hist-card${stateCls}" onclick="openHistorical('${v.id}')" title="View ${esc(label)}">
-      <div class="hist-card-eyebrow">${esc(eyebrow)}</div>
       <div class="hist-card-name">${esc(label)}</div>
       <div class="hist-card-meta">${esc(meta)}</div>
       <div class="hist-card-docid">${esc(_sowIdFor(v.id))}</div>
