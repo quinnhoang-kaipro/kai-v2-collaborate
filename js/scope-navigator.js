@@ -2784,7 +2784,7 @@ const _WORK_MODES_ALL = [
   {id:'floorplan',label:'Measurements'},   // id stays: it's the URL param and dispatch key
   {id:'pano',     label:'Progress'},
   {id:'artifact', label:'Artifact'},
-  {id:'artifact2',label:'Artifact 2'},   // scope change history — js/artifact2.js
+  {id:'artifact2',label:'Artifact 2'},   // scope change history — js/a2/*.js
 ];
 const _projModeParam = new URLSearchParams(window.__KAI_QS || window.location.search).get('projMode');
 const WORK_MODES = _projModeParam === 'closeout-approved'

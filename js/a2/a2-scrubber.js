@@ -42,14 +42,18 @@ function buildTimePos(){
   POS = new Array(N+1).fill(0);
   APPR = {};
   const at = v => Date.parse(VER[v].date);
-  const T0 = at(VER_ORDER[0]), TN = at(VER_ORDER[VER_ORDER.length-1]), span = TN - T0;
+  // The bar opens the day the scope was first walked, not the day it was
+  // approved: the Scope phase has changes of its own now, and they need a
+  // window to spread across. VER.orig.opened is that day.
+  const T0 = Date.parse(VER[VER_ORDER[0]].opened || VER[VER_ORDER[0]].date);
+  const TN = at(VER_ORDER[VER_ORDER.length-1]), span = TN - T0;
   if(!(span > 0)){                     // unparseable dates — fall back to even spacing
     for(let m=0; m<=N; m++) POS[m] = (m/Math.max(1,N))*100;
-    APPR[0] = VER_ORDER[0];
     if(N) APPR[N] = ORDERED[N-1].ver;
     return;
   }
-  APPR[0] = VER_ORDER[0];              // the Scope, approved — the start of the bar
+  // Position 0 is the empty scope on day one — nothing is approved there.
+  // Every approval is the last change of its version, stamped in the loop.
   let from = T0, m = 1;
   VER_ORDER.forEach(v=>{
     const rows = ORDERED.filter(ch => ch.ver === v);
@@ -81,11 +85,13 @@ function buildScrubber(){
     const mk  = ch ? CT[ch.ct].color : 'var(--t2)';
     ticks += `<div class="a2-tl-tick${ap ? ' is-appr' : ''}" data-m="${m}" style="left:${POS[m].toFixed(3)}%;--mk:${mk}"></div>`;
   }
-  const segs = [{ver:'orig',m:0},{ver:'co1',m:1},{ver:'co2',m:C1+1}];
+  // Bands come from the version bounds, so the Scope band covers the run of
+  // changes that built the scope rather than collapsing to a point at 0.
+  const segs = VBOUNDS;
   const groups = segs.map((s,i)=>{
-    const left  = POS[Math.min(s.m, N)] || 0;
-    const right = (i+1 < segs.length) ? (POS[Math.min(segs[i+1].m, N)] || 0) : 100;
-    const jump  = s.ver==='orig' ? 0 : s.ver==='co1' ? C1 : N;
+    const left  = POS[Math.min(s.start, N)] || 0;
+    const right = (i+1 < segs.length) ? (POS[Math.min(segs[i+1].start, N)] || 0) : 100;
+    const jump  = s.end;
     return `<button class="a2-tl-group" type="button" data-ver="${s.ver}" style="left:${left.toFixed(3)}%;width:${Math.max(0,right-left).toFixed(3)}%"
       onclick="a2SetT(${jump})" title="${a2Esc(VER[s.ver].label)} · approved ${a2Esc(VER[s.ver].date)}">${a2Esc(VER[s.ver].label)}</button>`;
   }).join('');
@@ -156,7 +162,9 @@ function updateScrubber(){
   const ver = asofVer();
   SREFS.groups.forEach(g=> g.classList.toggle('is-current', g.dataset.ver === ver));
   let dot, txt, date;
-  if(timeT === 0){ dot='var(--t3)'; txt='Original scope — baseline'; date=VER.orig.date; }
+  // Position 0 is the first walk, not an empty document — whatever the agent
+  // caught on the way through the door is already on the page.
+  if(timeT === 0){ dot='var(--t3)'; txt='Scope opened — first walk'; date=VER.orig.opened || VER.orig.date; }
   else {
     const ch = ORDERED[timeT-1];
     dot = CT[ch.ct].color;

@@ -3914,11 +3914,11 @@ body.draft-stage .task.is-missing .task-amt{color:var(--t3)}
 
 
 /* ════════════════════════════════════════════════════════════════════
-   ARTIFACT 2 · SCOPE CHANGE HISTORY  (js/artifact2.js)
+   ARTIFACT 2 · SCOPE CHANGE HISTORY  (js/a2/*.js · scrubber in a2-scrubber.css)
    Ported from ProjectReview_ChangeHistory_1.html, then re-proportioned to
    match the Artifact tab's layout language (ProjectReview_ScopePanel's
-   .art-page-stacked): a sunken controls card in the page gutters, the paper
-   claiming the rest of the width beneath it, and one narrow annotation
+   .art-page-stacked): the version cards in the page gutters, the paper
+   claiming the rest of the width beneath them, and one narrow annotation
    gutter on the right — instead of the standalone page's centered paper
    floating between two wide margins.
 
@@ -3928,9 +3928,9 @@ body.draft-stage .task.is-missing .task-amt{color:var(--t3)}
 
    One structural difference from the standalone page: it scrolled the window
    and docked the scrubber with position:fixed. Here .a2-root fills
-   #workBody, .a2-scroll is its own scroller (controls card + paper + legend
-   all scroll together, as on the Artifact tab), and the scrubber is a flex
-   row pinned to the bottom of the root.
+   #workBody, .a2-scroll is its own scroller (version cards + paper scroll
+   together, as on the Artifact tab), and the scrubber is a flex row pinned
+   to the bottom of the root.
    ════════════════════════════════════════════════════════════════════ */
 .a2-root{
   position:absolute;inset:0;display:flex;flex-direction:column;

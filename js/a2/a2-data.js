@@ -48,16 +48,38 @@ const CT = {
    .hist-card the Artifact tab uses for its audit trail, so the two surfaces
    present a scope's history identically. */
 const VER = {
-  orig:{label:'Scope',          date:'Apr 12, 2026', rank:0, budget:24890, sow:'SOW-00000E7B', tag:'Original', tagCls:'archived', stateCls:''},
-  co1: {label:'Change Order 1', date:'Apr 22, 2026', rank:1, budget:25130, sow:'SOW-00000E7C', tag:'Outdated', tagCls:'outdated', stateCls:' is-outdated'},
-  co2: {label:'Change Order 2', date:'Apr 30, 2026', rank:2, budget:26370, sow:'SOW-00000E7D', tag:'Current',  tagCls:'',         stateCls:' is-current'},
+  // `opened` is where the timeline starts — the first walk, ten days before
+  // the scope was approved. Only the first version needs it.
+  orig:{label:'Scope',          date:'Apr 12, 2026', rank:0, opened:'Apr 2, 2026', sow:'SOW-00000E7B', tag:'Original', tagCls:'archived', stateCls:''},
+  co1: {label:'Change Order 1', date:'Apr 22, 2026', rank:1, sow:'SOW-00000E7C', tag:'Outdated', tagCls:'outdated', stateCls:' is-outdated'},
+  co2: {label:'Change Order 2', date:'Apr 30, 2026', rank:2, sow:'SOW-00000E7D', tag:'Current',  tagCls:'',         stateCls:' is-current'},
 };
 const VER_ORDER = ['orig','co1','co2'];
-const BASE_TOTAL = VER.orig.budget;   // the running total builds from here
+// `budget` is stamped onto each version by stampVersionBudgets() — it is the
+// sum of the lines that exist at that point, not a figure kept by hand.
 
 /* ── SCOPE (current / Change Order 2 state), grouped by room.
    `changes[]` on each task holds its history from the Original scope.
-   Budget math ties out:  $24,890 →(+$240)→ $25,130 →(+$1,240)→ $26,370 ── */
+
+   A scope grows, and it grows fastest before it is ever approved. The Scope
+   phase IS the scoping: an agent walks the property over days and the
+   document fills up behind them. By the time change orders start, the
+   argument is over details, not over what exists. So most changes here are
+   tagged ver:'orig' — they happen between the first walk (Apr 2) and the
+   approval (Apr 12) — and the later versions are comparatively quiet.
+
+   A line carries `added:true` plus an 'added' change naming the version it
+   arrived in, and until the playhead reaches that change the line is not in
+   the document — nor is its room, if it is the room's only line. What exists
+   when:
+     Day one  (Apr 2)  · 2 lines · Kitchen cabinets, living room floor: what
+                                   the first pass through the door caught
+     Scope    (Apr 12) · 8 lines · six more lines and two more rooms scoped,
+                                   products picked, contractors assigned
+     CO 1     (Apr 22) · +3      · kitchen backsplash, and Master Bath and
+                                   Garage appear for the first time
+     CO 2     (Apr 30) · +2, −1  · master closet, shower surround; the resident
+                                   takes the ceiling fan back out ── */
 const SCOPE = [
   {room:'Kitchen', tasks:[
     {code:'KIT-79B1', name:'Cabinets', opt:'Replace : shaker, white', gc:'Apex Carpentry',
@@ -65,7 +87,7 @@ const SCOPE = [
      desc:'Demo existing uppers and base cabinets. Install new shaker fronts, soft-close hardware, and toe-kick. Verify wall is plumb before hanging.',
      mods:[],
      changes:[
-       {ct:'product', ver:'co1', who:'D. Reyes', role:'Designer',
+       {ct:'product', ver:'orig', who:'D. Reyes', role:'Designer',
         rows:[{field:'Product', from:'(not selected)', to:'Diamond NOW Arcadia White Shaker'}]},
        {ct:'value', ver:'co2', who:'T. Okafor', role:'Manager',
         rows:[{field:'Labor', from:'$3,000', to:'$3,180'},{field:'Amount', from:'$4,580', to:'$4,820', delta:'+$240'}]},
@@ -73,18 +95,32 @@ const SCOPE = [
     {code:'KIT-F362', name:'Countertops', opt:'Replace : quartz', gc:'Stone Bros',
      product:'MSI Calacatta Laza Quartz', qty:'42 SF', labor:'$2,200', amount:'$4,400',
      desc:'Template and fabricate quartz tops. Remove old laminate. Confirm sink cutout and overhang before fab.',
-     mods:[],
+     mods:[], added:true,
      changes:[
+       {ct:'added', ver:'orig', who:'M. Alvarez', role:'Field Agent',
+        rows:[{field:'Line added', add:'Countertops — laminate is delaminating at the sink', wasAmount:'$4,400'}]},
+       {ct:'contractor', ver:'orig', who:'S. Patel', role:'Ops',
+        rows:[{field:'Contractor', from:'Unassigned', to:'Apex Carpentry'}]},
        {ct:'contractor', ver:'co2', who:'T. Okafor', role:'Manager',
         rows:[{field:'Contractor', from:'Apex Carpentry', to:'Stone Bros'}]},
      ]},
     {code:'KIT-E6C4', name:'Appliances', opt:'Replace : full suite', gc:'Apex Carpentry',
      product:'GE Profile Stainless Suite', qty:'1 suite', labor:'$3,950', amount:'$3,950',
      desc:'Remove and haul old appliances. Install full stainless suite. Confirm gas/electric rough-in matches range spec.',
-     mods:[],
+     mods:[], added:true,
      changes:[
+       {ct:'added', ver:'orig', who:'M. Alvarez', role:'Field Agent',
+        rows:[{field:'Line added', add:'Appliances — range and fridge are original to the build', wasAmount:'$3,410'}]},
        {ct:'value', ver:'co2', who:'T. Okafor', role:'Manager',
         rows:[{field:'Amount', from:'$3,410', to:'$3,950', delta:'+$540'}]},
+     ]},
+    {code:'KIT-B914', name:'Backsplash', opt:'Add : subway tile', gc:'Apex Carpentry',
+     product:'Daltile Rittenhouse Arctic White 3x6', qty:'32 SF', labor:'$820', amount:'$1,344',
+     desc:'Install waterproof membrane and subway tile from counter to the underside of the uppers. Schluter edge trim at exposed ends.',
+     mods:[], added:true,
+     changes:[
+       {ct:'added', ver:'co1', who:'M. Alvarez', role:'Field Agent',
+        rows:[{field:'Line added', add:'Backsplash — wall was left bare by the original scope', wasAmount:'$1,344'}]},
      ]},
   ]},
   {room:'Living Room', tasks:[
@@ -93,22 +129,28 @@ const SCOPE = [
      desc:'Pull existing flooring, prep subfloor, install LVP with underlayment across living area.',
      mods:[],
      changes:[
-       {ct:'value', ver:'co1', who:'M. Alvarez', role:'Field Agent',
+       {ct:'value', ver:'orig', who:'M. Alvarez', role:'Field Agent',
         rows:[{field:'Qty', from:'296 SF', to:'320 SF'},{field:'Amount', from:'$2,520', to:'$2,760', delta:'+$240'}]},
      ]},
     {code:'LIV-DA26', name:'Paint', opt:'Full repaint', gc:'FloorWorks',
      product:'SW Agreeable Gray 7029', qty:'1 room', labor:'$240', amount:'$980',
      desc:'Patch, prime, and repaint all walls and ceiling. Two coats.',
-     mods:[],
+     mods:[], added:true,
      changes:[
+       {ct:'added', ver:'orig', who:'M. Alvarez', role:'Field Agent',
+        rows:[{field:'Line added', add:'Paint — scuffing and nail pops throughout', wasAmount:'$980'}]},
        {ct:'modifier', ver:'co1', who:'S. Patel', role:'Ops',
         rows:[{field:'Modifier added', add:'Resident pays'}]},
      ]},
     {code:'LIV-53D7', name:'Ceiling fan', opt:'Resident install', gc:null,
      product:'Resident supplied', qty:'1 ea', labor:'$0', amount:'$0',
      desc:'Resident to supply and install ceiling fan. Confirm box is fan-rated.',
-     mods:['Resident pays'], removed:true,
+     mods:[], added:true, removed:true,
      changes:[
+       {ct:'added', ver:'orig', who:'M. Alvarez', role:'Field Agent',
+        rows:[{field:'Line added', add:'Ceiling fan — resident asked for one during the walk', wasAmount:'$0'}]},
+       {ct:'modifier', ver:'orig', who:'S. Patel', role:'Ops',
+        rows:[{field:'Modifier added', add:'Resident pays'}]},
        {ct:'removed', ver:'co2', who:'T. Okafor', role:'Manager',
         rows:[{field:'Line removed', remove:'Ceiling fan — resident handling separately', wasAmount:'$0'}]},
      ]},
@@ -117,7 +159,13 @@ const SCOPE = [
     {code:'MBD-2DFD', name:'Flooring', opt:'Replace : carpet', gc:'FloorWorks',
      product:'Mohawk SmartStrand Silk', qty:'1 room', labor:'$1,100', amount:'$1,540',
      desc:'Remove old carpet, install new carpet and pad in master bedroom.',
-     mods:[], changes:[]},
+     mods:[], added:true,
+     changes:[
+       {ct:'added', ver:'orig', who:'M. Alvarez', role:'Field Agent',
+        rows:[{field:'Line added', add:'Carpet — pet staining through to the pad', wasAmount:'$1,540'}]},
+       {ct:'contractor', ver:'orig', who:'S. Patel', role:'Ops',
+        rows:[{field:'Contractor', from:'Unassigned', to:'FloorWorks'}]},
+     ]},
     {code:'MBD-A7AE', name:'Closet', opt:'Add shelving', gc:null,
      product:'ClosetMaid ShelfTrack', qty:'1 kit', labor:'$340', amount:'$460',
      desc:'Add wire shelving system to master closet. Contractor not yet assigned.',
@@ -127,12 +175,32 @@ const SCOPE = [
         rows:[{field:'Line added', add:'Add shelving to master closet', wasAmount:'$460'}]},
      ]},
   ]},
+  {room:'Master Bath', tasks:[
+    {code:'MBA-3C57', name:'Vanity', opt:'Replace : 48in double', gc:'Stone Bros',
+     product:'Home Decorators Sonoma 48in', qty:'1 ea', labor:'$760', amount:'$2,180',
+     desc:'Remove existing vanity and top. Install 48 in. double vanity, undermount sinks, and new supply lines. Confirm rough-in centers before ordering.',
+     mods:[], added:true,
+     changes:[
+       {ct:'added', ver:'co1', who:'D. Reyes', role:'Designer',
+        rows:[{field:'Line added', add:'Vanity — master bath was not walked the first time', wasAmount:'$2,180'}]},
+     ]},
+    {code:'MBA-77E1', name:'Shower surround', opt:'Replace : tile surround', gc:null,
+     product:'MSI Highland Park 3x6', qty:'64 SF', labor:'$1,540', amount:'$2,860',
+     desc:'Demo tub surround to the studs. New cement board, waterproofing, and tile to the ceiling. Contractor not yet assigned.',
+     mods:['Required'], added:true,
+     changes:[
+       {ct:'added', ver:'co2', who:'T. Okafor', role:'Manager',
+        rows:[{field:'Line added', add:'Shower surround — failed moisture check behind the tub', wasAmount:'$2,860'}]},
+     ]},
+  ]},
   {room:'Garage', tasks:[
     {code:'GAR-9B10', name:'Door opener', opt:'Replace', gc:'Stone Bros',
      product:'Chamberlain B970 Smart', qty:'1 ea', labor:'$420', amount:'$520',
      desc:'Replace garage door opener with smart unit. Reuse existing rail if compatible.',
-     mods:[],
+     mods:[], added:true,
      changes:[
+       {ct:'added', ver:'co1', who:'M. Alvarez', role:'Field Agent',
+        rows:[{field:'Line added', add:'Door opener — garage added to the walk', wasAmount:'$520'}]},
        {ct:'product', ver:'co2', who:'D. Reyes', role:'Designer',
         rows:[{field:'Product', from:'Chamberlain B750', to:'Chamberlain B970 Smart'}]},
        {ct:'modifier', ver:'co2', who:'S. Patel', role:'Ops',
@@ -143,8 +211,10 @@ const SCOPE = [
     {code:'BD2-215F', name:'Paint', opt:'Full repaint', gc:'FloorWorks',
      product:'SW Pure White 7005', qty:'1 room', labor:'$180', amount:'$620',
      desc:'Repaint bedroom walls and trim, two coats.',
-     mods:[],
+     mods:[], added:true,
      changes:[
+       {ct:'added', ver:'orig', who:'M. Alvarez', role:'Field Agent',
+        rows:[{field:'Line added', add:'Paint — second bedroom walked on the last pass', wasAmount:'$620'}]},
        {ct:'modifier', ver:'co1', who:'S. Patel', role:'Ops',
         rows:[{field:'Modifier added', add:'Resident pays'}]},
      ]},

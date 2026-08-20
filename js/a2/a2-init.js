@@ -92,4 +92,4 @@ window.a2OpenInEditor = function(id){
 window.renderArtifact2 = renderArtifact2;
 window.a2SetT = setT;
 window.a2Select = selectRow;
-window.a2JumpVer = function(v){ setT(v === 'orig' ? 0 : v === 'co1' ? C1 : ORDERED.length); };
+window.a2JumpVer = function(v){ setT(verEnd(v)); };   // land on that version as approved
