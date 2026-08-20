@@ -29,7 +29,12 @@ function shellHtml(){
                 <div class="a2-doc-sub">Atlanta, GA 30315 · Single-family renovation</div>
               </div>
               <div class="a2-head-r">
-                <div><div class="a2-meta-k">Compared</div><div class="a2-meta-v">Original → Change Order 2</div></div>
+                <!-- Derived, not stated: before anything is approved there is only
+                     one version, and claiming a comparison against a change
+                     order that does not exist would be a lie on the document. -->
+                <div><div class="a2-meta-k">Compared</div><div class="a2-meta-v">${VER_ORDER.length > 1
+                  ? `${a2Esc(VER[VER_ORDER[0]].label)} → ${a2Esc(VER[VER_ORDER[VER_ORDER.length-1]].label)}`
+                  : `${a2Esc(VER[VER_ORDER[0]].label)} &middot; no changes yet`}</div></div>
                 <div><div class="a2-meta-k">Prepared by</div><div class="a2-meta-v">Kaiizen Engineering</div></div>
                 <div><div class="a2-meta-k">Project</div><div class="a2-meta-v">KAI-2241</div></div>
               </div>
@@ -105,7 +110,7 @@ function renderDoc(){
       // that story is told, and the pill repeated it inside the document.
       const badge  = '';
       const rbadge = isGone  ? '<span class="a2-badge is-removed">Removed</span>' : '';
-      out.push(`<tr class="${cls}" data-a2-code="${a2Esc(t.code)}" onclick="a2Select('${a2Esc(t.code)}')">
+      out.push(`<tr class="${cls}" data-a2-code="${a2Esc(t.code)}" onclick="a2RowClick('${a2Esc(t.code)}',event)">
         <td class="a2-item">
           <div class="a2-id">${a2Esc(t.code)}</div>
           <div class="a2-name">${a2NameHtml(t)}${badge}${rbadge}</div>
@@ -121,7 +126,7 @@ function renderDoc(){
       const mods = modsAsOf(t);
       const modsHtml = mods.length
         ? `<div class="a2-mods">${mods.map(x=>`<span class="a2-mod ${x.isNew?'is-new':''}">${a2Esc(x.m)}</span>`).join('')}</div>` : '';
-      out.push(`<tr class="a2-row a2-detail${isOpen?' is-open':''}" data-a2-detail="${a2Esc(t.code)}" onclick="a2Select('${a2Esc(t.code)}')">
+      out.push(`<tr class="a2-row a2-detail${isOpen?' is-open':''}" data-a2-detail="${a2Esc(t.code)}" onclick="a2RowClick('${a2Esc(t.code)}',event)">
         <td colspan="6">
           <div class="a2-desc">${a2Esc(t.desc)}</div>
           <div class="a2-prod"><span class="a2-lbl">Product</span> <span>${a2Esc(prodv.val)}</span></div>
