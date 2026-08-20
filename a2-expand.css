@@ -40,3 +40,25 @@
 /* The name's chevron points down while its block is open. */
 .a2-open.is-open .a2-open-chev{opacity:.6;transform:rotate(90deg)}
 .a2-open-chev{transition:opacity .12s,transform .12s}
+
+/* ── PHOTO RAIL (experiment part 2) ──────────────────────────────────
+   Third column in .a2-stage, furthest right so it never disturbs the card
+   lane's measured stacking. Exists only when the scope list is hidden —
+   that's the width it spends. */
+.a2-photorail{display:none}
+body.sb-collapsed .a2-photorail{display:block;width:250px;flex-shrink:0}
+body.sb-collapsed .a2-root.is-tight .a2-photorail{display:none}   /* no width to spare */
+.a2-pr{position:sticky;top:0;background:var(--white);border:1px solid var(--stroke);padding:10px}
+.a2-pr-hd{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
+.a2-pr-lbl{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.a2-pr-n{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--t3);flex-shrink:0}
+/* The shared tile is built for a horizontal strip; here it fills the rail. */
+.a2-pr-fig .pgd-photo-fig{flex:none;width:100%}
+.a2-pr-fig .pgd-photo{width:100%}
+.a2-pr-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;
+  padding-top:8px;border-top:1px solid var(--stroke)}
+.a2-pr-walk{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.a2-pr-dot{width:7px;height:7px;border-radius:50%;background:var(--mk,var(--t3));flex-shrink:0}
+.a2-pr-date{font-family:var(--mono);font-size:9.5px;color:var(--t3);flex-shrink:0}

@@ -7,15 +7,15 @@
    accumulates redlines instead of replacing them.
 
    Proportions follow the Artifact tab (ProjectReview_ScopePanel's
-   .art-page-stacked) rather than the standalone page: a sunken controls card
-   inside the page gutters, the paper claiming the rest of the width beneath
-   it, and one annotation gutter on the right. The standalone page centered a
+   .art-page-stacked) rather than the standalone page: the version cards in
+   the page gutters, the paper claiming the rest of the width beneath them,
+   and one annotation gutter on the right. The standalone page centered a
    fixed-width paper between two wide margins, which reads unbalanced in a
    panel that is already narrower than a full page.
 
    The other difference: the page scrolled the window and docked the scrubber
    with position:fixed. Here .a2-root fills #workBody, .a2-scroll holds the
-   controls card + paper + legend, and the scrubber is pinned to the bottom.
+   version cards + paper, and the scrubber is pinned to the bottom.
 
    Data is self-contained on purpose: this is a fixed prototype snapshot of
    the change history, not a projection of the live TASKS model.

@@ -8,21 +8,86 @@
    top-level declarations sharing one script scope, same as the rest of
    the panel — no IIFE, so any module can call any other.
    ════════════════════════════════════════════════════════════════════ */
+
+/* ════════════ WHEN THINGS ACTUALLY HAPPENED ════════════
+   A scope is not edited on a metronome. A change order is drafted over days,
+   at whatever pace the job throws up questions, and becomes real the moment
+   it is approved. Ticks spread at even intervals tell the opposite story —
+   one edit per beat — so they are placed on the calendar instead.
+
+   ORDERED only records which version a change belongs to, and a2-time.js is
+   shared, so there are no per-change timestamps to read. They are derived
+   here: each version's changes scatter across the window that closes on its
+   approval date, and the last change of a version is pinned to that date —
+   it is the change that closed the order. So exactly three positions are
+   approvals (the Scope at 0, then each change order), and those are the same
+   three the version bands jump to. The scatter is hashed off each change's
+   own identity rather than drawn at random, so the timeline is irregular but
+   comes out identical on every render. */
+const A2_LEAD = .18;          // nothing moves the instant a version is approved
+
+/* A stable 0..1 from a string (FNV-1a). Deterministic, so the ticks never
+   reshuffle between renders the way Math.random would. */
+function a2Jit(s){
+  let h = 2166136261;
+  for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return ((h >>> 0) % 10000) / 10000;
+}
+
+let POS  = [];   // POS[m] = where playhead position m sits on the bar, 0..100
+let APPR = {};   // APPR[m] = the version approved at m, for the milestone ticks
+
+function buildTimePos(){
+  const N = ORDERED.length;
+  POS = new Array(N+1).fill(0);
+  APPR = {};
+  const at = v => Date.parse(VER[v].date);
+  const T0 = at(VER_ORDER[0]), TN = at(VER_ORDER[VER_ORDER.length-1]), span = TN - T0;
+  if(!(span > 0)){                     // unparseable dates — fall back to even spacing
+    for(let m=0; m<=N; m++) POS[m] = (m/Math.max(1,N))*100;
+    APPR[0] = VER_ORDER[0];
+    if(N) APPR[N] = ORDERED[N-1].ver;
+    return;
+  }
+  APPR[0] = VER_ORDER[0];              // the Scope, approved — the start of the bar
+  let from = T0, m = 1;
+  VER_ORDER.forEach(v=>{
+    const rows = ORDERED.filter(ch => ch.ver === v);
+    if(!rows.length) return;           // a version nothing was changed under
+    const to = at(v), win = to - from, k = rows.length;
+    rows.forEach((ch,j)=>{
+      // Each change owns a slice of the window and sits at a hashed point
+      // inside it, so the cadence is uneven but two never land on top of one
+      // another. The last one is pinned to the approval date.
+      const slice = (j + .3 + .55*a2Jit(v+'|'+(ch._task?ch._task.code:'')+'|'+ch.ct+'|'+j)) / k;
+      const f = (j === k-1) ? 1 : A2_LEAD + (1-A2_LEAD)*slice;
+      POS[m++] = Math.max(0, Math.min(100, ((from + f*win) - T0) / span * 100));
+    });
+    APPR[m-1] = v;                     // the change that closed this order
+    from = to;
+  });
+}
+
 /* ════════════ SCRUBBER ════════════
    Built once so a pointer-drag survives the re-render of everything else;
    only the dynamic bits update as the playhead moves. */
 function buildScrubber(){
-  const N = ORDERED.length, denom = Math.max(1, N);
-  const ticks = ORDERED.map((ch,i)=>
-    `<div class="a2-tl-tick" data-m="${i+1}" style="left:${((i+1)/denom)*100}%;--mk:${CT[ch.ct].color}"></div>`
-  ).join('');
+  buildTimePos();
+  const N = ORDERED.length;
+  let ticks = '';
+  for(let m=0; m<=N; m++){
+    const ch  = m ? ORDERED[m-1] : null;
+    const ap  = APPR[m];
+    const mk  = ch ? CT[ch.ct].color : 'var(--t2)';
+    ticks += `<div class="a2-tl-tick${ap ? ' is-appr' : ''}" data-m="${m}" style="left:${POS[m].toFixed(3)}%;--mk:${mk}"></div>`;
+  }
   const segs = [{ver:'orig',m:0},{ver:'co1',m:1},{ver:'co2',m:C1+1}];
   const groups = segs.map((s,i)=>{
-    const left = (s.m/denom)*100;
-    const right = (i+1 < segs.length) ? (segs[i+1].m/denom)*100 : 100;
-    const jump = s.ver==='orig' ? 0 : s.ver==='co1' ? C1 : N;
-    return `<button class="a2-tl-group" type="button" data-ver="${s.ver}" style="left:${left}%;width:${Math.max(0,right-left)}%"
-      onclick="a2SetT(${jump})" title="${a2Esc(VER[s.ver].label)} · ${a2Esc(VER[s.ver].date)}">${a2Esc(VER[s.ver].label)}</button>`;
+    const left  = POS[Math.min(s.m, N)] || 0;
+    const right = (i+1 < segs.length) ? (POS[Math.min(segs[i+1].m, N)] || 0) : 100;
+    const jump  = s.ver==='orig' ? 0 : s.ver==='co1' ? C1 : N;
+    return `<button class="a2-tl-group" type="button" data-ver="${s.ver}" style="left:${left.toFixed(3)}%;width:${Math.max(0,right-left).toFixed(3)}%"
+      onclick="a2SetT(${jump})" title="${a2Esc(VER[s.ver].label)} · approved ${a2Esc(VER[s.ver].date)}">${a2Esc(VER[s.ver].label)}</button>`;
   }).join('');
   document.getElementById('a2Scrub').innerHTML = `
     <div class="a2-tl-hdr">
@@ -56,9 +121,14 @@ function buildScrubber(){
   SREFS.prev.onclick = ()=>setT(timeT-1);
   SREFS.next.onclick = ()=>setT(timeT+1);
   let dragging = false;
+  /* Ticks no longer sit at even intervals, so a drag snaps to the nearest
+     real moment rather than dividing the width into equal steps. */
   const toM = clientX => {
     const r = SREFS.wrap.getBoundingClientRect();
-    return Math.round(Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * N);
+    const p = Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * 100;
+    let best = 0, bd = Infinity;
+    for(let m=0; m<POS.length; m++){ const d = Math.abs(POS[m]-p); if(d < bd){ bd = d; best = m; } }
+    return best;
   };
   SREFS.wrap.addEventListener('pointerdown', e=>{
     dragging = true;
@@ -75,7 +145,7 @@ function buildScrubber(){
 }
 function updateScrubber(){
   if(!SREFS || !document.getElementById('a2TlWrap')) return;
-  const N = ORDERED.length, pct = (timeT/Math.max(1,N))*100;
+  const N = ORDERED.length, pct = POS[Math.max(0, Math.min(N, timeT))] || 0;
   SREFS.fill.style.width = pct + '%';
   SREFS.thumb.style.left = pct + '%';
   SREFS.ticks.forEach(tk=>{
@@ -93,7 +163,9 @@ function updateScrubber(){
     txt = `${VER[ch.ver].label} · ${ch._task.name} — ${CT[ch.ct].label.toLowerCase()}`;
     date = VER[ch.ver].date;
   }
-  SREFS.label.innerHTML = `<span class="a2-cl-dot" style="--mk:${dot}"></span><span class="a2-cl-txt">${a2Esc(txt)}</span><span class="a2-cl-date">${a2Esc(date)}</span><span class="a2-tl-idx">${timeT} / ${N}</span>`;
+  // Sitting on one of the three approvals is worth saying out loud.
+  const appr = APPR[timeT] ? `<span class="a2-cl-appr">Approved</span>` : '';
+  SREFS.label.innerHTML = `<span class="a2-cl-dot" style="--mk:${dot}"></span><span class="a2-cl-txt">${a2Esc(txt)}</span>${appr}<span class="a2-cl-date">${a2Esc(date)}</span><span class="a2-tl-idx">${timeT} / ${N}</span>`;
   SREFS.prev.disabled = timeT <= 0;
   SREFS.next.disabled = timeT >= N;
 }

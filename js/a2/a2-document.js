@@ -59,6 +59,11 @@ function shellHtml(){
             </table>
           </div>
           <div class="a2-margin" id="a2Margin"></div>
+          <!-- EXPERIMENT (a2-expand.js): photo rail. Furthest right so it never
+               disturbs the card lane's measured stacking. CSS-gated on
+               body.sb-collapsed — it only exists when hiding the scope list
+               freed up the width to spend on it. -->
+          <div class="a2-photorail" id="a2PhotoRail"></div>
         </div>
 
       </div>
@@ -132,6 +137,7 @@ function renderDoc(){
   const bodyEl = document.getElementById('a2Body');
   bodyEl.innerHTML = out.join('');
   bodyEl.classList.toggle('is-expanded', !!(typeof a2Expanded !== 'undefined' && a2Expanded));
+  if(typeof renderA2Photo === 'function') renderA2Photo();   // EXPERIMENT
   renderTotal(roomCount);
   applySelection();   // the rows were just replaced; re-mark the selected line
 }
