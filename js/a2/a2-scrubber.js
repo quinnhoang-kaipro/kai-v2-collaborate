@@ -54,6 +54,7 @@ function buildTimePos(){
   // window to spread across. VER.orig.opened is that day.
   const T0 = Date.parse(VER[VER_ORDER[0]].opened || VER[VER_ORDER[0]].date);
   const TN = at(VER_ORDER[VER_ORDER.length-1]), span = TN - T0;
+  TSPAN = (span > 0) ? {T0, span} : null;
   if(!(span > 0)){                     // unparseable dates — fall back to even spacing
     for(let m=0; m<=N; m++) POS[m] = (m/Math.max(1,N))*100;
     ORDERED.forEach(ch => { ch._when = null; });   // a2When() falls back to the version date
@@ -103,6 +104,31 @@ function a2AsOfDate(){
   return a2When(ORDERED[timeT-1]);
 }
 
+/* ── sign-offs ──
+   Where a calendar date falls on the bar, 0..100 — null if the timeline has
+   not been built or the date sits outside it. Changes are placed by their
+   position in ORDERED; a review has no position in that list, only a day, so
+   it needs the calendar directly. */
+function a2PctOf(dateStr){
+  if(!TSPAN) return null;
+  const t = Date.parse(dateStr);
+  if(!(t >= TSPAN.T0 && t <= TSPAN.T0 + TSPAN.span)) return null;
+  return ((t - TSPAN.T0) / TSPAN.span) * 100;
+}
+/* The sign-offs that belong on the bar. The version filter does the work: for
+   the pre-approval stages a2-stage.js trims VER_ORDER in place, so a review of
+   a change order that does not exist yet drops out on its own.
+
+   Deliberately not gated on a2Unapproved(). The Approved chip is suppressed in
+   draft because it asserts the thing the stage is still waiting for, but a
+   review asserts nothing about approval — and a2-stage.js keeps the Scope
+   phase's own authoring history for exactly this reason: those things really
+   did happen while the scope was being written. Its reviews did too. */
+function a2Signoffs(){
+  if(typeof REVIEWS === 'undefined') return [];
+  return REVIEWS.filter(r => VER[r.ver] && VER_ORDER.indexOf(r.ver) !== -1 && a2PctOf(r.date) != null);
+}
+
 /* ════════════ SCRUBBER ════════════
    Built once so a pointer-drag survives the re-render of everything else;
    only the dynamic bits update as the playhead moves. */
@@ -116,6 +142,15 @@ function buildScrubber(){
     const mk  = ch ? CT[ch.ct].color : 'var(--t2)';
     ticks += `<div class="a2-tl-tick${ap ? ' is-appr' : ''}" data-m="${m}" style="left:${POS[m].toFixed(3)}%;--mk:${mk}"></div>`;
   }
+  // Each sign-off sits on the day it was signed, in its own lane under the
+  // rail. Placed by date rather than by playhead position: a review is not a
+  // change, so it has no slot in ORDERED to hang off.
+  const signs = a2Signoffs().map(r=>{
+    const pct = a2PctOf(r.date);
+    const ttl = `${r.who} · ${r.role} marked ${VER[r.ver].label} as reviewed · ${r.date}`;
+    return `<div class="a2-tl-sign" data-p="${pct.toFixed(3)}" style="left:${pct.toFixed(3)}%" title="${a2Esc(ttl)}"
+      ><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2.2 5.3 4.2 7.3 7.8 3.2"/></svg></div>`;
+  }).join('');
   // Bands come from the version bounds, so the Scope band covers the run of
   // changes that built the scope rather than collapsing to a point at 0.
   const segs = VBOUNDS;
@@ -141,6 +176,7 @@ function buildScrubber(){
       <div class="a2-tl-track">
         <div class="a2-tl-fill" id="a2TlFill"></div>
         ${ticks}
+        ${signs}
         <div class="a2-tl-thumb" id="a2TlThumb"></div>
       </div>
     </div>
@@ -153,6 +189,7 @@ function buildScrubber(){
     prev:  document.getElementById('a2Prev'),
     next:  document.getElementById('a2Next'),
     ticks: [...document.querySelectorAll('#a2Scrub .a2-tl-tick')],
+    signs: [...document.querySelectorAll('#a2Scrub .a2-tl-sign')],
     groups:[...document.querySelectorAll('#a2Scrub .a2-tl-group')],
   };
   SREFS.prev.onclick = ()=>setT(timeT-1);
@@ -190,6 +227,8 @@ function updateScrubber(){
     tk.classList.toggle('is-revealed', m <= timeT);
     tk.classList.toggle('is-current', m === timeT);
   });
+  // A check fills in once the playhead reaches the day it was signed.
+  SREFS.signs.forEach(s => s.classList.toggle('is-revealed', +s.dataset.p <= pct + 1e-6));
   const ver = asofVer();
   SREFS.groups.forEach(g=> g.classList.toggle('is-current', g.dataset.ver === ver));
   let dot, txt, date;

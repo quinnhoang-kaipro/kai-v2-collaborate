@@ -33,7 +33,7 @@
    type, and the three approvals — the Scope, then each change order closing —
    as taller ink stems with a capped dot, so the eye can find the moments the
    document actually became real. The extra top padding is room for the caps. */
-.a2-tl-wrap{position:relative;padding:18px 0 6px;cursor:pointer;touch-action:none;user-select:none}
+.a2-tl-wrap{position:relative;padding:18px 0 16px;cursor:pointer;touch-action:none;user-select:none}
 .a2-tl-track{position:relative;height:6px;border-radius:999px;background:var(--sunken);border:1px solid var(--stroke)}
 .a2-tl-fill{position:absolute;left:0;top:0;bottom:0;background:var(--midtone);border-radius:999px 0 0 999px;transition:width .1s ease}
 .a2-tl-thumb{position:absolute;top:50%;width:15px;height:15px;border-radius:50%;background:var(--ink);border:2px solid var(--white);box-shadow:0 0 0 1px var(--ink),0 1px 3px rgba(0,0,0,.25);transform:translate(-50%,-50%);pointer-events:none;z-index:4;transition:left .1s ease}
@@ -51,6 +51,19 @@
 .a2-tl-tick.is-appr::after{content:'';position:absolute;left:50%;top:-7px;width:7px;height:7px;box-sizing:border-box;border-radius:1px;transform:translateX(-50%) rotate(45deg);background:var(--white);border:1.5px solid var(--midtone);transition:background .14s,border-color .14s}
 .a2-tl-tick.is-appr.is-revealed{background:var(--ink)}
 .a2-tl-tick.is-appr.is-revealed::after{background:var(--ink);border-color:var(--ink)}
+
+/* ── sign-off lane ──
+   Reviews get their own lane under the rail, which is what the extra bottom
+   padding buys: milestones above the line, edits on it, people below. Keeping
+   them off the rail matters — a review lands days before the approval it leads
+   to, so a check on the rail would read as one more edit. Hollow until the
+   playhead reaches the day it was signed, filled after, the same tense the
+   approval diamonds use. These are the only marks on the bar that take the
+   pointer, so the name is reachable on hover; a press still falls through to
+   the wrap and scrubs. */
+.a2-tl-sign{position:absolute;top:12px;width:10px;height:10px;margin-left:-5px;box-sizing:border-box;border-radius:50%;background:var(--white);border:1px solid var(--stroke);color:var(--midtone);display:flex;align-items:center;justify-content:center;z-index:2;cursor:pointer;transition:background .14s,border-color .14s,color .14s}
+.a2-tl-sign svg{display:block;width:6px;height:6px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.a2-tl-sign.is-revealed{background:var(--ink);border-color:var(--ink);color:var(--white)}
 
 /* ── version bands ──
    The three change orders as spans of the timeline rather than buttons: a

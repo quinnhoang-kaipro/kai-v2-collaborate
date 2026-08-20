@@ -55,6 +55,22 @@ const VER = {
   co2: {label:'Change Order 2', date:'Apr 30, 2026', rank:2, sow:'SOW-00000E7D', tag:'Current',  tagCls:'',         stateCls:' is-current'},
 };
 const VER_ORDER = ['orig','co1','co2'];
+
+/* ── sign-offs ──
+   Who marked a version as reviewed, and when. Kept apart from the version
+   ladder above because a review is a person's act rather than the document's:
+   several people sign the same version, and they sign in the days running up
+   to approval, not on the approval date itself. The scrubber draws each one as
+   a check in its own lane under the rail, and the dates are what place it —
+   these fall inside the Apr 2 → Apr 30 span the bar is drawn on. */
+const REVIEWS = [
+  {ver:'orig', who:'S. Patel',  role:'Ops',      date:'Apr 10, 2026'},
+  {ver:'orig', who:'T. Okafor', role:'Manager',  date:'Apr 11, 2026'},
+  {ver:'co1',  who:'D. Reyes',  role:'Designer', date:'Apr 20, 2026'},
+  {ver:'co1',  who:'T. Okafor', role:'Manager',  date:'Apr 21, 2026'},
+  {ver:'co2',  who:'S. Patel',  role:'Ops',      date:'Apr 28, 2026'},
+  {ver:'co2',  who:'T. Okafor', role:'Manager',  date:'Apr 29, 2026'},
+];
 // `budget` is stamped onto each version by stampVersionBudgets() — it is the
 // sum of the lines that exist at that point, not a figure kept by hand.
 
