@@ -54,7 +54,8 @@ function cardHtml(t, ch){
   const rowsHtml = ch.rows.map(r=>{
     if(r.add !== undefined){
       if(r.field === 'Line added'){
-        return `<div class="a2-mc-change"><span class="a2-mc-add"><span class="a2-mc-badge is-added">Added</span>${a2Esc(r.add)}${r.wasAmount?` · <b>${a2Esc(r.wasAmount)}</b>`:''}</span></div>`;
+        // No "Added" pill: the card's head already reads LINE ADDED.
+        return `<div class="a2-mc-change"><span class="a2-mc-add">${a2Esc(r.add)}${r.wasAmount?` · <b>${a2Esc(r.wasAmount)}</b>`:''}</span></div>`;
       }
       return `<div class="a2-mc-change"><span class="a2-mc-field">${a2Esc(r.field)}</span><span class="a2-mc-add">${a2Esc(r.add)}</span></div>`;
     }
@@ -68,7 +69,7 @@ function cardHtml(t, ch){
   return `
     <div class="a2-mc-head">
       <span class="a2-mc-ct"><span class="a2-swatch"></span>${ct.label}</span>
-      <span class="a2-mc-when">${a2Esc(ver.date)}</span>
+      <span class="a2-mc-when">${a2Esc(a2When(ch))}</span>
     </div>
     <div class="a2-mc-task"><b>${a2Esc(t.name)}</b> <span class="a2-tid">· ${a2Esc(t.code)}</span></div>
     <!-- Collapsed head: the type swatch, the line, and the date on one row, so
@@ -77,8 +78,7 @@ function cardHtml(t, ch){
     <div class="a2-mc-chead">
       <span class="a2-swatch"></span>
       <b>${a2Esc(t.name)}</b>
-      <span class="a2-tid">${a2Esc(t.code)}</span>
-      <span class="a2-mc-cwhen">${a2Esc(ver.date.replace(/,? \d{4}$/, ''))}</span>
+      <span class="a2-mc-cwhen">${a2Esc(a2When(ch).replace(/,? \d{4}$/, ''))}</span>
     </div>
     <div class="a2-mc-peek">${cardPeek(ch)}</div>
     <div class="a2-mc-body">

@@ -49,6 +49,7 @@ function buildTimePos(){
   const TN = at(VER_ORDER[VER_ORDER.length-1]), span = TN - T0;
   if(!(span > 0)){                     // unparseable dates — fall back to even spacing
     for(let m=0; m<=N; m++) POS[m] = (m/Math.max(1,N))*100;
+    ORDERED.forEach(ch => { ch._when = null; });   // a2When() falls back to the version date
     if(N) APPR[N] = ORDERED[N-1].ver;
     return;
   }
@@ -65,11 +66,34 @@ function buildTimePos(){
       // another. The last one is pinned to the approval date.
       const slice = (j + .3 + .55*a2Jit(v+'|'+(ch._task?ch._task.code:'')+'|'+ch.ct+'|'+j)) / k;
       const f = (j === k-1) ? 1 : A2_LEAD + (1-A2_LEAD)*slice;
-      POS[m++] = Math.max(0, Math.min(100, ((from + f*win) - T0) / span * 100));
+      ch._when = from + f*win;         // the day it landed — every surface reads this
+      POS[m++] = Math.max(0, Math.min(100, (ch._when - T0) / span * 100));
     });
     APPR[m-1] = v;                     // the change that closed this order
     from = to;
   });
+}
+
+/* ── the date a change landed ──
+   Reading VER[ch.ver].date instead would stamp every change in a version with
+   that version's approval date: eleven Scope changes spread across ten days on
+   the bar, all claiming to have happened on the day the scope was approved.
+   The tick already knows better, so everything that prints a change's date
+   asks here and the surfaces can't contradict each other. Falls back to the
+   version date if the timeline has not been built yet. */
+const A2_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function a2When(ch){
+  if(!ch) return '';
+  if(ch._when == null) return VER[ch.ver] ? VER[ch.ver].date : '';
+  const d = new Date(ch._when);
+  return `${A2_MON[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+/* The date the playhead is parked on: the day the change under it landed, or
+   the day the scope was opened at position 0. The scrubber label and the
+   paper's footer both print this, so the two cannot drift apart. */
+function a2AsOfDate(){
+  if(timeT === 0) return VER[VER_ORDER[0]].opened || VER[VER_ORDER[0]].date;
+  return a2When(ORDERED[timeT-1]);
 }
 
 /* ════════════ SCRUBBER ════════════
@@ -164,13 +188,13 @@ function updateScrubber(){
   let dot, txt, date;
   // Position 0 is the first walk, not an empty document — whatever the agent
   // caught on the way through the door is already on the page.
-  if(timeT === 0){ dot='var(--t3)'; txt='Scope opened — first walk'; date=VER.orig.opened || VER.orig.date; }
+  if(timeT === 0){ dot='var(--t3)'; txt='Scope opened — first walk'; }
   else {
     const ch = ORDERED[timeT-1];
     dot = CT[ch.ct].color;
     txt = `${VER[ch.ver].label} · ${ch._task.name} — ${CT[ch.ct].label.toLowerCase()}`;
-    date = VER[ch.ver].date;
   }
+  date = a2AsOfDate();
   // Sitting on one of the three approvals is worth saying out loud.
   const appr = APPR[timeT] ? `<span class="a2-cl-appr">Approved</span>` : '';
   SREFS.label.innerHTML = `<span class="a2-cl-dot" style="--mk:${dot}"></span><span class="a2-cl-txt">${a2Esc(txt)}</span>${appr}<span class="a2-cl-date">${a2Esc(date)}</span><span class="a2-tl-idx">${timeT} / ${N}</span>`;

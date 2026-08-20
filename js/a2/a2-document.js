@@ -101,7 +101,9 @@ function renderDoc(){
       // opacity while the rest of the document fades back.
       const isOpen = (typeof a2Expanded !== 'undefined') && a2Expanded === t.code;
       const cls = ['a2-row', isGone?'is-removed':'', isOpen?'is-open':''].filter(Boolean).join(' ');
-      const badge  = t.added ? '<span class="a2-badge is-added">New line</span>' : '';
+      // No "New line" pill on the row — the change card in the margin is where
+      // that story is told, and the pill repeated it inside the document.
+      const badge  = '';
       const rbadge = isGone  ? '<span class="a2-badge is-removed">Removed</span>' : '';
       out.push(`<tr class="${cls}" data-a2-code="${a2Esc(t.code)}" onclick="a2Select('${a2Esc(t.code)}')">
         <td class="a2-item">
@@ -154,7 +156,6 @@ function selectRow(code){
 function renderTotal(rooms){
   const foot = document.getElementById('a2Foot');
   if(!foot) return;
-  const ver = VER[asofVer()];
   foot.innerHTML = `
     <tr class="a2-total">
       <td class="a2-total-k" colspan="2">${rooms} ${rooms===1?'room':'rooms'}</td>
@@ -163,6 +164,6 @@ function renderTotal(rooms){
       <td></td>
     </tr>
     <tr class="a2-total-lbl">
-      <td colspan="6">Total as of ${a2Esc(ver.date)}</td>
+      <td colspan="6">Total as of ${a2Esc(a2AsOfDate())}</td>
     </tr>`;
 }
