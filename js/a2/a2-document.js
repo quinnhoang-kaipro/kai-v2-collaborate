@@ -30,6 +30,10 @@ function shellHtml(){
         }).join('')}</div>
 
         <div class="a2-stage">
+          <!-- Lane order is cards | paper | photos. The card lane leads so a
+               change reads before the line it changed; the photo trails as
+               evidence. Both are absolutely-positioned lanes aligned per row. -->
+          <div class="a2-margin" id="a2Margin"></div>
           <div class="a2-paper" id="a2Paper">
             <div class="a2-head">
               <div class="a2-head-l">
@@ -58,7 +62,6 @@ function shellHtml(){
               <tfoot id="a2Foot"></tfoot>
             </table>
           </div>
-          <div class="a2-margin" id="a2Margin"></div>
           <!-- EXPERIMENT (a2-expand.js): photo rail. Furthest right so it never
                disturbs the card lane's measured stacking. CSS-gated on
                body.sb-collapsed — it only exists when hiding the scope list
@@ -87,8 +90,11 @@ function renderDoc(){
   const out = [];
   let roomCount = 0;
   SCOPE.forEach(g=>{
-    // An added line is absent from the scope until its "added" change lands.
-    const vis = g.tasks.filter(t => !t.added || revealed(findCt(t,'added')));
+    // A line is absent from the scope until its "added" change lands, and a
+    // room with no lines yet is absent along with them — an empty room header
+    // would announce scope that does not exist at this point in the history.
+    const vis = g.tasks.filter(t => lineExistsAt(t, timeT));
+    if(!vis.length) return;
     out.push(`<tr class="a2-grp">
       <td class="a2-gname" colspan="5">${a2Esc(g.room)}<span class="a2-gcount">${vis.length} ${vis.length===1?'item':'items'}</span></td>
       <td class="a2-media-cell">${a2MediaBtn('room', g.room, a2RoomPhotoCount(g.room))}</td>

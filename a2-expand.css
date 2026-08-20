@@ -41,24 +41,24 @@
 .a2-open.is-open .a2-open-chev{opacity:.6;transform:rotate(90deg)}
 .a2-open-chev{transition:opacity .12s,transform .12s}
 
-/* ── PHOTO RAIL (experiment part 2) ──────────────────────────────────
-   Third column in .a2-stage, furthest right so it never disturbs the card
-   lane's measured stacking. Exists only when the scope list is hidden —
-   that's the width it spends. */
+/* ── LANES: cards left, paper centre, photos right (experiment part 2) ──
+   The card lane moved to the left of the paper, so its connector has to point
+   right — the pseudo-elements in panel.css put the leader line and dot on the
+   card's left edge, which now faces away from the document. */
+.a2-card::before{left:auto;right:-24px}
+.a2-card::after{left:auto;right:-27px}
+
+/* ── PHOTO LANE ──────────────────────────────────────────────────────
+   Absolutely-positioned items aligned per row by layoutPhotos(), same as the
+   card lane. Only present when the scope list is hidden. */
 .a2-photorail{display:none}
-body.sb-collapsed .a2-photorail{display:block;width:250px;flex-shrink:0}
+body.sb-collapsed .a2-photorail{display:block;width:180px;flex-shrink:0;position:relative;min-height:120px}
 body.sb-collapsed .a2-root.is-tight .a2-photorail{display:none}   /* no width to spare */
-.a2-pr{position:sticky;top:0;background:var(--white);border:1px solid var(--stroke);padding:10px}
-.a2-pr-hd{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
-.a2-pr-lbl{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.a2-pr-n{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--t3);flex-shrink:0}
-/* The shared tile is built for a horizontal strip; here it fills the rail. */
-.a2-pr-fig .pgd-photo-fig{flex:none;width:100%}
-.a2-pr-fig .pgd-photo{width:100%}
-.a2-pr-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;
-  padding-top:8px;border-top:1px solid var(--stroke)}
-.a2-pr-walk{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.a2-pr-dot{width:7px;height:7px;border-radius:50%;background:var(--mk,var(--t3));flex-shrink:0}
-.a2-pr-date{font-family:var(--mono);font-size:9.5px;color:var(--t3);flex-shrink:0}
+.a2-prow{position:absolute;left:0;right:0;transition:opacity .18s}
+.a2-prow .pgd-photo-fig{flex:none;width:100%;gap:4px}
+.a2-prow .pgd-photo{width:100%}
+.a2-prow .pgd-photo-date{font-size:10.5px}
+/* Fades with the document when a line is expanded, so the open line's photo is
+   the only one at full strength. Set in JS (buildPhotoRail) — the rail is a
+   sibling of .a2-paper, not of #a2Body, so no selector reaches it from there. */
+.a2-prow.is-dim{opacity:.2}

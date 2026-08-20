@@ -57,65 +57,87 @@ function a2ExpandRowHtml(t){
 
 /* ════════════════════════════════════════════════════════════════════
    PHOTO RAIL  ·  EXPERIMENT (part 2)
-   Hiding the scope list frees ~300px on the right. Spend it on the task's
-   photo, and the photo strip inside the expanded block becomes redundant —
-   so it's dropped from there (see a2ExpandRowHtml above).
+   A third lane, right of the paper, holding one photo per line — aligned to
+   the line it belongs to, the same way the change cards align on the left.
+   So a row reads left to right: what changed, the line itself, what it looks
+   like. Only exists when the scope list is hidden; that's the width it spends.
 
-   Which photo: the expanded line's task if a line is open, otherwise the most
-   recent task photo in the scope, so the rail is never dead.
+   Positioning mirrors layoutCards exactly: offsets are rect deltas against
+   the lane, and items stack downward so two photos never overlap. Which means
+   a photo can drift below its row when the one above it is taller than the
+   gap — same tradeoff the cards already make.
 
    HONEST CAVEAT about "changes as you scrub". The seeded walks are dated
    Jan 8 – Mar 15 2026, but the change history runs Apr 12 – Apr 30 2026 — so
-   every photo predates every version, and a true "latest photo on or before the
-   playhead date" filter would return the same Mar 15 shot at every position.
-   The pane would look broken. So the playhead's FRACTION through the change
-   list selects how far through the task's chronological photos we are: park
-   at the start and you see the initial walk, scrub to the present and you see
-   the closeout. It reads exactly like the real thing and it's the only way to
-   feel the interaction on this data — but it is a stand-in, not date logic.
-   Real fix is re-dating WALKS in data.js so they straddle the change orders.
+   every photo predates every version, and a true "latest photo on or before
+   the playhead date" filter would return the same Mar 15 shot at every
+   position. The pane would look broken. So the playhead's FRACTION through the
+   change list selects how far through that line's chronological photos we are:
+   park at the start and you see the initial walk, scrub to the present and you
+   see the closeout. It reads exactly like the real thing, but it is a stand-in
+   for date logic. Real fix is re-dating WALKS in data.js to straddle the
+   change orders.
    ════════════════════════════════════════════════════════════════════ */
 
-/* The task's photos, oldest first by walk date. */
-function a2PhotoSequence(){
-  if(typeof PHOTOS === 'undefined' || !PHOTOS) return {photos:[], task:null};
-  const walkRank = (p) => {
-    if(typeof WALKS === 'undefined' || !p.walk) return 0;
-    const i = WALKS.findIndex(x => x.id === p.walk);
-    return i < 0 ? 0 : i;
-  };
-  let task = null, pool = [];
-  if(a2Expanded && typeof TASKS !== 'undefined'){
-    task = TASKS.find(x => x.code === a2Expanded) || null;
-    if(task) pool = PHOTOS.filter(p => p.kind === 'task' && p.task === task.code);
-  }
-  if(!pool.length) pool = PHOTOS.filter(p => p.kind === 'task');
-  return {photos: pool.slice().sort((a,b) => walkRank(a) - walkRank(b)), task};
+/* Rank a photo by where its walk sits in the project's chronology. */
+function a2WalkRank(p){
+  if(typeof WALKS === 'undefined' || !p.walk) return 0;
+  const i = WALKS.findIndex(x => x.id === p.walk);
+  return i < 0 ? 0 : i;
 }
-
-function renderA2Photo(){
-  const rail = document.getElementById('a2PhotoRail');
-  if(!rail) return;
-  const {photos, task} = a2PhotoSequence();
-  if(!photos.length){ rail.innerHTML = ''; return; }
-  // Playhead fraction -> position in the photo sequence. See the caveat above.
+/* One line's photo at the current playhead, or null when it has none. */
+function a2PhotoAsOf(code){
+  if(typeof PHOTOS === 'undefined' || !PHOTOS) return null;
+  const pool = PHOTOS.filter(p => p.kind === 'task' && p.task === code)
+                     .sort((a,b) => a2WalkRank(a) - a2WalkRank(b));
+  if(!pool.length) return null;
   const denom = Math.max(1, (typeof ORDERED !== 'undefined' ? ORDERED.length : 1));
   const frac  = Math.min(1, Math.max(0, (typeof timeT !== 'undefined' ? timeT : 0) / denom));
-  const idx   = Math.min(photos.length - 1, Math.round(frac * (photos.length - 1)));
-  const p     = photos[idx];
-  const walk  = (p.walk && typeof walkFor === 'function') ? walkFor(p.walk) : null;
-  const fig   = (typeof _pgdPhotoFigHtml === 'function')
-    ? _pgdPhotoFigHtml(p, idx, task ? task.name : (p.room || 'Project'), task ? task.name : null)
-    : '';
-  rail.innerHTML = `<div class="a2-pr">
-    <div class="a2-pr-hd">
-      <span class="a2-pr-lbl">${a2Esc(task ? task.name : 'Scope')}</span>
-      <span class="a2-pr-n">${idx + 1}/${photos.length}</span>
-    </div>
-    <div class="a2-pr-fig">${fig}</div>
-    <div class="a2-pr-meta">
-      ${walk ? `<span class="a2-pr-walk"><span class="a2-pr-dot" style="--mk:${walk.color||'var(--t3)'}"></span>${a2Esc(walk.label)}</span>` : ''}
-      ${walk ? `<span class="a2-pr-date">${a2Esc(walk.date)}</span>` : ''}
-    </div>
-  </div>`;
+  return pool[Math.min(pool.length - 1, Math.round(frac * (pool.length - 1)))];
 }
+
+function buildPhotoRail(){
+  const rail = document.getElementById('a2PhotoRail');
+  if(!rail) return;
+  rail.innerHTML = '';
+  document.querySelectorAll('#a2Body tr[data-a2-code]').forEach(row => {
+    const code = row.dataset.a2Code;
+    const p = a2PhotoAsOf(code);
+    if(!p) return;
+    const t = (typeof TASKS !== 'undefined') ? TASKS.find(x => x.code === code) : null;
+    const el = document.createElement('div');
+    el.className = 'a2-prow';
+    el.dataset.code = code;
+    el.innerHTML = (typeof _pgdPhotoFigHtml === 'function')
+      ? _pgdPhotoFigHtml(p, 0, t ? t.name : (p.room || 'Project'), t ? t.name : null)
+      : '';
+    // Hovering a photo spotlights its line, same as hovering a card.
+    el.addEventListener('mouseenter', () => spotRow(code, true, el));
+    el.addEventListener('mouseleave', () => spotRow(code, false, el));
+    // Recede with the document when another line is expanded.
+    if(a2Expanded && a2Expanded !== code) el.classList.add('is-dim');
+    rail.appendChild(el);
+  });
+  layoutPhotos();
+}
+
+function layoutPhotos(){
+  const rail = document.getElementById('a2PhotoRail');
+  if(!rail) return;
+  const railTop = rail.getBoundingClientRect().top;
+  const GAP = 10;
+  let cursor = 0;
+  rail.querySelectorAll('.a2-prow').forEach(el => {
+    const row = document.querySelector('#a2Body tr[data-a2-code="' + el.dataset.code + '"]');
+    if(!row){ el.style.display = 'none'; return; }
+    el.style.display = '';
+    const top = Math.max(row.getBoundingClientRect().top - railTop, cursor);
+    el.style.top = top + 'px';
+    cursor = top + el.offsetHeight + GAP;
+  });
+  // Absolutely-positioned children only, so the lane needs a height of its own.
+  rail.style.minHeight = cursor ? cursor + 'px' : '';
+}
+
+/* renderDoc calls this after replacing the table. */
+function renderA2Photo(){ buildPhotoRail(); }
