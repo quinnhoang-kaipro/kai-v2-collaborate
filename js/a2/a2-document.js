@@ -16,19 +16,6 @@ function shellHtml(){
     <div class="a2-scroll" id="a2Scroll">
       <div class="a2-page">
 
-        <div class="hist-grid" id="a2Vers">${VER_ORDER.map(k=>{
-          const v = VER[k];
-          return `<button class="hist-card${v.stateCls}" type="button" data-ver="${k}" onclick="a2JumpVer('${k}')" title="Scrub to ${a2Esc(v.label)}">
-            <div class="hist-card-name">${a2Esc(v.label)}</div>
-            <div class="hist-card-meta">Approved ${a2Esc(v.date)}</div>
-            <div class="hist-card-docid">${a2Esc(v.sow)}</div>
-            <div class="hist-card-foot">
-              <span class="hist-card-budget">${a2Esc(fmtMoney(v.budget))}</span>
-              <span class="hist-card-tag${v.tagCls?` hist-tag-${v.tagCls}`:''}">${a2Esc(v.tag)}</span>
-            </div>
-          </button>`;
-        }).join('')}</div>
-
         <div class="a2-stage">
           <!-- Lane order is cards | paper | photos. The card lane leads so a
                change reads before the line it changed; the photo trails as
@@ -101,7 +88,12 @@ function renderDoc(){
       const qtyv = valueAsOf(t,'Qty', t.qty);
       const labv = valueAsOf(t,'Labor', t.labor);
       const amtv = valueAsOf(t,'Amount', t.amount);
-      const gcHtml = gcv.val ? a2Esc(gcv.val) : `<span class="a2-gc-none">Unassigned</span>`;
+      // A contractor assigned during scoping rolls back to the literal
+      // 'Unassigned' before its change lands, so both spellings of "nobody
+      // yet" get the same treatment.
+      const gcHtml = (gcv.val && gcv.val !== 'Unassigned')
+        ? a2Esc(gcv.val)
+        : `<span class="a2-gc-none">Unassigned</span>`;
       // EXPERIMENT (a2-expand.js): the opened line and its detail row keep full
       // opacity while the rest of the document fades back.
       const isOpen = (typeof a2Expanded !== 'undefined') && a2Expanded === t.code;
