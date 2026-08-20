@@ -1237,7 +1237,12 @@ function submitForReview(){
   openModal({
     icon:'check',
     title:'Submit scope for review?',
-    body:`Once submitted, the scope locks for editing until an admin reviews it. ${state.role==='field_agent'?'You can still recall it back to draft until review begins.':''}`,
+    // The old copy said the scope locks outright, which isn't what happens —
+    // you keep editing and re-submitting right up until approval; what changes
+    // is that everyone else needs to ask for access while it sits in the queue.
+    // The field-agent recall clause that used to hang off the end is gone: the
+    // first sentence now covers it, and better.
+    body:`Once submitted, you can make edits and submit again as long as the doc hasn't been approved. The rest of your team would need to request edit access while the scope is waiting for approval.`,
     confirm:'Submit',
     onConfirm:()=>{
       setProjectStage('submitted');
