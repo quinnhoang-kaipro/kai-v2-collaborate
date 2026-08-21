@@ -16,23 +16,55 @@
 /* The opened line reads as the head of the block below it, so the rule that
    normally separates rows is suppressed between them. */
 #a2Body > tr.is-open > td{background:var(--white)}
-#a2Body > tr.a2-detail.is-open > td{border-bottom:0}
+/* Detail row goes white with its main row, so the open line reads as one
+   block — otherwise the selection wash it also carries would show through
+   under a white header and look like a rendering fault. */
+#a2Body > tr.a2-detail.is-open > td{border-bottom:0;background:var(--white)}
 
-.a2-xrow > td{padding:0 !important;background:var(--sunken)}
-.a2-x{border-top:2px solid var(--ink);border-bottom:1px solid var(--stroke);padding:14px 22px 22px}
-.a2-root.is-tight .a2-x{padding:12px 16px 18px}
-.a2-x-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
-.a2-x-eyebrow{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--t3)}
-.a2-x-close{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--t2);background:var(--white);border:1px solid var(--stroke);
-  padding:5px 10px;cursor:pointer;transition:border-color .12s,color .12s}
-.a2-x-close:hover{border-color:var(--ink);color:var(--ink)}
+.a2-xrow > td{padding:0 !important;background:var(--white)}
+/* No horizontal padding on the block itself — the collapse bar spans it edge
+   to edge, and the content below carries its own gutters. */
+.a2-x{border-top:2px solid var(--ink);border-bottom:1px solid var(--stroke);padding:0}
+
+/* Collapse is the whole top edge of the block: a thin full-width strip with a
+   chevron in it, in place of the labelled header row this used to carry. The
+   eyebrow explaining that the Editor shows the task live is gone with it —
+   the block sits under the line it belongs to and needs no caption. Costs
+   16px of height where the header cost 40, which is the point. */
+.a2-x-collapse{display:flex;align-items:center;justify-content:center;
+  width:100%;height:16px;padding:0;border:0;background:transparent;
+  color:var(--t3);cursor:pointer;transition:background .12s,color .12s}
+.a2-x-collapse:hover{background:rgba(26,26,26,.05);color:var(--ink)}
+.a2-x-collapse:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
+.a2-x-collapse svg{width:11px;height:11px;stroke:currentColor;fill:none;
+  stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;display:block}
 .a2-x-empty{font-size:12.5px;color:var(--t3);font-style:italic;padding:14px 0}
 
-/* The Editor's modules are built for the full work surface; inside a document
-   row they need to stack in the width they're given. */
-.a2-x-shop{display:flex;flex-direction:column;gap:12px}
+/* ── ONE SURFACE, NOT A STACK OF CARDS ────────────────────────────────
+   This block used to be a sunken tray holding two white cards, one of which
+   held a filled note box — three nested frames to say "here are two facts
+   about this line". The frames are gone: the insert is a single white surface
+   and its sections are divided by a hairline, which is all the separation two
+   sections need. Every removed border and its padding was vertical space.
+
+   The Editor's own modules land in here, so their box treatment is undone
+   below — scoped to .a2-x, so the Editor tab keeps its cards. */
+.a2-x-shop{display:flex;flex-direction:column;gap:0;padding:0 22px 4px}
+.a2-root.is-tight .a2-x-shop{padding:0 16px 4px}
+
+/* Notes: unbox the module and its note body. The 2px left rule is enough to
+   mark quoted text; the fill behind it was a third frame. */
+.a2-x .pgd-hdr-box{background:transparent;border:0;padding:0;gap:7px}
+.a2-x .sec-tasknotes{margin-bottom:0}
+.a2-x .shop-notes-card{background:transparent;padding:0 0 0 11px;border-left:2px solid var(--stroke);gap:2px}
+.a2-x .shop-notes-body{font-size:12.5px}
+
+/* Section rhythm, declared after the unboxing above so those border:0 resets
+   can't take the divider with them — the imported modules and .a2-xo-wrap
+   both zero their own borders, and one of them is the section that needs
+   this one. */
+.a2-x .a2-x-shop > *{padding:11px 0}
+.a2-x .a2-x-shop > * + *{border-top:1px solid var(--stroke)}
 .a2-x-shop .pgd-details-sec,
 .a2-x-shop .pgd-hdr-box,
 .a2-x-shop .sec-taskcard{background:var(--white)}
@@ -74,3 +106,47 @@ body.sb-collapsed .a2-media-cell{white-space:normal;padding-top:12px!important;p
 
 /* Recedes with the document when another line is expanded. */
 #a2Body.is-expanded > tr:not(.is-open) .a2-pc{opacity:.35}
+
+/* ── OPTIONS, read-only (a2XOptionsHtml) ──────────────────────────────
+   A summary, not a working surface: one line per option, one per product.
+   Where the Editor's card spends ~140px a product on steppers and inputs,
+   this spends ~24px on the three facts that matter — what, how much, how
+   much it came to. Numbers are text; nothing here is a control. */
+.a2-xo-wrap{background:transparent;border:0;padding:0}
+/* Matches .pgd-details-title so this section header and the Notes one read as
+   siblings rather than two different ideas of a label. */
+.a2-xo-lbl{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--t2);margin-bottom:7px}
+.a2-xo+.a2-xo{margin-top:7px;padding-top:7px;border-top:1px dashed var(--stroke)}
+
+/* Option: name on the left, its total on the right. */
+.a2-xo-hd{display:flex;align-items:baseline;gap:12px;margin-bottom:2px}
+.a2-xo-name{font-size:13.5px;font-weight:600;color:var(--ink);min-width:0}
+.a2-xo-total{margin-left:auto;font-family:var(--display);font-size:13.5px;font-weight:700;
+  color:var(--ink);font-variant-numeric:tabular-nums;flex-shrink:0}
+
+/* Product: name · the numbers that make it up · its line total. Indented
+   under its option so the two levels read apart without a second box. */
+.a2-xp{display:flex;align-items:baseline;gap:10px;padding:2px 6px 2px 12px;font-size:12.5px;
+  color:var(--t2);line-height:1.4;margin:0 -6px}
+/* A product with a listing behind it opens the flyaway — the same read-only
+   panel the Editor uses. Hover only, so a row of them doesn't read as a
+   row of buttons. */
+.a2-xp.is-catalog{cursor:pointer;transition:background .12s}
+.a2-xp.is-catalog:hover{background:var(--wash)}
+.a2-xp.is-catalog:hover .a2-xp-name{text-decoration:underline;text-underline-offset:2px;
+  text-decoration-thickness:1px;text-decoration-color:var(--stroke)}
+.a2-xp-name{color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.a2-xp-brand{color:var(--t3);margin-right:6px}
+.a2-xp-meta{margin-left:auto;color:var(--t3);white-space:nowrap;flex-shrink:0;
+  font-variant-numeric:tabular-nums}
+.a2-xp-amt{width:74px;text-align:right;color:var(--ink);font-weight:600;flex-shrink:0;
+  font-variant-numeric:tabular-nums}
+.a2-xo-empty{font-size:12px;color:var(--t3);font-style:italic;padding:1px 0 1px 12px}
+
+/* Tight panel: the meta run is the first thing to give, then the name wraps
+   under it rather than squeezing the amount off the row. */
+.a2-root.is-tight .a2-xp{flex-wrap:wrap;gap:1px 8px;padding-left:10px}
+.a2-root.is-tight .a2-xp-name{flex-basis:100%;white-space:normal}
+.a2-root.is-tight .a2-xp-meta{margin-left:0}
+.a2-root.is-tight .a2-xp-amt{margin-left:auto}

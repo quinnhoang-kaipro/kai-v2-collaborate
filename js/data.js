@@ -120,12 +120,27 @@ let _pid = 1;
 // Each photo belongs to a "walk" — a scheduled site visit that captured
 // evidence. Users filter Pano/Gallery by walk to see how conditions
 // evolved: Initial → Progress → Change order → Progress → Closeout.
+/* Dates sit inside the project's own chronology rather than beside it. The
+   scope opens Apr 2 (VER.orig.opened in js/a2/a2-data.js) and is approved
+   Apr 12; Change Order 1 lands Apr 22 and Change Order 2 Apr 30. Each walk is
+   placed against those boundaries so "the latest photo as of this date" is a
+   real question with a changing answer:
+
+     initial      Apr 2   the scan the scope was built from
+     progress_1   Apr 14  first visit after the scope was approved
+     change_order Apr 21  the visit that surfaced Change Order 1
+     progress_2   Apr 27  between the two change orders
+     close_out    May 18  after the change history ends — construction done
+
+   These used to run Jan 8 – Mar 15, entirely before the scope existed, which
+   made every date-based lookup return the same photo no matter where the
+   playhead sat. Keep them ordered and inside the project's timeline. */
 const WALKS = [
-  {id:'initial',    label:'Initial walk',      short:'Initial',     date:'Jan 8, 2026',  conductor:'Sarah M.',   color:'#555555'},
-  {id:'progress_1', label:'Progress walk 1',   short:'Progress 1',  date:'Feb 3, 2026',  conductor:'Marcus W.',  color:'#567DA3'},
-  {id:'change_order',label:'Change order walk',short:'Change order',date:'Feb 17, 2026', conductor:'Diana R.',   color:'#B3643E'},
-  {id:'progress_2', label:'Progress walk 2',   short:'Progress 2',  date:'Feb 24, 2026', conductor:'Marcus W.',  color:'#5BAED4'},
-  {id:'close_out',  label:'Closeout walk',     short:'Closeout',    date:'Mar 15, 2026', conductor:'Sarah M.',   color:'#60926C'},
+  {id:'initial',    label:'Initial walk',      short:'Initial',     date:'Apr 2, 2026',  conductor:'Sarah M.',   color:'#555555'},
+  {id:'progress_1', label:'Progress walk 1',   short:'Progress 1',  date:'Apr 14, 2026', conductor:'Marcus W.',  color:'#567DA3'},
+  {id:'change_order',label:'Change order walk',short:'Change order',date:'Apr 21, 2026', conductor:'Diana R.',   color:'#B3643E'},
+  {id:'progress_2', label:'Progress walk 2',   short:'Progress 2',  date:'Apr 27, 2026', conductor:'Marcus W.',  color:'#5BAED4'},
+  {id:'close_out',  label:'Closeout walk',     short:'Closeout',    date:'May 18, 2026', conductor:'Sarah M.',   color:'#60926C'},
 ];
 // ── Room-color palette ────────────────────────────────────────────
 // Each room gets a signature color that shows up as a 2px outline on
@@ -183,12 +198,25 @@ function seedPhotos(){
   const walkIds = WALKS.map(w => w.id);
   let walkIdx = 0;
   const pickWalk = () => walkIds[walkIdx++ % walkIds.length];
+  // Everything after a task's first shot comes from a later visit.
+  const laterWalks = walkIds.slice(1);
+  let laterIdx = 0;
+  const pickLaterWalk = () => laterWalks.length ? laterWalks[laterIdx++ % laterWalks.length] : walkIds[0];
   ROOMS.forEach((room,ri)=>{
     const base=ri*13, gn=gCounts[ri]||2;
     for(let i=0;i<gn;i++) PHOTOS.push({id:_pid++, seed:base+i, room, kind:'group', task:null, walk:pickWalk()});
     let s=ri*13+50;
     TASKS.filter(t=>t.room===room).forEach(t=>{
-      for(let k=0;k<(t.photos||0);k++) PHOTOS.push({id:_pid++, seed:s++, room, kind:'task', task:t.code, walk:pickWalk()});
+      for(let k=0;k<(t.photos||0);k++){
+        // A task's FIRST shot is always the initial walk — that scan is what
+        // the task was scoped from, so every scoped line has evidence dated
+        // day one. Later shots come from the visits that followed. Without
+        // this, round-robin left most lines with nothing dated before the
+        // scope was even approved, and any "latest photo as of <date>" lookup
+        // came up empty for them through the whole draft and review phase.
+        const walk = (k === 0) ? walkIds[0] : pickLaterWalk();
+        PHOTOS.push({id:_pid++, seed:s++, room, kind:'task', task:t.code, walk});
+      }
     });
   });
   for(let i=0;i<9;i++) PHOTOS.push({id:_pid++, seed:900+i, room:'Project', kind:'unsorted', task:null, walk:pickWalk()});
