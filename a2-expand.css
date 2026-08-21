@@ -21,7 +21,10 @@
    under a white header and look like a rendering fault. */
 #a2Body > tr.a2-detail.is-open > td{border-bottom:0;background:var(--white)}
 
-.a2-xrow > td{padding:0 !important;background:var(--white)}
+/* Darker cream than the paper it hangs off, so the block reads as an extension
+   of the line rather than more document. --sunken is the app's own inset-surface
+   token, which is what this is: content set into the page, not laid on it. */
+.a2-xrow > td{padding:0 !important;background:var(--sunken)}
 /* No horizontal padding on the block itself — the collapse bar spans it edge
    to edge, and the content below carries its own gutters. */
 .a2-x{border-top:2px solid var(--ink);border-bottom:1px solid var(--stroke);padding:0}
@@ -65,9 +68,11 @@
    this one. */
 .a2-x .a2-x-shop > *{padding:11px 0}
 .a2-x .a2-x-shop > * + *{border-top:1px solid var(--stroke)}
+/* Transparent, not white: these sit ON the block's cream and would otherwise
+   punch white panels through it. */
 .a2-x-shop .pgd-details-sec,
 .a2-x-shop .pgd-hdr-box,
-.a2-x-shop .sec-taskcard{background:var(--white)}
+.a2-x-shop .sec-taskcard{background:transparent}
 
 /* The name's chevron points down while its block is open. */
 .a2-open.is-open .a2-open-chev{opacity:.6;transform:rotate(90deg)}
@@ -133,7 +138,9 @@ body.sb-collapsed .a2-media-cell{white-space:normal;padding-top:12px!important;p
    panel the Editor uses. Hover only, so a row of them doesn't read as a
    row of buttons. */
 .a2-xp.is-catalog{cursor:pointer;transition:background .12s}
-.a2-xp.is-catalog:hover{background:var(--wash)}
+/* On cream, --wash reads as a highlight going lighter; a touch of ink keeps
+   hover feeling like pressure instead. */
+.a2-xp.is-catalog:hover{background:rgba(26,26,26,.045)}
 .a2-xp.is-catalog:hover .a2-xp-name{text-decoration:underline;text-underline-offset:2px;
   text-decoration-thickness:1px;text-decoration-color:var(--stroke)}
 .a2-xp-name{color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
