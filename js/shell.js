@@ -148,11 +148,11 @@ function renderTurnPop(){
   const p2 = t.mine
     ? (turnNextFor(viewStage, state.twoStep) ? `<span class="turn-pop-lbl">Then</span> ${turnNextFor(viewStage, state.twoStep)}` : '')
     : `<span class="turn-pop-lbl">You</span> ${turnYoursFor(viewStage, state.role, state.twoStep, track)}`;
-  // Eyebrow names the stage rather than repeating "Waiting on" from p1.
-  const eyebrow = (STATUS_META[viewStage] || {}).label || 'Status';
+  // No stage eyebrow. The stepper node the chip sits on already carries the
+   // stage, so printing it again at the top of the card was the third time it
+   // appeared in the same corner of the screen.
   el.innerHTML = `<div class="turn-pop-card" role="dialog" aria-label="Whose turn it is"
       style="top:${Math.round(r.bottom + 8)}px;left:${Math.round(r.left)}px">
-    <div class="turn-pop-h">${eyebrow}</div>
     <div class="turn-pop-who"><span class="turn-pop-av${t.mine ? ' is-mine' : ''}">${t.initials}</span>
       <span class="turn-pop-name"><b>${t.who}</b><span class="turn-pop-role">${roleName}</span></span></div>
     <div class="turn-pop-p">${p1}</div>
