@@ -229,17 +229,12 @@ function buildScrubber(){
         : `approved ${a2Esc(VER[s.ver].date)}`}">${a2Esc(VER[s.ver].label)}</button>`;
   }).join('');
   document.getElementById('a2Scrub').innerHTML = `
-    <div class="a2-tl-hdr">
-      <span class="a2-tl-title">
-        <span class="a2-steps">
-          <button class="a2-step-btn" id="a2Prev" type="button" title="Step earlier"><svg viewBox="0 0 12 12"><path d="M7.5 2.5 4 6l3.5 3.5"/></svg></button>
-          <button class="a2-step-btn" id="a2Next" type="button" title="Step later"><svg viewBox="0 0 12 12"><path d="M4.5 2.5 8 6l-3.5 3.5"/></svg></button>
-        </span>
-        Scrub through time
-      </span>
-      <span class="a2-tl-label" id="a2TlLabel"></span>
-    </div>
+    <!-- No header row. The title said what the control obviously is, and the
+         caption was pinned to the far right — you read the change in one corner
+         while looking at the playhead in another. It rides the playhead now.
+         Stepping is still on the arrow keys (see a2-init.js). -->
     <div class="a2-tl-wrap" id="a2TlWrap">
+      <span class="a2-tl-label" id="a2TlLabel"></span>
       <div class="a2-tl-track">
         <div class="a2-tl-fill" id="a2TlFill"></div>
         ${ticks}
@@ -260,8 +255,11 @@ function buildScrubber(){
     signs: [...document.querySelectorAll('#a2Scrub .a2-tl-sign')],
     groups:[...document.querySelectorAll('#a2Scrub .a2-tl-group')],
   };
-  SREFS.prev.onclick = ()=>setT(timeT-1);
-  SREFS.next.onclick = ()=>setT(timeT+1);
+  // The step buttons went with the header row; the arrow keys still step (see
+  // a2-init.js). Guarded rather than deleted so a future control can re-appear
+  // under the same ids without this needing to change.
+  if(SREFS.prev) SREFS.prev.onclick = ()=>setT(timeT-1);
+  if(SREFS.next) SREFS.next.onclick = ()=>setT(timeT+1);
   let dragging = false;
   /* Ticks no longer sit at even intervals, so a drag snaps to the nearest
      real moment rather than dividing the width into equal steps. */
@@ -308,13 +306,18 @@ function updateScrubber(){
   let dot, txt, date;
   // Position 0 is the first walk, not an empty document — whatever the agent
   // caught on the way through the door is already on the page.
-  if(timeT === 0){ dot='var(--t3)'; txt='Scope opened — first walk'; }
+  if(timeT === 0){ dot='var(--t3)'; txt='First walk'; }
   else {
     const ch = ORDERED[timeT-1];
     dot = CT[ch.ct].color;
-    txt = `${VER[ch.ver].label} · ${ch._task.name} — ${CT[ch.ct].label.toLowerCase()}`;
+    // Short: the line and what happened to it. The version prefix is dropped
+    // because the band directly underneath the playhead already names it, and
+    // the N / M index with it — the thumb's position on the rail says that.
+    txt = `${ch._task.name} · ${CT[ch.ct].label.toLowerCase()}`;
   }
-  date = a2AsOfDate();
+  // Day and month only. The year is the same across the whole bar, so printing
+  // it on every stop is four characters that never change.
+  date = a2AsOfDate().replace(/,\s*\d{4}$/, '');
   // Sitting on one of the three approvals is worth saying out loud.
   // The milestone chip marks the change that closed a version — but only once
   // that version has actually been approved. In draft it would be asserting the
@@ -322,9 +325,15 @@ function updateScrubber(){
   const appr = (APPR[timeT] && !a2VerPending(APPR[timeT]))
     ? `<span class="a2-cl-appr">Approved</span>`
     : (APPR[timeT] && !a2Unapproved() ? `<span class="a2-cl-appr is-pending">Submitted</span>` : '');
-  SREFS.label.innerHTML = `<span class="a2-cl-dot" style="--mk:${dot}"></span><span class="a2-cl-txt">${a2Esc(txt)}</span>${appr}<span class="a2-cl-date">${a2Esc(date)}</span><span class="a2-tl-idx">${timeT} / ${N}</span>`;
-  SREFS.prev.disabled = timeT <= 0;
-  SREFS.next.disabled = timeT >= N;
+  SREFS.label.innerHTML = `<span class="a2-cl-dot" style="--mk:${dot}"></span><span class="a2-cl-date">${a2Esc(date)}</span><span class="a2-cl-txt">${a2Esc(txt)}</span>${appr}`;
+  /* Ride the playhead. Centred on it, except near the ends where centring would
+     hang the caption off the panel — there it anchors to the edge instead. */
+  const lab = SREFS.label;
+  lab.classList.toggle('at-start', pct < 14);
+  lab.classList.toggle('at-end',   pct > 86);
+  lab.style.left = (pct < 14 ? 0 : pct > 86 ? 100 : pct) + '%';
+  if(SREFS.prev) SREFS.prev.disabled = timeT <= 0;
+  if(SREFS.next) SREFS.next.disabled = timeT >= N;
 }
 /* Ring the version card the playhead currently sits in. */
 function updateAsof(){
