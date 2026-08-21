@@ -157,6 +157,18 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 .stage.active.publish .stage-num{background:var(--success);border-color:var(--success);color:var(--white)}
 .stage-info{min-width:0;flex:1;display:flex;align-items:center;gap:10px;flex-wrap:nowrap}
 .stage-label{font-size:13px;font-weight:600;color:var(--t3);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+/* ── turn marker ─────────────────────────────────────────────────────
+   Sits on the active stepper node and names who owes the next move. Reads as
+   an avatar rather than a badge, so it pairs visually with the viewer's own
+   avatar at the right of the same bar — "is it me" becomes a match between two
+   marks in one glance instead of role-plus-stage deduction.
+   Yours is the accent; someone else's is quiet, because the point of it then
+   is that there is nothing here for you. */
+.stage-turn{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;
+  min-width:22px;height:20px;padding:0 6px;
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;
+  border-radius:999px;background:rgba(255,255,255,.14);color:rgba(255,255,255,.72)}
+.stage-turn.is-mine{background:var(--accent);color:var(--ink)}
 .stage.done .stage-label{color:var(--midtone)}
 .stage.active .stage-label{color:var(--ink)}
 .stage:not(.accessible){cursor:not-allowed;opacity:.55}

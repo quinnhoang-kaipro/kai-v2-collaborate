@@ -30,6 +30,51 @@ const ROLES = [
   {id:'renter',      name:'Renter',         desc:'Views the scope without pricing or edit access.'},
 ];
 
+/* ── whose turn is it ─────────────────────────────────────────────────
+   One predicate, read by all three surfaces that answer the question: the
+   stepper's active node, the primary CTA, and the caption under the stepper.
+   They each used to infer it from `stage` independently, which is how the app
+   CTA ended up offering the manager's publish gate to an admin — it never
+   checked role at all, so a 2-step approval could be completed by the person
+   2-step exists to keep out.
+
+   The people are the same ones the panel's sign-off roster names, so "waiting
+   on T. Okafor" here and a pending Manager signature there are one fact. The
+   viewer is always whichever role the demo picker is set to, so `mine` is a
+   role comparison, not an identity lookup. */
+const ROLE_PEOPLE = {
+  field_agent: {name:'M. Alvarez', initials:'MA'},
+  admin:       {name:'A. Novak',   initials:'AN'},
+  manager:     {name:'T. Okafor',  initials:'TO'},
+  contractor:  {name:'Apex Carpentry', initials:'AC'},
+  renter:      {name:'Resident',   initials:'R'},
+};
+/* Which role owes the next move at a stage. Null where nobody does — a
+   terminal stage is nobody's turn, and saying "waiting on X" there would
+   invent an obligation. */
+function turnRoleFor(stage, twoStep){
+  switch(stage){
+    case 'edit':
+    case 'submitted':     return 'admin';
+    case 'reviewing':     return 'admin';
+    case 'review-done':   return 'admin';
+    // The whole point of 2-step: the publish belongs to the manager, and to
+    // the admin only when the second step is switched off.
+    case 'awaiting-pub':  return twoStep ? 'manager' : 'admin';
+    case 'published':     return 'admin';
+    case 'closeout':      return 'admin';
+    default:              return null;   // closeout-approved — done
+  }
+}
+/* {mine, role, who, initials}. `mine` is the only thing most callers need;
+   the rest is for naming the person you are waiting on. */
+function whoseTurn(stage, role, twoStep){
+  const owner = turnRoleFor(stage, twoStep);
+  if(!owner) return {mine:false, role:null, who:null, initials:null};
+  const p = ROLE_PEOPLE[owner] || {name:owner, initials:'?'};
+  return {mine: role === owner, role:owner, who:p.name, initials:p.initials};
+}
+
 const STAGES = [
   {id:'edit',          name:'Edit',           sub:'Draft',                 iframe:'ProjectReview_ScopePanel_ShopEdit.html'},
   {id:'submitted',     name:'Hand off',       sub:'Locked',                iframe:'ProjectReview_ScopePanel_ShopEdit.html'},
@@ -688,6 +733,19 @@ function syncAppApproveBtn(){
   // Review and approval: the sidebar collects the decisions, so this is a
   // gate rather than the action. It can't fire until every task carries
   // one, and says how many are left until then.
+  /* Not your move: the CTA becomes a statement of who owes it, not a disabled
+     gate. A disabled gate reads as "your job, not finished yet" — which is the
+     opposite of the truth here, and at awaiting-pub it also let an admin work
+     through the manager's 18 approvals and publish. */
+  const turn = whoseTurn(proj, state.role, state.twoStep);
+  if(turn.role && !turn.mine){
+    btn.textContent = 'Waiting on ' + turn.who;
+    btn.disabled = true;
+    btn.onclick = null;
+    btn.hidden = false;
+    if(tipEl) tipEl.hidden = true;
+    return;
+  }
   if(proj === 'reviewing' || proj === 'awaiting-pub'){
     const d = window.__KAI_DECISION || {};
     const label = proj === 'reviewing' ? 'Scope reviewed' : 'Approve & publish';
@@ -809,6 +867,14 @@ function renderStages(){
   const access = ROLE_ACCESS[state.role] || [];
   // Per-stage caption slots: only the active supergroup's slot renders text.
   const captionText = messageFor(state.role, viewStage);
+  /* The turn marker on the active node. Whose move it is stops being something
+     you deduce from role + stage and becomes a match: this avatar against your
+     own in the toolbar. Only the active node carries it — a past stage's turn
+     is spent and a future one's isn't assigned yet. */
+  const _turn = whoseTurn(viewStage, state.role, state.twoStep);
+  const turnChip = _turn.role
+    ? `<span class="stage-turn${_turn.mine ? ' is-mine' : ''}" title="${_turn.mine ? 'Your move' : 'Waiting on ' + _turn.who}">${_turn.mine ? 'You' : _turn.initials}</span>`
+    : '';
   if(capsWrap) capsWrap.innerHTML = visibleStages.map(sg => {
     const isActive = sg === viewSuper;
     const branched = sg.branched ? ' stage-cap-branched' : '';
@@ -834,6 +900,7 @@ function renderStages(){
         <span class="stage-num">${i+1}</span>
         <div class="stage-info">
           <div class="stage-label">${sub}</div>
+          ${isActive ? turnChip : ''}
         </div>
         <div class="stage-tracks">${tracks}</div>
       </div>`;
@@ -845,6 +912,7 @@ function renderStages(){
       <span class="stage-num">${i+1}</span>
       <div class="stage-info">
         <div class="stage-label">${sub}</div>
+        ${isActive ? turnChip : ''}
       </div>
     </div>`;
   }).join('');
@@ -937,6 +1005,13 @@ function renderActBar(){
 }
 
 function messageFor(role, stage){
+  /* This function took `role` and ignored it, so an admin parked on the publish
+     step was told "Manager approves and publishes to make the scope live" —
+     third person, about someone else, in the one slot that should say what YOU
+     do next. When the move isn't yours the caption now says so and names who
+     has it; when it is, the stage copy below explains the move. */
+  const turn = whoseTurn(stage, role, state.twoStep);
+  if(turn.role && !turn.mine) return `Nothing for you here — waiting on ${turn.who} (${turn.role === 'manager' ? 'Manager' : turn.role === 'admin' ? 'Admin' : turn.role}).`;
   if(stage==='edit') return `Build and refine the scope. Hand off for review when ready.`;
   if(stage==='submitted') return `Scope is locked. Recall to keep editing.`;
   if(stage==='reviewing') return state.twoStep

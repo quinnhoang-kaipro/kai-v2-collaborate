@@ -121,7 +121,10 @@
         <path d="M10 19.65V21.65L12 22.65L14 21.65V19.65"/>
       </svg>
     </button>
-    <span class="avatar" style="margin:0 16px 0 12px;display:none">QH</span>
+    <!-- The viewer's own identity. Was hidden; it's shown now because it is one
+         half of the "is this my turn" comparison — the other half is the turn
+         marker on the stepper's active node. -->
+    <span class="avatar" id="meAvatar" style="margin:0 16px 0 12px">QH</span>
   </div>
 
   <!-- UPPER NAV: just the state bar now. Stepper moved into the app-toolbar. -->
