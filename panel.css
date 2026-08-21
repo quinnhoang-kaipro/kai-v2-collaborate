@@ -4018,7 +4018,11 @@ body.draft-stage .task.is-missing .task-amt{color:var(--t3)}
 .a2-opt{font-size:12.5px;color:var(--t2);margin-top:3px}
 /* Detail rows span the whole table now, so their own indent is what lines
    them up under the name above. */
-.a2-desc{font-size:14px;color:var(--t2);line-height:1.55;max-width:64ch;padding-left:22px}
+/* No measure cap. 64ch is the readable ideal, but the detail cell spans five
+   columns (~870px here) and capping at ~500px left a 370px hole beside every
+   description that read as a broken column rather than as a margin. In a
+   document the line filling its cell is the lesser evil. */
+.a2-desc{font-size:14px;color:var(--t2);line-height:1.55;padding-left:22px;padding-right:22px}
 .a2-prod{font-size:13.5px;color:var(--t2);display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;margin-top:7px;padding-left:22px}
 .a2-lbl{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
 .a2-gc{font-size:14px;color:var(--ink)}

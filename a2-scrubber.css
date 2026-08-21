@@ -51,8 +51,18 @@
    here", which is the same statement whatever change happened to close it. */
 .a2-tl-tick.is-appr,.a2-tl-tick.is-appr.is-current{width:1.5px;height:20px;top:-8px;transform:translateX(-.75px);border-radius:0;opacity:1;background:var(--midtone);z-index:3}
 .a2-tl-tick.is-appr::after{content:'';position:absolute;left:50%;top:-7px;width:7px;height:7px;box-sizing:border-box;border-radius:1px;transform:translateX(-50%) rotate(45deg);background:var(--white);border:1.5px solid var(--midtone);transition:background .14s,border-color .14s}
-.a2-tl-tick.is-appr.is-revealed{background:var(--ink)}
-.a2-tl-tick.is-appr.is-revealed::after{background:var(--ink);border-color:var(--ink)}
+/* Reaching an approval is the good news on this bar, so it lands in green
+   rather than the same ink as everything else — the one moment the timeline has
+   something to celebrate. Before the playhead gets there it stays outlined:
+   the milestone exists, it just hasn't been reached yet. */
+.a2-tl-tick.is-appr.is-revealed{background:var(--success)}
+.a2-tl-tick.is-appr.is-revealed::after{background:var(--success);border-color:var(--success);
+  box-shadow:0 0 0 3px var(--success-fill)}
+/* Submitted, not approved — see the tick class in a2-scrubber.js. Keeps the
+   neutral treatment so it can't be read as a decision that has been made. */
+.a2-tl-tick.is-appr-pending.is-revealed{background:var(--midtone)}
+.a2-tl-tick.is-appr-pending.is-revealed::after{background:var(--white);
+  border-color:var(--midtone);box-shadow:none}
 
 /* ── sign-off lane ──
    Reviews get their own lane under the rail, which is what the extra bottom
@@ -110,3 +120,9 @@
    leaves the element stranded mid-flight — the same trap the photo lane hit
    with `top`. It also made the thumb lag the pointer during a drag, which is
    the one moment it must not. */
+
+/* A stop — a week the playhead can rest on. Taller and inked so the landable
+   points read against the per-change ticks around them. */
+.a2-tl-tick.is-stop{height:16px;top:-5px;width:2px;opacity:.55;background:var(--midtone)}
+.a2-tl-tick.is-stop.is-revealed{opacity:1;background:var(--ink)}
+.a2-tl-tick.is-stop.is-current{height:19px;top:-7px;width:3px}

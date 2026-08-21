@@ -80,8 +80,11 @@ document.addEventListener('keydown', e=>{
   if(!document.getElementById('a2Root')) return;
   const tag = (e.target && e.target.tagName || '').toLowerCase();
   if(tag === 'input' || tag === 'textarea' || tag === 'select') return;
-  if(e.key === 'ArrowLeft'){ setT(timeT-1); e.preventDefault(); }
-  if(e.key === 'ArrowRight'){ setT(timeT+1); e.preventDefault(); }
+  // Step stop to stop — week by week — matching what a drag snaps to. Falls
+  // back to single changes if the scrubber module isn't loaded.
+  const step = (typeof a2StepStop === 'function') ? a2StepStop : d => setT(timeT + d);
+  if(e.key === 'ArrowLeft'){ step(-1); e.preventDefault(); }
+  if(e.key === 'ArrowRight'){ step(1); e.preventDefault(); }
 });
 
 /* Globals the inline handlers in the markup above call. */

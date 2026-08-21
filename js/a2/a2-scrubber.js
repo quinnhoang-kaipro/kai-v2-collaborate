@@ -37,6 +37,21 @@ function a2Jit(s){
 let POS  = [];   // POS[m] = where playhead position m sits on the bar, 0..100
 let APPR = {};   // APPR[m] = the version approved at m, for the milestone ticks
 let TSPAN = null;// {T0, span} — the calendar the bar is drawn on, for dated marks
+/* ── weekly stops ─────────────────────────────────────────────────────
+   A change a day makes 24 near-identical stops, and landing on one tells you
+   about one line. Real scopes move in weeks: a batch of edits, then a decision.
+   So the playhead rests on WEEKS, and the caption summarises the batch.
+
+   The trick that keeps this cheap: a stop is still expressed as a change INDEX
+   (the m just past the week's last change), so timeT keeps its meaning and
+   everything reading it — revealed(), lineExistsAt(), the photo column's as-of
+   lookup, the margin cards — is untouched. Weeks change where you can land,
+   not what landing means.
+
+   Approval moments stay in A2_STOPS even when they fall mid-week: they are the
+   points on this bar most worth reaching. */
+let WEEKS = [];    // {k, from, to, m, count, t0, t1}
+let A2_STOPS = []; // ascending playhead positions the drag and the arrows snap to
 
 /* a2-stage.js sets this when the scope on screen has not been approved yet.
    Guarded so the scrubber still works if that module isn't loaded. */
@@ -65,6 +80,7 @@ function buildTimePos(){
     for(let m=0; m<=N; m++) POS[m] = (m/Math.max(1,N))*100;
     ORDERED.forEach(ch => { ch._when = null; });   // a2When() falls back to the version date
     if(N) APPR[N] = ORDERED[N-1].ver;
+    buildWeeks();
     return;
   }
   // Position 0 is the empty scope on day one — nothing is approved there.
@@ -86,6 +102,7 @@ function buildTimePos(){
     APPR[m-1] = v;                     // the change that closed this order
     from = to;
   });
+  buildWeeks();
 }
 
 /* ── the date a change landed ──
@@ -108,6 +125,59 @@ function a2When(ch){
 function a2AsOfDate(){
   if(timeT === 0) return VER[VER_ORDER[0]].opened || VER[VER_ORDER[0]].date;
   return a2When(ORDERED[timeT-1]);
+}
+
+/* Bucket the changes into 7-day windows from the day the scope opened. */
+function buildWeeks(){
+  WEEKS = []; A2_STOPS = [0];
+  const N = ORDERED.length;
+  if(N && TSPAN){
+    const DAY = 864e5, W = 7 * DAY, T0 = TSPAN.T0;
+    /* Bucketed by version AND week, not week alone. A week that straddles an
+       approval would otherwise produce a stop whose label starts before the
+       approval it comes after — walking the bar read Apr 4-8, Apr 12, Apr 9-14.
+       Splitting at the boundary keeps the stops in date order, and it is truer
+       anyway: edits either side of an approval are separate batches. */
+    ORDERED.forEach((ch, i) => {
+      const t = (ch._when != null) ? ch._when : T0;
+      const k = ch.ver + '|' + Math.max(0, Math.floor((t - T0) / W));
+      let wk = WEEKS.find(x => x.k === k);
+      if(!wk){ wk = {k, from:i, to:i, count:0, t0:t, t1:t}; WEEKS.push(wk); }
+      wk.to = i; wk.count++;
+      if(t < wk.t0) wk.t0 = t;
+      if(t > wk.t1) wk.t1 = t;
+    });
+    WEEKS.sort((a,b) => a.from - b.from);
+    WEEKS.forEach(wk => { wk.m = wk.to + 1; A2_STOPS.push(wk.m); });
+  }
+  // An approval is always reachable, even mid-week.
+  Object.keys(APPR).forEach(m => { const n = +m; if(A2_STOPS.indexOf(n) === -1) A2_STOPS.push(n); });
+  A2_STOPS.sort((a,b) => a - b);
+}
+/* The week a playhead position closes, or null when it sits on a lone change. */
+function weekAt(m){ return WEEKS.find(w => w.m === m) || null; }
+/* "Apr 13–19", or "Apr 28 – May 2" when the week straddles a month. */
+function weekLabel(wk){
+  const a = new Date(wk.t0), b = new Date(wk.t1);
+  const same = a.getMonth() === b.getMonth();
+  const l = d => `${A2_MON[d.getMonth()]} ${d.getDate()}`;
+  if(wk.t0 === wk.t1) return l(a);
+  return same ? `${l(a)}\u2013${b.getDate()}` : `${l(a)} \u2013 ${l(b)}`;
+}
+/* Nearest stop to a playhead position — used by the arrows to step week by
+   week instead of change by change. */
+function a2StepStop(dir){
+  if(!A2_STOPS.length) return setT(timeT + dir);
+  const here = A2_STOPS.indexOf(timeT);
+  if(here !== -1){
+    const nxt = A2_STOPS[here + dir];
+    return setT(nxt == null ? timeT : nxt);
+  }
+  // Parked between stops (a card click can do that) — move to the first stop
+  // in the direction of travel.
+  const next = dir > 0 ? A2_STOPS.find(m => m > timeT)
+                       : [...A2_STOPS].reverse().find(m => m < timeT);
+  return setT(next == null ? timeT : next);
 }
 
 /* ── sign-offs ──
@@ -203,7 +273,16 @@ function buildScrubber(){
     const ch  = m ? ORDERED[m-1] : null;
     const ap  = APPR[m];
     const mk  = ch ? CT[ch.ct].color : 'var(--t2)';
-    ticks += `<div class="a2-tl-tick${ap ? ' is-appr' : ''}" data-m="${m}" style="left:${POS[m].toFixed(3)}%;--mk:${mk}"></div>`;
+    // An approval milestone is only celebrated once it IS one. At the
+    // change-order-review step the last version is submitted and awaiting a
+    // decision, so its marker stays neutral rather than going green on
+    // something that hasn't happened.
+    const apCls = ap ? (a2VerPending(ap) ? ' is-appr is-appr-pending' : ' is-appr') : '';
+    // Per-change ticks stay — they are the texture that shows where the work
+    // clustered. A stop gets a taller mark so the places you can actually land
+    // are legible against them.
+    const stopCls = (A2_STOPS.indexOf(m) !== -1 && !ap) ? ' is-stop' : '';
+    ticks += `<div class="a2-tl-tick${apCls}${stopCls}" data-m="${m}" style="left:${POS[m].toFixed(3)}%;--mk:${mk}"></div>`;
   }
   // Each sign-off sits on the day it was signed, in its own lane under the
   // rail. Placed by date rather than by playhead position: a review is not a
@@ -266,8 +345,11 @@ function buildScrubber(){
   const toM = clientX => {
     const r = SREFS.wrap.getBoundingClientRect();
     const p = Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * 100;
-    let best = 0, bd = Infinity;
-    for(let m=0; m<POS.length; m++){ const d = Math.abs(POS[m]-p); if(d < bd){ bd = d; best = m; } }
+    // Snap to the stops — weeks, plus every approval — rather than to all 24
+    // changes. Scrubbing lands on a batch you can read, not on one edit.
+    const stops = A2_STOPS.length ? A2_STOPS : POS.map((_,m)=>m);
+    let best = stops[0], bd = Infinity;
+    stops.forEach(m => { const d = Math.abs((POS[m]||0) - p); if(d < bd){ bd = d; best = m; } });
     return best;
   };
   SREFS.wrap.addEventListener('pointerdown', e=>{
@@ -306,18 +388,24 @@ function updateScrubber(){
   let dot, txt, date;
   // Position 0 is the first walk, not an empty document — whatever the agent
   // caught on the way through the door is already on the page.
-  if(timeT === 0){ dot='var(--t3)'; txt='First walk'; }
-  else {
+  const wk = weekAt(timeT);
+  if(timeT === 0){ dot='var(--t3)'; txt='First walk'; date='Apr 2'; }
+  else if(wk){
+    /* Parked on a week: summarise the batch rather than naming its last edit.
+       The lines touched is the more useful number than the change count — four
+       changes across one line is a different week from four across four. */
+    const seen = new Set();
+    for(let i=wk.from; i<=wk.to; i++) seen.add(ORDERED[i]._task.code);
+    dot = 'var(--ink)';
+    txt = `${wk.count} change${wk.count===1?'':'s'} · ${seen.size} line${seen.size===1?'':'s'}`;
+    date = weekLabel(wk);
+  } else {
     const ch = ORDERED[timeT-1];
     dot = CT[ch.ct].color;
-    // Short: the line and what happened to it. The version prefix is dropped
-    // because the band directly underneath the playhead already names it, and
-    // the N / M index with it — the thumb's position on the rail says that.
+    // Landed on one change — from a margin card, or an approval mid-week.
     txt = `${ch._task.name} · ${CT[ch.ct].label.toLowerCase()}`;
+    date = a2AsOfDate().replace(/,\s*\d{4}$/, '');
   }
-  // Day and month only. The year is the same across the whole bar, so printing
-  // it on every stop is four characters that never change.
-  date = a2AsOfDate().replace(/,\s*\d{4}$/, '');
   // Sitting on one of the three approvals is worth saying out loud.
   // The milestone chip marks the change that closed a version — but only once
   // that version has actually been approved. In draft it would be asserting the
