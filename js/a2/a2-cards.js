@@ -20,6 +20,31 @@
    the stack short enough for the rest to stay attached. */
 let a2CardOpen = null;   // ch._ord of the expanded card, or null
 
+/* ── per-line approval ───────────────────────────────────────────────
+   A change order arrives as a set of lines, and the admin reviewing it does not
+   have to take or leave the whole thing — each card carries its own approve.
+   Only on the order that is actually awaiting a decision (A2_PENDING_VER, set
+   by a2-stage.js at the change-order step) and only for the admin, who is the
+   one holding that decision. Everywhere else the cards stay read-only.
+
+   Approved ords live in a Set rather than on the change, so buildCards can run
+   as often as it likes without losing them. */
+const a2LineApproved = new Set();
+function a2CanApproveLine(ch){
+  return !!ch && typeof A2_PENDING_VER !== 'undefined' && A2_PENDING_VER === ch.ver
+      && typeof USER_ROLE !== 'undefined' && USER_ROLE === 'admin';
+}
+function a2ApproveLine(ord, ev){
+  if(ev) ev.stopPropagation();   // approving is not opening the card
+  a2LineApproved.add(ord);
+  const ch = ORDERED[ord];
+  if(typeof toast === 'function' && ch){
+    toast(`Line approved · ${ch._task.name}`);
+  }
+  buildCards();
+  requestAnimationFrame(layoutCards);
+}
+
 function a2ToggleCard(ord){
   a2CardOpen = (a2CardOpen === ord) ? null : ord;
   applyCardOpen();
@@ -47,6 +72,20 @@ function cardPeek(ch){
         + (r.delta ? ` <span class="a2-mc-new is-pos">(${a2Esc(r.delta)})</span>` : '');
   }
   return txt + more;
+}
+
+/* The approve control, or the state it leaves behind. Sits at the foot of the
+   expanded body: it is the last thing you do after reading the change, not a
+   thing to press past on the way in. */
+function a2LineApproveHtml(ch){
+  if(!a2CanApproveLine(ch)) return '';
+  if(a2LineApproved.has(ch._ord)){
+    return `<div class="a2-mc-appr"><span class="a2-mc-appr-tick">
+      <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7"/></svg>
+    </span>Line approved</div>`;
+  }
+  return `<button class="a2-mc-apprbtn" type="button"
+    onclick="a2ApproveLine(${ch._ord},event)">Approve change order line</button>`;
 }
 
 function cardHtml(t, ch){
@@ -84,6 +123,7 @@ function cardHtml(t, ch){
     <div class="a2-mc-body">
       ${rowsHtml}
       <div class="a2-mc-who"><span class="a2-mc-av">${initials(ch.who)}</span><b>${a2Esc(ch.who)}</b> · ${a2Esc(ver.label)}<span class="a2-role">${a2Esc(ch.role)}</span></div>
+      ${a2LineApproveHtml(ch)}
     </div>`;
 }
 function buildCards(){

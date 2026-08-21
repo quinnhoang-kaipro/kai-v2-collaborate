@@ -42,3 +42,22 @@
    as a state, not an approval — outlined rather than filled, so it can't be
    mistaken for the approved chip at a glance. */
 .a2-cl-appr.is-pending{background:transparent;border:1px solid var(--stroke);color:var(--t2)}
+
+/* ── per-line approval (change-order review, admin) ──────────────────
+   At the foot of the expanded card, above nothing — the last thing you reach
+   after reading what changed. Ink-filled because it is a decision, not a
+   navigation. */
+.a2-mc-apprbtn{display:block;width:100%;margin-top:10px;padding:7px 10px;
+  background:var(--ink);color:var(--white);border:0;cursor:pointer;
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;transition:background .12s}
+.a2-mc-apprbtn:hover{background:#000}
+.a2-mc-apprbtn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+/* Approved is a state it never leaves, so it reads as a fact rather than a
+   button that has been used. Green to match the timeline's approval marks. */
+.a2-mc-appr{display:flex;align-items:center;gap:6px;margin-top:10px;padding:6px 0 0;
+  border-top:1px solid var(--stroke);
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--success)}
+.a2-mc-appr-tick svg{width:11px;height:11px;stroke:currentColor;stroke-width:2.4;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;display:block}

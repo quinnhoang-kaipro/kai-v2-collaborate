@@ -1472,9 +1472,13 @@ function renderIframe(){
   if(viewStage === 'published' && state.role === 'renter'){
     file = 'ProjectReview_ScopePanel_ShopEdit.html';
     params.push('tab=artifact','audience=renter');
-  } else if(viewStage === 'published' && state.role === 'contractor'){
-    params.push('role=contractor');
   }
+  /* The panel used to be told the role only when it was 'contractor', which is
+     all IS_CONTRACTOR needed. Anything that has to behave per-role inside the
+     panel — the admin's per-line approve on a change-order card — needs the
+     rest of them too, so it is always passed now. Harmless to the existing
+     check, which compares against 'contractor' exactly. */
+  params.push('role=' + state.role);
   // Draft-lifecycle stages need the sidebar's task-status pills to show
   // "in progress" / "missing details" instead of the approved vocabulary.
   if(viewStage === 'edit' || viewStage === 'submitted'){

@@ -248,6 +248,11 @@ const OPTIONS = ['Replace','Install','Reface','Repair','Remove','Full repaint','
    the one thing distinguishing step 5 from step 6. */
 const WORK_TRACK = new URLSearchParams(window.__KAI_QS || window.location.search).get('track') || '';
 const IS_CONTRACTOR = new URLSearchParams(window.__KAI_QS || window.location.search).get('role') === 'contractor';
+/* Which role is looking. The shell passes this for every role now, not just the
+   contractor — surfaces inside the panel that offer a role-specific action read
+   it. Defaults to admin so a panel opened without a query string behaves as it
+   always did. */
+const USER_ROLE = new URLSearchParams(window.__KAI_QS || window.location.search).get('role') || 'admin';
 const MY_CONTRACTOR = 'Apex Carpentry';
 
 const TASKS = [

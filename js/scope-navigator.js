@@ -2887,6 +2887,14 @@ function renderWorkHdr(){
         <span class="box-halo"><input type="checkbox" ${panoOnlyWithPhotos?'checked':''} onchange="setPanoOnlyWithPhotos(this.checked)"></span>
         <span class="copy-filter-chk-lbl">Only show tasks with photos</span>
       </label>`
+    /* Artifact 2 gets its own filter in the same slot. DECOY — wired to
+       nothing on purpose: it is here to see whether a reviewer working through
+       a long change order reaches for it, before the hiding logic is built. */
+    : (workMode === 'artifact2')
+    ? `<label class="copy-filter-chk wmode-tool" title="Not wired up yet">
+        <span class="box-halo"><input type="checkbox"></span>
+        <span class="copy-filter-chk-lbl">Hide approved changes</span>
+      </label>`
     : '';
   // Copies model owns its own Share affordances (per-copy Share button in the
   // doc-view crumb + per-card Share in the index), so the work-hdr is bare.
