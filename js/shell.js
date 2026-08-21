@@ -30,6 +30,92 @@ const ROLES = [
   {id:'renter',      name:'Renter',         desc:'Views the scope without pricing or edit access.'},
 ];
 
+/* ── change-order hand-off ───────────────────────────────────────────
+   A manager or field agent looking at a change order under review holds no
+   decision — approving it is the admin's. But they are not stuck: they can pass
+   the document on, to the admin or to whoever should weigh in, with a note
+   saying why. So their CTA is "Hand off" rather than a dead "Waiting on" gate.
+
+   Its own modal rather than openModal(): that one serialises onConfirm with
+   toString(), so a closure over the selected teammate and the typed note would
+   not survive the round trip. Reuses the .dsp-* shell so it looks native.
+
+   The internal team only. Handing a change order to the renter or the
+   contractor isn't a review, it's a disclosure. */
+const HANDOFF_ROLES = ['field_agent', 'admin', 'manager'];
+let coHandoffOpen = false;
+let coHandoffTo   = null;   // role id of the chosen teammate
+let coHandoffNote = '';
+
+function coHandoffTeam(){
+  return HANDOFF_ROLES
+    .filter(r => r !== state.role)
+    .map(r => ({id:r, name:ROLE_PEOPLE[r].name, initials:ROLE_PEOPLE[r].initials,
+                role:(ROLES.find(x => x.id === r) || {}).name || r}));
+}
+function openCoHandoff(){
+  const team = coHandoffTeam();
+  // Default to whoever actually owes the move — that is the hand-off you want
+  // nine times in ten, and pre-selecting it saves the common case a click.
+  const owner = turnRoleFor(viewStage, state.twoStep);
+  coHandoffTo   = (owner && owner !== state.role) ? owner : (team[0] && team[0].id);
+  coHandoffNote = '';
+  coHandoffOpen = true;
+  renderCoHandoff();
+}
+function closeCoHandoff(){ coHandoffOpen = false; renderCoHandoff(); }
+function pickCoHandoff(id){ coHandoffTo = id; renderCoHandoff(); }
+/* Note is read straight off the field on confirm rather than mirrored on every
+   keystroke — re-rendering the modal under a cursor loses the caret. */
+function confirmCoHandoff(){
+  const ta = document.getElementById('coHandoffNote');
+  coHandoffNote = ta ? ta.value.trim() : '';
+  const to = coHandoffTeam().find(p => p.id === coHandoffTo);
+  coHandoffOpen = false;
+  renderCoHandoff();
+  if(typeof toast === 'function'){
+    toast(to ? `Change order handed off to ${to.name}` : 'Change order handed off');
+  }
+}
+function renderCoHandoff(){
+  let el = document.getElementById('coHandoffModal');
+  if(!coHandoffOpen){ if(el) el.remove(); return; }
+  if(!el){ el = document.createElement('div'); el.id = 'coHandoffModal'; document.body.appendChild(el); }
+  const team = coHandoffTeam();
+  const rows = team.map(p => `
+    <button type="button" class="dsp-row co-ho-row${coHandoffTo === p.id ? ' is-on' : ''}"
+      onclick="pickCoHandoff('${p.id}')" aria-pressed="${coHandoffTo === p.id}">
+      <span class="dsp-av">${p.initials}</span>
+      <span class="dsp-who"><span class="dsp-name">${p.name}</span><span class="dsp-role">${p.role}</span></span>
+      <span class="co-ho-tick">${ICONS.check}</span>
+    </button>`).join('');
+  el.innerHTML = `<div class="dsp-scrim" onclick="closeCoHandoff()"></div>
+    <div class="dsp-card" role="dialog" aria-modal="true" aria-label="Hand off the change order">
+      <div class="dsp-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3L3 10.5l7 3 3 7L21 3z"/></svg>
+      </div>
+      <div class="dsp-title">Hand off the change order</div>
+      <div class="dsp-lbl">Pass it to</div>
+      <div class="dsp-list">${rows}</div>
+      <div class="dsp-lbl co-ho-lbl2">Add a comment <span class="co-ho-opt">optional</span></div>
+      <textarea id="coHandoffNote" class="co-ho-note" rows="3"
+        placeholder="What should they look at? Anything you'd want changed before this is approved.">${coHandoffNote}</textarea>
+      <div class="dsp-acts">
+        <button type="button" class="dsp-btn" onclick="closeCoHandoff()">Cancel</button>
+        <button type="button" class="dsp-btn is-primary" onclick="confirmCoHandoff()">Hand off</button>
+      </div>
+    </div>`;
+  const ta = document.getElementById('coHandoffNote');
+  if(ta) ta.focus();
+}
+/* True where a viewer with no decision can still pass the document on. Today
+   that is the change-order review, for the two internal roles that are not the
+   approver. */
+function canHandOffHere(){
+  if(viewStage !== 'published' || state.workTrack !== 'change_order') return false;
+  return state.role === 'manager' || state.role === 'field_agent';
+}
+
 /* ── the turn popover ────────────────────────────────────────────────
    Two initials can't say who someone is. The chip is a button, and this is
    what it opens: the name behind the initials, the role, what that person owes,
@@ -83,7 +169,7 @@ function turnYoursFor(stage, role, twoStep, track){
   const co   = (stage === 'published' && track === 'change_order');
   switch(role){
     case 'manager':
-      if(co)                 return 'If something is wrong with the change order, you can request an edit and send it back for approval.';
+      if(co)                 return 'If something is wrong with the change order, hand it off with a comment — request an edit and send it back for approval.';
       if(stage === 'published') return 'Nothing to action. You will be asked again if a change order needs approving.';
       if(stage === 'closeout')  return 'Nothing to action — the admin signs the closeout off.';
       return 'Nothing yet. It reaches you once the admin has finished their review.';
@@ -97,6 +183,7 @@ function turnYoursFor(stage, role, twoStep, track){
       return 'Nothing yet — the scope is not live. You get access once it is published.';
     case 'field_agent':
       if(stage === 'edit' || stage === 'submitted') return 'Keep adding what you found on site until the scope is handed off.';
+      if(co) return 'You can hand the change order on with a comment if you saw something on site that affects it.';
       return 'Nothing to action — the scope has moved past scoping.';
     case 'renter':
       return 'Nothing to action. You can view the scope, without pricing.';
@@ -272,7 +359,12 @@ function landingSubstage(supergroupId){
 // What each role is allowed to do at each stage. Read as "given this role,
 // which stages can I work in?"
 const ROLE_ACCESS = {
-  field_agent: ['edit','submitted'],
+  // 'published' so a field agent can see a live scope. They hold no decision
+  // there, but they are the person on site — a change order under review is
+  // exactly the thing they may have context on, and they need the stage in
+  // view to hand it on. Without this, switching to field agent at a live stage
+  // bounced them back to 'submitted'.
+  field_agent: ['edit','submitted','published'],
   admin:       ['edit','submitted','reviewing','review-done','awaiting-pub','published','closeout','closeout-approved'],
   manager:     ['submitted','reviewing','review-done','awaiting-pub','published','closeout','closeout-approved'],
   contractor:  ['published','closeout','closeout-approved'],
@@ -877,6 +969,17 @@ function syncAppApproveBtn(){
      through the manager's 18 approvals and publish. */
   const turn = whoseTurn(proj, state.role, state.twoStep);
   if(turn.role && !turn.mine){
+    /* No decision here, but not necessarily nothing to do: at a change order a
+       manager or field agent can still pass the document on with a note. Where
+       that applies the CTA is a real action rather than a dead gate. */
+    if(canHandOffHere()){
+      btn.textContent = 'Hand off';
+      btn.disabled = false;
+      btn.onclick = openCoHandoff;
+      btn.hidden = false;
+      if(tipEl) tipEl.hidden = true;
+      return;
+    }
     btn.textContent = 'Waiting on ' + turn.who;
     btn.disabled = true;
     btn.onclick = null;

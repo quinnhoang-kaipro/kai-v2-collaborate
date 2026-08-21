@@ -482,6 +482,27 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 .dsp-who{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
 .dsp-name{font-family:var(--display);font-size:15px;font-weight:700;color:var(--ink,#1A1A1A);line-height:1.3}
 .dsp-role{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--midtone,#7D7469)}
+/* ── change-order hand-off modal ─────────────────────────────────────
+   Borrows the dispatch modal's shell (.dsp-*) so it reads as the same kind of
+   object; only the selectable row and the note field are new. */
+#coHandoffModal{position:fixed;inset:0;z-index:200}
+.co-ho-row{cursor:pointer;transition:border-color .12s,background .12s}
+.co-ho-row + .co-ho-row{margin-top:8px}
+.co-ho-row:hover{border-color:var(--ink,#1A1A1A)}
+.co-ho-row.is-on{border-color:var(--ink,#1A1A1A);background:var(--wash,#FDFDEA)}
+/* The tick is the selection, so it only exists on the chosen row. */
+.co-ho-tick{flex-shrink:0;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;
+  color:var(--ink,#1A1A1A);opacity:0;transition:opacity .12s}
+.co-ho-row.is-on .co-ho-tick{opacity:1}
+.co-ho-tick svg{width:14px;height:14px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.co-ho-lbl2{margin-top:16px}
+.co-ho-opt{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--midtone,#7D7469);margin-left:6px}
+.co-ho-note{width:100%;box-sizing:border-box;resize:vertical;padding:11px 12px;
+  border:1px solid var(--stroke,#DDD6C8);background:var(--white,#fff);color:var(--ink,#1A1A1A);
+  font-family:var(--body);font-size:13.5px;line-height:1.5}
+.co-ho-note:focus{outline:none;border-color:var(--ink,#1A1A1A)}
+.co-ho-note::placeholder{color:var(--midtone,#7D7469)}
 .dsp-change{flex-shrink:0;padding:8px 13px;background:var(--white,#fff);border:1px solid var(--ink,#1A1A1A);color:var(--ink,#1A1A1A);font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:background .12s}
 .dsp-change:hover{background:var(--sunken,#F4F0E6)}
 /* The bench. Scrolls, so a long market doesn't push the actions off. */
