@@ -113,31 +113,32 @@ function homeStage(role, projectStage){
 }
 
 /* ════════════ DEMO PRESETS ════════════ */
-/* Demo scenarios. `step` is the scenario's number in this list and is the
-   single source of truth for both the numbered circle and the written label —
-   those used to be authored separately, so they disagreed. The numbering is
-   fixed to the full list rather than the visible one, so a scenario keeps its
-   number when the 2-step preset is filtered out; the sequence skips it. */
+/* Demo scenarios. The step number is the scenario's position in the VISIBLE
+   list, computed in renderPresets — not stored here. It used to be a hardcoded
+   `step` field pinned to the full list, so with the 2-step preset filtered out
+   (the default) the menu read 1, 2, 3, 5, 6, 7, 8 with a hole where step 4
+   should be. Deriving it keeps the sequence contiguous in both modes and
+   removes the second source of truth. */
 const PRESETS = [
-  {id:'empty-draft',        step:1, name:'Empty draft',                desc:'Fresh project, no tasks. Start building the scope from scratch.',
+  {id:'empty-draft',        name:'Empty draft',                desc:'Fresh project, no tasks. Start building the scope from scratch.',
     state:{role:'admin', projectStage:'edit', viewStage:'edit', scopeSeed:'empty'}},
-  {id:'populated-draft',    step:2, name:'Populated draft',            desc:'Scope pre-built with tasks across all rooms. Ready to hand off for review.',
+  {id:'populated-draft',    name:'Populated draft',            desc:'Scope pre-built with tasks across all rooms. Ready to hand off for review.',
     state:{role:'admin', projectStage:'edit', viewStage:'edit', scopeSeed:'full'}},
-  {id:'mid-review',         step:3, name:'Handed off, admin reviewing', desc:'Scope has been handed off and admin is actively reviewing tasks.',
+  {id:'mid-review',         name:'Handed off, admin reviewing', desc:'Scope has been handed off and admin is actively reviewing tasks.',
     state:{role:'admin', projectStage:'reviewing', viewStage:'reviewing', scopeSeed:'full'}},
   // Only relevant when the 2-step approval flow is on — filtered out by renderPresets otherwise.
-  {id:'awaiting-publish',   step:4, name:'Review complete, awaiting publish', desc:'Admin approved the review. Manager needs to approve and publish (2-step).', twoStepOnly:true,
+  {id:'awaiting-publish',   name:'Review complete, awaiting publish', desc:'Admin approved the review. Manager needs to approve and publish (2-step).', twoStepOnly:true,
     state:{role:'manager', projectStage:'awaiting-pub', viewStage:'awaiting-pub', scopeSeed:'full', twoStep:true}},
-  {id:'construction-labor', step:5, name:'Scope approved, construction in progress · Labor', desc:'Scope is live. Admin tracking labor progress on the job.',
+  {id:'construction-labor', name:'Scope approved', desc:'Scope is live and released to the field. Nothing has been started yet.',
     state:{role:'admin', projectStage:'published', viewStage:'published', scopeSeed:'full', workTrack:'labor'}},
-  {id:'construction-materials', step:6, name:'Scope approved, construction in progress · Materials', desc:'Scope is live. Contractor shopping products with Kai.',
+  {id:'construction-materials', name:'Scope approved, tasks in progress', desc:'Work is under way. Tasks sit at mixed statuses across the job.',
     state:{role:'contractor', projectStage:'published', viewStage:'published', scopeSeed:'full', workTrack:'materials'}},
-  {id:'closeout',           step:7, name:'Close out review',           desc:'Work is done. Admin comparing before/after photos to sign off.',
+  {id:'closeout',           name:'Close out review',           desc:'Work is done. Admin comparing before/after photos to sign off.',
     state:{role:'admin', projectStage:'closeout', viewStage:'closeout', scopeSeed:'full'}},
-  {id:'closeout-approved',  step:8, name:'Closeout approved',          desc:'Admin has signed off. Project is complete — read-only view.',
+  {id:'closeout-approved',  name:'Closeout approved',          desc:'Admin has signed off. Project is complete — read-only view.',
     state:{role:'admin', projectStage:'closeout-approved', viewStage:'closeout-approved', scopeSeed:'full'}},
 ];
-function presetLabel(p){ return `Step ${p.step} · ${p.name}`; }
+function presetLabel(p, n){ return `Step ${n} · ${p.name}`; }
 
 /* ════════════ PERSISTED STATE ════════════ */
 const DEFAULTS={
@@ -202,11 +203,17 @@ function renderPresets(){
   if(!wrap) return;
   // Hide 2-step-only presets when 2-step approval is turned off in the demo settings.
   const visible = PRESETS.filter(p => !(p.twoStepOnly && !state.twoStep));
-  wrap.innerHTML = visible.map(p=>`
+  /* The 2-step preset doesn't take a number of its own — it's a variant of the
+     review step, not a step after it, and letting it consume one pushed every
+     later scenario's number up whenever the toggle was on. It shows as "3+"
+     beside the step it varies, and the main line stays 1..7 in both modes. */
+  let n = 0;
+  const nums = visible.map(p => p.twoStepOnly ? `${n}+` : `${++n}`);
+  wrap.innerHTML = visible.map((p,i)=>`
     <button class="tb-preset${state.preset===p.id?' on':''}" onclick="applyPreset('${p.id}')">
-      <span class="tb-preset-num">${p.step}</span>
+      <span class="tb-preset-num">${nums[i]}</span>
       <span class="tb-preset-l">
-        <div class="tb-preset-n">${presetLabel(p)}</div>
+        <div class="tb-preset-n">${presetLabel(p, nums[i])}</div>
         <div class="tb-preset-d">${p.desc}</div>
       </span>
     </button>

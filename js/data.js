@@ -681,6 +681,28 @@ if(PROJ_MODE === 'work' && WORK_TRACK === 'labor'){
     t.flags = [];
   });
 }
+/* Work under way. The statuses that came off the TASKS literal are the ones the
+   scope carried through review — 'pending', 'in_review' — which say nothing
+   about whether the work has been done. On a live job the only four answers are
+   not started, in progress, complete, and rework, so they get assigned here.
+
+   The pattern is fixed rather than random so the demo is the same every time,
+   and ordered so earlier rooms read as further along — which is how a job
+   actually progresses, one space at a time. Every one of the four appears. */
+if(PROJ_MODE === 'work' && WORK_TRACK === 'materials'){
+  const RUN = ['complete','complete','in_progress','needs_rework',
+               'in_progress','complete','not_started','in_progress',
+               'needs_rework','not_started'];
+  TASKS.forEach((t, i) => {
+    t.status = RUN[i % RUN.length];
+    t.editRequested = false;
+    // A task that is finished or being redone has no outstanding scoping gaps —
+    // 'missing details' or 'unassigned' alongside 'complete' contradicts itself.
+    if(t.status === 'complete' || t.status === 'needs_rework'){
+      t.flags = (t.flags || []).filter(f => f !== 'missing' && f !== 'unassigned');
+    }
+  });
+}
 if(IS_CONTRACTOR){
   // Shop-mode focus only: swap the topbar identity + reframe notes as external
   // requests. The left panel still shows the full scope like the admin view.
