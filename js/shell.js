@@ -26,6 +26,10 @@ const ROLES = [
   {id:'field_agent', name:'Field agent',    desc:'Walks the property and builds the initial scope.'},
   {id:'admin',       name:'Admin',          desc:'Reviews the scope. Sends to manager for publish.'},
   {id:'manager',     name:'Manager',        desc:'Publishes the scope so it can be shared externally.'},
+  /* A second field agent who isn't the one accountable for this scope. They can
+     see it and weigh in — mark a change order reviewed, ask for an edit — but
+     they own no stage, so they never hold the move. */
+  {id:'field_agent_nr', name:'Field agent · non-responsible', desc:'Sees the scope and can weigh in, but owns none of it.'},
   {id:'contractor',  name:'Contractor',     desc:'Shops products and executes the approved work.'},
   {id:'renter',      name:'Renter',         desc:'Views the scope without pricing or edit access.'},
 ];
@@ -42,7 +46,7 @@ const ROLES = [
 
    The internal team only. Handing a change order to the renter or the
    contractor isn't a review, it's a disclosure. */
-const HANDOFF_ROLES = ['field_agent', 'admin', 'manager'];
+const HANDOFF_ROLES = ['field_agent', 'field_agent_nr', 'admin', 'manager'];
 let coHandoffOpen = false;
 let coHandoffTo   = null;   // role id of the chosen teammate
 let coHandoffNote = '';
@@ -124,6 +128,75 @@ function approveChangeOrder(){
     onConfirm:()=>{ if(typeof toast === 'function') toast('Change order approved'); }
   });
 }
+/* ── the non-responsible field agent's two moves ─────────────────────
+   They own no stage, so they never hold the move — but "waiting on someone
+   else" is not the whole truth for them either. At a change order they can put
+   their name to having read it; at the review they can ask for the document
+   back. Both are contributions to someone else's decision rather than decisions
+   of their own, which is why neither advances a stage. */
+function canMarkReviewedHere(){
+  return state.role === 'field_agent_nr'
+      && viewStage === 'published' && state.workTrack === 'change_order';
+}
+function canRequestEditHere(){
+  return state.role === 'field_agent_nr' && viewStage === 'reviewing';
+}
+/* One-way, and low enough stakes to skip a confirm — it records that you read
+   it, it does not decide anything. */
+function markAsReviewed(){
+  const me = ROLE_PEOPLE[state.role] || {name:'You'};
+  if(typeof toast === 'function') toast(`Marked as reviewed · ${me.name}`);
+}
+/* Asking for the document back. The reason is the point, so the field is the
+   modal rather than an afterthought — an edit request with no "why" just
+   bounces the scope and stalls it. */
+let editReqNote = '';
+function openScopeEditRequest(){
+  editReqNote = '';
+  renderScopeEditRequest();
+}
+function closeScopeEditRequest(){
+  const el = document.getElementById('editReqModal');
+  if(el) el.remove();
+}
+function confirmScopeEditRequest(){
+  const ta = document.getElementById('editReqNote');
+  const why = ta ? ta.value.trim() : '';
+  closeScopeEditRequest();
+  const owner = turnRoleFor(viewStage, state.twoStep);
+  const who = (ROLE_PEOPLE[owner] || {}).name || 'the reviewer';
+  if(typeof toast === 'function'){
+    toast(why ? `Edit requested from ${who}` : `Edit requested from ${who} — no reason given`);
+  }
+}
+function renderScopeEditRequest(){
+  let el = document.getElementById('editReqModal');
+  if(!el){ el = document.createElement('div'); el.id = 'editReqModal'; document.body.appendChild(el); }
+  const owner = turnRoleFor(viewStage, state.twoStep);
+  const who = (ROLE_PEOPLE[owner] || {}).name || 'the reviewer';
+  const role = (ROLES.find(r => r.id === owner) || {}).name || '';
+  el.innerHTML = `<div class="dsp-scrim" onclick="closeScopeEditRequest()"></div>
+    <div class="dsp-card" role="dialog" aria-modal="true" aria-label="Request to edit the scope">
+      <div class="dsp-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l10-10-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>
+      </div>
+      <div class="dsp-title">Request to edit</div>
+      <div class="dsp-lbl">Goes to</div>
+      <div class="dsp-assignee">
+        <span class="dsp-av">${(ROLE_PEOPLE[owner] || {}).initials || '?'}</span>
+        <span class="dsp-who"><span class="dsp-name">${who}</span><span class="dsp-role">${role}</span></span>
+      </div>
+      <div class="dsp-lbl co-ho-lbl2">What needs changing?</div>
+      <textarea id="editReqNote" class="co-ho-note" rows="3"
+        placeholder="What you saw on site, or what looks wrong in the scope as written."></textarea>
+      <div class="dsp-acts">
+        <button type="button" class="dsp-btn" onclick="closeScopeEditRequest()">Cancel</button>
+        <button type="button" class="dsp-btn is-primary" onclick="confirmScopeEditRequest()">Request edit</button>
+      </div>
+    </div>`;
+  const ta = document.getElementById('editReqNote');
+  if(ta) ta.focus();
+}
 /* True where a viewer with no decision can still pass the document on. Today
    that is the change-order review, for the two internal roles that are not the
    approver. */
@@ -201,6 +274,10 @@ function turnYoursFor(stage, role, twoStep, track){
       if(stage === 'edit' || stage === 'submitted') return 'Keep adding what you found on site until the scope is handed off.';
       if(co) return 'You can hand the change order on with a comment if you saw something on site that affects it.';
       return 'Nothing to action — the scope has moved past scoping.';
+    case 'field_agent_nr':
+      if(co)                    return 'You can mark the change order as reviewed, so the admin knows you have read it.';
+      if(stage === 'reviewing') return 'You can request an edit if the scope does not match what you saw on site.';
+      return 'Nothing to action — this scope is not yours to move.';
     case 'renter':
       return 'Nothing to action. You can view the scope, without pricing.';
     default:
@@ -287,6 +364,8 @@ const ROLE_PEOPLE = {
   field_agent: {name:'M. Alvarez', initials:'MA'},
   admin:       {name:'A. Novak',   initials:'AN'},
   manager:     {name:'T. Okafor',  initials:'TO'},
+  // G. Han is the other field agent the note pool already attributes walks to.
+  field_agent_nr: {name:'G. Han', initials:'GH'},
   contractor:  {name:'Apex Carpentry', initials:'AC'},
   renter:      {name:'Resident',   initials:'R'},
 };
@@ -383,6 +462,8 @@ const ROLE_ACCESS = {
   field_agent: ['edit','submitted','published'],
   admin:       ['edit','submitted','reviewing','review-done','awaiting-pub','published','closeout','closeout-approved'],
   manager:     ['submitted','reviewing','review-done','awaiting-pub','published','closeout','closeout-approved'],
+  // Needs 'reviewing' for the edit request and 'published' for the change order.
+  field_agent_nr: ['edit','submitted','reviewing','published'],
   contractor:  ['published','closeout','closeout-approved'],
   renter:      ['published'],
 };
@@ -992,6 +1073,17 @@ function syncAppApproveBtn(){
     /* No decision here, but not necessarily nothing to do: at a change order a
        manager or field agent can still pass the document on with a note. Where
        that applies the CTA is a real action rather than a dead gate. */
+    /* The non-responsible field agent's contributions come before the generic
+       waiting state — they hold no move, but they are not idle either. */
+    if(canMarkReviewedHere() || canRequestEditHere()){
+      const mark = canMarkReviewedHere();
+      btn.textContent = mark ? 'Mark as reviewed' : 'Request to edit';
+      btn.disabled = false;
+      btn.onclick = mark ? markAsReviewed : openScopeEditRequest;
+      btn.hidden = false;
+      if(tipEl) tipEl.hidden = true;
+      return;
+    }
     if(canHandOffHere()){
       /* A manager can send the change order on for review — that is the
          forward action, so it takes the primary — with Hand off beside it as

@@ -486,6 +486,7 @@ body.tb-hidden .tb-reveal{display:inline-flex}
    Borrows the dispatch modal's shell (.dsp-*) so it reads as the same kind of
    object; only the selectable row and the note field are new. */
 #coHandoffModal{position:fixed;inset:0;z-index:200}
+#editReqModal{position:fixed;inset:0;z-index:200}
 .co-ho-row{cursor:pointer;transition:border-color .12s,background .12s}
 .co-ho-row + .co-ho-row{margin-top:8px}
 .co-ho-row:hover{border-color:var(--ink,#1A1A1A)}
