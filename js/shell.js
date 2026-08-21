@@ -921,7 +921,11 @@ function syncAppApproveBtn(){
   const btn = document.getElementById('appApproveBtn');
   const tipEl = document.getElementById('appApproveTip');
   const cancelBtn = document.getElementById('appCancelCoBtn');
+  const hoBtn = document.getElementById('appHandoffBtn');
   if(!btn) return;
+  // Off unless a branch below turns it on — otherwise it survives a role or
+  // stage change that no longer offers a hand-off.
+  if(hoBtn) hoBtn.hidden = true;
   const proj = state.projectStage;
   // Hide entirely when viewing an archived / outdated scope (v1 / v2).
   if(currentVersionId && currentVersionId !== 'v3'){
@@ -973,9 +977,20 @@ function syncAppApproveBtn(){
        manager or field agent can still pass the document on with a note. Where
        that applies the CTA is a real action rather than a dead gate. */
     if(canHandOffHere()){
-      btn.textContent = 'Hand off';
-      btn.disabled = false;
-      btn.onclick = openCoHandoff;
+      /* A manager can send the change order on for review — that is the
+         forward action, so it takes the primary — with Hand off beside it as
+         the sideways one. A field agent has no submit to make, so for them
+         Hand off IS the action and takes the primary itself. */
+      if(state.role === 'manager'){
+        if(hoBtn) hoBtn.hidden = false;
+        btn.textContent = 'Submit for review';
+        btn.disabled = false;
+        btn.onclick = submitChangeOrderForReview;
+      } else {
+        btn.textContent = 'Hand off';
+        btn.disabled = false;
+        btn.onclick = openCoHandoff;
+      }
       btn.hidden = false;
       if(tipEl) tipEl.hidden = true;
       return;
@@ -1589,6 +1604,19 @@ function reviewRosterHtml(){
     </div>`;
 }
 
+/* Sending a change order on for approval — the manager's forward action at the
+   change-order review. Distinct from submitForReview() above, which hands off
+   the whole scope and moves the project stage: this one is about the order
+   sitting against an already-live scope, so the stage does not move. */
+function submitChangeOrderForReview(){
+  openModal({
+    icon:'check',
+    title:'Submit the change order for review?',
+    body:`The change order goes to the team for approval. The live scope is unaffected until it is approved — work carries on against the approved lines, and the lines this order touches stay on hold.${reviewRosterHtml()}`,
+    confirm:'Submit for review',
+    onConfirm:()=>{ if(typeof toast === 'function') toast('Change order submitted for review'); }
+  });
+}
 function submitForReview(){
   openModal({
     icon:'check',
