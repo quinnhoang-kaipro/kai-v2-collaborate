@@ -43,6 +43,12 @@ let TSPAN = null;// {T0, span} — the calendar the bar is drawn on, for dated m
 function a2Unapproved(){
   return (typeof A2_SCOPE_UNAPPROVED !== 'undefined') && A2_SCOPE_UNAPPROVED;
 }
+/* One version awaiting a decision, rather than the whole document being
+   pre-approval. Set by a2-stage.js at the change-order-review step. */
+function a2VerPending(ver){
+  if(a2Unapproved()) return true;
+  return (typeof A2_PENDING_VER !== 'undefined') && A2_PENDING_VER === ver;
+}
 
 function buildTimePos(){
   const N = ORDERED.length;
@@ -218,7 +224,9 @@ function buildScrubber(){
     const right = (i+1 < segs.length) ? (POS[Math.min(segs[i+1].start, N)] || 0) : 100;
     const jump  = s.end;
     return `<button class="a2-tl-group" type="button" data-ver="${s.ver}" style="left:${left.toFixed(3)}%;width:${Math.max(0,right-left).toFixed(3)}%"
-      onclick="a2SetT(${jump})" title="${a2Esc(VER[s.ver].label)} · ${a2Unapproved() ? 'in draft — not approved yet' : `approved ${a2Esc(VER[s.ver].date)}`}">${a2Esc(VER[s.ver].label)}</button>`;
+      onclick="a2SetT(${jump})" title="${a2Esc(VER[s.ver].label)} · ${a2Unapproved() ? 'in draft — not approved yet'
+        : a2VerPending(s.ver) ? `submitted ${a2Esc(VER[s.ver].date)} — awaiting approval`
+        : `approved ${a2Esc(VER[s.ver].date)}`}">${a2Esc(VER[s.ver].label)}</button>`;
   }).join('');
   document.getElementById('a2Scrub').innerHTML = `
     <div class="a2-tl-hdr">
@@ -311,7 +319,9 @@ function updateScrubber(){
   // The milestone chip marks the change that closed a version — but only once
   // that version has actually been approved. In draft it would be asserting the
   // thing the stage is still waiting for.
-  const appr = (APPR[timeT] && !a2Unapproved()) ? `<span class="a2-cl-appr">Approved</span>` : '';
+  const appr = (APPR[timeT] && !a2VerPending(APPR[timeT]))
+    ? `<span class="a2-cl-appr">Approved</span>`
+    : (APPR[timeT] && !a2Unapproved() ? `<span class="a2-cl-appr is-pending">Submitted</span>` : '');
   SREFS.label.innerHTML = `<span class="a2-cl-dot" style="--mk:${dot}"></span><span class="a2-cl-txt">${a2Esc(txt)}</span>${appr}<span class="a2-cl-date">${a2Esc(date)}</span><span class="a2-tl-idx">${timeT} / ${N}</span>`;
   SREFS.prev.disabled = timeT <= 0;
   SREFS.next.disabled = timeT >= N;

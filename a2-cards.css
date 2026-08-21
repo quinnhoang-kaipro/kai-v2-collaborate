@@ -37,3 +37,8 @@
 
 /* The open card is the one being read, so it comes forward. */
 .a2-card:not(.is-collapsed){z-index:22;box-shadow:0 1px 0 rgba(0,0,0,.03),0 10px 24px rgba(0,0,0,.13)}
+
+/* A milestone that closed a version which is still out for a decision. Reads
+   as a state, not an approval — outlined rather than filled, so it can't be
+   mistaken for the approved chip at a glance. */
+.a2-cl-appr.is-pending{background:transparent;border:1px solid var(--stroke);color:var(--t2)}

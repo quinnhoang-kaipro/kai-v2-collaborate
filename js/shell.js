@@ -133,6 +133,8 @@ const PRESETS = [
     state:{role:'admin', projectStage:'published', viewStage:'published', scopeSeed:'full', workTrack:'labor'}},
   {id:'construction-materials', name:'Scope approved, tasks in progress', desc:'Work is under way. Tasks sit at mixed statuses across the job.',
     state:{role:'contractor', projectStage:'published', viewStage:'published', scopeSeed:'full', workTrack:'materials'}},
+  {id:'change-order-review', name:'Change order review', desc:'Work is under way and a change order has been submitted against the live scope. Admin reviewing it before approval.',
+    state:{role:'admin', projectStage:'published', viewStage:'published', scopeSeed:'full', workTrack:'change_order'}},
   {id:'closeout',           name:'Close out review',           desc:'Work is done. Admin comparing before/after photos to sign off.',
     state:{role:'admin', projectStage:'closeout', viewStage:'closeout', scopeSeed:'full'}},
   {id:'closeout-approved',  name:'Closeout approved',          desc:'Admin has signed off. Project is complete — read-only view.',

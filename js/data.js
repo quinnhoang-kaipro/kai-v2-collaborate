@@ -689,7 +689,10 @@ if(PROJ_MODE === 'work' && WORK_TRACK === 'labor'){
    The pattern is fixed rather than random so the demo is the same every time,
    and ordered so earlier rooms read as further along — which is how a job
    actually progresses, one space at a time. Every one of the four appears. */
-if(PROJ_MODE === 'work' && WORK_TRACK === 'materials'){
+/* Also the change-order-review step: work is under way there too, so the same
+   four live-job statuses apply. Only the labour track above forces a clean
+   not-started board. */
+if(PROJ_MODE === 'work' && (WORK_TRACK === 'materials' || WORK_TRACK === 'change_order')){
   const RUN = ['complete','complete','in_progress','needs_rework',
                'in_progress','complete','not_started','in_progress',
                'needs_rework','not_started'];
