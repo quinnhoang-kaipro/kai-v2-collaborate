@@ -108,6 +108,22 @@ function renderCoHandoff(){
   const ta = document.getElementById('coHandoffNote');
   if(ta) ta.focus();
 }
+/* The admin's move at a change-order review: approve the order. Without this the
+   generic published-stage rule labelled their CTA "Submit closeout" — the right
+   action for a live job, the wrong one while an order sits unapproved, and gated
+   on every task being complete so it was permanently disabled here. */
+function canApproveChangeOrderHere(){
+  return viewStage === 'published' && state.workTrack === 'change_order' && state.role === 'admin';
+}
+function approveChangeOrder(){
+  openModal({
+    icon:'check',
+    title:'Approve the change order?',
+    body:`Approving releases the lines this order touches back to the field and rolls its cost into the live scope. The team is notified. If something is wrong, request an edit instead and it goes back for revision.${reviewRosterHtml()}`,
+    confirm:'Approve change order',
+    onConfirm:()=>{ if(typeof toast === 'function') toast('Change order approved'); }
+  });
+}
 /* True where a viewer with no decision can still pass the document on. Today
    that is the change-order review, for the two internal roles that are not the
    approver. */
@@ -1008,6 +1024,17 @@ function syncAppApproveBtn(){
     btn.textContent = d.total && !d.ready ? `${d.done} of ${d.total} ${d.verb === 'approve' ? 'approved' : 'reviewed'}` : label;
     btn.disabled = !d.ready;
     btn.onclick = openStageConfirm;
+    if(tipEl) tipEl.hidden = true;
+    return;
+  }
+  // The change-order review comes before the generic published rule below, or
+  // the admin gets "Submit closeout" — an action that isn't theirs to take yet
+  // and is gated on work that isn't finished, so it sat permanently disabled.
+  if(canApproveChangeOrderHere()){
+    btn.textContent = 'Approve change order';
+    btn.disabled = false;
+    btn.onclick = approveChangeOrder;
+    btn.hidden = false;
     if(tipEl) tipEl.hidden = true;
     return;
   }
