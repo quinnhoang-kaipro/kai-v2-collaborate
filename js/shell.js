@@ -40,18 +40,84 @@ const ROLES = [
 let turnPopOpen = false;
 function toggleTurnPop(){ turnPopOpen = !turnPopOpen; renderTurnPop(); }
 function closeTurnPop(){ if(!turnPopOpen) return; turnPopOpen = false; renderTurnPop(); }
-/* What the person whose turn it is has to do. Phrased as their obligation, so
-   it reads the same whether you are them or waiting on them. */
-function turnNeedFor(stage, twoStep){
+/* What the person whose turn it is owes, as an infinitive phrase that reads
+   after their name: "A. Novak (Admin) to review the change order." Keeping it
+   in one grammatical shape is what lets the same string serve both paragraphs. */
+function turnNeedFor(stage, twoStep, track){
   switch(stage){
-    case 'edit':         return 'Finish building the scope and hand it off for review.';
+    case 'edit':         return 'to finish building the scope and hand it off for review';
+    case 'submitted':    return 'to begin the review';
+    case 'reviewing':    return twoStep ? 'to review every task and hand it off'
+                                        : 'to review every task and approve it to publish';
+    case 'review-done':  return 'to send the reviewed scope on to publish';
+    case 'awaiting-pub': return 'to approve and publish the scope';
+    case 'published':    return track === 'change_order'
+                                ? 'to review the change order'
+                                : 'to track the work and submit closeout once every task is complete';
+    case 'closeout':     return 'to compare before and after, then approve the closeout';
+    default:             return '';
+  }
+}
+/* The same obligation addressed to the person who holds it. */
+function turnMineFor(stage, twoStep, track){
+  switch(stage){
+    case 'edit':         return 'Finish building the scope, then hand it off for review.';
     case 'submitted':    return 'Begin the review.';
     case 'reviewing':    return twoStep ? 'Review every task, then hand off to the manager.'
                                         : 'Review every task, then approve to publish.';
     case 'review-done':  return 'Send the reviewed scope on to publish.';
     case 'awaiting-pub': return 'Approve and publish the scope to release it to the field.';
-    case 'published':    return 'Track the work, and submit closeout once every task is complete.';
+    case 'published':    return track === 'change_order'
+                                ? 'Review the change order and approve it, or request an edit if something is wrong.'
+                                : 'Track the work. Submit closeout once every task is complete.';
     case 'closeout':     return 'Compare before and after, then approve the closeout.';
+    default:             return '';
+  }
+}
+/* What the VIEWER can do while someone else holds the move. The useful answer
+   is rarely "nothing" — there is usually a way to intervene, and saying so is
+   the difference between a dead end and a next step. Keyed on the viewer's role
+   first, because the same stage means different things to each of them. */
+function turnYoursFor(stage, role, twoStep, track){
+  const live = (stage === 'published' || stage === 'closeout' || stage === 'closeout-approved');
+  const co   = (stage === 'published' && track === 'change_order');
+  switch(role){
+    case 'manager':
+      if(co)                 return 'If something is wrong with the change order, you can request an edit and send it back for approval.';
+      if(stage === 'published') return 'Nothing to action. You will be asked again if a change order needs approving.';
+      if(stage === 'closeout')  return 'Nothing to action — the admin signs the closeout off.';
+      return 'Nothing yet. It reaches you once the admin has finished their review.';
+    case 'admin':
+      if(stage === 'awaiting-pub') return 'Your review is done. You can recall the scope if something needs changing before it goes live.';
+      return 'Nothing to action from here.';
+    case 'contractor':
+      if(co)                 return 'Keep working the approved lines. Anything the change order touches is on hold until it is approved.';
+      if(stage === 'published') return 'Keep shopping products and marking tasks complete as you go.';
+      if(live)               return 'Nothing to action. Your work is being signed off.';
+      return 'Nothing yet — the scope is not live. You get access once it is published.';
+    case 'field_agent':
+      if(stage === 'edit' || stage === 'submitted') return 'Keep adding what you found on site until the scope is handed off.';
+      return 'Nothing to action — the scope has moved past scoping.';
+    case 'renter':
+      return 'Nothing to action. You can view the scope, without pricing.';
+    default:
+      return 'Nothing to action from here.';
+  }
+}
+/* Who picks it up after the person whose move it is now. */
+function turnNextFor(stage, twoStep){
+  switch(stage){
+    // This paragraph only renders when the move is yours, so it can address you
+    // directly. Review is the admin's own next step, not a handover to someone
+    // else — saying "it goes to the admin" to the admin read as a dead loop.
+    case 'edit':
+    case 'submitted':    return twoStep ? 'You review it next, then the manager publishes.'
+                                        : 'You review it next, then publish.';
+    case 'reviewing':    return twoStep ? 'It goes to the manager to publish.' : 'Publishing is yours too — the scope goes live.';
+    case 'review-done':  return 'It goes to the manager to publish.';
+    case 'awaiting-pub': return 'The scope goes live and the contractor starts work.';
+    case 'published':    return 'Closeout review follows once the work is done.';
+    case 'closeout':     return 'The project is complete.';
     default:             return '';
   }
 }
@@ -71,14 +137,27 @@ function renderTurnPop(){
     ? `<div class="turn-pop-prog"><b>${d.done} of ${d.total}</b> ${d.verb === 'approve' ? 'approved' : 'reviewed'}</div>`
     : (d.total && d.ready ? `<div class="turn-pop-prog is-done"><b>All ${d.total}</b> ${d.verb === 'approve' ? 'approved' : 'reviewed'} — ready</div>` : '');
   const r = chip.getBoundingClientRect();
+  const track = state.workTrack || '';
+  /* Two labelled paragraphs: who holds the move and what for, then what YOU can
+     do about it. The old single sentence stated the holder's obligation with no
+     subject — "Track the work and submit closeout" read as an instruction to
+     whoever was looking, which is exactly wrong when it is someone else's. */
+  const p1 = t.mine
+    ? `<span class="turn-pop-lbl">You</span> ${turnMineFor(viewStage, state.twoStep, track)}`
+    : `<span class="turn-pop-lbl">Waiting on</span> ${t.who} (${roleName}) ${turnNeedFor(viewStage, state.twoStep, track)}.`;
+  const p2 = t.mine
+    ? (turnNextFor(viewStage, state.twoStep) ? `<span class="turn-pop-lbl">Then</span> ${turnNextFor(viewStage, state.twoStep)}` : '')
+    : `<span class="turn-pop-lbl">You</span> ${turnYoursFor(viewStage, state.role, state.twoStep, track)}`;
+  // Eyebrow names the stage rather than repeating "Waiting on" from p1.
+  const eyebrow = (STATUS_META[viewStage] || {}).label || 'Status';
   el.innerHTML = `<div class="turn-pop-card" role="dialog" aria-label="Whose turn it is"
       style="top:${Math.round(r.bottom + 8)}px;left:${Math.round(r.left)}px">
-    <div class="turn-pop-h">${t.mine ? 'Your move' : 'Waiting on'}</div>
+    <div class="turn-pop-h">${eyebrow}</div>
     <div class="turn-pop-who"><span class="turn-pop-av${t.mine ? ' is-mine' : ''}">${t.initials}</span>
       <span class="turn-pop-name"><b>${t.who}</b><span class="turn-pop-role">${roleName}</span></span></div>
-    <div class="turn-pop-need">${turnNeedFor(viewStage, state.twoStep)}</div>
+    <div class="turn-pop-p">${p1}</div>
+    ${p2 ? `<div class="turn-pop-p">${p2}</div>` : ''}
     ${prog}
-    ${t.mine ? '' : `<div class="turn-pop-note">You are signed in as ${(ROLES.find(r2 => r2.id === state.role) || {}).name || state.role}. Nothing here is yours to action.</div>`}
   </div>`;
 }
 /* Anywhere else closes it. Registered once — the popover is rebuilt, not this. */

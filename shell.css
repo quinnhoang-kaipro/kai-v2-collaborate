@@ -193,7 +193,13 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 .turn-pop-name b{font-size:13.5px;color:var(--ink);font-weight:600}
 .turn-pop-role{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;
   text-transform:uppercase;color:var(--t3)}
-.turn-pop-need{font-size:12.5px;color:var(--t2);line-height:1.45}
+/* Two paragraphs, each led by its own label. The label is what makes the
+   subject unambiguous — the sentence alone can't say whose obligation it is. */
+.turn-pop-p{font-size:12.5px;color:var(--t2);line-height:1.5}
+.turn-pop-p + .turn-pop-p{margin-top:9px;padding-top:9px;border-top:1px solid var(--stroke)}
+.turn-pop-lbl{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink);margin-right:5px}
+.turn-pop-lbl::after{content:':'}
 .turn-pop-prog{margin-top:10px;padding-top:9px;border-top:1px solid var(--stroke);
   font-size:12px;color:var(--t2)}
 .turn-pop-prog b{color:var(--ink)}
