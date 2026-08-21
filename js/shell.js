@@ -30,6 +30,65 @@ const ROLES = [
   {id:'renter',      name:'Renter',         desc:'Views the scope without pricing or edit access.'},
 ];
 
+/* ── the turn popover ────────────────────────────────────────────────
+   Two initials can't say who someone is. The chip is a button, and this is
+   what it opens: the name behind the initials, the role, what that person owes,
+   and how far through it they are when the stage tracks that.
+
+   Lives on <body> rather than inside the stepper — renderStages rewrites that
+   subtree on every state change, which would take the popover with it. */
+let turnPopOpen = false;
+function toggleTurnPop(){ turnPopOpen = !turnPopOpen; renderTurnPop(); }
+function closeTurnPop(){ if(!turnPopOpen) return; turnPopOpen = false; renderTurnPop(); }
+/* What the person whose turn it is has to do. Phrased as their obligation, so
+   it reads the same whether you are them or waiting on them. */
+function turnNeedFor(stage, twoStep){
+  switch(stage){
+    case 'edit':         return 'Finish building the scope and hand it off for review.';
+    case 'submitted':    return 'Begin the review.';
+    case 'reviewing':    return twoStep ? 'Review every task, then hand off to the manager.'
+                                        : 'Review every task, then approve to publish.';
+    case 'review-done':  return 'Send the reviewed scope on to publish.';
+    case 'awaiting-pub': return 'Approve and publish the scope to release it to the field.';
+    case 'published':    return 'Track the work, and submit closeout once every task is complete.';
+    case 'closeout':     return 'Compare before and after, then approve the closeout.';
+    default:             return '';
+  }
+}
+function renderTurnPop(){
+  let el = document.getElementById('turnPop');
+  if(!turnPopOpen){ if(el) el.remove(); return; }
+  const chip = document.querySelector('.stage.active .stage-turn');
+  if(!chip){ turnPopOpen = false; if(el) el.remove(); return; }
+  const t = whoseTurn(viewStage, state.role, state.twoStep);
+  if(!t.role){ turnPopOpen = false; if(el) el.remove(); return; }
+  if(!el){ el = document.createElement('div'); el.id = 'turnPop'; document.body.appendChild(el); }
+  const roleName = (ROLES.find(r => r.id === t.role) || {}).name || t.role;
+  // Where the stage counts decisions, say how far along they are — "waiting on
+  // someone" is a lot more actionable with "9 of 18 reviewed" under it.
+  const d = window.__KAI_DECISION || {};
+  const prog = (d.total && !d.ready)
+    ? `<div class="turn-pop-prog"><b>${d.done} of ${d.total}</b> ${d.verb === 'approve' ? 'approved' : 'reviewed'}</div>`
+    : (d.total && d.ready ? `<div class="turn-pop-prog is-done"><b>All ${d.total}</b> ${d.verb === 'approve' ? 'approved' : 'reviewed'} — ready</div>` : '');
+  const r = chip.getBoundingClientRect();
+  el.innerHTML = `<div class="turn-pop-card" role="dialog" aria-label="Whose turn it is"
+      style="top:${Math.round(r.bottom + 8)}px;left:${Math.round(r.left)}px">
+    <div class="turn-pop-h">${t.mine ? 'Your move' : 'Waiting on'}</div>
+    <div class="turn-pop-who"><span class="turn-pop-av${t.mine ? ' is-mine' : ''}">${t.initials}</span>
+      <span class="turn-pop-name"><b>${t.who}</b><span class="turn-pop-role">${roleName}</span></span></div>
+    <div class="turn-pop-need">${turnNeedFor(viewStage, state.twoStep)}</div>
+    ${prog}
+    ${t.mine ? '' : `<div class="turn-pop-note">You are signed in as ${(ROLES.find(r2 => r2.id === state.role) || {}).name || state.role}. Nothing here is yours to action.</div>`}
+  </div>`;
+}
+/* Anywhere else closes it. Registered once — the popover is rebuilt, not this. */
+document.addEventListener('click', e => {
+  if(!turnPopOpen) return;
+  if(e.target.closest && (e.target.closest('#turnPop') || e.target.closest('.stage-turn'))) return;
+  closeTurnPop();
+});
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeTurnPop(); });
+
 /* ── whose turn is it ─────────────────────────────────────────────────
    One predicate, read by all three surfaces that answer the question: the
    stepper's active node, the primary CTA, and the caption under the stepper.
@@ -873,7 +932,10 @@ function renderStages(){
      is spent and a future one's isn't assigned yet. */
   const _turn = whoseTurn(viewStage, state.role, state.twoStep);
   const turnChip = _turn.role
-    ? `<span class="stage-turn${_turn.mine ? ' is-mine' : ''}" title="${_turn.mine ? 'Your move' : 'Waiting on ' + _turn.who}">${_turn.mine ? 'You' : _turn.initials}</span>`
+    ? `<button class="stage-turn${_turn.mine ? ' is-mine' : ''}" type="button" aria-haspopup="dialog"
+         onclick="event.stopPropagation();toggleTurnPop()"
+         title="${_turn.mine ? 'Your move — click for detail' : 'Waiting on ' + _turn.who + ' — click for detail'}"
+         >${_turn.mine ? 'You' : _turn.initials}</button>`
     : '';
   if(capsWrap) capsWrap.innerHTML = visibleStages.map(sg => {
     const isActive = sg === viewSuper;

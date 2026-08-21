@@ -4009,7 +4009,11 @@ body.draft-stage .task.is-missing .task-amt{color:var(--t3)}
 .a2-grp .a2-gcount{color:var(--t3);font-weight:700;margin-left:14px;white-space:nowrap}
 .a2-grp .a2-gcount::before{content:'· ';margin-right:2px}
 .a2-row td{padding:15px 11px 6px;vertical-align:top;border-bottom:0;position:relative}
-.a2-row.a2-detail td{padding:0 11px 16px;border-bottom:1px solid rgba(0,0,0,.05)}
+/* 22px to match .a2-item, so the description and the product line start on the
+   same edge as the id, the name and the option above them. The cell owned 11px
+   and each child added 22 more, which set the body text 11px right of the name
+   it belongs to — close enough to look like a mistake rather than an indent. */
+.a2-row.a2-detail td{padding:0 22px 16px;border-bottom:1px solid rgba(0,0,0,.05)}
 .a2-row .a2-item{padding-left:22px!important}
 /* The line code reads as an eyebrow over the name rather than its own
    column — same information, none of the horizontal budget. */
@@ -4022,8 +4026,8 @@ body.draft-stage .task.is-missing .task-amt{color:var(--t3)}
    columns (~870px here) and capping at ~500px left a 370px hole beside every
    description that read as a broken column rather than as a margin. In a
    document the line filling its cell is the lesser evil. */
-.a2-desc{font-size:14px;color:var(--t2);line-height:1.55;padding-left:22px;padding-right:22px}
-.a2-prod{font-size:13.5px;color:var(--t2);display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;margin-top:7px;padding-left:22px}
+.a2-desc{font-size:14px;color:var(--t2);line-height:1.55}
+.a2-prod{font-size:13.5px;color:var(--t2);display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;margin-top:7px}
 .a2-lbl{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
 .a2-gc{font-size:14px;color:var(--ink)}
 .a2-gc-none{color:var(--error);font-style:italic}
@@ -4031,16 +4035,16 @@ body.draft-stage .task.is-missing .task-amt{color:var(--t3)}
 .a2-amt{text-align:right;font-family:var(--display);font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums}
 /* Media column: rightmost, glyph-only, flush with the paper's right gutter. */
 .a2-media-cell{text-align:right;padding-right:22px!important;vertical-align:top;white-space:nowrap}
-.a2-mods{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;padding-left:22px}
+.a2-mods{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
 .a2-mod{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--midtone);border:1px solid var(--stroke);padding:2px 6px;line-height:1.2}
 .a2-mod.is-new{color:var(--ct-modifier);border-color:var(--ct-modifier);background:#F7EEDF}
 .a2-root.is-tight .a2-name{font-size:13.5px;gap:6px}
 .a2-root.is-tight .a2-opt{font-size:11.5px}
-.a2-root.is-tight .a2-desc{font-size:12.5px;padding-left:16px}
-.a2-root.is-tight .a2-prod{font-size:12px;padding-left:16px}
-.a2-root.is-tight .a2-mods{padding-left:16px}
+.a2-root.is-tight .a2-desc{font-size:12.5px}
+.a2-root.is-tight .a2-prod{font-size:12px}
+
 .a2-root.is-tight .a2-row td{padding:12px 8px 5px}
-.a2-root.is-tight .a2-row.a2-detail td{padding:0 8px 13px}
+.a2-root.is-tight .a2-row.a2-detail td{padding:0 16px 13px}
 .a2-root.is-tight .a2-row .a2-item{padding-left:16px!important}
 .a2-root.is-tight .a2-row .a2-id{font-size:10px}
 .a2-root.is-tight .a2-media-cell{padding-right:16px!important}

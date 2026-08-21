@@ -169,6 +169,36 @@ body.tb-hidden .tb-reveal{display:inline-flex}
   font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;
   border-radius:999px;background:rgba(255,255,255,.14);color:rgba(255,255,255,.72)}
 .stage-turn.is-mine{background:var(--accent);color:var(--ink)}
+/* It's a button now — two initials can't say who someone is, so it opens the
+   name, the role and what they owe. */
+.stage-turn{border:0;cursor:pointer;transition:background .12s,color .12s}
+.stage-turn:hover{background:rgba(255,255,255,.26);color:#fff}
+.stage-turn.is-mine:hover{background:var(--accent);filter:brightness(1.06)}
+.stage-turn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ── turn popover ────────────────────────────────────────────────────
+   Fixed-position card on <body>, placed under the chip. Light on a dark bar,
+   because it is a panel of detail rather than more chrome. */
+#turnPop{position:fixed;inset:0;z-index:120;pointer-events:none}
+.turn-pop-card{position:fixed;pointer-events:auto;width:268px;background:var(--white);
+  border:1px solid var(--stroke);box-shadow:0 12px 30px rgba(26,26,26,.22);padding:13px 14px 14px}
+.turn-pop-h{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--t3);margin-bottom:9px}
+.turn-pop-who{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.turn-pop-av{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--midtone);
+  color:var(--white);font-family:var(--mono);font-size:10px;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+.turn-pop-av.is-mine{background:var(--ink);color:var(--accent)}
+.turn-pop-name{display:flex;flex-direction:column;gap:1px;min-width:0}
+.turn-pop-name b{font-size:13.5px;color:var(--ink);font-weight:600}
+.turn-pop-role{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--t3)}
+.turn-pop-need{font-size:12.5px;color:var(--t2);line-height:1.45}
+.turn-pop-prog{margin-top:10px;padding-top:9px;border-top:1px solid var(--stroke);
+  font-size:12px;color:var(--t2)}
+.turn-pop-prog b{color:var(--ink)}
+.turn-pop-prog.is-done b{color:var(--success)}
+.turn-pop-note{margin-top:9px;font-size:11.5px;color:var(--t3);font-style:italic;line-height:1.4}
 .stage.done .stage-label{color:var(--midtone)}
 .stage.active .stage-label{color:var(--ink)}
 .stage:not(.accessible){cursor:not-allowed;opacity:.55}
