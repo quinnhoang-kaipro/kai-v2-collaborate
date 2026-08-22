@@ -110,11 +110,6 @@
          sits to the LEFT of the primary CTA so the destructive action
          doesn't pull focus. -->
     <button class="btn-ghost" id="appCancelCoBtn" onclick="triggerIframeCancelCo()" hidden>Cancel change order</button>
-    <!-- Hand off sits in the same ghost slot. For a manager at a change order it
-         is the secondary to Submit for review; for a field agent, who has no
-         submit, it is promoted into the primary instead (see
-         syncAppApproveBtn). -->
-    <button class="btn-ghost" id="appHandoffBtn" onclick="openCoHandoff()" hidden>Hand off</button>
     <span class="btn-tooltip-wrap" id="appApproveWrap">
       <button class="btn-primary" id="appApproveBtn" onclick="triggerIframeApprove()">Approve scope</button>
       <span class="btn-tooltip" id="appApproveTip" hidden>All tasks must be marked as Completed before you can submit the closeout.</span>

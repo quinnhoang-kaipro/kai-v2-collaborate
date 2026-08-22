@@ -487,6 +487,22 @@ body.tb-hidden .tb-reveal{display:inline-flex}
    object; only the selectable row and the note field are new. */
 #coHandoffModal{position:fixed;inset:0;z-index:200}
 #editReqModal{position:fixed;inset:0;z-index:200}
+/* Wider than the dispatch card it borrows from, to carry two columns. */
+.co-ho-card{width:660px}
+.co-ho-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.co-ho-col{min-width:0}
+/* The review column is reference, not input, so it sits back a shade. */
+.co-ho-col-review{background:var(--sunken,#F4F0E6);border:1px solid var(--stroke,#DDD6C8);padding:12px 13px}
+.co-ho-col-review .rv-list{margin-top:0}
+.co-ho-search{width:100%;box-sizing:border-box;margin-bottom:8px;padding:9px 11px;
+  border:1px solid var(--stroke,#DDD6C8);background:var(--white,#fff);color:var(--ink,#1A1A1A);
+  font-family:var(--body);font-size:13.5px}
+.co-ho-search:focus{outline:none;border-color:var(--ink,#1A1A1A)}
+.co-ho-search::placeholder{color:var(--midtone,#7D7469)}
+/* Scrolls rather than growing, so a long team can't push the actions off. */
+.co-ho-results{max-height:196px;overflow-y:auto}
+.co-ho-none{padding:12px 2px;font-family:var(--body);font-size:12.5px;font-style:italic;
+  color:var(--midtone,#7D7469)}
 .co-ho-row{cursor:pointer;transition:border-color .12s,background .12s}
 .co-ho-row + .co-ho-row{margin-top:8px}
 .co-ho-row:hover{border-color:var(--ink,#1A1A1A)}

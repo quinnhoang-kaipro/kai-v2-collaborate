@@ -48,8 +48,9 @@ const ROLES = [
    contractor isn't a review, it's a disclosure. */
 const HANDOFF_ROLES = ['field_agent', 'field_agent_nr', 'admin', 'manager'];
 let coHandoffOpen = false;
-let coHandoffTo   = null;   // role id of the chosen teammate
-let coHandoffNote = '';
+let coHandoffTo    = null;   // role id of the chosen teammate
+let coHandoffNote  = '';
+let coHandoffQuery = '';     // what has been typed into the name search
 
 function coHandoffTeam(){
   return HANDOFF_ROLES
@@ -57,18 +58,45 @@ function coHandoffTeam(){
     .map(r => ({id:r, name:ROLE_PEOPLE[r].name, initials:ROLE_PEOPLE[r].initials,
                 role:(ROLES.find(x => x.id === r) || {}).name || r}));
 }
+/* The result rows for the current query. Kept apart from renderCoHandoff so
+   typing and picking can replace just this list — re-rendering the whole modal
+   on a keystroke throws away the caret and whatever is in the comment box. */
+function coHandoffRowsHtml(){
+  const q = coHandoffQuery.trim().toLowerCase();
+  const team = coHandoffTeam().filter(p =>
+    !q || p.name.toLowerCase().includes(q) || p.role.toLowerCase().includes(q));
+  if(!team.length) return `<div class="co-ho-none">No one by that name on this project.</div>`;
+  return team.map(p => `
+    <button type="button" class="dsp-row co-ho-row${coHandoffTo === p.id ? ' is-on' : ''}"
+      onclick="pickCoHandoff('${p.id}')" aria-pressed="${coHandoffTo === p.id}">
+      <span class="dsp-av">${p.initials}</span>
+      <span class="dsp-who"><span class="dsp-name">${p.name}</span><span class="dsp-role">${p.role}</span></span>
+      <span class="co-ho-tick">${ICONS.check}</span>
+    </button>`).join('');
+}
 function openCoHandoff(){
   const team = coHandoffTeam();
   // Default to whoever actually owes the move — that is the hand-off you want
   // nine times in ten, and pre-selecting it saves the common case a click.
   const owner = turnRoleFor(viewStage, state.twoStep);
-  coHandoffTo   = (owner && owner !== state.role) ? owner : (team[0] && team[0].id);
-  coHandoffNote = '';
-  coHandoffOpen = true;
+  coHandoffTo    = (owner && owner !== state.role) ? owner : (team[0] && team[0].id);
+  coHandoffNote  = '';
+  coHandoffQuery = '';
+  coHandoffOpen  = true;
   renderCoHandoff();
 }
 function closeCoHandoff(){ coHandoffOpen = false; renderCoHandoff(); }
-function pickCoHandoff(id){ coHandoffTo = id; renderCoHandoff(); }
+/* Both of these repaint only the results list, for the reason above. */
+function filterCoHandoff(v){
+  coHandoffQuery = v || '';
+  const host = document.getElementById('coHandoffResults');
+  if(host) host.innerHTML = coHandoffRowsHtml();
+}
+function pickCoHandoff(id){
+  coHandoffTo = id;
+  const host = document.getElementById('coHandoffResults');
+  if(host) host.innerHTML = coHandoffRowsHtml();
+}
 /* Note is read straight off the field on confirm rather than mirrored on every
    keystroke — re-rendering the modal under a cursor loses the caret. */
 function confirmCoHandoff(){
@@ -85,22 +113,28 @@ function renderCoHandoff(){
   let el = document.getElementById('coHandoffModal');
   if(!coHandoffOpen){ if(el) el.remove(); return; }
   if(!el){ el = document.createElement('div'); el.id = 'coHandoffModal'; document.body.appendChild(el); }
-  const team = coHandoffTeam();
-  const rows = team.map(p => `
-    <button type="button" class="dsp-row co-ho-row${coHandoffTo === p.id ? ' is-on' : ''}"
-      onclick="pickCoHandoff('${p.id}')" aria-pressed="${coHandoffTo === p.id}">
-      <span class="dsp-av">${p.initials}</span>
-      <span class="dsp-who"><span class="dsp-name">${p.name}</span><span class="dsp-role">${p.role}</span></span>
-      <span class="co-ho-tick">${ICONS.check}</span>
-    </button>`).join('');
+  /* Two columns: who you are passing it to on the left, where the review
+     already stands on the right. Stacked, the dialog ran past the fold — and
+     the two belong side by side anyway, since who has already signed is exactly
+     what tells you who to send it to next. */
   el.innerHTML = `<div class="dsp-scrim" onclick="closeCoHandoff()"></div>
-    <div class="dsp-card" role="dialog" aria-modal="true" aria-label="Hand off the change order">
+    <div class="dsp-card co-ho-card" role="dialog" aria-modal="true" aria-label="Hand off the change order">
       <div class="dsp-icon">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3L3 10.5l7 3 3 7L21 3z"/></svg>
       </div>
       <div class="dsp-title">Hand off the change order</div>
-      <div class="dsp-lbl">Pass it to</div>
-      <div class="dsp-list">${rows}</div>
+      <div class="co-ho-cols">
+        <div class="co-ho-col">
+          <div class="dsp-lbl">Pass it to</div>
+          <input id="coHandoffSearch" class="co-ho-search" type="text" autocomplete="off"
+            placeholder="Search by name or role" value="${coHandoffQuery}"
+            oninput="filterCoHandoff(this.value)" aria-label="Search for a teammate">
+          <div class="co-ho-results" id="coHandoffResults">${coHandoffRowsHtml()}</div>
+        </div>
+        <div class="co-ho-col co-ho-col-review">
+          ${reviewRosterHtml() || '<div class="dsp-lbl">Review</div><div class="co-ho-none">No review on file yet.</div>'}
+        </div>
+      </div>
       <div class="dsp-lbl co-ho-lbl2">Add a comment <span class="co-ho-opt">optional</span></div>
       <textarea id="coHandoffNote" class="co-ho-note" rows="3"
         placeholder="What should they look at? Anything you'd want changed before this is approved.">${coHandoffNote}</textarea>
@@ -109,24 +143,8 @@ function renderCoHandoff(){
         <button type="button" class="dsp-btn is-primary" onclick="confirmCoHandoff()">Hand off</button>
       </div>
     </div>`;
-  const ta = document.getElementById('coHandoffNote');
-  if(ta) ta.focus();
-}
-/* The admin's move at a change-order review: approve the order. Without this the
-   generic published-stage rule labelled their CTA "Submit closeout" — the right
-   action for a live job, the wrong one while an order sits unapproved, and gated
-   on every task being complete so it was permanently disabled here. */
-function canApproveChangeOrderHere(){
-  return viewStage === 'published' && state.workTrack === 'change_order' && state.role === 'admin';
-}
-function approveChangeOrder(){
-  openModal({
-    icon:'check',
-    title:'Approve the change order?',
-    body:`Approving releases the lines this order touches back to the field and rolls its cost into the live scope. The team is notified. If something is wrong, request an edit instead and it goes back for revision.${reviewRosterHtml()}`,
-    confirm:'Approve change order',
-    onConfirm:()=>{ if(typeof toast === 'function') toast('Change order approved'); }
-  });
+  const q = document.getElementById('coHandoffSearch');
+  if(q) q.focus();
 }
 /* ── the non-responsible field agent's two moves ─────────────────────
    They own no stage, so they never hold the move — but "waiting on someone
@@ -150,11 +168,7 @@ function markAsReviewed(){
 /* Asking for the document back. The reason is the point, so the field is the
    modal rather than an afterthought — an edit request with no "why" just
    bounces the scope and stalls it. */
-let editReqNote = '';
-function openScopeEditRequest(){
-  editReqNote = '';
-  renderScopeEditRequest();
-}
+function openScopeEditRequest(){ renderScopeEditRequest(); }
 function closeScopeEditRequest(){
   const el = document.getElementById('editReqModal');
   if(el) el.remove();
@@ -1018,11 +1032,7 @@ function syncAppApproveBtn(){
   const btn = document.getElementById('appApproveBtn');
   const tipEl = document.getElementById('appApproveTip');
   const cancelBtn = document.getElementById('appCancelCoBtn');
-  const hoBtn = document.getElementById('appHandoffBtn');
   if(!btn) return;
-  // Off unless a branch below turns it on — otherwise it survives a role or
-  // stage change that no longer offers a hand-off.
-  if(hoBtn) hoBtn.hidden = true;
   const proj = state.projectStage;
   // Hide entirely when viewing an archived / outdated scope (v1 / v2).
   if(currentVersionId && currentVersionId !== 'v3'){
@@ -1085,20 +1095,14 @@ function syncAppApproveBtn(){
       return;
     }
     if(canHandOffHere()){
-      /* A manager can send the change order on for review — that is the
-         forward action, so it takes the primary — with Hand off beside it as
-         the sideways one. A field agent has no submit to make, so for them
-         Hand off IS the action and takes the primary itself. */
-      if(state.role === 'manager'){
-        if(hoBtn) hoBtn.hidden = false;
-        btn.textContent = 'Submit for review';
-        btn.disabled = false;
-        btn.onclick = submitChangeOrderForReview;
-      } else {
-        btn.textContent = 'Hand off';
-        btn.disabled = false;
-        btn.onclick = openCoHandoff;
-      }
+      /* One CTA. The manager briefly had "Submit for review" in the primary
+         with Hand off beside it, but the two were the same act — passing the
+         order to someone with a note — split across two buttons and two
+         dialogs. Handing off IS the submission, so it takes the primary and the
+         review roster moved into its dialog. */
+      btn.textContent = 'Hand off';
+      btn.disabled = false;
+      btn.onclick = openCoHandoff;
       btn.hidden = false;
       if(tipEl) tipEl.hidden = true;
       return;
@@ -1727,19 +1731,6 @@ function reviewRosterHtml(){
     </div>`;
 }
 
-/* Sending a change order on for approval — the manager's forward action at the
-   change-order review. Distinct from submitForReview() above, which hands off
-   the whole scope and moves the project stage: this one is about the order
-   sitting against an already-live scope, so the stage does not move. */
-function submitChangeOrderForReview(){
-  openModal({
-    icon:'check',
-    title:'Submit the change order for review?',
-    body:`The change order goes to the team for approval. The live scope is unaffected until it is approved — work carries on against the approved lines, and the lines this order touches stay on hold.${reviewRosterHtml()}`,
-    confirm:'Submit for review',
-    onConfirm:()=>{ if(typeof toast === 'function') toast('Change order submitted for review'); }
-  });
-}
 function submitForReview(){
   openModal({
     icon:'check',
