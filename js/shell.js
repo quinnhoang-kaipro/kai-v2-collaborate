@@ -410,29 +410,49 @@ const LOCK_SVG = {
   open:  '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9"/><path d="M8 11V7.5a4 4 0 0 1 7.5-1.9"/></svg>',
   shut:  '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9"/><path d="M8.5 11V7.5a3.5 3.5 0 0 1 7 0V11"/></svg>',
 };
-function renderDocState(){
-  const host = document.getElementById('docState');
-  if(!host) return;
+/* What the Scope step says when you open it. The three states each answer a
+   different question, so each gets its own sentence rather than a template:
+   draft is about who may write, locked about who is holding it, approved about
+   what it now costs to change your mind. */
+function docStateCopy(id){
+  if(id === 'draft')  return 'Anyone with edit access can edit.';
+  if(id === 'locked'){
+    const t = whoseTurn(viewStage, state.role, state.twoStep);
+    return t.who ? `Waiting on ${t.who}. Editing is paused until they pass it back.`
+                 : 'Editing is paused while the scope is out for review.';
+  }
+  const v = VERSIONS.find(x => x.id === currentVersionId) || VERSIONS[0];
+  return `Budget: ${(v && v.budget) || '—'}. Any changes need to be processed as a Change order.`;
+}
+/* Anchored under the Scope node. On <body> because renderStages rewrites the
+   stepper subtree and would take the popover with it. */
+let scopeInfoOpen = false;
+function toggleScopeInfo(){ scopeInfoOpen = !scopeInfoOpen; renderScopeInfo(); }
+function closeScopeInfo(){ if(!scopeInfoOpen) return; scopeInfoOpen = false; renderScopeInfo(); }
+function renderScopeInfo(){
+  let el = document.getElementById('scopeInfoPop');
+  if(!scopeInfoOpen){ if(el) el.remove(); return; }
+  const anchor = document.querySelector('.stage.is-scope-info');
+  if(!anchor){ scopeInfoOpen = false; if(el) el.remove(); return; }
+  if(!el){ el = document.createElement('div'); el.id = 'scopeInfoPop'; document.body.appendChild(el); }
   const id = docStateFor(viewStage);
   const st = DOC_STATE[id];
-  const t = whoseTurn(viewStage, state.role, state.twoStep);
-  // The second line is what makes each state actionable rather than a status
-  // word: who is holding it, or what exactly is frozen.
-  let sub = st.hint;
-  if(id === 'locked' && t.who) sub = `Waiting on ${t.who}`;
-  if(id === 'approved'){
-    const v = VERSIONS.find(x => x.id === currentVersionId) || VERSIONS[0];
-    sub = v && v.budget ? `Budget frozen · ${v.budget}` : st.hint;
-  }
-  host.className = 'doc-state is-' + id;
-  host.innerHTML = `
-    <span class="doc-state-lock">${id === 'draft' ? LOCK_SVG.open : LOCK_SVG.shut}</span>
-    <span class="doc-state-txt">
-      <span class="doc-state-lbl">${st.label}</span>
-      <span class="doc-state-sub">${sub}</span>
-    </span>`;
-  host.title = `${st.label} — ${sub}`;
+  const r = anchor.getBoundingClientRect();
+  el.innerHTML = `<div class="scope-info-card is-${id}" role="dialog" aria-label="Scope state"
+      style="top:${Math.round(r.bottom + 8)}px;left:${Math.round(r.left)}px">
+    <div class="scope-info-h">
+      <span class="scope-info-lock">${id === 'draft' ? LOCK_SVG.open : LOCK_SVG.shut}</span>
+      ${st.label}
+    </div>
+    <div class="scope-info-body">${docStateCopy(id)}</div>
+  </div>`;
 }
+document.addEventListener('click', e => {
+  if(!scopeInfoOpen) return;
+  if(e.target.closest && (e.target.closest('#scopeInfoPop') || e.target.closest('.stage.is-scope-info'))) return;
+  closeScopeInfo();
+});
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeScopeInfo(); });
 
 /* ── whose turn is it ─────────────────────────────────────────────────
    One predicate, read by all three surfaces that answer the question: the
@@ -1317,12 +1337,12 @@ function renderStages(){
   const projSuperIdx = visibleStages.findIndex(s=>s===projSuper);
   const access = ROLE_ACCESS[state.role] || [];
   // Per-stage caption slots: only the active supergroup's slot renders text.
-  renderDocState();
   const captionText = messageFor(state.role, viewStage);
   /* The turn marker on the active node. Whose move it is stops being something
      you deduce from role + stage and becomes a match: this avatar against your
      own in the toolbar. Only the active node carries it — a past stage's turn
      is spent and a future one's isn't assigned yet. */
+  const docState = docStateFor(viewStage);
   const _turn = whoseTurn(viewStage, state.role, state.twoStep);
   const turnChip = _turn.role
     ? `<button class="stage-turn${_turn.mine ? ' is-mine' : ''}" type="button" aria-haspopup="dialog"
@@ -1346,12 +1366,14 @@ function renderStages(){
       const tracks = sg.tracks.map((tr,ti) => {
         const trActive = isActive && state.workTrack === tr.id;
         return `<div class="stage-track${trActive?' active':''}${accessible?'':' locked'}"
-                     onclick="${accessible?`event.stopPropagation();jumpWorkTrack('${tr.id}')`:''}"
                      title="${tr.sub}">
           <span class="stage-track-name">${tr.name}</span>
         </div>`;
       }).join('');
-      return `<div class="stage stage-branched ${cls}" onclick="${accessible?`jumpSupergroup('${sg.id}')`:''}">
+      /* No onclick. The stepper reports where the project is; it is not a way to
+         move it, and clicking a node to jump stages let you land somewhere the
+         project has not reached. Switching is the demo picker's job. */
+      return `<div class="stage stage-branched ${cls}">
         <span class="stage-num">${i+1}</span>
         <div class="stage-info">
           <div class="stage-label">${sub}</div>
@@ -1363,10 +1385,20 @@ function renderStages(){
     // Version chip moved to the iframe's sidebar header (it only controls the
     // sidebar's scope contents, not the whole page's stage). SCOPE node is now
     // a plain stepper item like Work and Closeout.
-    return `<div class="stage ${cls}" onclick="${accessible?`jumpSupergroup('${sg.id}')`:''}">
+    /* The Scope node is the one thing here you can press, and it opens the
+       document's state rather than navigating: the lock lives on it now, so
+       "what may I do to this" is answered at the step it belongs to instead of
+       in a separate pill competing for the same corner. */
+    const isScope = (i === 0);
+    return `<div class="stage ${cls}${isScope ? ' is-scope-info' : ''}"
+      ${isScope ? `role="button" tabindex="0" aria-haspopup="dialog"
+        title="${DOC_STATE[docState].label} — press for detail"
+        onclick="event.stopPropagation();toggleScopeInfo()"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleScopeInfo();}"` : ''}>
       <span class="stage-num">${i+1}</span>
       <div class="stage-info">
         <div class="stage-label">${sub}</div>
+        ${isScope ? `<span class="stage-lock">${docState === 'draft' ? LOCK_SVG.open : LOCK_SVG.shut}</span>` : ''}
         ${isActive ? turnChip : ''}
       </div>
     </div>`;

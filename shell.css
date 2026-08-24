@@ -315,33 +315,42 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 /* Group by + Filters CSS moved to the iframe's work-hdr styles. */
 /* Primary CTA — hidden in draft (state bar owns Submit for review) and when
    viewing an outdated version; other stages show a stage-appropriate label. */
-/* ── document state indicator ────────────────────────────────────────
-   Three states, one shape. The lock glyph carries the difference at a glance —
-   open for draft, shut for the other two — and the colour separates "settled"
-   from "someone is holding it". The second line is what makes each state
-   actionable rather than a status word: who has it, or what exactly is frozen.
+/* ── the Scope step's lock + info ────────────────────────────────────
+   The standalone Draft/Locked/Approved pill is gone: it duplicated the Scope
+   step's job and sat in the same crowded corner. The lock rides the step now
+   and pressing it opens the detail. */
+.stage.is-scope-info{cursor:pointer}
+.stage.is-scope-info:hover .stage-lock,
+.stage.is-scope-info:focus-visible .stage-lock{color:var(--accent)}
+.stage.is-scope-info:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.stage-lock{flex-shrink:0;display:flex;color:rgba(255,255,255,.6);transition:color .12s}
+.stage-lock svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.6;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+/* Approved is the one worth colouring — a frozen budget is the state with a
+   consequence. Draft's open padlock says enough on its own. */
+.stage.done.is-scope-info .stage-lock,
+.stage.is-scope-info .stage-lock{color:rgba(255,255,255,.55)}
 
-   Deliberately quiet in draft. Draft is the normal condition of a document
-   being written; the states worth noticing are the two where you cannot. */
-.doc-state{display:inline-flex;align-items:center;gap:8px;margin-left:16px;padding:5px 11px 5px 9px;
-  border:1px solid rgba(255,255,255,.22);flex-shrink:0}
-.doc-state-lock{flex-shrink:0;display:flex}
-.doc-state-lock svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.5;fill:none;
-  stroke-linecap:round;stroke-linejoin:round}
-.doc-state-txt{display:flex;flex-direction:column;gap:1px;min-width:0}
-.doc-state-lbl{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;
-  text-transform:uppercase;line-height:1.1}
-.doc-state-sub{font-size:11px;line-height:1.25;white-space:nowrap;opacity:.72}
-/* Draft — open, and understated. */
-.doc-state.is-draft{color:rgba(255,255,255,.72);border-color:rgba(255,255,255,.18)}
-/* Locked — someone is holding it, so it takes the accent that means "attention
-   is required here" everywhere else in this bar. */
-.doc-state.is-locked{color:var(--accent);border-color:rgba(253,255,134,.42);
-  background:rgba(253,255,134,.08)}
-/* Approved — settled. Green, matching the timeline's approval marks and the
-   Approved chip, so "this is done" is one colour across the product. */
-.doc-state.is-approved{color:#8FD6A2;border-color:rgba(143,214,162,.38);
-  background:rgba(143,214,162,.08)}
+#scopeInfoPop{position:fixed;inset:0;z-index:130;pointer-events:none}
+.scope-info-card{position:fixed;pointer-events:auto;width:270px;background:var(--white);
+  border:1px solid var(--stroke);box-shadow:0 12px 30px rgba(26,26,26,.22);padding:12px 14px 13px}
+.scope-info-h{display:flex;align-items:center;gap:7px;margin-bottom:7px;
+  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink)}
+.scope-info-lock{display:flex}
+.scope-info-lock svg{width:13px;height:13px;stroke:currentColor;stroke-width:1.7;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+.scope-info-body{font-size:12.5px;line-height:1.5;color:var(--t2)}
+/* A left edge in the state's own colour, so which of the three you are in
+   registers before the words do. Same greens and accents used elsewhere. */
+.scope-info-card{border-left:3px solid var(--stroke)}
+.scope-info-card.is-locked{border-left-color:var(--accent-deep,#E8EA5F)}
+.scope-info-card.is-approved{border-left-color:var(--success)}
+
+/* Nothing in the stepper navigates any more, so nothing in it should invite a
+   press except the Scope node above. */
+.stage:not(.is-scope-info){cursor:default}
+.stage-track{cursor:default}
 .app-toolbar .btn-primary{height:36px;padding:0 18px;margin-right:14px;background:var(--accent);border:none;color:var(--ink);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:background .12s;white-space:nowrap}
 /* Cancel Change Order — ghost button sitting to the left of the primary.
    Sized to match .btn-primary so the pair reads as a coordinated action set. */
