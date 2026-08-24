@@ -110,6 +110,10 @@
          sits to the LEFT of the primary CTA so the destructive action
          doesn't pull focus. -->
     <button class="btn-ghost" id="appCancelCoBtn" onclick="triggerIframeCancelCo()" hidden>Cancel change order</button>
+    <!-- Generic secondary CTA, to the left of the primary. Label and handler are
+         set by syncAppApproveBtn; hidden unless a branch there claims it. Used
+         for the manager's Approve alongside Hand off at review. -->
+    <button class="btn-ghost" id="appSecondBtn" hidden></button>
     <span class="btn-tooltip-wrap" id="appApproveWrap">
       <button class="btn-primary" id="appApproveBtn" onclick="triggerIframeApprove()">Approve scope</button>
       <span class="btn-tooltip" id="appApproveTip" hidden>All tasks must be marked as Completed before you can submit the closeout.</span>

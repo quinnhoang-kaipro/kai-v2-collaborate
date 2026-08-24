@@ -139,7 +139,9 @@ function renderCoHandoff(){
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3L3 10.5l7 3 3 7L21 3z"/></svg>
       </div>
       <div class="dsp-title">Hand off ${cfg.subject || 'the scope'}</div>
-      ${cfg.note ? `<div class="co-ho-note-lead">${cfg.note}</div>` : ''}
+      ${cfg.note ? `<div class="co-ho-note-lead${cfg.noteTitle ? ' is-flagged' : ''}">
+        ${cfg.noteTitle ? `<b class="co-ho-note-h">${cfg.noteTitle}</b>` : ''}${cfg.note}
+      </div>` : ''}
       <!-- Who it goes to is the decision this dialogue exists for, so it takes
            the full width at the top. The comment and the review roster sit
            together underneath: both are context for that choice, and neither
@@ -261,8 +263,33 @@ function renderScopeEditRequest(){
    that is the change-order review, for the two internal roles that are not the
    approver. */
 function canHandOffHere(){
-  if(state.projectStage !== 'published' || state.workTrack !== 'change_order') return false;
+  const proj = state.projectStage;
+  /* A manager is never blocked from moving the document along. They are not the
+     responsible party at draft or at review — that is the field agent and the
+     admin — but they can pass it to whoever it needs to reach next, which is
+     what their seniority is for. The dialogue says whose it is before they do. */
+  if(state.role === 'manager' && (proj === 'edit' || proj === 'reviewing')) return true;
+  if(proj !== 'published' || state.workTrack !== 'change_order') return false;
   return state.role === 'manager' || state.role === 'field_agent';
+}
+/* The manager's approve at review. Their own stage is the publish, so reaching
+   past it is a deliberate shortcut rather than the normal path — hence its own
+   confirm naming what it does to the budget. */
+function canApproveScopeHere(){
+  return state.role === 'manager' && state.projectStage === 'reviewing';
+}
+function approveScopeAsManager(){
+  const v = VERSIONS.find(x => x.id === currentVersionId) || VERSIONS[0];
+  openModal({
+    icon:'check',
+    title:'Approve the scope?',
+    body:`This publishes the scope and releases it to the field, ahead of the admin finishing their review. The budget freezes at ${(v && v.budget) || 'the current total'} and any change after this is a change order.${reviewRosterHtml()}`,
+    confirm:'Approve & publish',
+    onConfirm:()=>{
+      setProjectStage('published');
+      toast('Scope approved and published');
+    }
+  });
 }
 
 /* What the person whose turn it is owes, as an infinitive phrase that reads
@@ -1169,7 +1196,11 @@ function syncAppApproveBtn(){
   const btn = document.getElementById('appApproveBtn');
   const tipEl = document.getElementById('appApproveTip');
   const cancelBtn = document.getElementById('appCancelCoBtn');
+  const secondBtn = document.getElementById('appSecondBtn');
   if(!btn) return;
+  // Off unless a branch below claims it, or it survives a stage or role change
+  // that no longer offers a second action.
+  if(secondBtn){ secondBtn.hidden = true; secondBtn.onclick = null; }
   const proj = state.projectStage;
   // Hide entirely when viewing an archived / outdated scope (v1 / v2).
   if(currentVersionId && currentVersionId !== 'v3'){
@@ -1236,15 +1267,20 @@ function syncAppApproveBtn(){
       return;
     }
     if(canHandOffHere()){
-      /* One CTA. The manager briefly had "Submit for review" in the primary
-         with Hand off beside it, but the two were the same act — passing the
-         order to someone with a note — split across two buttons and two
-         dialogs. Handing off IS the submission, so it takes the primary and the
-         review roster moved into its dialog. */
+      /* One primary, always "Hand off" — passing the document on is the same act
+         wherever it happens, so it reads the same. What differs is what is being
+         passed, which the dialogue names. */
       btn.textContent = 'Hand off';
       btn.disabled = false;
-      btn.onclick = openCoHandoff;
+      btn.onclick = (proj === 'published') ? openCoHandoff : submitForReview;
       btn.hidden = false;
+      /* At review a manager can also just approve it. Secondary, because passing
+         it along is the normal move and approving early is the exception. */
+      if(secondBtn && canApproveScopeHere()){
+        secondBtn.textContent = 'Approve';
+        secondBtn.onclick = approveScopeAsManager;
+        secondBtn.hidden = false;
+      }
       if(tipEl) tipEl.hidden = true;
       return;
     }
@@ -1939,14 +1975,32 @@ function submitForReview(){
      now: pick who it goes to, say why, see where the review already stands.
      The explanatory line survives as the lead, because what handing off costs
      you — everyone else needing to ask for access — is worth stating once. */
+  const proj  = state.projectStage;
+  const owner = turnRoleFor(proj, state.twoStep);
+  const mine  = owner === state.role;
+  const who   = (ROLE_PEOPLE[owner] || {}).name || 'someone else';
+  const role  = (ROLES.find(r => r.id === owner) || {}).name || '';
+  /* When it is not your document, say whose it is before you move it. The point
+     is not to stop you — a manager passing a scope along is legitimate — it is
+     that moving someone else's work without knowing it was theirs is how a
+     hand-off turns into a surprise. */
+  const note = mine
+    ? "You can keep editing and hand off again until it is approved. Everyone else needs to request edit access while it waits."
+    : `${who} (${role}) is responsible for this scope right now. You can still hand it off to whoever needs it next — they will be told you did.`;
   openHandoff({
     subject: 'the scope',
-    defaultTo: 'admin',
-    note: "You can keep editing and hand off again until it is approved. Everyone else needs to request edit access while it waits.",
+    defaultTo: (proj === 'reviewing') ? 'manager' : 'admin',
+    // Flagged only when it is someone else's document. Moving your own needs no
+    // warning; moving theirs is the case worth stopping on.
+    noteTitle: mine ? '' : 'Attention',
+    note,
     placeholder: "What have you left open, or what should they look at first?",
     onDone: to => {
-      setProjectStage('submitted');
-      toast(to ? `Scope handed off to ${to.name}` : 'Handed off for review');
+      // From draft, handing off IS the submission, so the stage moves. From
+      // review it is a reassignment: the scope is already in review and stays
+      // there, just with someone else looking at it.
+      if(proj === 'edit') setProjectStage('submitted');
+      toast(to ? `Scope handed off to ${to.name}` : 'Scope handed off');
     },
   });
 }

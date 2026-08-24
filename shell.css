@@ -527,10 +527,31 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 .co-ho-card{width:660px}
 /* The one line of explanation some hand-offs carry, above the columns. */
 .co-ho-note-lead{margin:-8px 0 18px;font-size:13px;line-height:1.5;color:var(--midtone,#7D7469)}
+/* Flagged variant: this hand-off moves someone else's document, so the note is
+   a caution rather than a description. Subhead on its own line, and the whole
+   block takes ink and a left edge so it reads as something to stop and read. */
+.co-ho-note-lead.is-flagged{color:var(--ink,#1A1A1A);border-left:3px solid var(--accent-deep,#E8EA5F);
+  padding:2px 0 2px 12px}
+.co-ho-note-h{display:block;margin-bottom:3px;font-family:var(--mono);font-size:9.5px;
+  font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink,#1A1A1A)}
 /* Pass-it-to owns the top row. A stacked list, not a grid: a real team runs to
    more than a screen's worth of people, and a grid stops being scannable long
    before a scrolling list does. Full width just means each row is wide. */
-.co-ho-top{margin-bottom:20px}
+.co-ho-top{margin-bottom:20px;position:relative}
+/* One line per person: name left, role right. Two lines each turned three
+   people into a third of the dialogue, and the role is a qualifier on the name
+   rather than a second fact about them — it belongs on the same line, at the
+   far end where it lines up into a readable column. */
+.co-ho-row{padding:10px 14px}
+.co-ho-row .dsp-who{flex-direction:row;align-items:baseline;justify-content:space-between;gap:14px}
+.co-ho-row .dsp-name{flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.co-ho-row .dsp-role{margin-left:auto;flex-shrink:0}
+/* Cut off mid-row. A list that ends flush reads as the whole team; a clipped
+   row says there are more people than fit, which is the truth for any real
+   project. The fade sits above the scroll so it does not travel with it. */
+.co-ho-results{max-height:116px}
+.co-ho-top::after{content:'';position:absolute;left:0;right:0;bottom:0;height:34px;
+  pointer-events:none;background:linear-gradient(to bottom,rgba(255,255,255,0),var(--white,#fff) 78%)}
 .co-ho-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
 .co-ho-col{min-width:0}
 /* No panel behind the review column. It is reference beside the picker, not a
@@ -544,7 +565,7 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 .co-ho-search:focus{outline:none;border-color:var(--ink,#1A1A1A)}
 .co-ho-search::placeholder{color:var(--midtone,#7D7469)}
 /* Scrolls rather than growing, so a long team can't push the actions off. */
-.co-ho-results{max-height:196px;overflow-y:auto}
+.co-ho-results{overflow-y:auto}
 .co-ho-none{padding:12px 2px;font-family:var(--body);font-size:12.5px;font-style:italic;
   color:var(--midtone,#7D7469)}
 /* No initials tile in the picker. Every row is a person, so a square of
