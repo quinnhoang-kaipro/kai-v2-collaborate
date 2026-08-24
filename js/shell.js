@@ -348,7 +348,7 @@ function docLockLine(id, mine){
   // person who has it, it points at nobody.
   if(id === 'locked') return {label:'Editing', text: mine
     ? 'Paused for everyone else while it is with you.'
-    : 'Paused until they pass it back.'};
+    : 'Paused until they pass it back or approve.'};
   const v = VERSIONS.find(x => x.id === currentVersionId) || VERSIONS[0];
   return {label:'Budget', text:`${(v && v.budget) || '\u2014'} \u2014 any changes need to be processed as a Change order.`};
 }
