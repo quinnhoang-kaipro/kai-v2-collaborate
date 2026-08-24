@@ -527,15 +527,10 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 .co-ho-card{width:660px}
 /* The one line of explanation some hand-offs carry, above the columns. */
 .co-ho-note-lead{margin:-8px 0 18px;font-size:13px;line-height:1.5;color:var(--midtone,#7D7469)}
-/* Pass-it-to owns the top row. Its results lay out as a grid rather than a
-   single column now that they have the full width — a three-person team reads
-   as three cards across instead of a tall list beside dead space. */
+/* Pass-it-to owns the top row. A stacked list, not a grid: a real team runs to
+   more than a screen's worth of people, and a grid stops being scannable long
+   before a scrolling list does. Full width just means each row is wide. */
 .co-ho-top{margin-bottom:20px}
-.co-ho-top .co-ho-results{max-height:none;display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
-/* The stacking border between list rows is wrong in a grid — each cell is its
-   own card, so each gets its own outline. */
-.co-ho-top .co-ho-row + .co-ho-row{margin-top:0}
 .co-ho-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
 .co-ho-col{min-width:0}
 /* No panel behind the review column. It is reference beside the picker, not a
