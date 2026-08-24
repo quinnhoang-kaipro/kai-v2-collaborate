@@ -168,7 +168,7 @@ function renderCoHandoff(){
    action for a live job, the wrong one while an order sits unapproved, and gated
    on every task being complete so it was permanently disabled here. */
 function canApproveChangeOrderHere(){
-  return viewStage === 'published' && state.workTrack === 'change_order' && state.role === 'admin';
+  return state.projectStage === 'published' && state.workTrack === 'change_order' && state.role === 'admin';
 }
 function approveChangeOrder(){
   openModal({
@@ -186,11 +186,17 @@ function approveChangeOrder(){
    back. Both are contributions to someone else's decision rather than decisions
    of their own, which is why neither advances a stage. */
 function canMarkReviewedHere(){
-  return state.role === 'field_agent_nr'
-      && viewStage === 'published' && state.workTrack === 'change_order';
+  if(state.role !== 'field_agent_nr') return false;
+  const proj = state.projectStage;
+  // In draft their review is optional and can happen any time before the
+  // hand-off — which is what the card promises them, so the button has to
+  // actually be there.
+  if(proj === 'edit') return true;
+  // A change order sitting out for approval.
+  return proj === 'published' && state.workTrack === 'change_order';
 }
 function canRequestEditHere(){
-  return state.role === 'field_agent_nr' && viewStage === 'reviewing';
+  return state.role === 'field_agent_nr' && state.projectStage === 'reviewing';
 }
 /* One-way, and low enough stakes to skip a confirm — it records that you read
    it, it does not decide anything. */
@@ -248,7 +254,7 @@ function renderScopeEditRequest(){
    that is the change-order review, for the two internal roles that are not the
    approver. */
 function canHandOffHere(){
-  if(viewStage !== 'published' || state.workTrack !== 'change_order') return false;
+  if(state.projectStage !== 'published' || state.workTrack !== 'change_order') return false;
   return state.role === 'manager' || state.role === 'field_agent';
 }
 
