@@ -1238,6 +1238,25 @@ function syncAppApproveBtn(){
     if(tipEl) tipEl.hidden = true;
     return;
   }
+  /* The reviewer's own stage. It used to be a gate: "0 of 18 reviewed",
+     disabled until every task had been ticked in the sidebar. That reads as
+     "your job, unfinished" and offers nothing to press — so the one screen
+     where the admin has work to do had a dead button on it. It is an action
+     now, and the count moved into the confirm where it can be read properly.
+     Once everything is reviewed it becomes the hand-off it always was. */
+  if(proj === 'reviewing' && state.role === 'admin'){
+    const d = window.__KAI_DECISION || {};
+    btn.disabled = false;
+    if(d.total && !d.ready){
+      btn.textContent = 'Mark all as reviewed';
+      btn.onclick = markAllReviewed;
+    } else {
+      btn.textContent = 'Scope reviewed';
+      btn.onclick = openStageConfirm;
+    }
+    if(tipEl) tipEl.hidden = true;
+    return;
+  }
   if(proj === 'reviewing' || proj === 'awaiting-pub'){
     const d = window.__KAI_DECISION || {};
     const label = proj === 'reviewing' ? 'Scope reviewed' : 'Approve & publish';
@@ -1873,6 +1892,30 @@ function reviewRosterHtml(){
     </div>`;
 }
 
+/* Bulk review. The per-task control in the sidebar is the considered path; this
+   is for the reviewer who has read the scope and wants to sign the rest off at
+   once. It states the count first, because "mark all as reviewed" means
+   something different when it is 2 of 18 than when it is 17. */
+function markAllReviewed(){
+  const d = window.__KAI_DECISION || {};
+  const total = d.total || 0;
+  const done  = d.done  || 0;
+  const left  = Math.max(0, total - done);
+  const body = total
+    ? `<b>${done} of ${total}</b> task${total === 1 ? '' : 's'} reviewed so far. This marks the remaining ${left} as reviewed too — reviewing is one-way, so it cannot be undone task by task afterwards.${reviewRosterHtml()}`
+    : `This marks every task in the scope as reviewed. Reviewing is one-way, so it cannot be undone task by task afterwards.${reviewRosterHtml()}`;
+  openModal({
+    icon:'check',
+    title: left ? `Mark the remaining ${left} as reviewed?` : 'Mark all as reviewed?',
+    body,
+    confirm:'Mark all as reviewed',
+    onConfirm:()=>{
+      const iframe = document.getElementById('iframe');
+      if(iframe && iframe.contentWindow) iframe.contentWindow.postMessage({type:'kai-review-all'}, '*');
+      toast('All tasks marked as reviewed');
+    }
+  });
+}
 function submitForReview(){
   /* Was an openModal() confirm with a wall of body copy and a read-only roster.
      It is the same act as handing a change order on, so it is the same dialogue

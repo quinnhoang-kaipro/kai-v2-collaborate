@@ -244,6 +244,13 @@ window.addEventListener('message', e => {
   // directly. Same downstream behavior as clicking Create draft & edit in the
   // (now-bypassed) modal — enterEditMode(true) also posts kai-edit-mode back
   // to the shell so the bar swaps to the Editing state automatically.
+  /* Bulk review from the shell's CTA. Routed through apApproveScope() rather
+     than looping tasks here, so the cascade, the toast wording and the
+     progress report back to the shell all behave exactly as they do when the
+     scope-level control is used in the sidebar. */
+  if(e.data.type === 'kai-review-all'){
+    if(typeof apApproveScope === 'function') apApproveScope();
+  }
   if(e.data.type === 'kai-duplicate-edit'){
     if(typeof confirmEditFromApproved === 'function') confirmEditFromApproved();
   }
