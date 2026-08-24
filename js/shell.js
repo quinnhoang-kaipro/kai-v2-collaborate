@@ -281,9 +281,13 @@ function turnYoursFor(stage, role, twoStep, track){
       if(co)                 return 'If something is wrong with the change order, hand it off with a comment — request an edit and send it back for approval.';
       if(stage === 'published') return 'Nothing to action. You will be asked again if a change order needs approving.';
       if(stage === 'closeout')  return 'Nothing to action — the admin signs the closeout off.';
+      if(stage === 'edit')      return 'Nothing yet. The scope is still being built on site.';
       return 'Nothing yet. It reaches you once the admin has finished their review.';
     case 'admin':
       if(stage === 'awaiting-pub') return 'Your review is done. You can recall the scope if something needs changing before it goes live.';
+      // Draft is editable by anyone with access — the hand-off is what is not
+      // theirs, so "nothing to action" would have been wrong here.
+      if(stage === 'edit') return 'You can edit the scope while it is in draft. Handing it off for review is the field agent\'s call.';
       return 'Nothing to action from here.';
     case 'contractor':
       if(co)                 return 'Keep working the approved lines. Anything the change order touches is on hold until it is approved.';
@@ -295,6 +299,7 @@ function turnYoursFor(stage, role, twoStep, track){
       if(co) return 'You can hand the change order on with a comment if you saw something on site that affects it.';
       return 'Nothing to action — the scope has moved past scoping.';
     case 'field_agent_nr':
+      if(stage === 'edit')      return 'You can add what you found on site. The responsible field agent hands it off.';
       if(co)                    return 'You can mark the change order as reviewed, so the admin knows you have read it.';
       if(stage === 'reviewing') return 'You can request an edit if the scope does not match what you saw on site.';
       return 'Nothing to action — this scope is not yours to move.';
@@ -308,7 +313,10 @@ function turnYoursFor(stage, role, twoStep, track){
    move IS yours, so it can address you directly. */
 function turnNextFor(stage, twoStep){
   switch(stage){
-    case 'edit':
+    // The draft's owner is the field agent, so what follows is somebody else's
+    // review — it used to say "you review it next", which was only true while
+    // the admin held the draft too.
+    case 'edit':         return 'It goes to the admin to review.';
     case 'submitted':    return twoStep ? 'You review it next, then the manager publishes.'
                                         : 'You review it next, then publish.';
     case 'reviewing':    return twoStep ? 'It goes to the manager to publish.' : 'Publishing is yours too — the scope goes live.';
@@ -358,9 +366,16 @@ function renderStatePop(){
   const anchor = document.querySelector(statePopAnchor) || document.querySelector('.stage.is-scope-info');
   if(!anchor){ statePopOpen = false; if(el) el.remove(); return; }
   if(!el){ el = document.createElement('div'); el.id = 'statePop'; document.body.appendChild(el); }
-  const id = docStateFor(viewStage);
+  /* projectStage, not viewStage. The lock and the turn are facts about the
+     document; viewStage is only which step you happen to be looking at, and a
+     role that cannot view the current step gets bounced to one it can — which
+     is how a manager at a draft scope was told it was LOCKED and awaiting a
+     review that had not been asked for. syncAppApproveBtn already reads
+     projectStage, so this also stops the card and the CTA disagreeing. */
+  const proj = state.projectStage;
+  const id = docStateFor(proj);
   const st = DOC_STATE[id];
-  const t = whoseTurn(viewStage, state.role, state.twoStep);
+  const t = whoseTurn(proj, state.role, state.twoStep);
   const lock = docLockLine(id, t.mine);
   const roleName = t.role ? ((ROLES.find(r => r.id === t.role) || {}).name || t.role) : '';
   const track = state.workTrack || '';
@@ -373,15 +388,15 @@ function renderStatePop(){
   /* Who holds the move and what for, then what YOU can do about it. Dropped
      entirely at a terminal stage, where nobody holds anything. */
   const second = t.role
-    ? (t.mine ? turnNextFor(viewStage, state.twoStep)
-              : turnYoursFor(viewStage, state.role, state.twoStep, track))
+    ? (t.mine ? turnNextFor(proj, state.twoStep)
+              : turnYoursFor(proj, state.role, state.twoStep, track))
     : '';
   const turnHtml = !t.role ? '' : `
     <div class="turn-pop-who"><span class="turn-pop-av${t.mine ? ' is-mine' : ''}">${t.initials}</span>
       <span class="turn-pop-name"><b>${t.who}</b><span class="turn-pop-role">${roleName}</span></span></div>
     <div class="turn-pop-p">${t.mine
-      ? `<span class="turn-pop-lbl">You</span> ${turnMineFor(viewStage, state.twoStep, track)}`
-      : `<span class="turn-pop-lbl">Waiting on</span> ${t.who} (${roleName}) ${turnNeedFor(viewStage, state.twoStep, track)}.`}</div>
+      ? `<span class="turn-pop-lbl">You</span> ${turnMineFor(proj, state.twoStep, track)}`
+      : `<span class="turn-pop-lbl">Waiting on</span> ${t.who} (${roleName}) ${turnNeedFor(proj, state.twoStep, track)}.`}</div>
     ${second ? `<div class="turn-pop-p"><span class="turn-pop-lbl">${t.mine ? 'Then' : 'You'}</span> ${second}</div>` : ''}`;
   const r = anchor.getBoundingClientRect();
   // Clamped, so opening from the turn chip further along the bar can't push the
@@ -464,7 +479,10 @@ const ROLE_PEOPLE = {
    invent an obligation. */
 function turnRoleFor(stage, twoStep){
   switch(stage){
-    case 'edit':
+    /* The scope is built on site, so handing it off is the field agent's call.
+       Everyone with edit access can still write to a draft — that is what draft
+       means — but the submission is theirs. Once submitted the admin owns it. */
+    case 'edit':          return 'field_agent';
     case 'submitted':     return 'admin';
     case 'reviewing':     return 'admin';
     case 'review-done':   return 'admin';
@@ -1214,7 +1232,9 @@ function syncAppApproveBtn(){
   // Every other state keeps the approve path the button was born with.
   btn.onclick = triggerIframeApprove;
   // Step 2 only — Step 1 (empty scope) returned above with 'Dispatch'.
-  if(proj === 'edit')           btn.textContent = 'Hand off Scope';
+  // Just "Hand off": the object is obvious from where the button sits, and the
+  // same verb is used for handing a change order on, so the two read as one act.
+  if(proj === 'edit')           btn.textContent = 'Hand off';
   else if(proj === 'review-done')btn.textContent = 'Send to publish';
   else if(proj === 'awaiting-pub')btn.textContent = 'Approve & publish';
   else if(proj === 'published') btn.textContent = 'Submit closeout';
@@ -1326,7 +1346,7 @@ function renderStages(){
      you deduce from role + stage and becomes a match: this avatar against your
      own in the toolbar. Only the active node carries it — a past stage's turn
      is spent and a future one's isn't assigned yet. */
-  const docState = docStateFor(viewStage);
+  const docState = docStateFor(state.projectStage);
   const _turn = whoseTurn(viewStage, state.role, state.twoStep);
   const turnChip = _turn.role
     ? `<button class="stage-turn${_turn.mine ? ' is-mine' : ''}" type="button" aria-haspopup="dialog"
@@ -1574,7 +1594,7 @@ function renderIframe(){
   params.push('role=' + state.role);
   /* The same three-state mapping the toolbar indicator uses, so the lock cannot
      say one thing up there and another inside the editor. */
-  params.push('lock=' + docStateFor(viewStage));
+  params.push('lock=' + docStateFor(state.projectStage));
   // Draft-lifecycle stages need the sidebar's task-status pills to show
   // "in progress" / "missing details" instead of the approved vocabulary.
   if(viewStage === 'edit' || viewStage === 'submitted'){
