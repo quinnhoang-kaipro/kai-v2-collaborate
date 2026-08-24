@@ -74,16 +74,32 @@ function coHandoffRowsHtml(){
       <span class="co-ho-tick">${ICONS.check}</span>
     </button>`).join('');
 }
-function openCoHandoff(){
+/* What this hand-off is of, and what happens when it lands. Every hand-off in
+   the product goes through here now — the scope leaving draft and a change
+   order going out for approval are the same act, and they were two dialogues
+   that looked nothing alike. */
+let handoffCfg = null;
+function openHandoff(cfg){
+  handoffCfg = cfg || {};
   const team = coHandoffTeam();
-  // Default to whoever actually owes the move — that is the hand-off you want
-  // nine times in ten, and pre-selecting it saves the common case a click.
-  const owner = turnRoleFor(viewStage, state.twoStep);
-  coHandoffTo    = (owner && owner !== state.role) ? owner : (team[0] && team[0].id);
+  // Default to whoever the document is going to next: the stage's owner if that
+  // is not you, else whatever the caller named. Pre-selecting it saves the
+  // common case a click.
+  const owner = turnRoleFor(state.projectStage, state.twoStep);
+  const preferred = (owner && owner !== state.role) ? owner : handoffCfg.defaultTo;
+  coHandoffTo    = (preferred && team.some(p => p.id === preferred)) ? preferred : (team[0] && team[0].id);
   coHandoffNote  = '';
   coHandoffQuery = '';
   coHandoffOpen  = true;
   renderCoHandoff();
+}
+/* The change order going out for approval. */
+function openCoHandoff(){
+  openHandoff({
+    subject: 'the change order',
+    placeholder: "What should they look at? Anything you'd want changed before this is approved.",
+    onDone: to => toast(to ? `Change order handed off to ${to.name}` : 'Change order handed off'),
+  });
 }
 function closeCoHandoff(){ coHandoffOpen = false; renderCoHandoff(); }
 /* Both of these repaint only the results list, for the reason above. */
@@ -103,15 +119,15 @@ function confirmCoHandoff(){
   const ta = document.getElementById('coHandoffNote');
   coHandoffNote = ta ? ta.value.trim() : '';
   const to = coHandoffTeam().find(p => p.id === coHandoffTo);
+  const cfg = handoffCfg || {};
   coHandoffOpen = false;
   renderCoHandoff();
-  if(typeof toast === 'function'){
-    toast(to ? `Change order handed off to ${to.name}` : 'Change order handed off');
-  }
+  if(typeof cfg.onDone === 'function') cfg.onDone(to, coHandoffNote);
 }
 function renderCoHandoff(){
   let el = document.getElementById('coHandoffModal');
   if(!coHandoffOpen){ if(el) el.remove(); return; }
+  const cfg = handoffCfg || {};
   if(!el){ el = document.createElement('div'); el.id = 'coHandoffModal'; document.body.appendChild(el); }
   /* Two columns: who you are passing it to on the left, where the review
      already stands on the right. Stacked, the dialog ran past the fold — and
@@ -122,7 +138,8 @@ function renderCoHandoff(){
       <div class="dsp-icon">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3L3 10.5l7 3 3 7L21 3z"/></svg>
       </div>
-      <div class="dsp-title">Hand off the change order</div>
+      <div class="dsp-title">Hand off ${cfg.subject || 'the scope'}</div>
+      ${cfg.note ? `<div class="co-ho-note-lead">${cfg.note}</div>` : ''}
       <div class="co-ho-cols">
         <div class="co-ho-col">
           <div class="dsp-lbl">Pass it to</div>
@@ -137,7 +154,7 @@ function renderCoHandoff(){
       </div>
       <div class="dsp-lbl co-ho-lbl2">Add a comment <span class="co-ho-opt">optional</span></div>
       <textarea id="coHandoffNote" class="co-ho-note" rows="3"
-        placeholder="What should they look at? Anything you'd want changed before this is approved.">${coHandoffNote}</textarea>
+        placeholder="${cfg.placeholder || 'Anything they should know.'}">${coHandoffNote}</textarea>
       <div class="dsp-acts">
         <button type="button" class="dsp-btn" onclick="closeCoHandoff()">Cancel</button>
         <button type="button" class="dsp-btn is-primary" onclick="confirmCoHandoff()">Hand off</button>
@@ -1844,20 +1861,20 @@ function reviewRosterHtml(){
 }
 
 function submitForReview(){
-  openModal({
-    icon:'check',
-    title:'Hand off scope for review?',
-    // The old copy said the scope locks outright, which isn't what happens —
-    // you keep editing and re-submitting right up until approval; what changes
-    // is that everyone else needs to ask for access while it sits in the queue.
-    // The field-agent recall clause that used to hang off the end is gone: the
-    // first sentence now covers it, and better.
-    body:`Once handed off, you can make edits and hand off again as long as the doc hasn't been approved. The rest of your team would need to request edit access while the scope is waiting for approval.${reviewRosterHtml()}`,
-    confirm:'Hand off',
-    onConfirm:()=>{
+  /* Was an openModal() confirm with a wall of body copy and a read-only roster.
+     It is the same act as handing a change order on, so it is the same dialogue
+     now: pick who it goes to, say why, see where the review already stands.
+     The explanatory line survives as the lead, because what handing off costs
+     you — everyone else needing to ask for access — is worth stating once. */
+  openHandoff({
+    subject: 'the scope',
+    defaultTo: 'admin',
+    note: "You can keep editing and hand off again until it is approved. Everyone else needs to request edit access while it waits.",
+    placeholder: "What have you left open, or what should they look at first?",
+    onDone: to => {
       setProjectStage('submitted');
-      toast('Handed off for review');
-    }
+      toast(to ? `Scope handed off to ${to.name}` : 'Handed off for review');
+    },
   });
 }
 function recallToDraft(){
