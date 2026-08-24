@@ -179,7 +179,20 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 /* ── turn popover ────────────────────────────────────────────────────
    Fixed-position card on <body>, placed under the chip. Light on a dark bar,
    because it is a panel of detail rather than more chrome. */
-#turnPop{position:fixed;inset:0;z-index:120;pointer-events:none}
+#statePop{position:fixed;inset:0;z-index:130;pointer-events:none}
+/* The lock state heads the card — the document-level fact before the
+   person-level one. */
+.turn-pop-lockh{display:flex;align-items:center;gap:7px;margin-bottom:10px;
+  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink)}
+.turn-pop-lock{display:flex}
+.turn-pop-lock svg{width:13px;height:13px;stroke:currentColor;stroke-width:1.7;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+/* A left edge in the state's colour, so which of the three registers before the
+   words do. Same accent and green used for these states elsewhere. */
+.turn-pop-card{border-left:3px solid var(--stroke)}
+.turn-pop-card.is-locked{border-left-color:var(--accent-deep,#E8EA5F)}
+.turn-pop-card.is-approved{border-left-color:var(--success)}
 .turn-pop-card{position:fixed;pointer-events:auto;width:268px;background:var(--white);
   border:1px solid var(--stroke);box-shadow:0 12px 30px rgba(26,26,26,.22);padding:13px 14px 14px}
 .turn-pop-who{display:flex;align-items:center;gap:9px;margin-bottom:11px}
@@ -315,10 +328,10 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 /* Group by + Filters CSS moved to the iframe's work-hdr styles. */
 /* Primary CTA — hidden in draft (state bar owns Submit for review) and when
    viewing an outdated version; other stages show a stage-appropriate label. */
-/* ── the Scope step's lock + info ────────────────────────────────────
+/* ── the Scope step's lock ───────────────────────────────────────────
    The standalone Draft/Locked/Approved pill is gone: it duplicated the Scope
-   step's job and sat in the same crowded corner. The lock rides the step now
-   and pressing it opens the detail. */
+   step's job and sat in the same crowded corner. The lock rides the step now,
+   and pressing it — or the turn chip beside it — opens the one state card. */
 .stage.is-scope-info{cursor:pointer}
 .stage.is-scope-info:hover .stage-lock,
 .stage.is-scope-info:focus-visible .stage-lock{color:var(--accent)}
@@ -331,21 +344,8 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 .stage.done.is-scope-info .stage-lock,
 .stage.is-scope-info .stage-lock{color:rgba(255,255,255,.55)}
 
-#scopeInfoPop{position:fixed;inset:0;z-index:130;pointer-events:none}
-.scope-info-card{position:fixed;pointer-events:auto;width:270px;background:var(--white);
-  border:1px solid var(--stroke);box-shadow:0 12px 30px rgba(26,26,26,.22);padding:12px 14px 13px}
-.scope-info-h{display:flex;align-items:center;gap:7px;margin-bottom:7px;
-  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--ink)}
-.scope-info-lock{display:flex}
-.scope-info-lock svg{width:13px;height:13px;stroke:currentColor;stroke-width:1.7;fill:none;
-  stroke-linecap:round;stroke-linejoin:round;display:block}
-.scope-info-body{font-size:12.5px;line-height:1.5;color:var(--t2)}
 /* A left edge in the state's own colour, so which of the three you are in
    registers before the words do. Same greens and accents used elsewhere. */
-.scope-info-card{border-left:3px solid var(--stroke)}
-.scope-info-card.is-locked{border-left-color:var(--accent-deep,#E8EA5F)}
-.scope-info-card.is-approved{border-left-color:var(--success)}
 
 /* Nothing in the stepper navigates any more, so nothing in it should invite a
    press except the Scope node above. */

@@ -235,16 +235,6 @@ function canHandOffHere(){
   return state.role === 'manager' || state.role === 'field_agent';
 }
 
-/* ── the turn popover ────────────────────────────────────────────────
-   Two initials can't say who someone is. The chip is a button, and this is
-   what it opens: the name behind the initials, the role, what that person owes,
-   and how far through it they are when the stage tracks that.
-
-   Lives on <body> rather than inside the stepper — renderStages rewrites that
-   subtree on every state change, which would take the popover with it. */
-let turnPopOpen = false;
-function toggleTurnPop(){ turnPopOpen = !turnPopOpen; renderTurnPop(); }
-function closeTurnPop(){ if(!turnPopOpen) return; turnPopOpen = false; renderTurnPop(); }
 /* What the person whose turn it is owes, as an infinitive phrase that reads
    after their name: "A. Novak (Admin) to review the change order." Keeping it
    in one grammatical shape is what lets the same string serve both paragraphs. */
@@ -314,12 +304,10 @@ function turnYoursFor(stage, role, twoStep, track){
       return 'Nothing to action from here.';
   }
 }
-/* Who picks it up after the person whose move it is now. */
+/* Who picks it up after the person whose move it is now. Only rendered when the
+   move IS yours, so it can address you directly. */
 function turnNextFor(stage, twoStep){
   switch(stage){
-    // This paragraph only renders when the move is yours, so it can address you
-    // directly. Review is the admin's own next step, not a handover to someone
-    // else — saying "it goes to the admin" to the admin read as a dead loop.
     case 'edit':
     case 'submitted':    return twoStep ? 'You review it next, then the manager publishes.'
                                         : 'You review it next, then publish.';
@@ -331,52 +319,92 @@ function turnNextFor(stage, twoStep){
     default:             return '';
   }
 }
-function renderTurnPop(){
-  let el = document.getElementById('turnPop');
-  if(!turnPopOpen){ if(el) el.remove(); return; }
-  const chip = document.querySelector('.stage.active .stage-turn');
-  if(!chip){ turnPopOpen = false; if(el) el.remove(); return; }
+
+/* ── the state popover ───────────────────────────────────────────────
+   One card, opened either from the lock on the Scope step or from the turn chip
+   beside it. They used to be two popovers that overlapped on screen and said
+   "waiting on A. Novak" twice — the document-level fact and the person-level
+   fact belong in one place, in that order.
+
+   Lives on <body> because renderStages rewrites the stepper subtree on every
+   state change and would take the card with it. */
+let statePopOpen   = false;
+let statePopAnchor = '.stage.is-scope-info';   // which element it hangs off
+function toggleStatePop(sel){
+  // Pressing the same trigger again closes; pressing the other one moves it.
+  const same = statePopOpen && statePopAnchor === (sel || statePopAnchor);
+  statePopAnchor = sel || statePopAnchor;
+  statePopOpen = !same;
+  renderStatePop();
+}
+function closeStatePop(){ if(!statePopOpen) return; statePopOpen = false; renderStatePop(); }
+/* The document-level line, and the one place the lock's consequence is stated.
+   Deliberately does NOT repeat who is holding it — the Waiting-on paragraph
+   says that, and the two cards this replaces both did. */
+function docLockLine(id, mine){
+  if(id === 'draft')  return {label:'Editing', text:'Anyone with edit access can edit.'};
+  // Who the pause applies to depends on which side of it you are. "Paused until
+  // they pass it back" is only true when someone else is holding it; said to the
+  // person who has it, it points at nobody.
+  if(id === 'locked') return {label:'Editing', text: mine
+    ? 'Paused for everyone else while it is with you.'
+    : 'Paused until they pass it back.'};
+  const v = VERSIONS.find(x => x.id === currentVersionId) || VERSIONS[0];
+  return {label:'Budget', text:`${(v && v.budget) || '\u2014'} \u2014 any changes need to be processed as a Change order.`};
+}
+function renderStatePop(){
+  let el = document.getElementById('statePop');
+  if(!statePopOpen){ if(el) el.remove(); return; }
+  const anchor = document.querySelector(statePopAnchor) || document.querySelector('.stage.is-scope-info');
+  if(!anchor){ statePopOpen = false; if(el) el.remove(); return; }
+  if(!el){ el = document.createElement('div'); el.id = 'statePop'; document.body.appendChild(el); }
+  const id = docStateFor(viewStage);
+  const st = DOC_STATE[id];
   const t = whoseTurn(viewStage, state.role, state.twoStep);
-  if(!t.role){ turnPopOpen = false; if(el) el.remove(); return; }
-  if(!el){ el = document.createElement('div'); el.id = 'turnPop'; document.body.appendChild(el); }
-  const roleName = (ROLES.find(r => r.id === t.role) || {}).name || t.role;
-  // Where the stage counts decisions, say how far along they are — "waiting on
-  // someone" is a lot more actionable with "9 of 18 reviewed" under it.
+  const lock = docLockLine(id, t.mine);
+  const roleName = t.role ? ((ROLES.find(r => r.id === t.role) || {}).name || t.role) : '';
+  const track = state.workTrack || '';
+  /* Where the stage counts decisions, say how far along they are — "waiting on
+     someone" is a lot more actionable with "9 of 18 reviewed" under it. */
   const d = window.__KAI_DECISION || {};
   const prog = (d.total && !d.ready)
     ? `<div class="turn-pop-prog"><b>${d.done} of ${d.total}</b> ${d.verb === 'approve' ? 'approved' : 'reviewed'}</div>`
-    : (d.total && d.ready ? `<div class="turn-pop-prog is-done"><b>All ${d.total}</b> ${d.verb === 'approve' ? 'approved' : 'reviewed'} — ready</div>` : '');
-  const r = chip.getBoundingClientRect();
-  const track = state.workTrack || '';
-  /* Two labelled paragraphs: who holds the move and what for, then what YOU can
-     do about it. The old single sentence stated the holder's obligation with no
-     subject — "Track the work and submit closeout" read as an instruction to
-     whoever was looking, which is exactly wrong when it is someone else's. */
-  const p1 = t.mine
-    ? `<span class="turn-pop-lbl">You</span> ${turnMineFor(viewStage, state.twoStep, track)}`
-    : `<span class="turn-pop-lbl">Waiting on</span> ${t.who} (${roleName}) ${turnNeedFor(viewStage, state.twoStep, track)}.`;
-  const p2 = t.mine
-    ? (turnNextFor(viewStage, state.twoStep) ? `<span class="turn-pop-lbl">Then</span> ${turnNextFor(viewStage, state.twoStep)}` : '')
-    : `<span class="turn-pop-lbl">You</span> ${turnYoursFor(viewStage, state.role, state.twoStep, track)}`;
-  // No stage eyebrow. The stepper node the chip sits on already carries the
-   // stage, so printing it again at the top of the card was the third time it
-   // appeared in the same corner of the screen.
-  el.innerHTML = `<div class="turn-pop-card" role="dialog" aria-label="Whose turn it is"
-      style="top:${Math.round(r.bottom + 8)}px;left:${Math.round(r.left)}px">
+    : (d.total && d.ready ? `<div class="turn-pop-prog is-done"><b>All ${d.total}</b> ${d.verb === 'approve' ? 'approved' : 'reviewed'} \u2014 ready</div>` : '');
+  /* Who holds the move and what for, then what YOU can do about it. Dropped
+     entirely at a terminal stage, where nobody holds anything. */
+  const second = t.role
+    ? (t.mine ? turnNextFor(viewStage, state.twoStep)
+              : turnYoursFor(viewStage, state.role, state.twoStep, track))
+    : '';
+  const turnHtml = !t.role ? '' : `
     <div class="turn-pop-who"><span class="turn-pop-av${t.mine ? ' is-mine' : ''}">${t.initials}</span>
       <span class="turn-pop-name"><b>${t.who}</b><span class="turn-pop-role">${roleName}</span></span></div>
-    <div class="turn-pop-p">${p1}</div>
-    ${p2 ? `<div class="turn-pop-p">${p2}</div>` : ''}
+    <div class="turn-pop-p">${t.mine
+      ? `<span class="turn-pop-lbl">You</span> ${turnMineFor(viewStage, state.twoStep, track)}`
+      : `<span class="turn-pop-lbl">Waiting on</span> ${t.who} (${roleName}) ${turnNeedFor(viewStage, state.twoStep, track)}.`}</div>
+    ${second ? `<div class="turn-pop-p"><span class="turn-pop-lbl">${t.mine ? 'Then' : 'You'}</span> ${second}</div>` : ''}`;
+  const r = anchor.getBoundingClientRect();
+  // Clamped, so opening from the turn chip further along the bar can't push the
+  // card off the right edge.
+  const left = Math.max(8, Math.min(r.left, window.innerWidth - 316));
+  el.innerHTML = `<div class="turn-pop-card is-${id}" role="dialog" aria-label="Scope state"
+      style="top:${Math.round(r.bottom + 8)}px;left:${Math.round(left)}px">
+    <div class="turn-pop-lockh">
+      <span class="turn-pop-lock">${id === 'draft' ? LOCK_SVG.open : LOCK_SVG.shut}</span>${st.label}
+    </div>
+    ${turnHtml}
+    <div class="turn-pop-p"><span class="turn-pop-lbl">${lock.label}</span> ${lock.text}</div>
     ${prog}
   </div>`;
 }
-/* Anywhere else closes it. Registered once — the popover is rebuilt, not this. */
+/* Anywhere else closes it. Registered once — the card is rebuilt, not this. */
 document.addEventListener('click', e => {
-  if(!turnPopOpen) return;
-  if(e.target.closest && (e.target.closest('#turnPop') || e.target.closest('.stage-turn'))) return;
-  closeTurnPop();
+  if(!statePopOpen) return;
+  if(e.target.closest && (e.target.closest('#statePop') || e.target.closest('.stage.is-scope-info')
+     || e.target.closest('.stage-turn'))) return;
+  closeStatePop();
 });
-document.addEventListener('keydown', e => { if(e.key === 'Escape') closeTurnPop(); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeStatePop(); });
 
 /* ── document state ──────────────────────────────────────────────────
    Eight stepper substages, but only three things a person actually needs to
@@ -410,50 +438,6 @@ const LOCK_SVG = {
   open:  '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9"/><path d="M8 11V7.5a4 4 0 0 1 7.5-1.9"/></svg>',
   shut:  '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9"/><path d="M8.5 11V7.5a3.5 3.5 0 0 1 7 0V11"/></svg>',
 };
-/* What the Scope step says when you open it. The three states each answer a
-   different question, so each gets its own sentence rather than a template:
-   draft is about who may write, locked about who is holding it, approved about
-   what it now costs to change your mind. */
-function docStateCopy(id){
-  if(id === 'draft')  return 'Anyone with edit access can edit.';
-  if(id === 'locked'){
-    const t = whoseTurn(viewStage, state.role, state.twoStep);
-    return t.who ? `Waiting on ${t.who}. Editing is paused until they pass it back.`
-                 : 'Editing is paused while the scope is out for review.';
-  }
-  const v = VERSIONS.find(x => x.id === currentVersionId) || VERSIONS[0];
-  return `Budget: ${(v && v.budget) || '—'}. Any changes need to be processed as a Change order.`;
-}
-/* Anchored under the Scope node. On <body> because renderStages rewrites the
-   stepper subtree and would take the popover with it. */
-let scopeInfoOpen = false;
-function toggleScopeInfo(){ scopeInfoOpen = !scopeInfoOpen; renderScopeInfo(); }
-function closeScopeInfo(){ if(!scopeInfoOpen) return; scopeInfoOpen = false; renderScopeInfo(); }
-function renderScopeInfo(){
-  let el = document.getElementById('scopeInfoPop');
-  if(!scopeInfoOpen){ if(el) el.remove(); return; }
-  const anchor = document.querySelector('.stage.is-scope-info');
-  if(!anchor){ scopeInfoOpen = false; if(el) el.remove(); return; }
-  if(!el){ el = document.createElement('div'); el.id = 'scopeInfoPop'; document.body.appendChild(el); }
-  const id = docStateFor(viewStage);
-  const st = DOC_STATE[id];
-  const r = anchor.getBoundingClientRect();
-  el.innerHTML = `<div class="scope-info-card is-${id}" role="dialog" aria-label="Scope state"
-      style="top:${Math.round(r.bottom + 8)}px;left:${Math.round(r.left)}px">
-    <div class="scope-info-h">
-      <span class="scope-info-lock">${id === 'draft' ? LOCK_SVG.open : LOCK_SVG.shut}</span>
-      ${st.label}
-    </div>
-    <div class="scope-info-body">${docStateCopy(id)}</div>
-  </div>`;
-}
-document.addEventListener('click', e => {
-  if(!scopeInfoOpen) return;
-  if(e.target.closest && (e.target.closest('#scopeInfoPop') || e.target.closest('.stage.is-scope-info'))) return;
-  closeScopeInfo();
-});
-document.addEventListener('keydown', e => { if(e.key === 'Escape') closeScopeInfo(); });
-
 /* ── whose turn is it ─────────────────────────────────────────────────
    One predicate, read by all three surfaces that answer the question: the
    stepper's active node, the primary CTA, and the caption under the stepper.
@@ -1346,7 +1330,7 @@ function renderStages(){
   const _turn = whoseTurn(viewStage, state.role, state.twoStep);
   const turnChip = _turn.role
     ? `<button class="stage-turn${_turn.mine ? ' is-mine' : ''}" type="button" aria-haspopup="dialog"
-         onclick="event.stopPropagation();toggleTurnPop()"
+         onclick="event.stopPropagation();toggleStatePop('.stage.active .stage-turn')"
          title="${_turn.mine ? 'Your move — click for detail' : 'Waiting on ' + _turn.who + ' — click for detail'}"
          >${_turn.mine ? 'You' : _turn.initials}</button>`
     : '';
@@ -1393,8 +1377,8 @@ function renderStages(){
     return `<div class="stage ${cls}${isScope ? ' is-scope-info' : ''}"
       ${isScope ? `role="button" tabindex="0" aria-haspopup="dialog"
         title="${DOC_STATE[docState].label} — press for detail"
-        onclick="event.stopPropagation();toggleScopeInfo()"
-        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleScopeInfo();}"` : ''}>
+        onclick="event.stopPropagation();toggleStatePop('.stage.is-scope-info')"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleStatePop('.stage.is-scope-info');}"` : ''}>
       <span class="stage-num">${i+1}</span>
       <div class="stage-info">
         <div class="stage-label">${sub}</div>
