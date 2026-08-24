@@ -293,18 +293,22 @@ function turnMineFor(stage, twoStep, track){
 function turnYoursFor(stage, role, twoStep, track){
   const live = (stage === 'published' || stage === 'closeout' || stage === 'closeout-approved');
   const co   = (stage === 'published' && track === 'change_order');
+  /* Draft is open to everyone with access, so the admin and the manager get the
+     same answer — the only thing that is not theirs is the hand-off. Said once
+     here rather than twice below, where the two had drifted apart. */
+  const DRAFT_EDITOR = 'You can edit the scope while it is in draft. Handing it off for review is the field agent\'s call.';
   switch(role){
     case 'manager':
       if(co)                 return 'If something is wrong with the change order, hand it off with a comment — request an edit and send it back for approval.';
       if(stage === 'published') return 'Nothing to action. You will be asked again if a change order needs approving.';
       if(stage === 'closeout')  return 'Nothing to action — the admin signs the closeout off.';
-      if(stage === 'edit')      return 'Nothing yet. The scope is still being built on site.';
+      if(stage === 'edit')      return DRAFT_EDITOR;
       return 'Nothing yet. It reaches you once the admin has finished their review.';
     case 'admin':
       if(stage === 'awaiting-pub') return 'Your review is done. You can recall the scope if something needs changing before it goes live.';
       // Draft is editable by anyone with access — the hand-off is what is not
       // theirs, so "nothing to action" would have been wrong here.
-      if(stage === 'edit') return 'You can edit the scope while it is in draft. Handing it off for review is the field agent\'s call.';
+      if(stage === 'edit') return DRAFT_EDITOR;
       return 'Nothing to action from here.';
     case 'contractor':
       if(co)                 return 'Keep working the approved lines. Anything the change order touches is on hold until it is approved.';
@@ -316,7 +320,7 @@ function turnYoursFor(stage, role, twoStep, track){
       if(co) return 'You can hand the change order on with a comment if you saw something on site that affects it.';
       return 'Nothing to action — the scope has moved past scoping.';
     case 'field_agent_nr':
-      if(stage === 'edit')      return 'You can add what you found on site. The responsible field agent hands it off.';
+      if(stage === 'edit')      return 'You can edit and mark the scope as reviewed once you\'re done (optional).';
       if(co)                    return 'You can mark the change order as reviewed, so the admin knows you have read it.';
       if(stage === 'reviewing') return 'You can request an edit if the scope does not match what you saw on site.';
       return 'Nothing to action — this scope is not yours to move.';
@@ -398,7 +402,10 @@ function renderStatePop(){
   const track = state.workTrack || '';
   /* Where the stage counts decisions, say how far along they are — "waiting on
      someone" is a lot more actionable with "9 of 18 reviewed" under it. */
-  const d = window.__KAI_DECISION || {};
+  /* Not in draft. The panel reports a decision tally at every stage, but in
+     draft nothing is being reviewed or approved yet — "0 of 18 approved" reads
+     as work outstanding when the real answer is that it has not been asked for. */
+  const d = (id === 'draft') ? {} : (window.__KAI_DECISION || {});
   const prog = (d.total && !d.ready)
     ? `<div class="turn-pop-prog"><b>${d.done} of ${d.total}</b> ${d.verb === 'approve' ? 'approved' : 'reviewed'}</div>`
     : (d.total && d.ready ? `<div class="turn-pop-prog is-done"><b>All ${d.total}</b> ${d.verb === 'approve' ? 'approved' : 'reviewed'} \u2014 ready</div>` : '');
