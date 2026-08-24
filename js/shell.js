@@ -202,7 +202,8 @@ function canRequestEditHere(){
    it, it does not decide anything. */
 function markAsReviewed(){
   const me = ROLE_PEOPLE[state.role] || {name:'You'};
-  if(typeof toast === 'function') toast(`Marked as reviewed · ${me.name}`);
+  const word = (state.projectStage === 'edit') ? 'done' : 'reviewed';
+  if(typeof toast === 'function') toast(`Marked as ${word} · ${me.name}`);
 }
 /* Asking for the document back. The reason is the point, so the field is the
    modal rather than an afterthought — an edit request with no "why" just
@@ -1215,7 +1216,11 @@ function syncAppApproveBtn(){
        waiting state — they hold no move, but they are not idle either. */
     if(canMarkReviewedHere() || canRequestEditHere()){
       const mark = canMarkReviewedHere();
-      btn.textContent = mark ? 'Mark as reviewed' : 'Request to edit';
+      /* "Done" in draft, "reviewed" against a change order. In draft they are
+         signing off their own contribution — what they added on site — so
+         "reviewed" implied they were reviewing someone else's work. */
+      btn.textContent = mark ? (proj === 'edit' ? 'Mark as done' : 'Mark as reviewed')
+                             : 'Request to edit';
       btn.disabled = false;
       btn.onclick = mark ? markAsReviewed : openScopeEditRequest;
       btn.hidden = false;
