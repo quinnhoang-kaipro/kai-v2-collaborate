@@ -1935,7 +1935,7 @@ function reviewRosterHtml(){
     <div class="rv-row${done?' is-done':''}">
       <span class="rv-mark">${done ? ICONS.check : ''}</span>
       <span class="rv-who"><b>${p.who}</b><span class="rv-role">${p.role}</span></span>
-      <span class="rv-when">${done ? p.date : 'Not yet reviewed'}</span>
+      <span class="rv-when">${done ? p.date : 'Not marked as done'}</span>
     </div>`;
   return `
     <div class="rv-list">
