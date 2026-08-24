@@ -140,21 +140,27 @@ function renderCoHandoff(){
       </div>
       <div class="dsp-title">Hand off ${cfg.subject || 'the scope'}</div>
       ${cfg.note ? `<div class="co-ho-note-lead">${cfg.note}</div>` : ''}
+      <!-- Who it goes to is the decision this dialogue exists for, so it takes
+           the full width at the top. The comment and the review roster sit
+           together underneath: both are context for that choice, and neither
+           needs a whole row. -->
+      <div class="co-ho-top">
+        <div class="dsp-lbl">Pass it to</div>
+        <input id="coHandoffSearch" class="co-ho-search" type="text" autocomplete="off"
+          placeholder="Search by name or role" value="${coHandoffQuery}"
+          oninput="filterCoHandoff(this.value)" aria-label="Search for a teammate">
+        <div class="co-ho-results" id="coHandoffResults">${coHandoffRowsHtml()}</div>
+      </div>
       <div class="co-ho-cols">
         <div class="co-ho-col">
-          <div class="dsp-lbl">Pass it to</div>
-          <input id="coHandoffSearch" class="co-ho-search" type="text" autocomplete="off"
-            placeholder="Search by name or role" value="${coHandoffQuery}"
-            oninput="filterCoHandoff(this.value)" aria-label="Search for a teammate">
-          <div class="co-ho-results" id="coHandoffResults">${coHandoffRowsHtml()}</div>
+          <div class="dsp-lbl">Add a comment <span class="co-ho-opt">optional</span></div>
+          <textarea id="coHandoffNote" class="co-ho-note" rows="4"
+            placeholder="${cfg.placeholder || 'Anything they should know.'}">${coHandoffNote}</textarea>
         </div>
         <div class="co-ho-col co-ho-col-review">
           ${reviewRosterHtml() || '<div class="dsp-lbl">Review</div><div class="co-ho-none">No review on file yet.</div>'}
         </div>
       </div>
-      <div class="dsp-lbl co-ho-lbl2">Add a comment <span class="co-ho-opt">optional</span></div>
-      <textarea id="coHandoffNote" class="co-ho-note" rows="3"
-        placeholder="${cfg.placeholder || 'Anything they should know.'}">${coHandoffNote}</textarea>
       <div class="dsp-acts">
         <button type="button" class="dsp-btn" onclick="closeCoHandoff()">Cancel</button>
         <button type="button" class="dsp-btn is-primary" onclick="confirmCoHandoff()">Hand off</button>
