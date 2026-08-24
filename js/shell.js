@@ -329,7 +329,9 @@ function turnYoursFor(stage, role, twoStep, track){
       if(stage === 'published') return 'Add task progress to keep the project updated.';
       return 'Nothing to action — the scope has moved past scoping.';
     case 'field_agent_nr':
-      if(stage === 'edit')      return 'You can edit and mark the scope as reviewed once you\'re done (optional).';
+      // Matches the button, which says "Mark as done" in draft. What is being
+      // marked is their own pass over the scope, not a verdict on it.
+      if(stage === 'edit')      return 'You can edit the scope, and mark yourself done when you have finished (optional).';
       if(co)                    return 'You can mark the change order as reviewed, so the admin knows you have read it.';
       if(stage === 'reviewing') return 'You can request an edit if the scope does not match what you saw on site.';
       return 'Nothing to action — this scope is not yours to move.';
