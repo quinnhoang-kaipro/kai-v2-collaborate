@@ -324,6 +324,8 @@ function turnYoursFor(stage, role, twoStep, track){
     case 'field_agent':
       if(stage === 'edit' || stage === 'submitted') return 'Keep adding what you found on site until the scope is handed off.';
       if(co) return 'You can hand the change order on with a comment if you saw something on site that affects it.';
+      // A live job is where they are most useful, not least: they are on site.
+      if(stage === 'published') return 'Add task progress to keep the project updated.';
       return 'Nothing to action — the scope has moved past scoping.';
     case 'field_agent_nr':
       if(stage === 'edit')      return 'You can edit and mark the scope as reviewed once you\'re done (optional).';
@@ -408,10 +410,12 @@ function renderStatePop(){
   const track = state.workTrack || '';
   /* Where the stage counts decisions, say how far along they are — "waiting on
      someone" is a lot more actionable with "9 of 18 reviewed" under it. */
-  /* Not in draft. The panel reports a decision tally at every stage, but in
-     draft nothing is being reviewed or approved yet — "0 of 18 approved" reads
-     as work outstanding when the real answer is that it has not been asked for. */
-  const d = (id === 'draft') ? {} : (window.__KAI_DECISION || {});
+  /* Only where a decision is actually being collected. The panel reports a
+     tally at every stage, so the card was showing "0 of 18 reviewed" during
+     construction and in draft — work outstanding, when nobody has been asked
+     for it. Review and publish are the two stages that gate on it. */
+  const collecting = (proj === 'reviewing' || proj === 'awaiting-pub');
+  const d = collecting ? (window.__KAI_DECISION || {}) : {};
   const prog = (d.total && !d.ready)
     ? `<div class="turn-pop-prog"><b>${d.done} of ${d.total}</b> ${d.verb === 'approve' ? 'approved' : 'reviewed'}</div>`
     : (d.total && d.ready ? `<div class="turn-pop-prog is-done"><b>All ${d.total}</b> ${d.verb === 'approve' ? 'approved' : 'reviewed'} \u2014 ready</div>` : '');
