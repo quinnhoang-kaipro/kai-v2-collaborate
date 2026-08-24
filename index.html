@@ -101,6 +101,11 @@
     <!-- Kai wordmark moved to the top of the global left rail (in a white
          box) so the top toolbar no longer duplicates the brand. -->
     <span class="tb-address">3484 South Main Street</span>
+    <!-- Document state: Draft / Locked / Approved. Sits with the address rather
+         than with the stepper — the stepper says where we are in the process,
+         this says what you may do to the document, and the second is the
+         question people are actually asking. renderDocState writes it. -->
+    <span class="doc-state" id="docState"></span>
     <!-- Group by + Filters moved to the right panel's work-hdr tab bar. -->
     <!-- Inline progress stepper (renderStages writes into #stages). -->
     <div class="stages" id="stages"></div>

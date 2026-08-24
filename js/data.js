@@ -253,6 +253,13 @@ const IS_CONTRACTOR = new URLSearchParams(window.__KAI_QS || window.location.sea
    it. Defaults to admin so a panel opened without a query string behaves as it
    always did. */
 const USER_ROLE = new URLSearchParams(window.__KAI_QS || window.location.search).get('role') || 'admin';
+/* Document lock state, from the shell's one mapping: 'draft' | 'locked' |
+   'approved'. Mirrored onto <body> as lock-<state> so styling can respond
+   without every surface re-deriving it from the stage. */
+const DOC_LOCK = new URLSearchParams(window.__KAI_QS || window.location.search).get('lock') || 'draft';
+document.addEventListener('DOMContentLoaded', () => {
+  document.body.classList.add('lock-' + DOC_LOCK);
+});
 const MY_CONTRACTOR = 'Apex Carpentry';
 
 const TASKS = [

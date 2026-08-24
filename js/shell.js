@@ -146,6 +146,22 @@ function renderCoHandoff(){
   const q = document.getElementById('coHandoffSearch');
   if(q) q.focus();
 }
+/* The admin's move at a change-order review: approve the order. Without this the
+   generic published-stage rule labelled their CTA "Submit closeout" — the right
+   action for a live job, the wrong one while an order sits unapproved, and gated
+   on every task being complete so it was permanently disabled here. */
+function canApproveChangeOrderHere(){
+  return viewStage === 'published' && state.workTrack === 'change_order' && state.role === 'admin';
+}
+function approveChangeOrder(){
+  openModal({
+    icon:'check',
+    title:'Approve the change order?',
+    body:`Approving releases the lines this order touches back to the field and rolls its cost into the live scope. The team is notified. If something is wrong, request an edit instead and it goes back for revision.${reviewRosterHtml()}`,
+    confirm:'Approve change order',
+    onConfirm:()=>{ if(typeof toast === 'function') toast('Change order approved'); }
+  });
+}
 /* ── the non-responsible field agent's two moves ─────────────────────
    They own no stage, so they never hold the move — but "waiting on someone
    else" is not the whole truth for them either. At a change order they can put
@@ -361,6 +377,62 @@ document.addEventListener('click', e => {
   closeTurnPop();
 });
 document.addEventListener('keydown', e => { if(e.key === 'Escape') closeTurnPop(); });
+
+/* ── document state ──────────────────────────────────────────────────
+   Eight stepper substages, but only three things a person actually needs to
+   know before touching the document: can I edit it, is it sitting with someone,
+   or is it settled. The substages answer "where are we in the process"; these
+   answer "what may I do", which is the question people are really asking.
+
+     DRAFT     unlocked — anyone with edit rights can edit
+     LOCKED    editing paused, waiting on one named person
+     APPROVED  locked, and the budget is frozen
+
+   One mapping, read by the indicator and by the panel (passed as ?lock=), so
+   the lock can never say one thing in the toolbar and another in the editor.
+
+   'published' is APPROVED, not LOCKED, even while a change order sits under
+   review: the approved scope and its budget are settled: the order is a
+   proposal against them. Its own pending state is the scrubber's job. */
+const DOC_STATE = {
+  draft:    {label:'Draft',    hint:'Anyone with edit rights can edit'},
+  locked:   {label:'Locked',   hint:'Editing paused'},
+  approved: {label:'Approved', hint:'Budget frozen'},
+};
+function docStateFor(stage){
+  if(stage === 'edit') return 'draft';
+  if(stage === 'published' || stage === 'closeout' || stage === 'closeout-approved') return 'approved';
+  return 'locked';   // submitted · reviewing · review-done · awaiting-pub
+}
+/* Open padlock for draft, shut for the other two — the same glyph in two
+   positions, so the difference reads without the label. */
+const LOCK_SVG = {
+  open:  '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9"/><path d="M8 11V7.5a4 4 0 0 1 7.5-1.9"/></svg>',
+  shut:  '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9"/><path d="M8.5 11V7.5a3.5 3.5 0 0 1 7 0V11"/></svg>',
+};
+function renderDocState(){
+  const host = document.getElementById('docState');
+  if(!host) return;
+  const id = docStateFor(viewStage);
+  const st = DOC_STATE[id];
+  const t = whoseTurn(viewStage, state.role, state.twoStep);
+  // The second line is what makes each state actionable rather than a status
+  // word: who is holding it, or what exactly is frozen.
+  let sub = st.hint;
+  if(id === 'locked' && t.who) sub = `Waiting on ${t.who}`;
+  if(id === 'approved'){
+    const v = VERSIONS.find(x => x.id === currentVersionId) || VERSIONS[0];
+    sub = v && v.budget ? `Budget frozen · ${v.budget}` : st.hint;
+  }
+  host.className = 'doc-state is-' + id;
+  host.innerHTML = `
+    <span class="doc-state-lock">${id === 'draft' ? LOCK_SVG.open : LOCK_SVG.shut}</span>
+    <span class="doc-state-txt">
+      <span class="doc-state-lbl">${st.label}</span>
+      <span class="doc-state-sub">${sub}</span>
+    </span>`;
+  host.title = `${st.label} — ${sub}`;
+}
 
 /* ── whose turn is it ─────────────────────────────────────────────────
    One predicate, read by all three surfaces that answer the question: the
@@ -1245,6 +1317,7 @@ function renderStages(){
   const projSuperIdx = visibleStages.findIndex(s=>s===projSuper);
   const access = ROLE_ACCESS[state.role] || [];
   // Per-stage caption slots: only the active supergroup's slot renders text.
+  renderDocState();
   const captionText = messageFor(state.role, viewStage);
   /* The turn marker on the active node. Whose move it is stops being something
      you deduce from role + stage and becomes a match: this avatar against your
@@ -1483,6 +1556,9 @@ function renderIframe(){
      rest of them too, so it is always passed now. Harmless to the existing
      check, which compares against 'contractor' exactly. */
   params.push('role=' + state.role);
+  /* The same three-state mapping the toolbar indicator uses, so the lock cannot
+     say one thing up there and another inside the editor. */
+  params.push('lock=' + docStateFor(viewStage));
   // Draft-lifecycle stages need the sidebar's task-status pills to show
   // "in progress" / "missing details" instead of the approved vocabulary.
   if(viewStage === 'edit' || viewStage === 'submitted'){
