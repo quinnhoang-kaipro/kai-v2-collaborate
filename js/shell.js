@@ -90,6 +90,7 @@ function openHandoff(cfg){
   coHandoffTo    = (preferred && team.some(p => p.id === preferred)) ? preferred : (team[0] && team[0].id);
   coHandoffNote  = '';
   coHandoffQuery = '';
+  handoffRosterOpen = false;
   coHandoffOpen  = true;
   renderCoHandoff();
 }
@@ -124,6 +125,35 @@ function confirmCoHandoff(){
   renderCoHandoff();
   if(typeof cfg.onDone === 'function') cfg.onDone(to, coHandoffNote);
 }
+/* The roster, demoted. It is context for choosing a recipient, not a section of
+   the form — as a full list beside the comment box it read as a peer of the
+   things you fill in, and it arrived after the decision it informs. One line
+   above the picker, expandable when the detail matters.
+
+   Toggling repaints only this block, so the search box and whatever is typed in
+   the comment survive it. */
+let handoffRosterOpen = false;
+function toggleHandoffRoster(){
+  handoffRosterOpen = !handoffRosterOpen;
+  const host = document.getElementById('coHandoffRoster');
+  if(host) host.innerHTML = handoffRosterHtml();
+}
+function handoffRosterHtml(){
+  const st = reviewState();
+  if(!st || !st.total) return '';
+  const n = st.signed.length;
+  const names = st.signed.map(p => p.who).join(', ');
+  const summary = n
+    ? `<b>${n} of ${st.total}</b> marked this done${names ? ` \u2014 ${names}` : ''}`
+    : `<b>Nobody</b> has marked this done yet`;
+  return `<div class="co-ho-rv-line">
+      <span class="co-ho-rv-txt">${summary}</span>
+      <button type="button" class="co-ho-rv-more" onclick="toggleHandoffRoster()"
+        aria-expanded="${handoffRosterOpen}">${handoffRosterOpen ? 'Hide' : 'See all'}</button>
+    </div>
+    ${handoffRosterOpen ? `<div class="rv-list co-ho-rv-open">${reviewRowsHtml(st)}</div>` : ''}`;
+}
+
 function renderCoHandoff(){
   let el = document.getElementById('coHandoffModal');
   if(!coHandoffOpen){ if(el) el.remove(); return; }
@@ -146,6 +176,9 @@ function renderCoHandoff(){
            the full width at the top. The comment and the review roster sit
            together underneath: both are context for that choice, and neither
            needs a whole row. -->
+      <!-- Roster first: who has already dealt with this is what tells you who to
+           send it to, so it comes before the choice rather than after it. -->
+      <div id="coHandoffRoster">${handoffRosterHtml()}</div>
       <div class="co-ho-top">
         <div class="dsp-lbl">Pass it to</div>
         <input id="coHandoffSearch" class="co-ho-search" type="text" autocomplete="off"
@@ -153,16 +186,11 @@ function renderCoHandoff(){
           oninput="filterCoHandoff(this.value)" aria-label="Search for a teammate">
         <div class="co-ho-results" id="coHandoffResults">${coHandoffRowsHtml()}</div>
       </div>
-      <div class="co-ho-cols">
-        <div class="co-ho-col">
-          <div class="dsp-lbl">Add a comment <span class="co-ho-opt">optional</span></div>
-          <textarea id="coHandoffNote" class="co-ho-note" rows="4"
-            placeholder="${cfg.placeholder || 'Anything they should know.'}">${coHandoffNote}</textarea>
-        </div>
-        <div class="co-ho-col co-ho-col-review">
-          ${reviewRosterHtml() || '<div class="dsp-lbl">Review</div><div class="co-ho-none">No review on file yet.</div>'}
-        </div>
-      </div>
+      <!-- Full width now that the roster has left this row: the comment is the
+           only thing here you fill in. -->
+      <div class="dsp-lbl">Add a comment <span class="co-ho-opt">optional</span></div>
+      <textarea id="coHandoffNote" class="co-ho-note" rows="3"
+        placeholder="${cfg.placeholder || 'Anything they should know.'}">${coHandoffNote}</textarea>
       <div class="dsp-acts">
         <button type="button" class="dsp-btn" onclick="closeCoHandoff()">Cancel</button>
         <button type="button" class="dsp-btn is-primary" onclick="confirmCoHandoff()">Hand off</button>
@@ -1957,36 +1985,37 @@ function initialsOf(name){
   return String(name || '').split(/[\s.]+/).filter(Boolean).map(w => w[0]).join('').slice(0,2).toUpperCase();
 }
 function scopeApprover(){
-  let st = null;
-  try{
-    const ifr = document.getElementById('iframe') || document.querySelector('iframe');
-    if(ifr && ifr.contentWindow && typeof ifr.contentWindow.a2ReviewState === 'function'){
-      st = ifr.contentWindow.a2ReviewState();
-    }
-  }catch(e){ return null; }
+  const st = reviewState();
   if(!st || !st.signed || !st.signed.length) return null;
   return st.signed.slice().sort((a, b) => Date.parse(a.date) - Date.parse(b.date)).pop();
 }
-function reviewRosterHtml(){
-  let st = null;
+function reviewState(){
   try{
     const ifr = document.getElementById('iframe') || document.querySelector('iframe');
     if(ifr && ifr.contentWindow && typeof ifr.contentWindow.a2ReviewState === 'function'){
-      st = ifr.contentWindow.a2ReviewState();
+      return ifr.contentWindow.a2ReviewState();
     }
-  }catch(e){ return ''; }
-  if(!st || !st.total) return '';
+  }catch(e){ return null; }
+  return null;
+}
+function reviewRowsHtml(st){
   const row = (p, done) => `
     <div class="rv-row${done?' is-done':''}">
       <span class="rv-mark">${done ? ICONS.check : ''}</span>
       <span class="rv-who"><b>${p.who}</b><span class="rv-role">${p.role}</span></span>
       <span class="rv-when">${done ? p.date : 'Not marked as done'}</span>
     </div>`;
+  return st.signed.map(p => row(p, true)).join('') + st.pending.map(p => row(p, false)).join('');
+}
+/* The full roster with its own heading — still what the approve and mark-all
+   confirms want, where it is the substance of the decision. */
+function reviewRosterHtml(){
+  const st = reviewState();
+  if(!st || !st.total) return '';
   return `
     <div class="rv-list">
       <div class="rv-hdr">Reviewed by ${st.signed.length} of ${st.total}</div>
-      ${st.signed.map(p => row(p, true)).join('')}
-      ${st.pending.map(p => row(p, false)).join('')}
+      ${reviewRowsHtml(st)}
     </div>`;
 }
 

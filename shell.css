@@ -559,10 +559,19 @@ body.tb-hidden .tb-reveal{display:inline-flex}
   pointer-events:none;background:linear-gradient(to bottom,rgba(255,255,255,0),var(--white,#fff) 78%)}
 .co-ho-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
 .co-ho-col{min-width:0}
-/* No panel behind the review column. It is reference beside the picker, not a
-   nested container — the fill and border made it read as a separate card, and
-   the rule above its heading was a third line in a column that already has
-   one line per person. */
+/* ── the roster, demoted to a line ───────────────────────────────────
+   Deliberately not styled like the fields below it. No border, no mono section
+   label, smaller type: it is something you read, and the things that look like
+   inputs in this dialogue should be the things you fill in. */
+.co-ho-rv-line{display:flex;align-items:baseline;gap:12px;margin-bottom:16px;
+  font-size:12.5px;color:var(--midtone,#7D7469)}
+.co-ho-rv-txt{min-width:0}
+.co-ho-rv-txt b{font-weight:600;color:var(--ink,#1A1A1A)}
+.co-ho-rv-more{margin-left:auto;flex-shrink:0;background:none;border:0;padding:0;cursor:pointer;
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--midtone,#7D7469);transition:color .12s}
+.co-ho-rv-more:hover{color:var(--ink,#1A1A1A);text-decoration:underline;text-underline-offset:2px}
+.co-ho-rv-open{margin:-8px 0 16px;border-top:0;padding-top:0}
 .co-ho-col-review .rv-list{margin-top:0;border-top:0;padding-top:0}
 .co-ho-search{width:100%;box-sizing:border-box;margin-bottom:8px;padding:9px 11px;
   border:1px solid var(--stroke,#DDD6C8);background:var(--white,#fff);color:var(--ink,#1A1A1A);
