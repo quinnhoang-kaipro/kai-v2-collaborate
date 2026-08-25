@@ -169,7 +169,13 @@ function _histNoteFor(v){
     : removed
       ? `${gc} confirmed dates and the resident took ${lines(removed)} back out, so this is the scope as it now stands. Nothing else is waiting on anyone.`
       : `${gc} came back with dates, so this carries the revised labor${added ? ` and ${lines(added)} the last walk turned up` : ''}. Sending it up now rather than holding the whole scope for it.`;
-  return {who:author.who, role:author.role, text};
+  /* The note was written when the version was submitted, not when it was
+     approved — so v.at is the wrong date to put on it. The earliest sign-off is
+     the last moment the document must already have existed, which is the closest
+     honest stand-in; a version nobody has signed falls back to its own date. */
+  const sigs = (ver && typeof REVIEWS !== 'undefined' ? REVIEWS.filter(r => r.ver === ver) : [])
+    .map(r => r.date).sort((a, b) => Date.parse(a) - Date.parse(b));
+  return {who:author.who, role:author.role, text, when: sigs[0] || v.at || ''};
 }
 // Local rather than Artifact 2's initials(): this file should not stop working
 // if that one is not on the page.
@@ -182,7 +188,7 @@ function _histNoteHtml(v){
   return `<div class="hist-note">
     <div class="hist-note-hdr">
       <span class="hist-note-av">${esc(_histInitials(n.who))}</span>
-      <span class="hist-note-who"><b>${esc(n.who)}</b>${n.role ? `<span class="hist-note-role">${esc(n.role)}</span>` : ''}</span>
+      <span class="hist-note-who"><b>${esc(n.who)}</b>${n.role ? `<span class="hist-note-role">${esc(n.role)}</span>` : ''}${n.when ? `<span class="hist-note-when">${esc(n.when)}</span>` : ''}</span>
       <span class="hist-note-sp"></span>
       <span class="hist-note-tag" title="Visible to your team only — not part of the document or any shared copy">Internal note</span>
     </div>

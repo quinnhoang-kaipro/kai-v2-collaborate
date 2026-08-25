@@ -2459,6 +2459,11 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 .hist-note-who b{font-weight:600}
 .hist-note-role{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.06em;
   text-transform:uppercase;color:var(--t3)}
+/* Date belongs with the byline, not out by the visibility marker: who wrote it
+   and when is one fact. */
+.hist-note-when{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.04em;
+  color:var(--t3)}
+.hist-note-when::before{content:'\00b7';margin-right:6px}
 .hist-note-sp{flex:1}
 .hist-note-tag{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t2);padding:3px 7px;border:1px dashed var(--stroke);
