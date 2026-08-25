@@ -453,6 +453,29 @@ function docLockLine(id, mine){
   const v = VERSIONS.find(x => x.id === currentVersionId) || VERSIONS[0];
   return {label:'Budget', text:`${(v && v.budget) || '\u2014'} \u2014 any changes need to be processed as a Change order.`};
 }
+/* The scope's dated events, newest first, for the Scope step's card. Same
+   sign-off records the hand-off dialogue summarises — this is the long form,
+   which is what you want when the card is the only thing on screen telling you
+   where the document has been.
+
+   Only the signatures carry dates in the data. There is no record of when the
+   scope was handed off or by whom, so no "submitted" row is invented here. */
+function scopeHistoryHtml(){
+  const st = reviewState();
+  if(!st || !st.signed || !st.signed.length) return '';
+  const rows = st.signed.slice()
+    .sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
+    .map(p => `<div class="sh-row">
+        <span class="sh-when">${p.date}</span>
+        <span class="sh-what"><b>${p.who}</b> <span class="sh-role">${p.role}</span> marked as done</span>
+      </div>`).join('');
+  const left = (st.pending || []).length;
+  return `<div class="sh-list">
+    ${rows}
+    ${left ? `<div class="sh-foot">${left} still to mark ${left === 1 ? 'theirs' : 'theirs'} done</div>` : ''}
+  </div>`;
+}
+
 function renderStatePop(){
   let el = document.getElementById('statePop');
   if(!statePopOpen){ if(el) el.remove(); return; }
@@ -514,7 +537,8 @@ function renderStatePop(){
         <span class="turn-pop-name"><b>${appr.who}</b><span class="turn-pop-role">${appr.role}</span></span></div>
         <div class="turn-pop-p"><span class="turn-pop-lbl">Approved</span> ${appr.date}</div>` : ''}
       ${(id === 'locked' && t.role && !t.mine) ? `<div class="turn-pop-p"><span class="turn-pop-lbl">With</span> ${t.who} (${roleName})</div>` : ''}
-      <div class="turn-pop-p"><span class="turn-pop-lbl">${lock.label}</span> ${lock.text}</div>`;
+      <div class="turn-pop-p"><span class="turn-pop-lbl">${lock.label}</span> ${lock.text}</div>
+      ${(id !== 'approved') ? scopeHistoryHtml() : ''}`;
   } else {
     const second = t.role
       ? (t.mine ? turnNextFor(proj, state.twoStep)
