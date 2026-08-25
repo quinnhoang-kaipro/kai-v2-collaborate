@@ -169,11 +169,11 @@ function renderCoHandoff(){
      the two belong side by side anyway, since who has already signed is exactly
      what tells you who to send it to next. */
   el.innerHTML = `<div class="dsp-scrim" onclick="closeCoHandoff()"></div>
-    <div class="dsp-card co-ho-card" role="dialog" aria-modal="true" aria-label="Hand off the change order">
+    <div class="dsp-card co-ho-card" role="dialog" aria-modal="true" aria-label="${cfg.title || ('Hand off ' + (cfg.subject || 'the scope'))}">
       <div class="dsp-icon">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3L3 10.5l7 3 3 7L21 3z"/></svg>
       </div>
-      <div class="dsp-title">Hand off ${cfg.subject || 'the scope'}</div>
+      <div class="dsp-title">${cfg.title || `Hand off ${cfg.subject || 'the scope'}`}</div>
       ${cfg.note ? `<div class="co-ho-note-lead${cfg.noteTitle ? ' is-flagged' : ''}">
         ${cfg.noteTitle ? `<b class="co-ho-note-h">${cfg.noteTitle}</b>` : ''}${cfg.note}
       </div>` : ''}
@@ -198,7 +198,7 @@ function renderCoHandoff(){
         placeholder="${cfg.placeholder || 'Anything they should know.'}">${coHandoffNote}</textarea>
       <div class="dsp-acts">
         <button type="button" class="dsp-btn" onclick="closeCoHandoff()">Cancel</button>
-        <button type="button" class="dsp-btn is-primary" onclick="confirmCoHandoff()">Hand off</button>
+        <button type="button" class="dsp-btn is-primary" onclick="confirmCoHandoff()">${cfg.confirm || 'Hand off'}</button>
       </div>
     </div>`;
   const q = document.getElementById('coHandoffSearch');
@@ -310,6 +310,27 @@ function canHandOffHere(){
    confirm naming what it does to the budget. */
 function canApproveScopeHere(){
   return state.role === 'manager' && state.projectStage === 'reviewing';
+}
+/* The scope is with the reviewer, but the field agent can still edit — and the
+   Scope card now says as much, that nothing they change reaches the submitted
+   version until they send a new one. This is how they send it. Without it the
+   card promised an action the toolbar did not offer. */
+function canSubmitScopeHere(){
+  return state.role === 'field_agent'
+      && (state.projectStage === 'submitted' || state.projectStage === 'reviewing');
+}
+function submitScopeAgain(){
+  const owner = turnRoleFor(state.projectStage, state.twoStep);
+  const who = (ROLE_PEOPLE[owner] || {}).name || 'the reviewer';
+  openHandoff({
+    title: 'Submit the scope',
+    confirm: 'Submit',
+    subject: 'the scope',
+    defaultTo: owner || 'admin',
+    note: `${who} is reviewing the version you submitted. Sending this replaces it with what the scope says now.`,
+    placeholder: 'What changed since you last submitted?',
+    onDone: to => toast(to ? `Scope submitted to ${to.name}` : 'Scope submitted'),
+  });
 }
 /* Tracking a live job is the field agent's move, but calling it finished is not
    only theirs: a manager or admin watching the same board can close it out
@@ -1480,6 +1501,14 @@ function syncAppApproveBtn(){
       btn.textContent = 'Submit closeout';
       btn.disabled = false;
       btn.onclick = triggerIframeApprove;
+      btn.hidden = false;
+      if(tipEl) tipEl.hidden = true;
+      return;
+    }
+    if(canSubmitScopeHere()){
+      btn.textContent = 'Submit scope';
+      btn.disabled = false;
+      btn.onclick = submitScopeAgain;
       btn.hidden = false;
       if(tipEl) tipEl.hidden = true;
       return;
