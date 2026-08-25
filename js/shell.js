@@ -469,17 +469,44 @@ function renderStatePop(){
       : `<span class="turn-pop-lbl">Waiting on</span> ${t.who} (${roleName}) ${turnNeedFor(proj, state.twoStep, track)}.`}</div>
     ${second ? `<div class="turn-pop-p"><span class="turn-pop-lbl">${t.mine ? 'Then' : 'You'}</span> ${second}</div>` : ''}`;
   const r = anchor.getBoundingClientRect();
-  // Clamped, so opening from the turn chip further along the bar can't push the
-  // card off the right edge.
+  // Clamped, so opening from a chip further along the bar can't push the card
+  // off the right edge.
   const left = Math.max(8, Math.min(r.left, window.innerWidth - 316));
-  el.innerHTML = `<div class="turn-pop-card is-${id}" role="dialog" aria-label="Scope state"
+  /* Which step was pressed decides what the card is about. The lock on the
+     Scope step reports the document — its state, who settled it, what it costs
+     to change. The chip on the active step reports the move — whose it is and
+     what happens next. One card showing both meant step 1 answered for step 2,
+     which is wrong the moment more than one step is live. */
+  const isScopeCard = statePopAnchor.indexOf('stage-turn') === -1;
+  let body;
+  if(isScopeCard){
+    const appr = (id === 'approved') ? scopeApprover() : null;
+    body = `
+      ${appr ? `<div class="turn-pop-who"><span class="turn-pop-av">${initialsOf(appr.who)}</span>
+        <span class="turn-pop-name"><b>${appr.who}</b><span class="turn-pop-role">${appr.role}</span></span></div>
+        <div class="turn-pop-p"><span class="turn-pop-lbl">Approved</span> ${appr.date}</div>` : ''}
+      ${(id === 'locked' && t.role && !t.mine) ? `<div class="turn-pop-p"><span class="turn-pop-lbl">With</span> ${t.who} (${roleName})</div>` : ''}
+      <div class="turn-pop-p"><span class="turn-pop-lbl">${lock.label}</span> ${lock.text}</div>`;
+  } else {
+    const second = t.role
+      ? (t.mine ? turnNextFor(proj, state.twoStep)
+                : turnYoursFor(proj, state.role, state.twoStep, track))
+      : '';
+    body = !t.role ? '<div class="turn-pop-p">Nothing outstanding here.</div>' : `
+      <div class="turn-pop-who"><span class="turn-pop-av${t.mine ? ' is-mine' : ''}">${t.initials}</span>
+        <span class="turn-pop-name"><b>${t.who}</b><span class="turn-pop-role">${roleName}</span></span></div>
+      <div class="turn-pop-p">${t.mine
+        ? `<span class="turn-pop-lbl">You</span> ${turnMineFor(proj, state.twoStep, track)}`
+        : `<span class="turn-pop-lbl">Waiting on</span> ${t.who} (${roleName}) ${turnNeedFor(proj, state.twoStep, track)}.`}</div>
+      ${second ? `<div class="turn-pop-p"><span class="turn-pop-lbl">${t.mine ? 'Then' : 'You'}</span> ${second}</div>` : ''}
+      ${prog}`;
+  }
+  el.innerHTML = `<div class="turn-pop-card is-${id}" role="dialog" aria-label="${isScopeCard ? 'Scope state' : 'Whose turn it is'}"
       style="top:${Math.round(r.bottom + 8)}px;left:${Math.round(left)}px">
-    <div class="turn-pop-lockh">
+    ${isScopeCard ? `<div class="turn-pop-lockh">
       <span class="turn-pop-lock">${id === 'draft' ? LOCK_SVG.open : LOCK_SVG.shut}</span>${st.label}
-    </div>
-    ${turnHtml}
-    <div class="turn-pop-p"><span class="turn-pop-lbl">${lock.label}</span> ${lock.text}</div>
-    ${prog}
+    </div>` : ''}
+    ${body}
   </div>`;
 }
 /* Anywhere else closes it. Registered once — the card is rebuilt, not this. */
@@ -1922,6 +1949,24 @@ function setProjectStage(s){
    across through the export rather than kept a second time here — two copies
    of the same team would drift the moment either changed. Returns '' if the
    panel is not up yet, and the modal simply goes without. */
+/* The signature that stands as the approval: the latest one on the version. Read
+   across from the panel, same source as the roster, so the two cannot disagree
+   about who signed and when. */
+/* Initials from a display name — the panel's roster gives names only. */
+function initialsOf(name){
+  return String(name || '').split(/[\s.]+/).filter(Boolean).map(w => w[0]).join('').slice(0,2).toUpperCase();
+}
+function scopeApprover(){
+  let st = null;
+  try{
+    const ifr = document.getElementById('iframe') || document.querySelector('iframe');
+    if(ifr && ifr.contentWindow && typeof ifr.contentWindow.a2ReviewState === 'function'){
+      st = ifr.contentWindow.a2ReviewState();
+    }
+  }catch(e){ return null; }
+  if(!st || !st.signed || !st.signed.length) return null;
+  return st.signed.slice().sort((a, b) => Date.parse(a.date) - Date.parse(b.date)).pop();
+}
 function reviewRosterHtml(){
   let st = null;
   try{
