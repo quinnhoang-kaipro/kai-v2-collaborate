@@ -338,7 +338,7 @@ function turnNeedFor(stage, twoStep, track){
     case 'awaiting-pub': return 'to approve and publish the scope';
     case 'published':    return track === 'change_order'
                                 ? 'to review the change order'
-                                : 'to track the work and submit closeout once every task is complete';
+                                : 'to keep task progress up to date and submit closeout once every task is complete';
     case 'closeout':     return 'to compare before and after, then approve the closeout';
     default:             return '';
   }
@@ -354,7 +354,7 @@ function turnMineFor(stage, twoStep, track){
     case 'awaiting-pub': return 'Approve and publish the scope to release it to the field.';
     case 'published':    return track === 'change_order'
                                 ? 'Review the change order and approve it, or request an edit if something is wrong.'
-                                : 'Track the work. Submit closeout once every task is complete.';
+                                : 'Add task progress to keep the project updated. Submit closeout once every task is complete.';
     case 'closeout':     return 'Compare before and after, then approve the closeout.';
     default:             return '';
   }
@@ -369,19 +369,28 @@ function turnYoursFor(stage, role, twoStep, track){
   /* Draft is open to everyone with access, so the admin and the manager get the
      same answer — the only thing that is not theirs is the hand-off. Said once
      here rather than twice below, where the two had drifted apart. */
-  const DRAFT_EDITOR = 'You can edit the scope while it is in draft. Handing it off for review is the field agent\'s call.';
+  /* Both can edit a draft; only one of them can move it. The manager's hand-off
+     is not blocked at draft (canHandOffHere), the admin's is — so this said the
+     wrong thing to one of them whichever way it was worded, and is now two
+     lines. */
+  const DRAFT_MANAGER = 'You can edit the scope while it is in draft. Either the field agent or you can hand it off to the next step.';
+  const DRAFT_ADMIN   = 'You can edit the scope while it is in draft. Handing it off for review is the field agent\'s call.';
   switch(role){
     case 'manager':
       if(co)                 return 'If something is wrong with the change order, hand it off with a comment — request an edit and send it back for approval.';
-      if(stage === 'published') return 'Nothing to action. You will be asked again if a change order needs approving.';
+      if(stage === 'published') return 'Nothing to action while the field agent tracks the work. A change order would go to the admin to approve.';
       if(stage === 'closeout')  return 'Nothing to action — the admin signs the closeout off.';
-      if(stage === 'edit')      return DRAFT_EDITOR;
+      if(stage === 'edit')      return DRAFT_MANAGER;
       return 'Nothing yet. It reaches you once the admin has finished their review.';
     case 'admin':
       if(stage === 'awaiting-pub') return 'Your review is done. You can recall the scope if something needs changing before it goes live.';
+      // A live job is the field agent's now, so "nothing to action" needed to say
+      // what does still come back to them — otherwise the admin reads it as being
+      // done with the project.
+      if(stage === 'published') return 'Nothing to action while the field agent tracks the work. Closeout comes to you once every task is complete.';
       // Draft is editable by anyone with access — the hand-off is what is not
       // theirs, so "nothing to action" would have been wrong here.
-      if(stage === 'edit') return DRAFT_EDITOR;
+      if(stage === 'edit') return DRAFT_ADMIN;
       return 'Nothing to action from here.';
     case 'contractor':
       if(co)                 return 'Keep working the approved lines. Anything the change order touches is on hold until it is approved.';
@@ -391,8 +400,8 @@ function turnYoursFor(stage, role, twoStep, track){
     case 'field_agent':
       if(stage === 'edit' || stage === 'submitted') return 'Keep adding what you found on site until the scope is handed off.';
       if(co) return 'You can hand the change order on with a comment if you saw something on site that affects it.';
-      // A live job is where they are most useful, not least: they are on site.
-      if(stage === 'published') return 'Add task progress to keep the project updated.';
+      // No 'published' line: a live job is their move now, so it is turnMineFor
+      // that answers there, not this.
       return 'Nothing to action — the scope has moved past scoping.';
     case 'field_agent_nr':
       // Matches the button, which says "Mark as done" in draft. What is being
@@ -400,6 +409,7 @@ function turnYoursFor(stage, role, twoStep, track){
       if(stage === 'edit')      return 'You can edit the scope, and mark yourself done when you have finished (optional).';
       if(co)                    return 'You can mark the change order as reviewed, so the admin knows you have read it.';
       if(stage === 'reviewing') return 'You can request an edit if the scope does not match what you saw on site.';
+      if(stage === 'published') return 'You can add task progress from site. Submitting closeout is the responsible field agent\'s call.';
       return 'Nothing to action — this scope is not yours to move.';
     case 'renter':
       return 'Nothing to action. You can view the scope, without pricing.';
@@ -409,7 +419,7 @@ function turnYoursFor(stage, role, twoStep, track){
 }
 /* Who picks it up after the person whose move it is now. Only rendered when the
    move IS yours, so it can address you directly. */
-function turnNextFor(stage, twoStep){
+function turnNextFor(stage, twoStep, track){
   switch(stage){
     // The draft's owner is the field agent, so what follows is somebody else's
     // review — it used to say "you review it next", which was only true while
@@ -420,7 +430,11 @@ function turnNextFor(stage, twoStep){
     case 'reviewing':    return twoStep ? 'It goes to the manager to publish.' : 'Publishing is yours too — the scope goes live.';
     case 'review-done':  return 'It goes to the manager to publish.';
     case 'awaiting-pub': return 'The scope goes live and the contractor starts work.';
-    case 'published':    return 'Closeout review follows once the work is done.';
+    // A change order and a live job share this stage but not what follows: one
+    // releases the work to carry on, the other ends it.
+    case 'published':    return track === 'change_order'
+                                ? 'The approved lines are released and the work carries on.'
+                                : 'It goes to the admin to review the closeout.';
     case 'closeout':     return 'The project is complete.';
     default:             return '';
   }
@@ -545,7 +559,7 @@ function renderStatePop(){
   /* Who holds the move and what for, then what YOU can do about it. Dropped
      entirely at a terminal stage, where nobody holds anything. */
   const second = t.role
-    ? (t.mine ? turnNextFor(proj, state.twoStep)
+    ? (t.mine ? turnNextFor(proj, state.twoStep, track)
               : turnYoursFor(proj, state.role, state.twoStep, track))
     : '';
   const turnHtml = !t.role ? '' : `
@@ -577,7 +591,7 @@ function renderStatePop(){
       ${(id !== 'approved') ? scopeHistoryHtml() : ''}`;
   } else {
     const second = t.role
-      ? (t.mine ? turnNextFor(proj, state.twoStep)
+      ? (t.mine ? turnNextFor(proj, state.twoStep, track)
                 : turnYoursFor(proj, state.role, state.twoStep, track))
       : '';
     body = !t.role ? '<div class="turn-pop-p">Nothing outstanding here.</div>' : `
@@ -674,7 +688,11 @@ function turnRoleFor(stage, twoStep){
     // The whole point of 2-step: the publish belongs to the manager, and to
     // the admin only when the second step is switched off.
     case 'awaiting-pub':  return twoStep ? 'manager' : 'admin';
-    case 'published':     return 'admin';
+    /* A live job belongs to the field agent: they are the ones on site, so
+       tracking the work and calling it finished is theirs. A change order is the
+       exception — that is an approval against a frozen budget, which is the
+       admin's. Closeout is the admin's for the same reason. */
+    case 'published':     return state.workTrack === 'change_order' ? 'admin' : 'field_agent';
     case 'closeout':      return 'admin';
     default:              return null;   // closeout-approved — done
   }
@@ -1720,7 +1738,10 @@ function messageFor(role, stage){
      do next. When the move isn't yours the caption now says so and names who
      has it; when it is, the stage copy below explains the move. */
   const turn = whoseTurn(stage, role, state.twoStep);
-  if(turn.role && !turn.mine) return `Nothing for you here — waiting on ${turn.who} (${turn.role === 'manager' ? 'Manager' : turn.role === 'admin' ? 'Admin' : turn.role}).`;
+  // roleName(), not a two-case ternary falling through to the raw id: the live
+  // job is the field agent's now, which that ternary would have printed as
+  // "field_agent".
+  if(turn.role && !turn.mine) return `Nothing for you here — waiting on ${turn.who} (${roleName(turn.role)}).`;
   if(stage==='edit') return `Build and refine the scope. Hand off for review when ready.`;
   if(stage==='submitted') return `Scope is locked. Recall to keep editing.`;
   if(stage==='reviewing') return state.twoStep
