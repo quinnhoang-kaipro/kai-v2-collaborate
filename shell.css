@@ -193,6 +193,9 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 .turn-pop-card{border-left:3px solid var(--stroke)}
 .turn-pop-card.is-locked{border-left-color:var(--accent-deep,#E8EA5F)}
 .turn-pop-card.is-approved{border-left-color:var(--success)}
+/* A change order reads as unsettled, like locked, not as the approved scope
+   underneath it. */
+.turn-pop-card.is-co{border-left-color:var(--accent-deep,#E8EA5F)}
 .turn-pop-card{position:fixed;pointer-events:auto;width:268px;background:var(--white);
   border:1px solid var(--stroke);box-shadow:0 12px 30px rgba(26,26,26,.22);padding:13px 14px 14px}
 .turn-pop-who{display:flex;align-items:center;gap:9px;margin-bottom:11px}
