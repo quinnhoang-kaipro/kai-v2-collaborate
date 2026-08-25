@@ -1986,7 +1986,7 @@ function submitForReview(){
      hand-off turns into a surprise. */
   const note = mine
     ? "You can keep editing and hand off again until it is approved. Everyone else needs to request edit access while it waits."
-    : `${who} (${role}) is responsible for this scope right now. You can still hand it off to whoever needs it next — they will be told you did.`;
+    : `${who} (${role}) is responsible for this scope currently. You can still hand it off to whoever needs it next, we'll notify ${who}.`;
   openHandoff({
     subject: 'the scope',
     defaultTo: (proj === 'reviewing') ? 'manager' : 'admin',
