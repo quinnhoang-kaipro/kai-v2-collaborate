@@ -1,3 +1,10 @@
+/* Captions for a line's photo strip, in the order the photos were taken: the
+   walk that found the line, then the detail shots. Lost when this file was split
+   out — both this file and progress.js read it, neither defined it, so opening
+   any historical document threw before it rendered. It belongs here, with the
+   paper that shows the strip. */
+const ART_PHOTO_CAPS = ['Initial walk','Detail','Wide','Spec','Context','Angle'];
+
 function renderArtifact(){
   const body = document.getElementById('workBody');
   if(!body) return;
