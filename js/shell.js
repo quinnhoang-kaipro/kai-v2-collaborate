@@ -478,11 +478,12 @@ function docLockLine(id, mine){
   if(id === 'locked') return {label:'Editing', text: mine
     ? 'Paused for everyone else while it is with you.'
     : 'Paused until they pass it back or approve.'};
-  if(id === 'co') return {label:'Editing', text: mine
-    ? 'The approved scope stays frozen. Approving the change order is what moves the budget.'
-    : 'Paused until the change order is approved or sent back.'};
-  const v = VERSIONS.find(x => x.id === currentVersionId) || VERSIONS[0];
-  return {label:'Budget', text:`${(v && v.budget) || '\u2014'} \u2014 any changes need to be processed as a Change order.`};
+  /* The panel's ladder, not the shell's: budgets there are the sum of the lines
+     that actually exist at each version, and the two lists had already drifted
+     apart on both the figure and the dates. One source, so the approved budget
+     here and the new budget on a change order are the same arithmetic. */
+  const v = changeOrderInfo();
+  return {label:'Budget', text:`${v.budget || '\u2014'} \u2014 any changes need to be processed as a Change order.`};
 }
 /* ── hand-off records ────────────────────────────────────────────────
    A hand-off is arguably the most consequential event in this flow and it was
@@ -500,7 +501,14 @@ function docLockLine(id, mine){
    other row. */
 let sessionHandoffs = [];
 function handoffLog(){
-  // Anything past draft got there by being handed off, so the record exists.
+  // Anything past draft got there by being handed off, so the record exists. A
+  // change order got there the same way, on its own date — same event, same
+  // words, because it is the same act on the same document.
+  if(inChangeOrder()){
+    const co = changeOrderInfo();
+    return [{when: co.submitted || co.date, from:'M. Alvarez', fromRole:'Field agent', to:'A. Novak'}]
+      .concat(sessionHandoffs);
+  }
   const seeded = (state.projectStage === 'edit')
     ? []
     : [{when:'Apr 9, 2026', from:'M. Alvarez', fromRole:'Field agent', to:'A. Novak'}];
@@ -535,29 +543,6 @@ function scopeHistoryHtml(){
   return `<div class="sh-list">
     ${rows}
     ${left ? `<div class="sh-foot">${left} still to mark it done</div>` : ''}
-  </div>`;
-}
-
-/* The change order's own log — same shape as the scope's, different records.
-   Reads bottom-up: submitted, then who has signed it off since. */
-function coHistoryHtml(){
-  const co = changeOrderInfo();
-  const events = CO_REVIEW.signed.map(p => ({
-    when: p.date,
-    what: `<b>${p.who}</b> <span class="sh-role">${p.role}</span> marked as reviewed`
-  })).concat([{
-    when: co.date,
-    what: `<b>${CO_REVIEW.by.who}</b> <span class="sh-role">${CO_REVIEW.by.role}</span> submitted change order ${co.num}`
-  }]);
-  const rows = events.sort((a, b) => (Date.parse(b.when) || 0) - (Date.parse(a.when) || 0))
-    .map(e => `<div class="sh-row">
-        <div class="sh-when">${e.when}</div>
-        <div class="sh-what">${e.what}</div>
-      </div>`).join('');
-  const left = CO_REVIEW.pending.length;
-  return `<div class="sh-list">
-    ${rows}
-    ${left ? `<div class="sh-foot">${left} still to mark it reviewed</div>` : ''}
   </div>`;
 }
 
@@ -616,16 +601,21 @@ function renderStatePop(){
   let body;
   if(isScopeCard){
     const appr = (id === 'approved') ? scopeApprover() : null;
+    const co   = inChangeOrder() ? changeOrderInfo() : null;
     body = `
       ${appr ? `<div class="turn-pop-who"><span class="turn-pop-av">${initialsOf(appr.who)}</span>
         <span class="turn-pop-name"><b>${appr.who}</b><span class="turn-pop-role">${appr.role}</span></span></div>
         <div class="turn-pop-p"><span class="turn-pop-lbl">Approved</span> ${appr.date}</div>` : ''}
-      ${((id === 'locked' || id === 'co') && t.role && !t.mine) ? `<div class="turn-pop-p"><span class="turn-pop-lbl">With</span> ${t.who} (${roleName})</div>` : ''}
-      <div class="turn-pop-p"><span class="turn-pop-lbl">${lock.label}</span> ${lock.text}</div>
-      ${/* The frozen figure is the reason a change order exists, so it stays on
-           the card next to the change order's own state. */
-        (id === 'co') ? `<div class="turn-pop-p"><span class="turn-pop-lbl">Approved budget</span> ${changeOrderInfo().budget || '\u2014'} \u2014 this change order is not in it yet.</div>` : ''}
-      ${id === 'co' ? coHistoryHtml() : (id !== 'approved') ? scopeHistoryHtml() : ''}`;
+      ${(id === 'locked' && t.role && !t.mine) ? `<div class="turn-pop-p"><span class="turn-pop-lbl">With</span> ${t.who} (${roleName})</div>` : ''}
+      ${/* A change order swaps the editing line for the two figures. What editing
+           costs is not the question here — the scope is already approved, so what
+           you want to know is what the budget is and what approving would make
+           it. Both come off the panel's stamped ladder. */
+        co
+          ? `<div class="turn-pop-p"><span class="turn-pop-lbl">Approved budget</span> ${co.prevBudget || '\u2014'}</div>
+             <div class="turn-pop-p"><span class="turn-pop-lbl">New budget</span> ${co.budget || '\u2014'}</div>`
+          : `<div class="turn-pop-p"><span class="turn-pop-lbl">${lock.label}</span> ${lock.text}</div>`}
+      ${(id !== 'approved') ? scopeHistoryHtml() : ''}`;
   } else {
     const second = t.role
       ? (t.mine ? turnNextFor(proj, state.twoStep, track)
@@ -643,7 +633,7 @@ function renderStatePop(){
   el.innerHTML = `<div class="turn-pop-card is-${id}" role="dialog" aria-label="${isScopeCard ? 'Scope state' : 'Whose turn it is'}"
       style="top:${Math.round(r.bottom + 8)}px;left:${Math.round(left)}px">
     ${isScopeCard ? `<div class="turn-pop-lockh">
-      <span class="turn-pop-lock">${id === 'draft' ? LOCK_SVG.open : LOCK_SVG.shut}</span>${docStateLabel(id)}
+      <span class="turn-pop-lock">${id === 'draft' ? LOCK_SVG.open : LOCK_SVG.shut}</span>${(DOC_STATE[id] || {}).label || ''}
     </div>` : ''}
     ${body}
   </div>`;
@@ -677,40 +667,35 @@ const DOC_STATE = {
   draft:    {label:'Draft',    hint:'Anyone with edit rights can edit'},
   locked:   {label:'Locked',   hint:'Editing paused'},
   approved: {label:'Approved', hint:'Budget frozen'},
-  /* A fourth, because a change order is not any of the three. The scope is
-     approved and the budget frozen — that is why a change order exists at all —
-     but there is a live document waiting on a decision again, so "Approved"
-     alone left the Scope step reporting a settled state while the whole screen
-     was about an unsettled one. Its label carries the number. */
-  co:       {label:'Change order', hint:'Awaiting approval against a frozen budget'},
 };
+/* A change order is a scope going round the loop again, so it gets no state of
+   its own: one in review is a locked document waiting on a named person, which
+   is what 'locked' already means. What differs between the two passes is the
+   records against them, not the states they move through. */
 function docStateFor(stage){
   if(stage === 'edit') return 'draft';
-  if(stage === 'published' && state.workTrack === 'change_order') return 'co';
+  if(stage === 'published' && state.workTrack === 'change_order') return 'locked';
   if(stage === 'published' || stage === 'closeout' || stage === 'closeout-approved') return 'approved';
   return 'locked';   // submitted · reviewing · review-done · awaiting-pub
 }
-/* The change order under review, numbered and dated off the version it created:
-   version 3 is change order 2, because version 1 was the original scope. Kept
-   derived rather than restated so the stepper, the card and the version list
-   cannot drift. */
-function changeOrderInfo(){
-  const v = VERSIONS[0] || {};
-  return {num: Math.max(1, (v.num || 2) - 1), date: v.at || '\u2014', budget: v.budget};
+/* Is a change order the live document right now? Not a different kind of state —
+   the answer to "which document" rather than "what state is it in". */
+function inChangeOrder(){
+  return state.projectStage === 'published' && state.workTrack === 'change_order';
 }
-/* Who has signed off the change order, as opposed to the scope. Separate list
-   because they are separate decisions taken weeks apart — reusing the scope
-   roster would have dated the change order's reviews before it was submitted. */
-const CO_REVIEW = {
-  by:      {who:'M. Alvarez', role:'Field agent'},   // raised it on site
-  signed:  [{date:'May 8, 2026', who:'T. Okafor', role:'Manager'},
-            {date:'May 7, 2026', who:'G. Han',    role:'Field agent'}],
-  pending: [{who:'S. Patel', role:'Ops'}],
-};
-/* The header label, which for a change order has to carry its number. */
-function docStateLabel(id){
-  if(id === 'co') return `Change order ${changeOrderInfo().num} \u00b7 in review`;
-  return (DOC_STATE[id] || {}).label || '';
+/* The version awaiting a decision, read from the panel rather than restated
+   here: it owns the ladder, and its budgets are stamped from the lines that
+   actually exist at each version. Falls back to the shell's own list when the
+   panel is not reachable yet. */
+function changeOrderInfo(){
+  try{
+    const ifr = document.getElementById('iframe') || document.querySelector('iframe');
+    if(ifr && ifr.contentWindow && typeof ifr.contentWindow.a2VersionInfo === 'function'){
+      return ifr.contentWindow.a2VersionInfo();
+    }
+  }catch(e){ /* cross-origin or not loaded — fall through */ }
+  const v = VERSIONS[0] || {};
+  return {label:'Change Order ' + Math.max(1, (v.num || 2) - 1), date: v.at || '', budget: v.budget, prevBudget: null};
 }
 /* Open padlock for draft, shut for the other two — the same glyph in two
    positions, so the difference reads without the label. */
@@ -1709,7 +1694,7 @@ function renderStages(){
     const isScope = (i === 0);
     return `<div class="stage ${cls}${isScope ? ' is-scope-info' : ''}"
       ${isScope ? `role="button" tabindex="0" aria-haspopup="dialog"
-        title="${docStateLabel(docState)} — press for detail"
+        title="${(DOC_STATE[docState] || {}).label || ''} — press for detail"
         onclick="event.stopPropagation();toggleStatePop('.stage.is-scope-info')"
         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleStatePop('.stage.is-scope-info');}"` : ''}>
       <span class="stage-num">${i+1}</span>
@@ -1764,8 +1749,7 @@ function subStatusMeta(sgId){
     if(proj==='submitted' || proj==='reviewing' || proj==='review-done' || proj==='awaiting-pub') return 'Scope in review';
     /* A change order against a live scope is what the whole screen is about, so
        the step reports that rather than the settled state underneath it. */
-    if(proj==='published' && state.workTrack === 'change_order')
-      return `Change Order ${changeOrderInfo().num} in review`;
+    if(inChangeOrder()) return `${changeOrderInfo().label} in review`;
     if(proj==='published' || proj==='closeout' || proj==='closeout-approved') return 'Scope approved';
     return 'Scope in draft';
   }
@@ -2152,11 +2136,17 @@ function scopeApprover(){
   if(!st || !st.signed || !st.signed.length) return null;
   return st.signed.slice().sort((a, b) => Date.parse(a.date) - Date.parse(b.date)).pop();
 }
+/* The roster for whichever version is live. a2ReviewState() takes a version and
+   defaults to the scope; at a change order the live document is the pending
+   version, so that is the one whose sign-offs every surface should be reading.
+   One call, so the card, the hand-off line and the approve confirm cannot end up
+   describing different documents. */
 function reviewState(){
   try{
     const ifr = document.getElementById('iframe') || document.querySelector('iframe');
     if(ifr && ifr.contentWindow && typeof ifr.contentWindow.a2ReviewState === 'function'){
-      return ifr.contentWindow.a2ReviewState();
+      const ver = inChangeOrder() ? (changeOrderInfo().ver || null) : null;
+      return ifr.contentWindow.a2ReviewState(ver);
     }
   }catch(e){ return null; }
   return null;

@@ -100,3 +100,35 @@ window.a2JumpVer = function(v){ setT(verEnd(v)); };   // land on that version as
    cannot see REVIEWS/REVIEWERS directly. Defaults to the version being worked
    on — the first in the ladder, which a2-stage.js keeps in the draft stages. */
 window.a2ReviewState = function(v){ return reviewStateOf(v || VER_ORDER[0]); };
+/* The version ladder, for the same reason: the shell names the document in the
+   stepper and quotes its budget, and both of those live here — labels in VER,
+   budgets stamped from the lines that actually exist at each version. Restating
+   either in the shell is how the two drift apart.
+
+   `pending` is the version awaiting a decision (a change order at the
+   change-order step), and `prev` is the last one that was approved — which is
+   the pair you need to say what the budget is now and what it would become. */
+window.a2VersionInfo = function(v){
+  // The shell can ask before Artifact 2 has ever been rendered, and the budgets
+  // are stamped by the time model — without this they all read $0. Guarded
+  // internally, so calling it here is free.
+  buildOrdered();
+  const id  = v || (typeof A2_PENDING_VER !== 'undefined' && A2_PENDING_VER) || VER_ORDER[VER_ORDER.length - 1];
+  const i   = VER_ORDER.indexOf(id);
+  const pv  = i > 0 ? VER_ORDER[i - 1] : null;
+  const m   = VER[id] || {};
+  /* `date` on a version is the date it was APPROVED, which a pending one has not
+     been — quoting it as the submission put the hand-off after reviews of it.
+     The earliest sign-off is the last moment it must already have existed, so
+     that is the date to show; an unreviewed version falls back to its own. */
+  const sigs = (typeof REVIEWS === 'undefined' ? [] : REVIEWS.filter(r => r.ver === id))
+    .map(r => r.date).sort((a, b) => Date.parse(a) - Date.parse(b));
+  return {
+    ver: id, label: m.label || id, date: m.date || '',
+    submitted: sigs[0] || m.date || '',
+    budget: _fmtDollars(m.budget || 0),
+    prevVer: pv, prevLabel: pv ? VER[pv].label : null,
+    prevBudget: pv ? _fmtDollars(VER[pv].budget || 0) : null,
+    isPending: (typeof A2_PENDING_VER !== 'undefined') && A2_PENDING_VER === id,
+  };
+};
