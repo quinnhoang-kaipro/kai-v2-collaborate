@@ -2029,8 +2029,13 @@ function submitForReview(){
      is not to stop you — a manager passing a scope along is legitimate — it is
      that moving someone else's work without knowing it was theirs is how a
      hand-off turns into a surprise. */
+  /* Nothing above the picker when it is your own scope. The lock state already
+     says who may edit and until when — the Scope step's card carries it — so
+     repeating it here was two lines to read before reaching the decision. The
+     flagged note stays for someone else's document, where the fact is not
+     available anywhere else on screen. */
   const note = mine
-    ? "You can keep editing and hand off again until it is approved. Everyone else needs to request edit access while it waits."
+    ? ''
     : `${who} (${role}) is responsible for this scope currently. You can still hand it off to whoever needs it next, we'll notify ${who}.`;
   openHandoff({
     subject: 'the scope',
