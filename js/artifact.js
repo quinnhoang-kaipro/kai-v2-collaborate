@@ -195,6 +195,33 @@ function _histNoteHtml(v){
     <p class="hist-note-body">${esc(n.text)}</p>
   </div>`;
 }
+/* The same notes, for the Notes drawer opened from the Scope row. They are
+   scope-level internal notes that happen to live on a document, so a reader
+   going through the project's notes should find them there too — otherwise the
+   only way to know why a version was sent when it was is to open all three
+   artifacts. Shaped for dwNotes(), newest first.
+
+   Internal, so a contractor viewing the same drawer does not get them. The
+   drawer does not filter on `hidden` — it only badges it — so the filtering has
+   to happen here. */
+function _histSubmissionNotes(){
+  if(typeof IS_CONTRACTOR !== 'undefined' && IS_CONTRACTOR) return [];
+  if(typeof VERSIONS === 'undefined') return [];
+  return VERSIONS.slice()
+    .sort((a, b) => (b.num || 0) - (a.num || 0))
+    .map(v => {
+      const n = _histNoteFor(v);
+      if(!n) return null;
+      return {
+        who: n.who, role: n.role, when: n.when, body: n.text,
+        // The chip says what the note is attached to, and for these that is the
+        // document rather than a level in the scope.
+        level: versionLabel(v),
+        hidden: true,
+      };
+    })
+    .filter(Boolean);
+}
 // _renderHistoricalDoc — read-only view of a frozen version. Reuses
 // _renderCopyPaper with a synthetic "no filters" copy so we don't
 // duplicate the paper render logic. No filter strip, no Share button —

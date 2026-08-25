@@ -2057,6 +2057,10 @@ function scopeNotesPool(){
   if(typeof USER_NOTES !== 'undefined'){
     Object.keys(USER_NOTES).forEach(k => out.push(...(USER_NOTES[k] || [])));
   }
+  /* Ahead of the room and task notes: these are about the document as a whole,
+     which is the level this drawer is opened at, and the newest of them is the
+     most recent note in the project. */
+  if(typeof _histSubmissionNotes === 'function') out.push(..._histSubmissionNotes());
   const rooms = [...new Set((typeof TASKS !== 'undefined' ? TASKS : []).map(t => t.room))];
   rooms.forEach(r => {
     if(typeof roomNotes === 'function') out.push(...(roomNotes(r) || []));
