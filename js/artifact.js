@@ -121,6 +121,74 @@ function _sowIdFor(seed){
   for(let i = 0; i < s.length; i++){ h = ((h << 5) - h + s.charCodeAt(i)) | 0; }
   return 'SOW-' + Math.abs(h).toString(16).toUpperCase().padStart(8, '0').slice(0, 8);
 }
+/* ── the submitter's internal note ───────────────────────────────────
+   A document explains what the work is; it does not explain why it was sent
+   when it was. That belongs to whoever submitted it, and it is internal — so it
+   sits above the paper rather than in it, where a shared copy would carry it out
+   of the building.
+
+   Author and subject are read off the version's own changes rather than written
+   down again here: whoever authored the most of them submitted it, and the
+   contractor named is one actually assigned to a line that version touched. Both
+   come from Artifact 2's history, which is the same script scope. Falls back to
+   the review roster and the contractor list when that history is not loaded. */
+function _histVerId(v){
+  // VERSIONS is v1/v2/v3, the change history is orig/co1/co2 — same ladder,
+  // different names, matched by position.
+  if(typeof VER_ORDER === 'undefined') return null;
+  return VER_ORDER[(v.num || 1) - 1] || null;
+}
+function _histNoteFor(v){
+  const ver = _histVerId(v);
+  const changes = [];
+  if(ver && typeof SCOPE !== 'undefined'){
+    SCOPE.forEach(g => g.tasks.forEach(t => (t.changes || []).forEach(ch => {
+      if(ch.ver === ver) changes.push({ch, t});
+    })));
+  }
+  // Whoever made the most changes in this version is who sent it.
+  const tally = {};
+  changes.forEach(({ch}) => {
+    if(!ch.who) return;
+    tally[ch.who] = tally[ch.who] || {who:ch.who, role:ch.role || '', n:0};
+    tally[ch.who].n++;
+  });
+  const author = Object.values(tally).sort((a, b) => b.n - a.n)[0]
+    || (typeof REVIEWERS !== 'undefined' ? REVIEWERS[REVIEWERS.length - 1] : {who:'M. Alvarez', role:'Field Agent'});
+  // A contractor on one of the lines this version touched, so the note is about
+  // work the reader can actually find in the document below it.
+  const gcs = [...new Set(changes.map(({t}) => t.gc).filter(Boolean))];
+  // Stepped by version, so successive notes are not all about the same firm.
+  const gc = gcs[((v.num || 1) - 1) % (gcs.length || 1)] || gcs[0]
+    || (typeof CONTRACTORS !== 'undefined' ? CONTRACTORS[0] : 'the contractor');
+  const added   = changes.filter(({ch}) => ch.ct === 'added').length;
+  const removed = changes.filter(({ch}) => ch.ct === 'removed').length;
+  const lines = n => `${n} line${n === 1 ? '' : 's'}`;
+  const text = ((v.num || 1) === 1)
+    ? `Submitting scope for approval while ${gc}'s availability is pending. A change order may follow within the week to confirm.`
+    : removed
+      ? `${gc} confirmed dates and the resident took ${lines(removed)} back out, so this is the scope as it now stands. Nothing else is waiting on anyone.`
+      : `${gc} came back with dates, so this carries the revised labor${added ? ` and ${lines(added)} the last walk turned up` : ''}. Sending it up now rather than holding the whole scope for it.`;
+  return {who:author.who, role:author.role, text};
+}
+// Local rather than Artifact 2's initials(): this file should not stop working
+// if that one is not on the page.
+function _histInitials(name){
+  return String(name || '').split(/[\s.]+/).filter(Boolean).map(w => w[0]).join('').slice(0,2).toUpperCase();
+}
+function _histNoteHtml(v){
+  const n = _histNoteFor(v);
+  if(!n) return '';
+  return `<div class="hist-note">
+    <div class="hist-note-hdr">
+      <span class="hist-note-av">${esc(_histInitials(n.who))}</span>
+      <span class="hist-note-who"><b>${esc(n.who)}</b>${n.role ? `<span class="hist-note-role">${esc(n.role)}</span>` : ''}</span>
+      <span class="hist-note-sp"></span>
+      <span class="hist-note-tag" title="Visible to your team only — not part of the document or any shared copy">Internal note</span>
+    </div>
+    <p class="hist-note-body">${esc(n.text)}</p>
+  </div>`;
+}
 // _renderHistoricalDoc — read-only view of a frozen version. Reuses
 // _renderCopyPaper with a synthetic "no filters" copy so we don't
 // duplicate the paper render logic. No filter strip, no Share button —
@@ -153,6 +221,7 @@ function _renderHistoricalDoc(v){
         Print
       </button>
     </div>
+    ${_histNoteHtml(v)}
     <div class="copy-paper hist-paper">${_renderCopyPaper(readOnlyCopy)}</div>
   </div>`;
 }
