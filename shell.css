@@ -401,7 +401,12 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 .app-toolbar .stage-label{color:rgba(255,255,255,.55)}
 .app-toolbar .stage.done .stage-label{color:rgba(255,255,255,.8)}
 .app-toolbar .stage.active .stage-label{color:var(--white)}
-.app-toolbar .stage:not(:last-child)::after{border-left-color:rgba(255,255,255,.35)}
+/* TRYING IT WITHOUT THE ARROWS. The 40px gap between nodes already reads as a
+   sequence, and the numbered hexagons carry the order — the triangles were a
+   third thing saying the same thing. Only the toolbar's copy is hidden; the
+   base .stage rule still draws them anywhere else the stepper is used.
+   Revert = delete this block. */
+.app-toolbar .stage:not(:last-child)::after{display:none}
 .app-toolbar .stage-track-name{color:rgba(255,255,255,.55)}
 .app-toolbar .stage-track.active .stage-track-name{color:var(--white);font-weight:700}
 .app-toolbar .stage-track:hover .stage-track-name{color:var(--white)}
