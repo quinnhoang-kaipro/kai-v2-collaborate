@@ -476,8 +476,8 @@ function docLockLine(id, mine){
   // they pass it back" is only true when someone else is holding it; said to the
   // person who has it, it points at nobody.
   if(id === 'locked') return {label:'Editing', text: mine
-    ? 'Paused for everyone else while it is with you.'
-    : 'Paused until they pass it back or approve.'};
+    ? 'Open — but the version submitted for review stays as it was until you send a new one.'
+    : 'You can edit, though nothing you change is reflected in the scope already submitted.'};
   /* The panel's ladder, not the shell's: budgets there are the sum of the lines
      that actually exist at each version, and the two lists had already drifted
      apart on both the figure and the dates. One source, so the approved budget
@@ -633,7 +633,7 @@ function renderStatePop(){
   el.innerHTML = `<div class="turn-pop-card is-${id}" role="dialog" aria-label="${isScopeCard ? 'Scope state' : 'Whose turn it is'}"
       style="top:${Math.round(r.bottom + 8)}px;left:${Math.round(left)}px">
     ${isScopeCard ? `<div class="turn-pop-lockh">
-      <span class="turn-pop-lock">${id === 'draft' ? LOCK_SVG.open : LOCK_SVG.shut}</span>${(DOC_STATE[id] || {}).label || ''}
+      <span class="turn-pop-lock">${id === 'approved' ? LOCK_SVG.shut : LOCK_SVG.open}</span>${(DOC_STATE[id] || {}).label || ''}
     </div>` : ''}
     ${body}
   </div>`;
@@ -665,7 +665,11 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape') closeStatePop
    proposal against them. Its own pending state is the scrubber's job. */
 const DOC_STATE = {
   draft:    {label:'Draft',    hint:'Anyone with edit rights can edit'},
-  locked:   {label:'Locked',   hint:'Editing paused'},
+  /* Not "Locked": a submitted scope does not stop anyone typing. What freezes is
+     the version under review — the working document stays open, and anything
+     done to it simply is not in what the reviewer is holding. Calling that
+     locked sent people looking for permission they already had. */
+  locked:   {label:'In review', hint:'Submitted version frozen; the working document is not'},
   approved: {label:'Approved', hint:'Budget frozen'},
 };
 /* A change order is a scope going round the loop again, so it gets no state of
@@ -1700,7 +1704,9 @@ function renderStages(){
       <span class="stage-num">${i+1}</span>
       <div class="stage-info">
         <div class="stage-label">${sub}</div>
-        ${isScope ? `<span class="stage-lock">${docState === 'draft' ? LOCK_SVG.open : LOCK_SVG.shut}</span>` : ''}
+        ${/* Shut only at approved, the one state where the document really is
+              closed. Draft and review both leave the working copy editable. */''}
+        ${isScope ? `<span class="stage-lock">${docState === 'approved' ? LOCK_SVG.shut : LOCK_SVG.open}</span>` : ''}
         ${isActive ? turnChip : ''}
       </div>
     </div>`;
