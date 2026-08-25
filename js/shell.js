@@ -123,6 +123,11 @@ function confirmCoHandoff(){
   const cfg = handoffCfg || {};
   coHandoffOpen = false;
   renderCoHandoff();
+  if(to){
+    const me = ROLE_PEOPLE[state.role] || {name:'You'};
+    const myRole = (ROLES.find(r => r.id === state.role) || {}).name || '';
+    sessionHandoffs.push({when:'Just now', from:me.name, fromRole:myRole, to:to.name});
+  }
   if(typeof cfg.onDone === 'function') cfg.onDone(to, coHandoffNote);
 }
 /* The roster, demoted. It is context for choosing a recipient, not a section of
@@ -453,6 +458,29 @@ function docLockLine(id, mine){
   const v = VERSIONS.find(x => x.id === currentVersionId) || VERSIONS[0];
   return {label:'Budget', text:`${(v && v.budget) || '\u2014'} \u2014 any changes need to be processed as a Change order.`};
 }
+/* ── hand-off records ────────────────────────────────────────────────
+   A hand-off is arguably the most consequential event in this flow and it was
+   the one thing nothing recorded: the sign-offs carry dates, the hand-off that
+   moved the document did not. So the log could say who signed but never who
+   passed it to whom.
+
+   Shell-side, because the shell is where a hand-off is performed. That does mean
+   Artifact 2 cannot see these — if the timeline should show them too, they
+   belong in the panel's data beside REVIEWS and get read across like the
+   roster is.
+
+   Session hand-offs are stamped "Just now" rather than a date: the demo's
+   calendar is April 2026, and a real timestamp would sit years after every
+   other row. */
+let sessionHandoffs = [];
+function handoffLog(){
+  // Anything past draft got there by being handed off, so the record exists.
+  const seeded = (state.projectStage === 'edit')
+    ? []
+    : [{when:'Apr 9, 2026', from:'M. Alvarez', fromRole:'Field agent', to:'A. Novak'}];
+  return seeded.concat(sessionHandoffs);
+}
+
 /* The scope's dated events, newest first, for the Scope step's card. Same
    sign-off records the hand-off dialogue summarises — this is the long form,
    which is what you want when the card is the only thing on screen telling you
@@ -462,17 +490,25 @@ function docLockLine(id, mine){
    scope was handed off or by whom, so no "submitted" row is invented here. */
 function scopeHistoryHtml(){
   const st = reviewState();
-  if(!st || !st.signed || !st.signed.length) return '';
-  const rows = st.signed.slice()
-    .sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
-    .map(p => `<div class="sh-row">
-        <span class="sh-when">${p.date}</span>
-        <span class="sh-what"><b>${p.who}</b> <span class="sh-role">${p.role}</span> marked as done</span>
+  const events = handoffLog().map(h => ({
+    when: h.when,
+    what: `<b>${h.from}</b> handed off to <b>${h.to}</b>`
+  })).concat(((st && st.signed) || []).map(p => ({
+    when: p.date,
+    what: `<b>${p.who}</b> <span class="sh-role">${p.role}</span> marked as done`
+  })));
+  if(!events.length) return '';
+  // "Just now" has no parseable date and is always the most recent thing here.
+  const at = e => (e.when === 'Just now') ? Infinity : (Date.parse(e.when) || 0);
+  const rows = events.sort((a, b) => at(b) - at(a))
+    .map(e => `<div class="sh-row">
+        <div class="sh-when">${e.when}</div>
+        <div class="sh-what">${e.what}</div>
       </div>`).join('');
-  const left = (st.pending || []).length;
+  const left = ((st && st.pending) || []).length;
   return `<div class="sh-list">
     ${rows}
-    ${left ? `<div class="sh-foot">${left} still to mark ${left === 1 ? 'theirs' : 'theirs'} done</div>` : ''}
+    ${left ? `<div class="sh-foot">${left} still to mark it done</div>` : ''}
   </div>`;
 }
 
@@ -854,6 +890,7 @@ function renderPresets(){
 function applyPreset(id){
   const p=PRESETS.find(x=>x.id===id); if(!p) return;
   Object.assign(state, p.state, {preset:id});
+  sessionHandoffs = []; // each preset is a fresh scenario, not a continuation
   saveState();
   viewStage = p.state.viewStage || null;
   // Force iframe reload so seed param takes effect

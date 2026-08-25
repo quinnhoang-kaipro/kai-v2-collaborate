@@ -212,15 +212,18 @@ body.tb-hidden .tb-reveal{display:inline-flex}
    A log, so it reads as one: date in mono at a fixed column, the event beside
    it. Not a labelled paragraph like the lines above — those are statements
    about now, this is what has already happened. */
-.sh-list{margin-top:9px;padding-top:9px;border-top:1px solid var(--stroke)}
-.sh-row{display:flex;gap:9px;font-size:12px;line-height:1.45;color:var(--t2)}
-.sh-row + .sh-row{margin-top:5px}
-.sh-when{flex:0 0 76px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.03em;
-  color:var(--t3);padding-top:2px;white-space:nowrap}
+.sh-list{margin-top:10px;padding-top:10px;border-top:1px solid var(--stroke)}
+/* Date above the event, not beside it. Side by side, a date column wide enough
+   for "Apr 11, 2026" left the sentence wrapping onto two lines while most of the
+   date column sat empty — and the hand-off rows are the longer sentences. */
+.sh-row + .sh-row{margin-top:9px}
+.sh-when{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--t3);margin-bottom:2px}
+.sh-what{font-size:12px;line-height:1.4;color:var(--t2)}
 .sh-what b{font-weight:600;color:var(--ink)}
 .sh-role{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.06em;
   text-transform:uppercase;color:var(--t3)}
-.sh-foot{margin-top:7px;font-size:11.5px;font-style:italic;color:var(--t3)}
+.sh-foot{margin-top:9px;font-size:11.5px;font-style:italic;color:var(--t3)}
 .turn-pop-lbl{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--ink);margin-right:5px}
 .turn-pop-lbl::after{content:':'}
