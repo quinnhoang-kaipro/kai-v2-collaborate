@@ -311,6 +311,15 @@ function canHandOffHere(){
 function canApproveScopeHere(){
   return state.role === 'manager' && state.projectStage === 'reviewing';
 }
+/* Tracking a live job is the field agent's move, but calling it finished is not
+   only theirs: a manager or admin watching the same board can close it out
+   without waiting to be handed it back. Not the change order — that one is an
+   approval, and the CTA there is already the approval. */
+function canSubmitCloseoutHere(){
+  return state.projectStage === 'published'
+      && state.workTrack !== 'change_order'
+      && (state.role === 'manager' || state.role === 'admin');
+}
 function approveScopeAsManager(){
   const v = VERSIONS.find(x => x.id === currentVersionId) || VERSIONS[0];
   openModal({
@@ -1415,6 +1424,17 @@ function syncAppApproveBtn(){
         secondBtn.onclick = approveScopeAsManager;
         secondBtn.hidden = false;
       }
+      if(tipEl) tipEl.hidden = true;
+      return;
+    }
+    /* Enabled, not gated on every task being complete: this is the override, and
+       an override that only works once the work is already finished is not one.
+       The field agent's own Submit closeout below still waits for the count. */
+    if(canSubmitCloseoutHere()){
+      btn.textContent = 'Submit closeout';
+      btn.disabled = false;
+      btn.onclick = triggerIframeApprove;
+      btn.hidden = false;
       if(tipEl) tipEl.hidden = true;
       return;
     }
