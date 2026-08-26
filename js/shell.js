@@ -311,6 +311,27 @@ function canHandOffHere(){
 function canApproveScopeHere(){
   return state.role === 'manager' && state.projectStage === 'reviewing';
 }
+/* A manager can open the review before the draft is handed to them. It is out of
+   order on purpose — the field agent is still working and has not passed it on —
+   so it asks first rather than just doing it. */
+function canStartReviewHere(){
+  return state.role === 'manager' && state.projectStage === 'edit';
+}
+function openStartReview(){
+  const agent = (ROLE_PEOPLE.field_agent || {}).name || 'The field agent';
+  openModal({
+    icon:'alert',
+    title:'Start the approval process?',
+    body:`${agent} may still be working on it and has not handed the scope to you yet. `
+       + `You can choose to start the approval process anyways, but the scope may be incomplete.`,
+    confirm:'I understand. Start approving the scope anyways',
+    cancel:'Nevermind',
+    onConfirm:()=>{
+      setProjectStage('reviewing');
+      toast('Approval process started');
+    },
+  });
+}
 /* The scope is with the reviewer, but the field agent can still edit — and the
    Scope card now says as much, that nothing they change reaches the submitted
    version until they send a new one. This is how they send it. Without it the
@@ -1490,6 +1511,12 @@ function syncAppApproveBtn(){
         secondBtn.textContent = 'Approve';
         secondBtn.onclick = approveScopeAsManager;
         secondBtn.hidden = false;
+      } else if(secondBtn && canStartReviewHere()){
+        // Secondary, because handing it on is the ordinary move from a draft and
+        // opening the review early is the exception.
+        secondBtn.textContent = 'Review';
+        secondBtn.onclick = openStartReview;
+        secondBtn.hidden = false;
       }
       if(tipEl) tipEl.hidden = true;
       return;
@@ -2369,6 +2396,9 @@ const ICONS={
   arrow:`<svg viewBox="0 0 24 24"><path d="M9 6l-6 6 6 6M3 12h18"/></svg>`,
   bell: `<svg viewBox="0 0 24 24"><path d="M7 17a5 5 0 0 1 10 0M12 3v2M9 19a3 3 0 0 0 6 0"/></svg>`,
   send: `<svg viewBox="0 0 24 24"><path d="M21 3L10 14M21 3l-7 18-4-7-7-4 18-7z"/></svg>`,
+  // For confirms that are a caution rather than a confirmation — check would
+  // have read as approval of the very thing being warned about.
+  alert:`<svg viewBox="0 0 24 24"><path d="M12 3.5L2 20.5h20L12 3.5z"/><path d="M12 10v4.5M12 17.2v.6"/></svg>`,
 };
 function openModal({icon='check', title, body, confirm='Confirm', confirmKind='primary', cancel='Cancel', onConfirm}){
   const m=document.getElementById('modal');
