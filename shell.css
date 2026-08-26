@@ -473,7 +473,17 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 .modal-title{font-family:var(--display);font-size:20px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
 .modal-body{font-size:13.5px;color:var(--t2);line-height:1.55;margin-top:8px;margin-bottom:22px}
 .modal-body ul{margin-left:20px;margin-top:8px;margin-bottom:8px;display:flex;flex-direction:column;gap:6px}
-.modal-actions{display:flex;gap:10px;justify-content:flex-end}
+/* A confirm label can be a sentence — "I understand. Start approving the scope
+   anyways" — and .btn's nowrap made that one push the row wider than the card,
+   so flex-end shunted the pair out past the left edge. Inside a modal the
+   buttons may wrap their own text and share the row instead; stretch keeps the
+   two the same height when one takes two lines. */
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;align-items:stretch}
+.modal-actions .btn{white-space:normal;text-align:center;line-height:1.35;
+  text-wrap:balance}
+/* The wrapping one gives up width first, and the short answer stays one line. */
+.modal-actions .btn-secondary{flex:0 0 auto}
+.modal-actions .btn-primary{flex:0 1 auto;justify-content:center}
 /* ── review roster inside the hand-off modal ──
    Who has signed the scope off and who has not, so the decision to hand off is
    made against the actual state rather than from memory. Signed rows carry the
