@@ -1782,11 +1782,14 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    over the thing they were meant to let through, so the band was measured and
    placed correctly and then completely covered. */
 .tl-root{position:relative;display:flex;flex-direction:column;background:var(--white);color:var(--ink);font-family:var(--body);min-height:520px}
-/* The group you are in, banded from the header down past the last photo row. Set
-   by _pcPlaceHilite; z-index 0 against the rows' 1 puts it under the content, so
-   it shows in the gutters between photos and behind the empty ones rather than
-   washing over the photographs. */
-.tl-hilite{position:absolute;z-index:0;background:rgba(26,26,26,.065);pointer-events:none}
+/* Parked with PC_GROUP_BANDS — kept because the mechanism works and only the look
+   is in question. The groups you are NOT in, banded from the header down past the
+   last photo row: one child per group card, placed by _pcPlaceHilite. z-index 0
+   against the rows' 1 puts them under everything, so they show in the gutters
+   between photos and through the cards and empty cells rather than over the
+   photographs. Turning them back on also needs .tl-hgroup transparent again. */
+.tl-hilite{position:absolute;inset:0;z-index:0;pointer-events:none}
+.tl-hilite-band{position:absolute;background:rgba(26,26,26,.055)}
 .tl-head,.tl-body{position:relative;z-index:1}
 /* Two tiers: one bar for the group, spanning every column under it, and a
    nested bar per task over the columns that task owns. Column count is set
@@ -1824,11 +1827,12 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    saying which one you were looking at. One mark in the ink the rest of the type
    is set in answers that, and says nothing else. */
 .tl-hgroup,.tl-htask{grid-row:1;min-width:0}
+/* White, not transparent: the group bands are parked (PC_GROUP_BANDS), so nothing
+   needs to show through the card, and a card that paints its own ground does not
+   depend on what is behind it. */
 .tl-hgroup{display:flex;align-items:center;border:1px solid var(--stroke);
   background:var(--white);min-height:50px;padding:0 5px}
-/* Transparent, not white: the card sits over the band, and leaving it white cut a
-   hole in the very shape the band is drawing. */
-.tl-hgroup.is-active{background:transparent;box-shadow:inset 0 -3px 0 0 var(--ink)}
+.tl-hgroup.is-active{background:var(--white);box-shadow:inset 0 -3px 0 0 var(--ink)}
 .tl-hgroup-label{display:flex;align-items:baseline;gap:8px;padding:0 8px;min-width:0}
 .tl-hgroup-cap{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.16em;
   text-transform:uppercase;color:var(--t3);flex-shrink:0}

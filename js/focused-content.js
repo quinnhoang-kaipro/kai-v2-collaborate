@@ -267,32 +267,58 @@ function _pcColCount(){
   _pcColsRendered = _pcMeasureCols();
   return _pcColsRendered;
 }
-/* The band behind the group you are in — the sketch's grey box, under the content
-   rather than over it.
+/* A light ground behind the groups you are NOT in — one band per group card,
+   since a fixed-width strip can show three rooms at once. The room you are in is
+   left on the page's own white, so the mark is the absence of shading rather than
+   the presence of it: what stands out is the clean column, and the neighbours
+   recede without anything being drawn on them.
 
-   Measured and absolutely positioned rather than placed in the grids, because it
-   has to run from the top of the header to the bottom of the last photo row and
+   Measured and absolutely positioned rather than placed in the grids, because a
+   band has to run from the top of the header down past the last photo row, and
    those are three separate grids with the body's padding and row gap between
-   them. Three grid-placed bands could be bled into each other with negative
-   margins tuned to that padding, which is three numbers that have to stay in step
-   with the stylesheet. One element measured off the active card cannot drift. */
+   them. Grid-placed bands would need bleeding into each other with negative
+   margins tuned to that padding — three numbers that then have to stay in step
+   with the stylesheet. Measured off the cards, they cannot drift. */
+/* Parked. Flip to true to bring the bands back — the placer, the markup and the
+   styles are all still here and working; it is the look we are not sure about. */
+const PC_GROUP_BANDS = false;
 function _pcPlaceHilite(){
   const root = document.querySelector('.tl-root');
-  const el   = document.getElementById('tlHilite');
-  const card = document.querySelector('.tl-hgroup.is-active');
+  const host = document.getElementById('tlHilite');
+  if(!root || !host) return;
+  if(!PC_GROUP_BANDS){
+    while(host.firstChild) host.firstChild.remove();
+    return;
+  }
   const head = document.querySelector('.tl-head');
   const rows = document.querySelectorAll('.tl-cells');
-  if(!root || !el) return;
-  if(!card || !head || !rows.length){ el.hidden = true; return; }
+  const cards = document.querySelectorAll('.tl-hgroup:not(.is-active)');
+  if(!head || !rows.length || !cards.length){
+    while(host.firstChild) host.firstChild.remove();
+    return;
+  }
   const r = root.getBoundingClientRect();
-  const c = card.getBoundingClientRect();
   const h = head.getBoundingClientRect();
   const last = rows[rows.length - 1].getBoundingClientRect();
-  el.hidden = false;
-  el.style.left   = Math.round(c.left - r.left) + 'px';
-  el.style.width  = Math.round(c.width) + 'px';
-  el.style.top    = Math.round(h.top - r.top) + 'px';
-  el.style.height = Math.round(last.bottom - h.top) + 'px';
+  const top = Math.round(h.top - r.top);
+  const height = Math.round(last.bottom - h.top);
+  /* Reuse the elements. This runs on every poll tick, and rebuilding the markup
+     each time churned the DOM 4-5 times a second for a layout that had not
+     moved. Only the count of bands ever changes. */
+  while(host.children.length > cards.length) host.lastElementChild.remove();
+  while(host.children.length < cards.length){
+    const el = document.createElement('div');
+    el.className = 'tl-hilite-band';
+    host.appendChild(el);
+  }
+  Array.prototype.forEach.call(cards, (card, i) => {
+    const c = card.getBoundingClientRect();
+    const st = host.children[i].style;
+    st.left = Math.round(c.left - r.left) + 'px';
+    st.width = Math.round(c.width) + 'px';
+    st.top = top + 'px';
+    st.height = height + 'px';
+  });
 }
 /* Re-measure and redraw only if the answer changed. */
 function _pcSyncCols(){
