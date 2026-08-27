@@ -324,7 +324,7 @@ function _pcHeadHtml(slots, idx){
       <svg viewBox="0 0 12 12" fill="none"><path d="${glyph}" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>`;
   };
-  const groupBars = groups.map(g => `<div class="tl-hgroup" style="grid-column:${g.at + 1} / span ${g.span}">
+  const groupBars = groups.map(g => `<div class="tl-hgroup" style="grid-column:${g.at + 1} / span ${g.span};--room-tint:${roomColor(g.room)}">
       <span class="tl-hgroup-label">
         <span class="tl-hgroup-cap">Group</span>
         <span class="tl-hgroup-name">${esc(g.roomName)}</span>
@@ -341,7 +341,9 @@ function _pcHeadHtml(slots, idx){
         ${t.span > 1 ? `<span class="tl-htask-count">${t.span} photos</span>` : ''}
       </div>`;
   }).join('');
-  return `<div class="tl-head" style="grid-template-columns:repeat(${cols.length},1fr)">
+  // Columns belong to .tl-hgrid; .tl-head is the rail/grid/arrow frame and takes
+  // its columns from the stylesheet. Setting them here too overrode that frame.
+  return `<div class="tl-head">
     ${nav(-1, prevGroup)}
     <div class="tl-hgrid" style="grid-template-columns:repeat(${cols.length},1fr)">
       ${groupBars}${taskBars}
@@ -488,13 +490,14 @@ function _pcWalksRowHtml(bandKey){
   const isOpen = __pcCalOpen === bandKey;
   const closeBtn = bandKey === 'B' ? `<button class="tl-walks-remove" onclick="event.stopPropagation();_pcRemoveBand()" aria-label="Remove date row" title="Remove date row"><svg viewBox="0 0 10 10" fill="none"><line x1="2" y1="2" x2="8" y2="8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="8" y1="2" x2="2" y2="8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>` : '';
   return `<div class="tl-walks tl-walks-row" data-band="${bandKey}">
-    <span class="tl-walks-title">Walk ${bandKey}</span>
     <div class="tl-walk-picker">
-      <button class="tl-walk-picker-btn${isOpen?' is-open':''}" onclick="event.stopPropagation();_pcOpenCal('${bandKey}')" aria-haspopup="true" aria-expanded="${isOpen}">
-        <span class="tl-walk-dot" style="background:${w.color}"></span>
-        <span class="tl-walk-picker-name">${esc(w.short)}</span>
+      <button class="tl-walk-picker-btn${isOpen?' is-open':''}" onclick="event.stopPropagation();_pcOpenCal('${bandKey}')" aria-haspopup="true" aria-expanded="${isOpen}" aria-label="Walk ${bandKey} — ${esc(w.short)}, ${esc(w.date)}">
+        <span class="tl-walk-picker-top">
+          <span class="tl-walk-dot" style="background:${w.color}"></span>
+          <span class="tl-walk-picker-name">${esc(w.short)}</span>
+          <svg class="tl-walk-picker-caret" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
         <span class="tl-walk-picker-date">${esc(w.date)}</span>
-        <svg class="tl-walk-picker-caret" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       ${isOpen ? _pcCalendarHtml(bandKey) : ''}
     </div>
@@ -502,13 +505,19 @@ function _pcWalksRowHtml(bandKey){
   </div>`;
 }
 
+/* The date moved out of a row above the photos and into a rail beside them. As a
+   row it was a header for the photos under it, which is a fair description of
+   one row but not of two — with two dates on screen the thing you are comparing
+   is left-to-right within a column, and the label belongs at the start of the
+   row it names, not floating above it. */
 function _pcBandHtml(bandKey, slots){
   const walkId = bandKey === 'A' ? __pcState.walkA : __pcState.walkB;
   const idx = __pcState.currentIdx;
+  const cols = _pcGroupRun(slots);
   return `<div class="tl-band" data-band="${bandKey}">
     ${_pcWalksRowHtml(bandKey)}
-    <div class="tl-cells" style="grid-template-columns:repeat(${_pcGroupRun(slots).length},1fr)">
-      ${_pcGroupRun(slots).map(i => _pcCellHtml(slots[i] || null, walkId, i === idx)).join('')}
+    <div class="tl-cells" style="grid-template-columns:repeat(${cols.length},1fr)">
+      ${cols.map(i => _pcCellHtml(slots[i] || null, walkId, i === idx)).join('')}
     </div>
   </div>`;
 }
