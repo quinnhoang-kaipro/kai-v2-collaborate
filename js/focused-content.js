@@ -224,6 +224,25 @@ function _pcActiveGroupIdx(slots){
   }
   return -1;
 }
+/* How many slots the strip shows at once. Was three — the slot before, the
+   current one, and the slot after — which meant a room with five tasks read as
+   "Kitchen, Cabinets, Living Room": the group, one task, and straight on to the
+   next room. The run a group actually heads was invisible.
+
+   Four, anchored on the group instead of centred on the cursor, so the strip
+   reads the way the scope does — the room, then the tasks in it. */
+const PC_COLS = 4;
+function _pcWindow(slots){
+  const gi = _pcActiveGroupIdx(slots);
+  let start = gi >= 0 ? gi : 0;
+  // Once the cursor moves past the window the group gives up the first cell —
+  // pinning it there would mean the cursor leaves the strip it is meant to be in.
+  if(__pcState.currentIdx >= start + PC_COLS) start = __pcState.currentIdx - PC_COLS + 1;
+  start = Math.max(0, Math.min(start, Math.max(0, slots.length - PC_COLS)));
+  const out = [];
+  for(let k = 0; k < PC_COLS; k++) out.push(start + k);
+  return out;
+}
 
 function _pcHeadColHtml(slot, isCurrent, arrowPos, idx, slotsLen){
   // Whole prev / next card is clickable — arrow glyphs stay as visual
@@ -404,9 +423,7 @@ function _pcBandHtml(bandKey, slots){
   return `<div class="tl-band" data-band="${bandKey}">
     ${_pcWalksRowHtml(bandKey)}
     <div class="tl-cells">
-      ${_pcCellHtml(slots[idx-1] || null, walkId, false)}
-      ${_pcCellHtml(slots[idx]   || null, walkId, true)}
-      ${_pcCellHtml(slots[idx+1] || null, walkId, false)}
+      ${_pcWindow(slots).map(i => _pcCellHtml(slots[i] || null, walkId, i === idx)).join('')}
     </div>
   </div>`;
 }

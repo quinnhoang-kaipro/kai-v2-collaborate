@@ -1778,7 +1778,7 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    --border-mid → --midtone, --t1/t2/t3 → --ink/--t2/--t3, --charcoal
    → --ink, --rm → 4px, --r → 3px, --font → --body, --mono → --mono. */
 .tl-root{display:flex;flex-direction:column;background:transparent;color:var(--ink);font-family:var(--body);min-height:520px}
-.tl-head{display:grid;grid-template-columns:1fr 1fr 1fr;column-gap:10px;padding:10px 12px 8px;border-bottom:1px solid var(--stroke);flex-shrink:0;align-items:stretch;background:transparent}
+.tl-head{display:grid;grid-template-columns:repeat(4,1fr);column-gap:10px;padding:10px 12px 8px;border-bottom:1px solid var(--stroke);flex-shrink:0;align-items:stretch;background:transparent}
 .tl-col-head{font-size:12px;font-weight:500;color:var(--t2);padding:4px 8px;text-align:left;display:flex;align-items:center;gap:8px;min-width:0;border:1px solid var(--stroke);background:#F7F5F0;min-height:40px}
 .tl-col-head.current{color:var(--ink);font-weight:600;background:var(--sunken);border-color:var(--midtone)}
 .tl-col-label{flex:1;min-width:0;font-size:12px;display:flex;flex-direction:column;gap:1px;line-height:1.25}
@@ -1806,7 +1806,9 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    3-column photo grid full-width below. This lets photos claim the entire
    right-panel width instead of losing 88px + a gutter to the left aside. */
 .tl-band{display:flex;flex-direction:column;gap:6px}
-.tl-cells{display:grid;grid-template-columns:1fr 1fr 1fr;column-gap:10px}
+/* Four, matching PC_COLS in focused-content.js — the header row and both photo
+   bands are one grid read three times and must not disagree. */
+.tl-cells{display:grid;grid-template-columns:repeat(4,1fr);column-gap:10px}
 /* Horizontal picker row: label + pill options + optional X remove */
 .tl-walks{position:relative}
 /* Walk-picker row — no more boxed bg. Just the label + trigger button

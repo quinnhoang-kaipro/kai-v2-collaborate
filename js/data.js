@@ -200,8 +200,6 @@ function seedPhotos(){
   const pickWalk = () => walkIds[walkIdx++ % walkIds.length];
   // Everything after a task's first shot comes from a later visit.
   const laterWalks = walkIds.slice(1);
-  let laterIdx = 0;
-  const pickLaterWalk = () => laterWalks.length ? laterWalks[laterIdx++ % laterWalks.length] : walkIds[0];
   ROOMS.forEach((room,ri)=>{
     const base=ri*13, gn=gCounts[ri]||2;
     for(let i=0;i<gn;i++) PHOTOS.push({id:_pid++, seed:base+i, room, kind:'group', task:null, walk:pickWalk()});
@@ -214,7 +212,15 @@ function seedPhotos(){
         // this, round-robin left most lines with nothing dated before the
         // scope was even approved, and any "latest photo as of <date>" lookup
         // came up empty for them through the whole draft and review phase.
-        const walk = (k === 0) ? walkIds[0] : pickLaterWalk();
+        /* And they come in order: shot two is the next visit, shot three the one
+           after. A global round-robin scattered a single task's shots across
+           unrelated walks, which left most walks holding a photo of one task per
+           room — so Progress, filtered to tasks with photos, showed a room and
+           then jumped straight to the next room. A task's photos are a sequence
+           in time; numbering them like one is both truer and denser per walk. */
+        const walk = (k === 0)
+          ? walkIds[0]
+          : (laterWalks.length ? laterWalks[Math.min(k - 1, laterWalks.length - 1)] : walkIds[0]);
         PHOTOS.push({id:_pid++, seed:s++, room, kind:'task', task:t.code, walk});
       }
     });
