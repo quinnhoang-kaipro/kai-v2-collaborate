@@ -1780,11 +1780,15 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 .tl-root{display:flex;flex-direction:column;background:transparent;color:var(--ink);font-family:var(--body);min-height:520px}
 /* Two tiers: one bar for the group, spanning every column under it, and a
    nested bar per task over the columns that task owns. Column count is set
-   inline — it is the group's run, which varies by room. */
-.tl-head{--tl-nav-w:30px;--tl-nav-gap:8px;
-  display:flex;align-items:stretch;gap:var(--tl-nav-gap);padding:10px 12px 8px;
+   inline — it is the group's run, which varies by room.
+
+   The gutter and the column gap are declared once here because the header grid
+   and both photo grids have to agree on them to the pixel; a photo under the
+   wrong bar reads as a misaligned layout rather than as the wrong photo. */
+.tl-root{--tl-nav-w:30px;--tl-nav-gap:10px;--tl-col-gap:18px}
+.tl-head{display:flex;align-items:stretch;gap:var(--tl-nav-gap);padding:12px 16px 10px;
   border-bottom:1px solid var(--stroke);flex-shrink:0;background:transparent}
-.tl-hgrid{flex:1;min-width:0;display:grid;column-gap:10px;align-items:stretch}
+.tl-hgrid{flex:1;min-width:0;display:grid;column-gap:var(--tl-col-gap);align-items:stretch}
 /* Both tiers occupy row 1. The group bar is emitted first and the task bars
    after it, so the nesting is a paint order rather than a second row — the
    group's edge stays visible around its children. */
@@ -1810,8 +1814,9 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    restating what one photo already shows. */
 .tl-htask-count{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;
   text-transform:uppercase;color:var(--t3)}
-/* Group stepping lives outside the bar now: the bar is a label for a span, and
-   a span cannot also be a button to leave it. */
+/* Stepping lives outside the bar: the bar is a label for a span, and a span
+   cannot also be the button for leaving it. Steps a column at a time, crossing
+   into the next group only once this one's run is exhausted. */
 .tl-hnav{flex-shrink:0;width:var(--tl-nav-w);background:var(--white);border:1px solid var(--stroke);
   color:var(--t2);display:flex;align-items:center;justify-content:center;padding:0;
   cursor:pointer;transition:background .12s,color .12s,border-color .12s}
@@ -1819,19 +1824,18 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 .tl-hnav svg{width:12px;height:12px;stroke:currentColor;fill:none}
 .tl-hnav.is-disabled{opacity:.35;cursor:not-allowed}
 /* Body wraps both bands + Add-date placeholder */
-.tl-body{flex:1;display:flex;flex-direction:column;gap:8px;padding:8px 12px 14px;overflow:auto;background:var(--white)}
+.tl-body{flex:1;display:flex;flex-direction:column;gap:18px;padding:14px 16px 18px;overflow:auto;background:var(--white)}
 /* Band is a vertical stack now: horizontal walk picker row on top, then the
    3-column photo grid full-width below. This lets photos claim the entire
    right-panel width instead of losing 88px + a gutter to the left aside. */
-.tl-band{display:flex;flex-direction:column;gap:6px}
-/* Four, matching PC_COLS in focused-content.js — the header row and both photo
-   bands are one grid read three times and must not disagree. */
+.tl-band{display:flex;flex-direction:column;gap:10px}
 /* Indented by exactly what the header's nav buttons take, so a photo sits under
    the task bar that names it. Stated once here rather than guessed in two
    places — the columns disagreeing is the one failure nobody would read as a
    bug, just as a misaligned grid. */
-.tl-cells{display:grid;column-gap:10px;
-  margin-left:calc(30px + 8px);margin-right:calc(30px + 8px)}
+.tl-cells{display:grid;column-gap:var(--tl-col-gap);
+  margin-left:calc(var(--tl-nav-w) + var(--tl-nav-gap));
+  margin-right:calc(var(--tl-nav-w) + var(--tl-nav-gap))}
 /* Horizontal picker row: label + pill options + optional X remove */
 .tl-walks{position:relative}
 /* Walk-picker row — no more boxed bg. Just the label + trigger button
@@ -1892,26 +1896,33 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 .tl-add-band{display:flex;align-items:center;justify-content:center;gap:6px;height:56px;border:1px dashed var(--midtone);background:transparent;color:var(--t2);font:inherit;font-size:12px;font-weight:500;cursor:pointer;transition:color .12s,background .12s,border-color .12s;font-family:var(--body)}
 .tl-add-band:hover{color:var(--ink);background:var(--sunken);border-color:var(--t3)}
 /* Photo cell — 4/3 aspect, room-tint top stripe, dashed empty state */
-.tl-cell{aspect-ratio:4/3;background:var(--sunken);border:1px solid var(--stroke);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:pointer;transition:filter .15s}
+.tl-cell{aspect-ratio:4/3;background:var(--white);border:1px solid var(--stroke);
+  display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;
+  cursor:pointer;transition:filter .15s}
 .tl-cell:hover{filter:brightness(.94)}
 .tl-cell.current{border-color:var(--midtone);box-shadow:inset 0 0 0 1px var(--midtone)}
-.tl-cell[data-room-id]{box-shadow:inset 0 6px 0 0 var(--room-tint,transparent)}
-.tl-cell[data-room-id].current{box-shadow:inset 0 6px 0 0 var(--room-tint,transparent),inset 0 0 0 1px var(--midtone)}
-/* Empty-cell path: solid cream/tan aligned with the design styleguide (no
-   diagonal stripes). Room-tinted variant lightens the fill with a hint of the
-   room color mixed into --sunken so the room context still reads without
-   overwhelming the empty state. Dashed border stays as the "missing" cue. */
-.tl-cell:has(.tl-cell-empty){background:var(--sunken);border-style:dashed;border-color:var(--stroke)}
-.tl-cell[data-room-id]:has(.tl-cell-empty){background:color-mix(in srgb,var(--room-tint) 10%,var(--sunken));border-color:color-mix(in srgb,var(--room-tint) 35%,var(--stroke));border-style:dashed;box-shadow:inset 0 6px 0 0 var(--room-tint,transparent)}
-.tl-cell-empty{font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.12em;font-weight:700}
+.tl-cell[data-room-id]{box-shadow:inset 0 5px 0 0 var(--room-tint,transparent)}
+.tl-cell[data-room-id].current{box-shadow:inset 0 5px 0 0 var(--room-tint,transparent),inset 0 0 0 1px var(--midtone)}
+/* An empty cell is an absence, and should look like one: a dashed outline on the
+   page's own ground, with nothing written in it. It used to carry a tinted fill
+   and the words NO PHOTO, which gave the gaps more presence than the
+   photographs — a row of them read as content rather than as nothing there. */
+.tl-cell:has(.tl-cell-empty){background:transparent;border-style:dashed;border-color:var(--stroke)}
+.tl-cell[data-room-id]:has(.tl-cell-empty){background:transparent;border-style:dashed;
+  border-color:color-mix(in srgb,var(--room-tint) 30%,var(--stroke));
+  box-shadow:inset 0 5px 0 0 color-mix(in srgb,var(--room-tint) 45%,transparent)}
+.tl-cell-empty{display:none}
 .tl-cell-img{position:absolute;inset:0;width:100%;height:100%;display:block;background-size:cover;background-position:center}
 /* Green completion badge in top-right of every photo cell */
-.tl-cell-status{position:absolute;top:8px;right:8px;width:22px;height:22px;pointer-events:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.28))}
+.tl-cell-status{position:absolute;top:10px;right:10px;width:22px;height:22px;pointer-events:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.28))}
 .tl-cell-status svg{width:100%;height:100%;display:block}
-/* Bottom gradient overlay with task name + walk short */
-.tl-cell-label{position:absolute;left:0;right:0;bottom:0;padding:6px 8px 7px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,.58) 100%);color:#fff;font-size:11px;line-height:1.25;display:flex;flex-direction:column;gap:1px;pointer-events:none}
-.tl-cell-task{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tl-cell-walk{font-family:var(--mono);font-size:9.5px;opacity:.85;letter-spacing:.04em;text-transform:uppercase}
+/* How many shots exist of this line, on the first of its columns only. A chip on
+   the photograph rather than a strip under it: it is a pointer to the rest of
+   them, not a caption for this one. */
+.tl-cell-count{position:absolute;top:10px;left:10px;background:var(--white);color:var(--ink);
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:4px 8px;pointer-events:none;box-shadow:0 1px 4px rgba(26,26,26,.18)}
+.tl-cell-status + .tl-cell-count{left:10px;right:auto}
 /* Bottom slider — scrub through slot list */
 .tl-nav-slider{flex-shrink:0;padding:8px 18px 10px;border-top:1px solid var(--stroke);background:#F7F5F0;display:flex;flex-direction:column;gap:4px}
 .tl-nav-slider-hdr{display:flex;align-items:center;justify-content:space-between;gap:12px}

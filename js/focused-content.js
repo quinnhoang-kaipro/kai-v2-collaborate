@@ -252,22 +252,44 @@ function _pcActiveGroupIdx(slots){
    columns and its label has to own the first one. A sliding window would sooner
    or later start mid-run, and then the nested task bars would sit on top of the
    group's name. */
-const PC_MAX_COLS = 8;
+/* Five. A group's run can be longer than that, but a photograph you cannot read
+   is not evidence of anything — past five the columns get too narrow to see what
+   is in them, so a long run clips and the arrows walk you through it. */
+const PC_MAX_COLS = 5;
 function _pcGroupRun(slots){
-  let start = _pcActiveGroupIdx(slots);
-  if(start < 0) start = 0;
+  const g = _pcActiveGroupIdx(slots);
+  const start = g < 0 ? 0 : g;
   let end = start + 1;
   while(end < slots.length && slots[end] && slots[end].type !== 'group') end++;
-  // A pathological run gets clipped rather than squeezing every column to a
-  // sliver; the cursor is kept inside what is shown.
-  if(end - start > PC_MAX_COLS){
-    const cur = __pcState.currentIdx;
-    if(cur >= start + PC_MAX_COLS) start = Math.min(cur, end - PC_MAX_COLS);
-    end = start + PC_MAX_COLS;
-  }
   const cols = [];
-  for(let k = start; k < end; k++) cols.push(k);
+  if(end - start <= PC_MAX_COLS){
+    for(let k = start; k < end; k++) cols.push(k);
+    return cols;
+  }
+  /* A run too long for the strip pages its task columns and keeps the group's
+     own column pinned at the left. Sliding the whole run instead would sooner or
+     later scroll that column away, and then the first task bar would be sitting
+     on top of the group's name — the thing this window exists to prevent. */
+  const per  = PC_MAX_COLS - 1;
+  const cur  = Math.max(start + 1, __pcState.currentIdx);
+  const from = start + 1 + Math.floor((cur - start - 1) / per) * per;
+  cols.push(start);
+  for(let k = from; k < Math.min(end, from + per); k++) cols.push(k);
   return cols;
+}
+/* Where the arrows go. Advancing the strip means the next column after the last
+   one on show — which is the next group only once the run is exhausted, so a
+   clipped run can still be walked to its end. */
+function _pcStepTarget(slots, cols, dir){
+  const g = _pcActiveGroupIdx(slots);
+  if(dir > 0){
+    const after = cols[cols.length - 1] + 1;
+    if(slots[after] && slots[after].type !== 'group') return after;
+    return _pcAdjacentGroup(slots, g, 1);
+  }
+  const firstTask = cols.length > 1 ? cols[1] : cols[0];
+  if(firstTask - 1 > g) return firstTask - 1;
+  return _pcAdjacentGroup(slots, g, -1);
 }
 /* Where each group and each task begins and how far it reaches, over the
    columns on show. One pass, used by the header's two tiers. */
@@ -290,16 +312,15 @@ function _pcRuns(slots, cols){
 function _pcHeadHtml(slots, idx){
   const cols = _pcGroupRun(slots);
   const {groups, tasks} = _pcRuns(slots, cols);
-  const gi = _pcActiveGroupIdx(slots);
-  const prevGroup = _pcAdjacentGroup(slots, gi, -1);
-  const nextGroup = _pcAdjacentGroup(slots, gi, 1);
+  const prevGroup = _pcStepTarget(slots, cols, -1);
+  const nextGroup = _pcStepTarget(slots, cols, 1);
   const nav = (dir, target) => {
     const glyph = dir < 0 ? 'M7.5 2L3.5 6l4 4' : 'M4.5 2l4 4-4 4';
     const dis = target < 0 ? ' is-disabled' : '';
     const click = target < 0 ? '' : ` onclick="_pcSetIdx(${target})"`;
     return `<button type="button" class="tl-hnav${dis}"${click}
-      aria-label="${dir < 0 ? 'Previous' : 'Next'} group"
-      title="${dir < 0 ? 'Previous group' : 'Next group'}"${target < 0 ? ' disabled' : ''}>
+      aria-label="${dir < 0 ? 'Back' : 'Forward'}"
+      title="${dir < 0 ? 'Back' : 'Forward'}"${target < 0 ? ' disabled' : ''}>
       <svg viewBox="0 0 12 12" fill="none"><path d="${glyph}" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>`;
   };
@@ -335,8 +356,16 @@ function _pcAdjacentGroup(slots, from, dir){
   }
   return -1;
 }
+/* Every photo on this line or room, across all walks — what the corner pill
+   counts. The strip only ever shows one walk per row, so "2 photos" is a pointer
+   to the rest of them, not a description of this row. */
+function _pcSlotShotCount(slot){
+  if(!slot || typeof PHOTOS === 'undefined') return 0;
+  return slot.type === 'task'
+    ? PHOTOS.filter(p => p.kind === 'task' && p.task === slot.task.code).length
+    : PHOTOS.filter(p => p.kind === 'group' && p.room === slot.room).length;
+}
 function _pcCellHtml(slot, walkId, isCurrent){
-  const walk = walkFor(walkId);
   if(!slot){
     return `<div class="tl-cell${isCurrent?' current':''}"><span class="tl-cell-empty">No slot</span></div>`;
   }
@@ -350,9 +379,14 @@ function _pcCellHtml(slot, walkId, isCurrent){
     </div>`;
   }
   const bg = _photoBg(photo, 0);
-  const taskLabel = slot.type === 'task' ? slot.task.name : slot.roomName;
-  const isExtra = slot.type === 'task' && !!slot.isExtra;
-  const walkTag = walk ? `<span class="tl-cell-walk">${esc(walk.short)}${isExtra?' · 2nd photo':''}</span>` : '';
+  /* No caption strip. The bar directly above the cell names the task, and the
+     band's own row says which walk it is — the overlay restated both across
+     every column and buried the photograph under a gradient. What it could not
+     say is how many shots exist, so that is what the corner carries, once per
+     task rather than on every column of it. */
+  const shots = _pcSlotShotCount(slot);
+  const countPill = (!slot.photoIdx && shots > 1)
+    ? `<span class="tl-cell-count">${shots} photos</span>` : '';
   // Only show the approved-hexagon badge on cells whose task has been
   // approved by the admin. Group-level cells don't carry a task id, so
   // they never render the badge.
@@ -363,10 +397,7 @@ function _pcCellHtml(slot, walkId, isCurrent){
   return `<div class="tl-cell${isCurrent?' current':''}" data-room-id="${slot.room}" style="--room-tint:${tint}" onclick="openGalleryPhoto(${photo.id||0})">
     <div class="tl-cell-img" style="background:${bg}"></div>
     ${statusBadge}
-    <span class="tl-cell-label">
-      <span class="tl-cell-task">${esc(taskLabel)}${isExtra?' · 2nd photo':''}</span>
-      ${walkTag}
-    </span>
+    ${countPill}
   </div>`;
 }
 
