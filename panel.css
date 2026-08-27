@@ -1832,16 +1832,11 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
   transition:box-shadow .12s,background .12s}
 .tl-htask:hover{background:#EFEBE1}
 .tl-htask:focus-visible{outline:2px solid var(--ink);outline-offset:-1px}
-/* Filled, not outlined. This was a 1.5px ink box — the last of the hard
-   rectangles, and the one in the busiest place: a black outline around a tile
-   already sitting inside an outlined card reads as a third nested box. An ink
-   ground says the same thing with no line at all, and pairs with the black rule
-   under the group, so "where you are" is one colour in two places rather than two
-   different kinds of mark. */
-.tl-htask.current{background:var(--ink)}
-.tl-htask.current:hover{background:var(--ink)}
-.tl-htask.current .tl-htask-name{color:var(--white)}
-.tl-htask.current .tl-htask-count{color:rgba(255,255,255,.62)}
+/* No current state on these tiles at all. It was an ink ring, then an ink fill,
+   and both were answering a question already answered twice over: the rule under
+   the group card says which room you are in, and the rule under the current photo
+   sits directly beneath the tile that names it. A third mark in the same ink, on
+   the same row, was one tile shouting in a header meant to be read across. */
 .tl-htask-name{font-size:12px;font-weight:600;color:var(--ink);line-height:1.3;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Only when a task actually spans more than one column — otherwise it is noise
