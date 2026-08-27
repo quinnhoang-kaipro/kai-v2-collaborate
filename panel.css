@@ -1807,14 +1807,16 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    thing they are inside.
 
    White card, tinted tiles: the header row is white, so the group's bar is the
-   white card and its tasks are the tinted ones in it. The room's own colour is a
-   rule along the card's bottom edge — the one place a slab of it earns its keep,
-   since it names the group without spending a second label on it, and along the
-   bottom it also sits directly above the photo row it belongs to. */
+   white card and its tasks are the tinted ones in it.
+
+   One black rule, on the card you are actually in. A coloured rule under every
+   card was decoration — seven rooms, seven colours, and nothing among them
+   saying which one you were looking at. One mark in the ink the rest of the type
+   is set in answers that, and says nothing else. */
 .tl-hgroup,.tl-htask{grid-row:1;min-width:0}
-.tl-hgroup{display:flex;align-items:center;border:1px solid var(--stroke);border-bottom:0;
-  background:var(--white);min-height:50px;padding:0 5px;
-  box-shadow:inset 0 -3px 0 0 var(--room-tint,var(--midtone))}
+.tl-hgroup{display:flex;align-items:center;border:1px solid var(--stroke);
+  background:var(--white);min-height:50px;padding:0 5px}
+.tl-hgroup.is-active{box-shadow:inset 0 -3px 0 0 var(--ink)}
 .tl-hgroup-label{display:flex;align-items:baseline;gap:8px;padding:0 8px;min-width:0}
 .tl-hgroup-cap{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.16em;
   text-transform:uppercase;color:var(--t3);flex-shrink:0}

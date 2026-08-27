@@ -350,7 +350,18 @@ function _pcHeadHtml(slots, idx){
       <svg viewBox="0 0 12 12" fill="none"><path d="${glyph}" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>`;
   };
-  const groupBars = groups.map(g => `<div class="tl-hgroup" style="grid-column:${g.at + 1} / span ${g.span};--room-tint:${roomColor(g.room)}">
+  /* Which group you are looking at: the one whose card crosses the middle of the
+     strip. Not the one holding the cursor — with three rooms on screen at once
+     the cursor is a fine anchor for where the window starts and a poor answer to
+     "which of these am I in", and it would keep the mark on a group already
+     halfway off the left edge. Column widths are equal, so the midpoint is
+     arithmetic on spans rather than anything measured. */
+  const mid = cols.length / 2;
+  let activeAt = -1;
+  groups.forEach(g => { if(g.at <= mid && mid < g.at + g.span) activeAt = g.at; });
+  // The tail pads with blanks, so the middle can land outside every group.
+  if(activeAt < 0 && groups.length) activeAt = groups[groups.length - 1].at;
+  const groupBars = groups.map(g => `<div class="tl-hgroup${g.at === activeAt ? ' is-active' : ''}" style="grid-column:${g.at + 1} / span ${g.span}">
       <span class="tl-hgroup-label">
         <span class="tl-hgroup-cap">Group</span>
         <span class="tl-hgroup-name">${esc(g.roomName)}</span>
