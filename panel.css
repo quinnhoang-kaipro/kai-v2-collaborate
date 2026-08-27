@@ -1835,7 +1835,10 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 /* Paints its own ground rather than letting anything through: the group bands are
    parked (PC_GROUP_BANDS), and a card that fills itself does not depend on a
    switched-off feature. */
-.tl-hgroup{display:flex;align-items:center;border:1px solid var(--stroke);
+/* Half-strength stroke: at full --stroke the outline was the heaviest thing on a
+   card whose whole job is to be a quiet ground for its tiles. */
+.tl-hgroup{display:flex;align-items:center;
+  border:1px solid color-mix(in srgb,var(--stroke) 50%,transparent);
   background:var(--tl-card);min-height:50px;padding:0 5px}
 /* Same card colour as the rest — the rule is the whole of the difference. */
 .tl-hgroup.is-active{box-shadow:inset 0 -3px 0 0 var(--ink)}
