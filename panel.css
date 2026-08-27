@@ -1785,50 +1785,63 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    The gutter and the column gap are declared once here because the header grid
    and both photo grids have to agree on them to the pixel; a photo under the
    wrong bar reads as a misaligned layout rather than as the wrong photo. */
-.tl-root{--tl-nav-w:30px;--tl-nav-gap:10px;--tl-col-gap:18px}
-.tl-head{display:flex;align-items:stretch;gap:var(--tl-nav-gap);padding:12px 16px 10px;
+.tl-root{--tl-nav-w:26px;--tl-nav-gap:8px;--tl-col-gap:10px}
+.tl-head{display:flex;align-items:stretch;gap:var(--tl-nav-gap);padding:12px 16px 12px;
   border-bottom:1px solid var(--stroke);flex-shrink:0;background:transparent}
 .tl-hgrid{flex:1;min-width:0;display:grid;column-gap:var(--tl-col-gap);align-items:stretch}
 /* Both tiers occupy row 1. The group bar is emitted first and the task bars
-   after it, so the nesting is a paint order rather than a second row — the
-   group's edge stays visible around its children. */
+   after it, so the nesting is a paint order rather than a second row.
+
+   Nesting by figure and ground, not by two nested outlines. Everything here used
+   to carry the same 1px hairline — group bar, task bars, nav buttons, photo
+   cells — and at one weight nothing is inside anything else; the whole strip read
+   as a wireframe of equal rectangles. The group is a filled ground now and its
+   tasks are white tiles sitting on it, which is the same relationship with no
+   lines spent saying so. */
 .tl-hgroup,.tl-htask{grid-row:1;min-width:0}
-.tl-hgroup{display:flex;align-items:center;border:1px solid var(--stroke);
-  background:#F7F5F0;min-height:52px;padding:0 6px}
-.tl-hgroup-label{display:flex;flex-direction:column;gap:1px;padding:0 6px;min-width:0}
-.tl-hgroup-cap{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.14em;
+.tl-hgroup{display:flex;align-items:center;border:0;background:var(--sunken);
+  min-height:48px;padding:0 4px}
+.tl-hgroup-label{display:flex;flex-direction:column;gap:2px;padding:0 10px;min-width:0}
+.tl-hgroup-cap{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.16em;
   text-transform:uppercase;color:var(--t3)}
 .tl-hgroup-name{font-size:13px;font-weight:600;color:var(--ink);line-height:1.2;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* Inset on every side so the group's bar reads as the thing containing it. */
-.tl-htask{margin:7px 0;display:flex;flex-direction:column;justify-content:center;gap:1px;
-  border:1px solid var(--stroke);background:var(--white);padding:4px 9px;cursor:pointer;
-  outline:none;transition:border-color .12s,background .12s}
-.tl-htask:hover{border-color:var(--midtone)}
-.tl-htask:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
-.tl-htask.current{border-color:var(--midtone);background:var(--sunken)}
-.tl-htask-name{font-size:12px;font-weight:600;color:var(--ink);line-height:1.25;
+/* Inset top and bottom so the group's ground shows above and below its tiles —
+   that margin is what reads as containment. */
+.tl-htask{margin:5px 0;display:flex;flex-direction:column;justify-content:center;gap:1px;
+  border:0;background:var(--white);padding:5px 10px;cursor:pointer;outline:none;
+  transition:box-shadow .12s,background .12s}
+.tl-htask:hover{box-shadow:inset 0 0 0 1px var(--stroke)}
+.tl-htask:focus-visible{outline:2px solid var(--ink);outline-offset:-1px}
+/* The current task is the one thing in the strip that earns a line. */
+.tl-htask.current{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.tl-htask-name{font-size:12px;font-weight:600;color:var(--ink);line-height:1.3;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tl-htask.current .tl-htask-name{color:var(--ink)}
 /* Only when a task actually spans more than one column — otherwise it is noise
    restating what one photo already shows. */
-.tl-htask-count{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;
+.tl-htask-count{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3)}
 /* Stepping lives outside the bar: the bar is a label for a span, and a span
    cannot also be the button for leaving it. Steps a column at a time, crossing
-   into the next group only once this one's run is exhausted. */
-.tl-hnav{flex-shrink:0;width:var(--tl-nav-w);background:var(--white);border:1px solid var(--stroke);
-  color:var(--t2);display:flex;align-items:center;justify-content:center;padding:0;
-  cursor:pointer;transition:background .12s,color .12s,border-color .12s}
-.tl-hnav:hover{background:var(--sunken);border-color:var(--midtone);color:var(--ink)}
-.tl-hnav svg{width:12px;height:12px;stroke:currentColor;fill:none}
-.tl-hnav.is-disabled{opacity:.35;cursor:not-allowed}
+   into the next group only once this one's run is exhausted. Borderless, because
+   a chevron on the page's own ground is already a button and the box around it
+   was one more rectangle competing with the content. */
+.tl-hnav{flex-shrink:0;width:var(--tl-nav-w);background:transparent;border:0;
+  color:var(--t3);display:flex;align-items:center;justify-content:center;padding:0;
+  cursor:pointer;transition:color .12s,background .12s}
+.tl-hnav:hover{background:var(--sunken);color:var(--ink)}
+.tl-hnav svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.5}
+.tl-hnav.is-disabled{opacity:.3;cursor:not-allowed}
+.tl-hnav.is-disabled:hover{background:transparent;color:var(--t3)}
 /* Body wraps both bands + Add-date placeholder */
-.tl-body{flex:1;display:flex;flex-direction:column;gap:18px;padding:14px 16px 18px;overflow:auto;background:var(--white)}
+/* Rows sit closer than they did: 18px of column gap and 18px between bands was
+   spacing for its own sake — two dates of the same line want to read as a pair,
+   and pushing them apart made the grid feel provisional. */
+.tl-body{flex:1;display:flex;flex-direction:column;gap:14px;padding:14px 16px 18px;overflow:auto;background:var(--white)}
 /* Band is a vertical stack now: horizontal walk picker row on top, then the
    3-column photo grid full-width below. This lets photos claim the entire
    right-panel width instead of losing 88px + a gutter to the left aside. */
-.tl-band{display:flex;flex-direction:column;gap:10px}
+.tl-band{display:flex;flex-direction:column;gap:8px}
 /* Indented by exactly what the header's nav buttons take, so a photo sits under
    the task bar that names it. Stated once here rather than guessed in two
    places — the columns disagreeing is the one failure nobody would read as a
@@ -1896,33 +1909,39 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 .tl-add-band{display:flex;align-items:center;justify-content:center;gap:6px;height:56px;border:1px dashed var(--midtone);background:transparent;color:var(--t2);font:inherit;font-size:12px;font-weight:500;cursor:pointer;transition:color .12s,background .12s,border-color .12s;font-family:var(--body)}
 .tl-add-band:hover{color:var(--ink);background:var(--sunken);border-color:var(--t3)}
 /* Photo cell — 4/3 aspect, room-tint top stripe, dashed empty state */
-.tl-cell{aspect-ratio:4/3;background:var(--white);border:1px solid var(--stroke);
+/* A photograph is its own edge. The 1px box around every cell was the same
+   hairline as the header bars and the nav buttons, so a grid of photos read as a
+   grid of boxes that happened to contain photos. Only the states that are NOT a
+   photograph draw a line now. */
+.tl-cell{aspect-ratio:4/3;background:var(--sunken);border:0;
   display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;
-  cursor:pointer;transition:filter .15s}
-.tl-cell:hover{filter:brightness(.94)}
-.tl-cell.current{border-color:var(--midtone);box-shadow:inset 0 0 0 1px var(--midtone)}
-.tl-cell[data-room-id]{box-shadow:inset 0 5px 0 0 var(--room-tint,transparent)}
-.tl-cell[data-room-id].current{box-shadow:inset 0 5px 0 0 var(--room-tint,transparent),inset 0 0 0 1px var(--midtone)}
-/* An empty cell is an absence, and should look like one: a dashed outline on the
-   page's own ground, with nothing written in it. It used to carry a tinted fill
-   and the words NO PHOTO, which gave the gaps more presence than the
-   photographs — a row of them read as content rather than as nothing there. */
-.tl-cell:has(.tl-cell-empty){background:transparent;border-style:dashed;border-color:var(--stroke)}
-.tl-cell[data-room-id]:has(.tl-cell-empty){background:transparent;border-style:dashed;
-  border-color:color-mix(in srgb,var(--room-tint) 30%,var(--stroke));
-  box-shadow:inset 0 5px 0 0 color-mix(in srgb,var(--room-tint) 45%,transparent)}
+  cursor:pointer;transition:opacity .15s}
+.tl-cell:hover{opacity:.9}
+/* The room's colour as a hairline along the top rather than a 5px slab — enough
+   to group the row by eye, not enough to be the first thing in it. */
+.tl-cell[data-room-id]{box-shadow:inset 0 2px 0 0 var(--room-tint,transparent)}
+.tl-cell.current{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.tl-cell[data-room-id].current{box-shadow:inset 0 2px 0 0 var(--room-tint,transparent),inset 0 0 0 1.5px var(--ink)}
+/* An empty cell is an absence and should look like one: the page's own ground
+   inside a hairline, nothing written in it. Dashed on a tinted fill made every
+   gap louder than the photographs around it, so a sparse walk read as content
+   rather than as nothing there. */
+.tl-cell:has(.tl-cell-empty){background:transparent;box-shadow:inset 0 0 0 1px var(--stroke)}
+.tl-cell:has(.tl-cell-empty):hover{opacity:1}
+.tl-cell[data-room-id]:has(.tl-cell-empty){background:transparent;
+  box-shadow:inset 0 0 0 1px var(--stroke),inset 0 2px 0 0 color-mix(in srgb,var(--room-tint) 55%,transparent)}
 .tl-cell-empty{display:none}
 .tl-cell-img{position:absolute;inset:0;width:100%;height:100%;display:block;background-size:cover;background-position:center}
 /* Green completion badge in top-right of every photo cell */
-.tl-cell-status{position:absolute;top:10px;right:10px;width:22px;height:22px;pointer-events:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.28))}
+.tl-cell-status{position:absolute;top:9px;right:9px;width:20px;height:20px;pointer-events:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.28))}
 .tl-cell-status svg{width:100%;height:100%;display:block}
-/* How many shots exist of this line, on the first of its columns only. A chip on
-   the photograph rather than a strip under it: it is a pointer to the rest of
-   them, not a caption for this one. */
-.tl-cell-count{position:absolute;top:10px;left:10px;background:var(--white);color:var(--ink);
-  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-  padding:4px 8px;pointer-events:none;box-shadow:0 1px 4px rgba(26,26,26,.18)}
-.tl-cell-status + .tl-cell-count{left:10px;right:auto}
+/* How many shots exist of this line, on the first of its columns only. Sits ON
+   the photograph, so it is legible over anything: dark glass, white type, no
+   drop shadow — the shadow was there to lift a white chip off a light photo,
+   which is a chip fighting its background rather than belonging to it. */
+.tl-cell-count{position:absolute;top:9px;left:9px;background:rgba(26,26,26,.72);color:#fff;
+  font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;padding:3px 7px;pointer-events:none;backdrop-filter:blur(2px)}
 /* Bottom slider — scrub through slot list */
 .tl-nav-slider{flex-shrink:0;padding:8px 18px 10px;border-top:1px solid var(--stroke);background:#F7F5F0;display:flex;flex-direction:column;gap:4px}
 .tl-nav-slider-hdr{display:flex;align-items:center;justify-content:space-between;gap:12px}
