@@ -1830,10 +1830,18 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 .tl-htask{margin:6px 3px;display:flex;flex-direction:column;justify-content:center;gap:1px;
   border:0;background:var(--sunken);padding:5px 9px;cursor:pointer;outline:none;
   transition:box-shadow .12s,background .12s}
-.tl-htask:hover{box-shadow:inset 0 0 0 1px var(--midtone)}
+.tl-htask:hover{background:#EFEBE1}
 .tl-htask:focus-visible{outline:2px solid var(--ink);outline-offset:-1px}
-/* The current task is the one thing in the strip that earns a heavier line. */
-.tl-htask.current{background:var(--white);box-shadow:inset 0 0 0 1.5px var(--ink)}
+/* Filled, not outlined. This was a 1.5px ink box — the last of the hard
+   rectangles, and the one in the busiest place: a black outline around a tile
+   already sitting inside an outlined card reads as a third nested box. An ink
+   ground says the same thing with no line at all, and pairs with the black rule
+   under the group, so "where you are" is one colour in two places rather than two
+   different kinds of mark. */
+.tl-htask.current{background:var(--ink)}
+.tl-htask.current:hover{background:var(--ink)}
+.tl-htask.current .tl-htask-name{color:var(--white)}
+.tl-htask.current .tl-htask-count{color:rgba(255,255,255,.62)}
 .tl-htask-name{font-size:12px;font-weight:600;color:var(--ink);line-height:1.3;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Only when a task actually spans more than one column — otherwise it is noise
@@ -1943,16 +1951,20 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 /* The room's colour as a hairline along the top rather than a 5px slab — enough
    to group the row by eye, not enough to be the first thing in it. */
 .tl-cell[data-room-id]{box-shadow:inset 0 2px 0 0 var(--room-tint,transparent)}
-.tl-cell.current{box-shadow:inset 0 0 0 1.5px var(--ink)}
-.tl-cell[data-room-id].current{box-shadow:inset 0 2px 0 0 var(--room-tint,transparent),inset 0 0 0 1.5px var(--ink)}
-/* An empty cell is an absence and should look like one: the page's own ground
-   inside a hairline, nothing written in it. Dashed on a tinted fill made every
-   gap louder than the photographs around it, so a sparse walk read as content
-   rather than as nothing there. */
-.tl-cell:has(.tl-cell-empty){background:transparent;box-shadow:inset 0 0 0 1px var(--stroke)}
+/* The current photo gets the same rule as its group rather than a ring around it:
+   a box drawn over the edges of a photograph crops it, and it was the one outline
+   left in the photo grid. */
+.tl-cell.current{box-shadow:inset 0 -3px 0 0 var(--ink)}
+.tl-cell[data-room-id].current{box-shadow:inset 0 2px 0 0 var(--room-tint,transparent),inset 0 -3px 0 0 var(--ink)}
+/* An empty cell is an absence and should look like one — and once the outlines
+   came off everything else, a 1px ring was the loudest thing left in the grid.
+   Edges attract the eye, so a ring drawn around nothing announced it. A barely
+   tinted ground says the slot exists and stops there; the room's hairline still
+   runs along the top so the row reads as one row. */
+.tl-cell:has(.tl-cell-empty){background:rgba(26,26,26,.035);box-shadow:none}
 .tl-cell:has(.tl-cell-empty):hover{opacity:1}
-.tl-cell[data-room-id]:has(.tl-cell-empty){background:transparent;
-  box-shadow:inset 0 0 0 1px var(--stroke),inset 0 2px 0 0 color-mix(in srgb,var(--room-tint) 55%,transparent)}
+.tl-cell[data-room-id]:has(.tl-cell-empty){background:rgba(26,26,26,.035);
+  box-shadow:inset 0 2px 0 0 color-mix(in srgb,var(--room-tint) 45%,transparent)}
 .tl-cell-empty{display:none}
 .tl-cell-img{position:absolute;inset:0;width:100%;height:100%;display:block;background-size:cover;background-position:center}
 /* Green completion badge in top-right of every photo cell */
