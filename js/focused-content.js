@@ -145,6 +145,17 @@ function _pcInitState(){
 }
 // Build the flat slot list: interleave a group slot before each room's
 // tasks. Slot index is what the scrubber navigates through.
+/* How many columns one task takes: the most photos it has on any single walk on
+   show. Never zero — an unfiltered task with no photos still gets its column. */
+function _pcTaskCols(task, walkIds){
+  if(!walkIds || typeof PHOTOS === 'undefined' || !PHOTOS.length) return 1;
+  let m = 0;
+  walkIds.forEach(wid => {
+    const n = PHOTOS.filter(p => p.kind === 'task' && p.task === task.code && p.walk === wid).length;
+    if(n > m) m = n;
+  });
+  return Math.max(1, m);
+}
 function _pcBuildSlots(){
   const slots = [];
   const rooms = (typeof ROOMS !== 'undefined' && ROOMS.length) ? ROOMS : [...new Set(TASKS.map(t => t.room))];
@@ -167,7 +178,14 @@ function _pcBuildSlots(){
     const visibleTasks = panoOnlyWithPhotos ? allRoomTasks.filter(hasPhotoOnActiveWalks) : allRoomTasks;
     slots.push({type:'group', room, roomName: room});
     visibleTasks.forEach(task => {
-      slots.push({type:'task', task, room, roomName: room, isExtra:false});
+      /* A column is a photo, not a task. A visit that took a wide and a detail
+         of the same line has two things to show, and collapsing them to one
+         column threw the second away — which is also what the nested task bar in
+         the header measures itself against. Sized by the busiest visible walk so
+         both date rows have somewhere to put every shot they hold. */
+      for(let i = 0; i < _pcTaskCols(task, walkIds); i++){
+        slots.push({type:'task', task, room, roomName: room, photoIdx:i, isExtra: i > 0});
+      }
     });
   });
   return slots;
@@ -175,7 +193,8 @@ function _pcBuildSlots(){
 function _pcPhotoFor(slot, walkId){
   if(!slot || !PHOTOS || !PHOTOS.length) return null;
   if(slot.type === 'task'){
-    return PHOTOS.find(p => p.kind === 'task' && p.task === slot.task.code && p.walk === walkId) || null;
+    const shots = PHOTOS.filter(p => p.kind === 'task' && p.task === slot.task.code && p.walk === walkId);
+    return shots[slot.photoIdx || 0] || null;
   }
   return PHOTOS.find(p => p.kind === 'group' && p.room === slot.room && p.walk === walkId) || null;
 }
@@ -224,63 +243,98 @@ function _pcActiveGroupIdx(slots){
   }
   return -1;
 }
-/* How many slots the strip shows at once. Was three — the slot before, the
-   current one, and the slot after — which meant a room with five tasks read as
-   "Kitchen, Cabinets, Living Room": the group, one task, and straight on to the
-   next room. The run a group actually heads was invisible.
+/* The strip shows one group at a time: its overview column and every photo
+   column under it. Was a fixed three — the slot before, the slot at the cursor,
+   and the slot after — so a room with four tasks read "Kitchen, Cabinets, Living
+   Room" and the run a group heads was never visible.
 
-   Four, anchored on the group instead of centred on the cursor, so the strip
-   reads the way the scope does — the room, then the tasks in it. */
-const PC_COLS = 4;
-function _pcWindow(slots){
-  const gi = _pcActiveGroupIdx(slots);
-  let start = gi >= 0 ? gi : 0;
-  // Once the cursor moves past the window the group gives up the first cell —
-  // pinning it there would mean the cursor leaves the strip it is meant to be in.
-  if(__pcState.currentIdx >= start + PC_COLS) start = __pcState.currentIdx - PC_COLS + 1;
-  start = Math.max(0, Math.min(start, Math.max(0, slots.length - PC_COLS)));
-  const out = [];
-  for(let k = 0; k < PC_COLS; k++) out.push(start + k);
-  return out;
-}
-
-function _pcHeadColHtml(slot, isCurrent, arrowPos, idx, slotsLen){
-  // Whole prev / next card is clickable — arrow glyphs stay as visual
-  // affordances but the click target spans the entire cell so users can
-  // hit the task/group name to navigate too.
-  const canNavLeft  = arrowPos === 'left'  && idx > 0;
-  const canNavRight = arrowPos === 'right' && idx < slotsLen - 1;
-  const isClickable = canNavLeft || canNavRight;
-  const isDisabled  = arrowPos && !isClickable;
-  const arrowLeft  = arrowPos === 'left'  ? `<span class="tl-col-nav" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M7.5 2L3.5 6l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>` : '';
-  const arrowRight = arrowPos === 'right' ? `<span class="tl-col-nav" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 2l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>` : '';
-  let title = '', meta = '';
-  if(!slot){
-    title = '';
-  } else if(slot.type === 'group'){
-    title = slot.roomName;
-    meta = 'Group overview';
-  } else {
-    title = slot.task.name;
-    meta = slot.roomName;
+   A whole run rather than a fixed width, because the group's bar has to span its
+   columns and its label has to own the first one. A sliding window would sooner
+   or later start mid-run, and then the nested task bars would sit on top of the
+   group's name. */
+const PC_MAX_COLS = 8;
+function _pcGroupRun(slots){
+  let start = _pcActiveGroupIdx(slots);
+  if(start < 0) start = 0;
+  let end = start + 1;
+  while(end < slots.length && slots[end] && slots[end].type !== 'group') end++;
+  // A pathological run gets clipped rather than squeezing every column to a
+  // sliver; the cursor is kept inside what is shown.
+  if(end - start > PC_MAX_COLS){
+    const cur = __pcState.currentIdx;
+    if(cur >= start + PC_MAX_COLS) start = Math.min(cur, end - PC_MAX_COLS);
+    end = start + PC_MAX_COLS;
   }
-  const label = title
-    ? `<span class="tl-col-title">${esc(title)}</span>${meta?`<span class="tl-col-meta">${esc(meta)}</span>`:''}`
-    : `<span class="tl-col-empty">—</span>`;
-  const clickAttr = canNavLeft  ? ' onclick="_pcNav(-1)" role="button" tabindex="0"'
-                  : canNavRight ? ' onclick="_pcNav(1)" role="button" tabindex="0"'
-                  : '';
-  const cls = ['tl-col-head'];
-  if(isCurrent) cls.push('current');
-  if(isClickable) cls.push('is-clickable');
-  if(isDisabled)  cls.push('is-disabled');
-  return `<div class="${cls.join(' ')}"${clickAttr} title="${canNavLeft?'Previous':canNavRight?'Next':''}">
-    ${arrowLeft}
-    <div class="tl-col-label">${label}</div>
-    ${arrowRight}
+  const cols = [];
+  for(let k = start; k < end; k++) cols.push(k);
+  return cols;
+}
+/* Where each group and each task begins and how far it reaches, over the
+   columns on show. One pass, used by the header's two tiers. */
+function _pcRuns(slots, cols){
+  const groups = [], tasks = [];
+  cols.forEach((si, k) => {
+    const slot = slots[si];
+    if(!slot) return;
+    const g = groups[groups.length - 1];
+    if(g && g.room === slot.room) g.span++;
+    else groups.push({room: slot.room, roomName: slot.roomName, at: k, span: 1,
+                      hasOverview: slot.type === 'group'});
+    if(slot.type !== 'task') return;
+    const t = tasks[tasks.length - 1];
+    if(t && t.task === slot.task) t.span++;
+    else tasks.push({task: slot.task, at: k, span: 1});
+  });
+  return {groups, tasks};
+}
+function _pcHeadHtml(slots, idx){
+  const cols = _pcGroupRun(slots);
+  const {groups, tasks} = _pcRuns(slots, cols);
+  const gi = _pcActiveGroupIdx(slots);
+  const prevGroup = _pcAdjacentGroup(slots, gi, -1);
+  const nextGroup = _pcAdjacentGroup(slots, gi, 1);
+  const nav = (dir, target) => {
+    const glyph = dir < 0 ? 'M7.5 2L3.5 6l4 4' : 'M4.5 2l4 4-4 4';
+    const dis = target < 0 ? ' is-disabled' : '';
+    const click = target < 0 ? '' : ` onclick="_pcSetIdx(${target})"`;
+    return `<button type="button" class="tl-hnav${dis}"${click}
+      aria-label="${dir < 0 ? 'Previous' : 'Next'} group"
+      title="${dir < 0 ? 'Previous group' : 'Next group'}"${target < 0 ? ' disabled' : ''}>
+      <svg viewBox="0 0 12 12" fill="none"><path d="${glyph}" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>`;
+  };
+  const groupBars = groups.map(g => `<div class="tl-hgroup" style="grid-column:${g.at + 1} / span ${g.span}">
+      <span class="tl-hgroup-label">
+        <span class="tl-hgroup-cap">Group</span>
+        <span class="tl-hgroup-name">${esc(g.roomName)}</span>
+      </span>
+    </div>`).join('');
+  /* Nested, not stacked: the task bar sits on the group's bar over the columns it
+     owns, inset so the group's edge still reads around it. Same grid row, placed
+     after, so it paints on top. */
+  const taskBars = tasks.map(t => {
+    const isCur = slots[idx] && slots[idx].type === 'task' && slots[idx].task === t.task;
+    return `<div class="tl-htask${isCur ? ' current' : ''}" style="grid-column:${t.at + 1} / span ${t.span}"
+        onclick="_pcSetIdx(${cols[t.at]})" role="button" tabindex="0" title="${esc(t.task.name)}">
+        <span class="tl-htask-name">${esc(t.task.name)}</span>
+        ${t.span > 1 ? `<span class="tl-htask-count">${t.span} photos</span>` : ''}
+      </div>`;
+  }).join('');
+  return `<div class="tl-head" style="grid-template-columns:repeat(${cols.length},1fr)">
+    ${nav(-1, prevGroup)}
+    <div class="tl-hgrid" style="grid-template-columns:repeat(${cols.length},1fr)">
+      ${groupBars}${taskBars}
+    </div>
+    ${nav(1, nextGroup)}
   </div>`;
 }
-
+/* The group slot before or after this one, or -1 at either end. */
+function _pcAdjacentGroup(slots, from, dir){
+  for(let i = from + dir; i >= 0 && i < slots.length; i += dir){
+    if(slots[i] && slots[i].type === 'group') return i;
+  }
+  return -1;
+}
 function _pcCellHtml(slot, walkId, isCurrent){
   const walk = walkFor(walkId);
   if(!slot){
@@ -422,8 +476,8 @@ function _pcBandHtml(bandKey, slots){
   const idx = __pcState.currentIdx;
   return `<div class="tl-band" data-band="${bandKey}">
     ${_pcWalksRowHtml(bandKey)}
-    <div class="tl-cells">
-      ${_pcWindow(slots).map(i => _pcCellHtml(slots[i] || null, walkId, i === idx)).join('')}
+    <div class="tl-cells" style="grid-template-columns:repeat(${_pcGroupRun(slots).length},1fr)">
+      ${_pcGroupRun(slots).map(i => _pcCellHtml(slots[i] || null, walkId, i === idx)).join('')}
     </div>
   </div>`;
 }

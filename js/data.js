@@ -198,8 +198,16 @@ function seedPhotos(){
   const walkIds = WALKS.map(w => w.id);
   let walkIdx = 0;
   const pickWalk = () => walkIds[walkIdx++ % walkIds.length];
-  // Everything after a task's first shot comes from a later visit.
-  const laterWalks = walkIds.slice(1);
+  /* Everything after a task's first shot comes from a later visit — and the
+     progress walks come first in that queue, ahead of the change-order and
+     closeout walks. In date order the change-order walk sits between the two
+     progress walks, so filling the queue in date order put a line's second shot
+     there and left Progress 2 — the default second date row — with nothing in it
+     at all. A routine progress photo belongs to a progress visit; the other two
+     walks exist for their own reasons. */
+  const laterWalks = ['progress_1', 'progress_2', 'change_order', 'close_out']
+    .filter(id => walkIds.includes(id))
+    .concat(walkIds.slice(1).filter(id => !['progress_1','progress_2','change_order','close_out'].includes(id)));
   ROOMS.forEach((room,ri)=>{
     const base=ri*13, gn=gCounts[ri]||2;
     for(let i=0;i<gn;i++) PHOTOS.push({id:_pid++, seed:base+i, room, kind:'group', task:null, walk:pickWalk()});
@@ -218,9 +226,16 @@ function seedPhotos(){
            room — so Progress, filtered to tasks with photos, showed a room and
            then jumped straight to the next room. A task's photos are a sequence
            in time; numbering them like one is both truer and denser per walk. */
+        /* One shot per later visit, except that a line photographed four or more
+           times got a pair on its last — a wide and a detail of finished work.
+           Pairing on the FIRST later visit instead emptied every walk after it,
+           since no task here has enough shots to cover five walks and double up
+           early as well. */
+        const n = t.photos || 0;
+        const later = (n >= 4 && k === n - 1) ? k - 2 : k - 1;
         const walk = (k === 0)
           ? walkIds[0]
-          : (laterWalks.length ? laterWalks[Math.min(k - 1, laterWalks.length - 1)] : walkIds[0]);
+          : (laterWalks.length ? laterWalks[Math.min(later, laterWalks.length - 1)] : walkIds[0]);
         PHOTOS.push({id:_pid++, seed:s++, room, kind:'task', task:t.code, walk});
       }
     });

@@ -4,19 +4,9 @@ function renderPanoCloseout(){
   if(typeof seedPhotos === 'function' && (!PHOTOS || !PHOTOS.length)) seedPhotos();
   const slots = _pcBuildSlots();
   const idx = __pcState.currentIdx;
-  const slotsLen = slots.length;
-  /* The strip is a window onto the slot list, not a prev/current/next triple —
-     see _pcWindow. The nav arrows stay on the end cards, and still step the
-     cursor by one; what changes is how much of the group's run you can see while
-     doing it. */
-  const win = _pcWindow(slots);
-  const head = `<div class="tl-head">
-    ${win.map((i, k) => _pcHeadColHtml(
-        slots[i] || null,
-        i === idx,
-        k === 0 ? 'left' : (k === win.length - 1 ? 'right' : null),
-        idx, slotsLen)).join('')}
-  </div>`;
+  // Two tiers now — a bar for the group, nested bars for the tasks in it. See
+  // _pcHeadHtml.
+  const head = _pcHeadHtml(slots, idx);
   const bandA = _pcBandHtml('A', slots);
   // Scope-review stage has nothing to compare against — only the initial
   // walk exists, so we hide the "+ Add date" affordance entirely.

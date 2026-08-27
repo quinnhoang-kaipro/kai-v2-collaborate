@@ -1778,28 +1778,46 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    --border-mid → --midtone, --t1/t2/t3 → --ink/--t2/--t3, --charcoal
    → --ink, --rm → 4px, --r → 3px, --font → --body, --mono → --mono. */
 .tl-root{display:flex;flex-direction:column;background:transparent;color:var(--ink);font-family:var(--body);min-height:520px}
-.tl-head{display:grid;grid-template-columns:repeat(4,1fr);column-gap:10px;padding:10px 12px 8px;border-bottom:1px solid var(--stroke);flex-shrink:0;align-items:stretch;background:transparent}
-.tl-col-head{font-size:12px;font-weight:500;color:var(--t2);padding:4px 8px;text-align:left;display:flex;align-items:center;gap:8px;min-width:0;border:1px solid var(--stroke);background:#F7F5F0;min-height:40px}
-.tl-col-head.current{color:var(--ink);font-weight:600;background:var(--sunken);border-color:var(--midtone)}
-.tl-col-label{flex:1;min-width:0;font-size:12px;display:flex;flex-direction:column;gap:1px;line-height:1.25}
-.tl-col-title{color:var(--ink);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tl-col-head.current .tl-col-title{font-weight:600}
-.tl-col-meta{font-family:var(--mono);font-size:9.5px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tl-col-empty{color:var(--t3);font-style:italic}
-/* Nav glyph is now a visual affordance only — the whole tl-col-head cell
-   is the click target. Kept the circle chip so users still spot the "click
-   me" cue at a glance. */
-.tl-col-nav{flex-shrink:0;width:26px;height:26px;background:var(--white);border:1px solid var(--stroke);color:var(--t2);display:inline-flex;align-items:center;justify-content:center;padding:0;transition:background .12s,color .12s,border-color .12s,transform .12s;pointer-events:none}
-.tl-col-nav svg{width:12px;height:12px;stroke:currentColor;fill:none}
-/* Whole prev / next cell is clickable — hover lifts the glyph + swaps the
-   card background so the click zone reads as one big target. */
-.tl-col-head.is-clickable{cursor:pointer;outline:none}
-.tl-col-head.is-clickable:hover{background:var(--sunken);border-color:var(--midtone);color:var(--ink)}
-.tl-col-head.is-clickable:hover .tl-col-nav{background:var(--sunken);color:var(--ink);border-color:var(--midtone);transform:scale(1.06)}
-.tl-col-head.is-clickable:hover .tl-col-title{color:var(--ink)}
-.tl-col-head.is-clickable:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-.tl-col-head.is-disabled{opacity:.4;cursor:not-allowed}
-.tl-col-head.is-disabled .tl-col-nav{opacity:.6}
+/* Two tiers: one bar for the group, spanning every column under it, and a
+   nested bar per task over the columns that task owns. Column count is set
+   inline — it is the group's run, which varies by room. */
+.tl-head{--tl-nav-w:30px;--tl-nav-gap:8px;
+  display:flex;align-items:stretch;gap:var(--tl-nav-gap);padding:10px 12px 8px;
+  border-bottom:1px solid var(--stroke);flex-shrink:0;background:transparent}
+.tl-hgrid{flex:1;min-width:0;display:grid;column-gap:10px;align-items:stretch}
+/* Both tiers occupy row 1. The group bar is emitted first and the task bars
+   after it, so the nesting is a paint order rather than a second row — the
+   group's edge stays visible around its children. */
+.tl-hgroup,.tl-htask{grid-row:1;min-width:0}
+.tl-hgroup{display:flex;align-items:center;border:1px solid var(--stroke);
+  background:#F7F5F0;min-height:52px;padding:0 6px}
+.tl-hgroup-label{display:flex;flex-direction:column;gap:1px;padding:0 6px;min-width:0}
+.tl-hgroup-cap{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--t3)}
+.tl-hgroup-name{font-size:13px;font-weight:600;color:var(--ink);line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Inset on every side so the group's bar reads as the thing containing it. */
+.tl-htask{margin:7px 0;display:flex;flex-direction:column;justify-content:center;gap:1px;
+  border:1px solid var(--stroke);background:var(--white);padding:4px 9px;cursor:pointer;
+  outline:none;transition:border-color .12s,background .12s}
+.tl-htask:hover{border-color:var(--midtone)}
+.tl-htask:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.tl-htask.current{border-color:var(--midtone);background:var(--sunken)}
+.tl-htask-name{font-size:12px;font-weight:600;color:var(--ink);line-height:1.25;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-htask.current .tl-htask-name{color:var(--ink)}
+/* Only when a task actually spans more than one column — otherwise it is noise
+   restating what one photo already shows. */
+.tl-htask-count{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--t3)}
+/* Group stepping lives outside the bar now: the bar is a label for a span, and
+   a span cannot also be a button to leave it. */
+.tl-hnav{flex-shrink:0;width:var(--tl-nav-w);background:var(--white);border:1px solid var(--stroke);
+  color:var(--t2);display:flex;align-items:center;justify-content:center;padding:0;
+  cursor:pointer;transition:background .12s,color .12s,border-color .12s}
+.tl-hnav:hover{background:var(--sunken);border-color:var(--midtone);color:var(--ink)}
+.tl-hnav svg{width:12px;height:12px;stroke:currentColor;fill:none}
+.tl-hnav.is-disabled{opacity:.35;cursor:not-allowed}
 /* Body wraps both bands + Add-date placeholder */
 .tl-body{flex:1;display:flex;flex-direction:column;gap:8px;padding:8px 12px 14px;overflow:auto;background:var(--white)}
 /* Band is a vertical stack now: horizontal walk picker row on top, then the
@@ -1808,7 +1826,12 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 .tl-band{display:flex;flex-direction:column;gap:6px}
 /* Four, matching PC_COLS in focused-content.js — the header row and both photo
    bands are one grid read three times and must not disagree. */
-.tl-cells{display:grid;grid-template-columns:repeat(4,1fr);column-gap:10px}
+/* Indented by exactly what the header's nav buttons take, so a photo sits under
+   the task bar that names it. Stated once here rather than guessed in two
+   places — the columns disagreeing is the one failure nobody would read as a
+   bug, just as a misaligned grid. */
+.tl-cells{display:grid;column-gap:10px;
+  margin-left:calc(30px + 8px);margin-right:calc(30px + 8px)}
 /* Horizontal picker row: label + pill options + optional X remove */
 .tl-walks{position:relative}
 /* Walk-picker row — no more boxed bg. Just the label + trigger button
