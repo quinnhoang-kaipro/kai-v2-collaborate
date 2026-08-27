@@ -1807,13 +1807,14 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    thing they are inside.
 
    White card, tinted tiles: the header row is white, so the group's bar is the
-   white card and its tasks are the tinted ones in it. The room's own colour runs
-   down the card's leading edge — the one place a slab of it earns its keep, since
-   it names the group without spending a second label on it. */
+   white card and its tasks are the tinted ones in it. The room's own colour is a
+   rule along the card's bottom edge — the one place a slab of it earns its keep,
+   since it names the group without spending a second label on it, and along the
+   bottom it also sits directly above the photo row it belongs to. */
 .tl-hgroup,.tl-htask{grid-row:1;min-width:0}
-.tl-hgroup{display:flex;align-items:center;border:1px solid var(--stroke);border-left:0;
+.tl-hgroup{display:flex;align-items:center;border:1px solid var(--stroke);border-bottom:0;
   background:var(--white);min-height:50px;padding:0 5px;
-  box-shadow:inset 3px 0 0 0 var(--room-tint,var(--midtone))}
+  box-shadow:inset 0 -3px 0 0 var(--room-tint,var(--midtone))}
 .tl-hgroup-label{display:flex;align-items:baseline;gap:8px;padding:0 8px;min-width:0}
 .tl-hgroup-cap{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.16em;
   text-transform:uppercase;color:var(--t3);flex-shrink:0}
@@ -1821,7 +1822,10 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Inset top and bottom so the group's card shows above and below its tiles —
    that margin is what reads as containment. */
-.tl-htask{margin:6px 0;display:flex;flex-direction:column;justify-content:center;gap:1px;
+/* 3px either side as well as top and bottom, so the last tile in a group does not
+   run into the card's own edge. Symmetric rather than right-only, which keeps each
+   tile centred over the photo column it names. */
+.tl-htask{margin:6px 3px;display:flex;flex-direction:column;justify-content:center;gap:1px;
   border:0;background:var(--sunken);padding:5px 9px;cursor:pointer;outline:none;
   transition:box-shadow .12s,background .12s}
 .tl-htask:hover{box-shadow:inset 0 0 0 1px var(--midtone)}
