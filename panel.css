@@ -1798,7 +1798,12 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    The gutter and the column gap are declared once here because the header grid
    and both photo grids have to agree on them to the pixel; a photo under the
    wrong bar reads as a misaligned layout rather than as the wrong photo. */
-.tl-root{--tl-nav-w:26px;--tl-nav-gap:8px;--tl-col-gap:8px;--tl-rail-w:112px}
+.tl-root{--tl-nav-w:26px;--tl-nav-gap:8px;--tl-col-gap:8px;--tl-rail-w:112px;
+  /* The strip's two greys. Neither is a palette token: --white is pure white and
+     --sunken is the warm cream used for sunken panels, and what the header wants
+     is a near-white card with a distinctly greyer tile on it — a pair, read
+     against each other rather than against the page. */
+  --tl-card:#F8F7F4;--tl-tile:#E9E7E0;--tl-tile-hover:#E1DED5}
 /* One three-column frame — rail, photo columns, forward arrow — declared here and
    reused by the header and by every band, so the rail, the bars and the photos
    line up without any of them knowing the others' widths. */
@@ -1827,12 +1832,13 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    saying which one you were looking at. One mark in the ink the rest of the type
    is set in answers that, and says nothing else. */
 .tl-hgroup,.tl-htask{grid-row:1;min-width:0}
-/* White, not transparent: the group bands are parked (PC_GROUP_BANDS), so nothing
-   needs to show through the card, and a card that paints its own ground does not
-   depend on what is behind it. */
+/* Paints its own ground rather than letting anything through: the group bands are
+   parked (PC_GROUP_BANDS), and a card that fills itself does not depend on a
+   switched-off feature. */
 .tl-hgroup{display:flex;align-items:center;border:1px solid var(--stroke);
-  background:var(--white);min-height:50px;padding:0 5px}
-.tl-hgroup.is-active{background:var(--white);box-shadow:inset 0 -3px 0 0 var(--ink)}
+  background:var(--tl-card);min-height:50px;padding:0 5px}
+/* Same card colour as the rest — the rule is the whole of the difference. */
+.tl-hgroup.is-active{box-shadow:inset 0 -3px 0 0 var(--ink)}
 .tl-hgroup-label{display:flex;align-items:baseline;gap:8px;padding:0 8px;min-width:0}
 .tl-hgroup-cap{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.16em;
   text-transform:uppercase;color:var(--t3);flex-shrink:0}
@@ -1844,9 +1850,9 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    run into the card's own edge. Symmetric rather than right-only, which keeps each
    tile centred over the photo column it names. */
 .tl-htask{margin:6px 3px;display:flex;flex-direction:column;justify-content:center;gap:1px;
-  border:0;background:var(--sunken);padding:5px 9px;cursor:pointer;outline:none;
+  border:0;background:var(--tl-tile);padding:5px 9px;cursor:pointer;outline:none;
   transition:box-shadow .12s,background .12s}
-.tl-htask:hover{background:#EFEBE1}
+.tl-htask:hover{background:var(--tl-tile-hover)}
 .tl-htask:focus-visible{outline:2px solid var(--ink);outline-offset:-1px}
 /* No current state on these tiles at all. It was an ink ring, then an ink fill,
    and both were answering a question already answered twice over: the rule under
