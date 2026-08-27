@@ -1799,11 +1799,14 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    and both photo grids have to agree on them to the pixel; a photo under the
    wrong bar reads as a misaligned layout rather than as the wrong photo. */
 .tl-root{--tl-nav-w:26px;--tl-nav-gap:8px;--tl-col-gap:8px;--tl-rail-w:112px;
-  /* The strip's two greys. Neither is a palette token: --white is pure white and
-     --sunken is the warm cream used for sunken panels, and what the header wants
-     is a near-white card with a distinctly greyer tile on it — a pair, read
-     against each other rather than against the page. */
-  --tl-card:#F8F7F4;--tl-tile:#E9E7E0;--tl-tile-hover:#E1DED5}
+  /* The tile's grey. Not a palette token: --sunken is the warm cream for sunken
+     panels, several steps more yellow than this. Used at half strength, so the
+     tile is a tint of the page rather than a block sitting on it.
+
+     And one line for both boxes — the card and its tiles are bounded the same
+     way, so the value is stated once. */
+  --tl-tile:#E9E7E0;
+  --tl-line:color-mix(in srgb,var(--stroke) 50%,transparent)}
 /* One three-column frame — rail, photo columns, forward arrow — declared here and
    reused by the header and by every band, so the rail, the bars and the photos
    line up without any of them knowing the others' widths. */
@@ -1832,14 +1835,15 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    saying which one you were looking at. One mark in the ink the rest of the type
    is set in answers that, and says nothing else. */
 .tl-hgroup,.tl-htask{grid-row:1;min-width:0}
-/* Paints its own ground rather than letting anything through: the group bands are
-   parked (PC_GROUP_BANDS), and a card that fills itself does not depend on a
-   switched-off feature. */
-/* Half-strength stroke: at full --stroke the outline was the heaviest thing on a
-   card whose whole job is to be a quiet ground for its tiles. */
-.tl-hgroup{display:flex;align-items:center;
-  border:1px solid color-mix(in srgb,var(--stroke) 50%,transparent);
-  background:var(--tl-card);min-height:50px;padding:0 5px}
+/* No fill at all — the outline is the whole card. Filling it made the group a
+   panel with things on it; unfilled, it is a bracket around them, which is what a
+   group is. Half-strength stroke, because at full --stroke the outline was the
+   heaviest thing inside a card meant to be quiet.
+
+   (Transparent also happens to be what the parked group bands need, should
+   PC_GROUP_BANDS come back on.) */
+.tl-hgroup{display:flex;align-items:center;border:1px solid var(--tl-line);
+  background:transparent;min-height:50px;padding:0 5px}
 /* Same card colour as the rest — the rule is the whole of the difference. */
 .tl-hgroup.is-active{box-shadow:inset 0 -3px 0 0 var(--ink)}
 .tl-hgroup-label{display:flex;align-items:baseline;gap:8px;padding:0 8px;min-width:0}
@@ -1852,10 +1856,13 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 /* 3px either side as well as top and bottom, so the last tile in a group does not
    run into the card's own edge. Symmetric rather than right-only, which keeps each
    tile centred over the photo column it names. */
+/* Bounded like its card and filled at half strength: the tile reads as the same
+   kind of object as the group, one level in. box-sizing is border-box throughout,
+   so gaining a border did not change what it covers. */
 .tl-htask{margin:6px 3px;display:flex;flex-direction:column;justify-content:center;gap:1px;
-  border:0;background:var(--tl-tile);padding:5px 9px;cursor:pointer;outline:none;
-  transition:box-shadow .12s,background .12s}
-.tl-htask:hover{background:var(--tl-tile-hover)}
+  border:1px solid var(--tl-line);background:color-mix(in srgb,var(--tl-tile) 50%,transparent);
+  padding:5px 9px;cursor:pointer;outline:none;transition:box-shadow .12s,background .12s}
+.tl-htask:hover{background:var(--tl-tile)}
 .tl-htask:focus-visible{outline:2px solid var(--ink);outline-offset:-1px}
 /* No current state on these tiles at all. It was an ink ring, then an ink fill,
    and both were answering a question already answered twice over: the rule under
