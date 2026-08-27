@@ -287,24 +287,34 @@ function _pcWatchSize(){
     _pcSyncCols();
   }, 220);
 }
-/* The columns on show: anchored on the group you are in, running forward through
-   the slot list — across the next group's columns rather than padding with
-   blanks, since a fixed width has to be filled with something and the next
-   room's photos are more use than empty boxes. */
+/* The columns on show. Always opens on a group's own column, because that column
+   is where the group's name lives — the bar and its tiles sit side by side on one
+   row, so the label needs a column of its own and the window may never begin
+   mid-run. Then it runs forward through the slot list, crossing into later groups
+   to fill the strip; each of those brings its own column with it, so every group
+   in view is named the same way.
+
+   A run longer than the strip pages its tasks with the group's column pinned.
+   The tail pads with blanks rather than sliding the start back, since sliding
+   would land mid-run and changing the count would change the photo size. */
 function _pcGroupRun(slots){
   const n = _pcColCount();
   const g = _pcActiveGroupIdx(slots);
-  let start = g < 0 ? 0 : g;
-  // Keep the cursor in view when it has moved past the anchor's window.
-  if(__pcState.currentIdx >= start + n) start = __pcState.currentIdx - n + 1;
-  start = Math.max(0, Math.min(start, Math.max(0, slots.length - n)));
-  const cols = [];
-  for(let k = start; k < Math.min(slots.length, start + n); k++) cols.push(k);
+  const start = g < 0 ? 0 : g;
+  const cols = [start];
+  let from = start + 1;
+  if(__pcState.currentIdx >= start + n){
+    const per = n - 1;
+    from = start + 1 + Math.floor((__pcState.currentIdx - start - 1) / per) * per;
+  }
+  for(let k = from; cols.length < n && k < slots.length; k++) cols.push(k);
+  while(cols.length < n) cols.push(-1);   // blank, so the count never varies
   return cols;
 }
-/* Where the arrows go: one column either way. */
+/* Where the arrows go: one column either way, counted from the real columns. */
 function _pcStepTarget(slots, cols, dir){
-  const t = dir > 0 ? cols[cols.length - 1] + 1 : cols[0] - 1;
+  const real = cols.filter(i => i >= 0);
+  const t = dir > 0 ? real[real.length - 1] + 1 : real[0] - 1;
   return (t >= 0 && t < slots.length) ? t : -1;
 }
 /* Where each group and each task begins and how far it reaches, over the
