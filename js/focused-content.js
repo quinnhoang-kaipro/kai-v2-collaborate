@@ -243,53 +243,69 @@ function _pcActiveGroupIdx(slots){
   }
   return -1;
 }
-/* The strip shows one group at a time: its overview column and every photo
-   column under it. Was a fixed three — the slot before, the slot at the cursor,
-   and the slot after — so a room with four tasks read "Kitchen, Cabinets, Living
-   Room" and the run a group heads was never visible.
-
-   A whole run rather than a fixed width, because the group's bar has to span its
-   columns and its label has to own the first one. A sliding window would sooner
-   or later start mid-run, and then the nested task bars would sit on top of the
-   group's name. */
-/* Five. A group's run can be longer than that, but a photograph you cannot read
-   is not evidence of anything — past five the columns get too narrow to see what
-   is in them, so a long run clips and the arrows walk you through it. */
-const PC_MAX_COLS = 5;
+/* How many photo columns the strip shows. Fixed as you scroll — it is a property
+   of how much room there is, so it changes when the scope sidebar opens or shuts
+   and at no other time. It used to be the length of the current group's run,
+   which meant a room with one task got two enormous columns and a room with four
+   got five small ones: the photographs changed size as you moved between rooms,
+   which reads as a bug because it is one. */
+let _pcColsRendered = null;  // the count the current DOM was built with
+let _pcSizeW = null;         // width poll; see _pcWatchSize for why not an observer
+function _pcMeasureCols(){
+  const host = document.getElementById('workBody');
+  const w = host && host.clientWidth ? host.clientWidth : 900;
+  // What is left for photos once the rail, the forward arrow, the gaps between
+  // them and the strip's own padding are taken out.
+  const inner = w - 112 - 26 - 16 - 32;
+  return Math.max(3, Math.min(6, Math.round(inner / 250)));
+}
+/* Measured every render, never cached. Caching it looked safe — the count only
+   changes with the width — but toggling the scope sidebar rebuilds the panel's
+   work area and re-renders this tab, and a cache meant that fresh render kept
+   the old count and simply stretched three columns to fill a wider strip. */
+function _pcColCount(){
+  _pcColsRendered = _pcMeasureCols();
+  return _pcColsRendered;
+}
+/* Re-measure and redraw only if the answer changed. */
+function _pcSyncCols(){
+  if(_pcMeasureCols() === _pcColsRendered) return;
+  if(typeof renderPanoCloseout === 'function') renderPanoCloseout();
+}
+/* A poll, for the reason a2-init.js already documents about its own: a
+   ResizeObserver never fires inside the shell's srcdoc iframe. Nothing else
+   here catches the two ways this width moves — hiding the scope sidebar, which
+   only widens the work area by CSS and re-renders nothing, and dragging it,
+   which fires no event of its own. Cheap: it compares two integers and only
+   does work when the answer actually changed. */
+function _pcWatchSize(){
+  if(_pcSizeW) return;
+  _pcSizeW = setInterval(() => {
+    if(!document.getElementById('workBody') || !document.querySelector('.tl-root')){
+      clearInterval(_pcSizeW); _pcSizeW = null; return;   // tab moved on
+    }
+    _pcSyncCols();
+  }, 220);
+}
+/* The columns on show: anchored on the group you are in, running forward through
+   the slot list — across the next group's columns rather than padding with
+   blanks, since a fixed width has to be filled with something and the next
+   room's photos are more use than empty boxes. */
 function _pcGroupRun(slots){
+  const n = _pcColCount();
   const g = _pcActiveGroupIdx(slots);
-  const start = g < 0 ? 0 : g;
-  let end = start + 1;
-  while(end < slots.length && slots[end] && slots[end].type !== 'group') end++;
+  let start = g < 0 ? 0 : g;
+  // Keep the cursor in view when it has moved past the anchor's window.
+  if(__pcState.currentIdx >= start + n) start = __pcState.currentIdx - n + 1;
+  start = Math.max(0, Math.min(start, Math.max(0, slots.length - n)));
   const cols = [];
-  if(end - start <= PC_MAX_COLS){
-    for(let k = start; k < end; k++) cols.push(k);
-    return cols;
-  }
-  /* A run too long for the strip pages its task columns and keeps the group's
-     own column pinned at the left. Sliding the whole run instead would sooner or
-     later scroll that column away, and then the first task bar would be sitting
-     on top of the group's name — the thing this window exists to prevent. */
-  const per  = PC_MAX_COLS - 1;
-  const cur  = Math.max(start + 1, __pcState.currentIdx);
-  const from = start + 1 + Math.floor((cur - start - 1) / per) * per;
-  cols.push(start);
-  for(let k = from; k < Math.min(end, from + per); k++) cols.push(k);
+  for(let k = start; k < Math.min(slots.length, start + n); k++) cols.push(k);
   return cols;
 }
-/* Where the arrows go. Advancing the strip means the next column after the last
-   one on show — which is the next group only once the run is exhausted, so a
-   clipped run can still be walked to its end. */
+/* Where the arrows go: one column either way. */
 function _pcStepTarget(slots, cols, dir){
-  const g = _pcActiveGroupIdx(slots);
-  if(dir > 0){
-    const after = cols[cols.length - 1] + 1;
-    if(slots[after] && slots[after].type !== 'group') return after;
-    return _pcAdjacentGroup(slots, g, 1);
-  }
-  const firstTask = cols.length > 1 ? cols[1] : cols[0];
-  if(firstTask - 1 > g) return firstTask - 1;
-  return _pcAdjacentGroup(slots, g, -1);
+  const t = dir > 0 ? cols[cols.length - 1] + 1 : cols[0] - 1;
+  return (t >= 0 && t < slots.length) ? t : -1;
 }
 /* Where each group and each task begins and how far it reaches, over the
    columns on show. One pass, used by the header's two tiers. */
@@ -350,13 +366,6 @@ function _pcHeadHtml(slots, idx){
     </div>
     ${nav(1, nextGroup)}
   </div>`;
-}
-/* The group slot before or after this one, or -1 at either end. */
-function _pcAdjacentGroup(slots, from, dir){
-  for(let i = from + dir; i >= 0 && i < slots.length; i += dir){
-    if(slots[i] && slots[i].type === 'group') return i;
-  }
-  return -1;
 }
 /* Every photo on this line or room, across all walks — what the corner pill
    counts. The strip only ever shows one walk per row, so "2 photos" is a pointer

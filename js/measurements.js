@@ -21,6 +21,9 @@ function renderPanoCloseout(){
     <div class="tl-body">${bandA}${bandB}</div>
     ${_pcSliderHtml(slots)}
   </div>`;
+  // The column count is a function of width, and the width can move without
+  // anything re-rendering this tab. _pcWatchSize explains why it is a poll.
+  if(typeof _pcWatchSize === 'function') _pcWatchSize();
 }
 
 function renderPano(){
