@@ -1777,7 +1777,13 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    Design tokens map: --bg → --white / --sunken, --border → --stroke,
    --border-mid → --midtone, --t1/t2/t3 → --ink/--t2/--t3, --charcoal
    → --ink, --rm → 4px, --r → 3px, --font → --body, --mono → --mono. */
-.tl-root{display:flex;flex-direction:column;background:transparent;color:var(--ink);font-family:var(--body);min-height:520px}
+.tl-root{position:relative;display:flex;flex-direction:column;background:transparent;color:var(--ink);font-family:var(--body);min-height:520px}
+/* The group you are in, banded from the header down past the last photo row. Set
+   by _pcPlaceHilite; z-index 0 against the rows' 1 puts it under the content, so
+   it shows in the gutters between photos and behind the empty ones rather than
+   washing over the photographs. */
+.tl-hilite{position:absolute;z-index:0;background:rgba(26,26,26,.065);pointer-events:none}
+.tl-head,.tl-body{position:relative;z-index:1}
 /* Two tiers: one bar for the group, spanning every column under it, and a
    nested bar per task over the columns that task owns. Column count is set
    inline — it is the group's run, which varies by room.
@@ -1816,7 +1822,9 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 .tl-hgroup,.tl-htask{grid-row:1;min-width:0}
 .tl-hgroup{display:flex;align-items:center;border:1px solid var(--stroke);
   background:var(--white);min-height:50px;padding:0 5px}
-.tl-hgroup.is-active{box-shadow:inset 0 -3px 0 0 var(--ink)}
+/* Transparent, not white: the card sits over the band, and leaving it white cut a
+   hole in the very shape the band is drawing. */
+.tl-hgroup.is-active{background:transparent;box-shadow:inset 0 -3px 0 0 var(--ink)}
 .tl-hgroup-label{display:flex;align-items:baseline;gap:8px;padding:0 8px;min-width:0}
 .tl-hgroup-cap{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.16em;
   text-transform:uppercase;color:var(--t3);flex-shrink:0}

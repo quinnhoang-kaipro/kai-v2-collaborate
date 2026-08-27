@@ -267,6 +267,33 @@ function _pcColCount(){
   _pcColsRendered = _pcMeasureCols();
   return _pcColsRendered;
 }
+/* The band behind the group you are in — the sketch's grey box, under the content
+   rather than over it.
+
+   Measured and absolutely positioned rather than placed in the grids, because it
+   has to run from the top of the header to the bottom of the last photo row and
+   those are three separate grids with the body's padding and row gap between
+   them. Three grid-placed bands could be bled into each other with negative
+   margins tuned to that padding, which is three numbers that have to stay in step
+   with the stylesheet. One element measured off the active card cannot drift. */
+function _pcPlaceHilite(){
+  const root = document.querySelector('.tl-root');
+  const el   = document.getElementById('tlHilite');
+  const card = document.querySelector('.tl-hgroup.is-active');
+  const head = document.querySelector('.tl-head');
+  const rows = document.querySelectorAll('.tl-cells');
+  if(!root || !el) return;
+  if(!card || !head || !rows.length){ el.hidden = true; return; }
+  const r = root.getBoundingClientRect();
+  const c = card.getBoundingClientRect();
+  const h = head.getBoundingClientRect();
+  const last = rows[rows.length - 1].getBoundingClientRect();
+  el.hidden = false;
+  el.style.left   = Math.round(c.left - r.left) + 'px';
+  el.style.width  = Math.round(c.width) + 'px';
+  el.style.top    = Math.round(h.top - r.top) + 'px';
+  el.style.height = Math.round(last.bottom - h.top) + 'px';
+}
 /* Re-measure and redraw only if the answer changed. */
 function _pcSyncCols(){
   if(_pcMeasureCols() === _pcColsRendered) return;
@@ -285,6 +312,7 @@ function _pcWatchSize(){
       clearInterval(_pcSizeW); _pcSizeW = null; return;   // tab moved on
     }
     _pcSyncCols();
+    _pcPlaceHilite();   // the band is measured, so it moves when the width does
   }, 220);
 }
 /* The columns on show. Always opens on a group's own column, because that column

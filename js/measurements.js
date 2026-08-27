@@ -17,6 +17,7 @@ function renderPanoCloseout(){
   // "Only show tasks with photos" now lives in the tabs row (see
   // renderWorkHdr's scopeTools), not as a standalone bar here.
   body.innerHTML = `<div class="tl-root">
+    <div class="tl-hilite" id="tlHilite" hidden></div>
     ${head}
     <div class="tl-body">${bandA}${bandB}</div>
     ${_pcSliderHtml(slots)}
@@ -24,6 +25,11 @@ function renderPanoCloseout(){
   // The column count is a function of width, and the width can move without
   // anything re-rendering this tab. _pcWatchSize explains why it is a poll.
   if(typeof _pcWatchSize === 'function') _pcWatchSize();
+  /* Straight away, not on a frame callback. Reading a rect forces layout, so the
+     measurement is correct the moment the markup is in — and requestAnimationFrame
+     does not reliably fire for this iframe anyway, the same way ResizeObserver
+     does not. */
+  if(typeof _pcPlaceHilite === 'function') _pcPlaceHilite();
 }
 
 function renderPano(){
