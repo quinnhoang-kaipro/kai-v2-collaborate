@@ -2454,3 +2454,35 @@ try{ localStorage.removeItem('kai_tb_hidden'); }catch(e){}
 
 /* ════════════ INIT ════════════ */
 render();
+
+/* ── SCRATCH · sidebar look picker ───────────────────────────────────
+   Flips the panel's sbopt-* body class from the Demo menu, so the three
+   options can be compared without a console. Remembered across renders
+   because changing a preset reloads the iframe and the panel would come
+   back on the current look otherwise. All of this goes when one is chosen. */
+let sbOptChoice = '';
+function setSbOpt(k){
+  sbOptChoice = k || '';
+  applySbOpt();
+  syncSbOptSeg();
+}
+function applySbOpt(){
+  try{
+    const w = (document.getElementById('iframe') || {}).contentWindow;
+    if(w && typeof w.sbOpt === 'function') w.sbOpt(sbOptChoice);
+  }catch(e){ /* iframe still loading — the load handler below retries */ }
+}
+function syncSbOptSeg(){
+  const seg = document.getElementById('sbOptSeg');
+  if(!seg) return;
+  const keys = ['', 'a', 'b', 'c'];
+  Array.prototype.forEach.call(seg.children, (b, i) => {
+    b.classList.toggle('on', keys[i] === sbOptChoice);
+  });
+}
+document.addEventListener('DOMContentLoaded', () => {
+  syncSbOptSeg();
+  const ifr = document.getElementById('iframe');
+  // Re-apply after every load: a preset change blanks the src and remounts.
+  if(ifr) ifr.addEventListener('load', applySbOpt);
+});

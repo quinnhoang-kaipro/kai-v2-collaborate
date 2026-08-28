@@ -668,3 +668,13 @@ body{flex-direction:column}
 .dsp-confirm-n{margin-top:12px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--midtone,#7D7469)}
 /* The gate reads as unavailable rather than broken — it says what's left. */
 #appApproveBtn[disabled]{opacity:.45;cursor:not-allowed}
+
+/* SCRATCH · segmented switch for picking a sidebar look. Goes with the
+   sbopt-* rules in panel.css once an option is chosen. */
+.sb-opt-seg{display:inline-flex;border:1px solid var(--stroke);overflow:hidden;flex-shrink:0}
+.sb-opt-seg button{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;
+  padding:0 8px;height:22px;background:transparent;color:var(--t2);border:0;cursor:pointer;
+  transition:background .12s,color .12s}
+.sb-opt-seg button+button{border-left:1px solid var(--stroke)}
+.sb-opt-seg button:hover{color:var(--ink)}
+.sb-opt-seg button.on{background:var(--ink);color:var(--white)}

@@ -32,6 +32,21 @@
           </div>
           <label class="tb-toggle"><input type="checkbox" id="twoStep" onchange="setTwoStep(this.checked)"><span class="sw"></span></label>
         </div>
+        <!-- SCRATCH · picking a sidebar look. Goes with the sbopt-* rules in
+             panel.css once an option is chosen. -->
+        <div class="tb-set-h" style="margin-top:14px">Sidebar look</div>
+        <div class="tb-set-row">
+          <div>
+            <div class="ll">Group rows</div>
+            <div class="sub">Show the scope sidebar to compare.</div>
+          </div>
+          <div class="sb-opt-seg" id="sbOptSeg">
+            <button type="button" onclick="setSbOpt('')">Now</button>
+            <button type="button" onclick="setSbOpt('a')">A</button>
+            <button type="button" onclick="setSbOpt('b')">B</button>
+            <button type="button" onclick="setSbOpt('c')">C</button>
+          </div>
+        </div>
         <div class="tb-set-foot">
           <button class="reset" onclick="resetDemo()">Reset demo</button>
         </div>
