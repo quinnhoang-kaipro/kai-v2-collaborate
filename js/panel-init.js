@@ -70,3 +70,12 @@ function toast(msg){
 document.body.classList.toggle('shop-mode', workMode==='shop');
 renderWorkHdr();
 renderAll();
+
+/* SCRATCH · flip between the sidebar look options in panel.css. sbOpt('a'),
+   sbOpt('b'), sbOpt('c'), or sbOpt('') for the current look. Goes when the
+   option is picked. */
+window.sbOpt = function(k){
+  document.body.classList.remove('sbopt-a','sbopt-b','sbopt-c');
+  if(k) document.body.classList.add('sbopt-' + k);
+  return k ? 'option ' + k.toUpperCase() : 'current look';
+};
