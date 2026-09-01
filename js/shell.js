@@ -1540,7 +1540,7 @@ function syncAppApproveBtn(){
       } else if(secondBtn && canStartReviewHere()){
         // Secondary, because handing it on is the ordinary move from a draft and
         // opening the review early is the exception.
-        secondBtn.textContent = 'Review';
+        secondBtn.textContent = 'Enter approval mode';
         secondBtn.onclick = openStartReview;
         secondBtn.hidden = false;
       }
