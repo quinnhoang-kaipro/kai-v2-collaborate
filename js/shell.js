@@ -590,9 +590,16 @@ function scopeHistoryHtml(){
 
 function renderStatePop(){
   let el = document.getElementById('statePop');
+  /* The chip holds a pressed state for as long as its card is open. A control
+     that visibly stays down is the plainest statement a thing can make that it
+     was a control — and it also answers "did my click do anything", which a
+     popover appearing below the fold of the eye does not. Cleared first so it
+     cannot be left behind on a chip the card has moved away from. */
+  document.querySelectorAll('.stage-turn.is-open').forEach(b => b.classList.remove('is-open'));
   if(!statePopOpen){ if(el) el.remove(); return; }
   const anchor = document.querySelector(statePopAnchor) || document.querySelector('.stage.is-scope-info');
   if(!anchor){ statePopOpen = false; if(el) el.remove(); return; }
+  if(anchor.classList.contains('stage-turn')) anchor.classList.add('is-open');
   if(!el){ el = document.createElement('div'); el.id = 'statePop'; document.body.appendChild(el); }
   /* projectStage, not viewStage. The lock and the turn are facts about the
      document; viewStage is only which step you happen to be looking at, and a
@@ -1706,11 +1713,19 @@ function renderStages(){
      is spent and a future one's isn't assigned yet. */
   const docState = docStateFor(state.projectStage);
   const _turn = whoseTurn(viewStage, state.role, state.twoStep);
+  /* The label says the obligation, not the identity. "You" and two initials were
+     both answers to "who", when the question the bar is being asked is "whose move
+     is it" — and the words that say so were already written, sitting in this
+     element's title where nobody sees them until they hover. The caret points
+     down because the card opens downwards: a right chevron reads as "go
+     somewhere", a down one as "this opens". */
+  const turnRoleName = _turn.role ? roleName(_turn.role) : '';
   const turnChip = _turn.role
     ? `<button class="stage-turn${_turn.mine ? ' is-mine' : ''}" type="button" aria-haspopup="dialog"
          onclick="event.stopPropagation();toggleStatePop('.stage.active .stage-turn')"
-         title="${_turn.mine ? 'Your move — click for detail' : 'Waiting on ' + _turn.who + ' — click for detail'}"
-         >${_turn.mine ? 'You' : _turn.initials}</button>`
+         title="${_turn.mine ? 'Your move' : 'With ' + _turn.who + ' (' + turnRoleName + ')'} — opens the detail"
+         ><span class="stage-turn-lbl">${_turn.mine ? 'Your move' : 'With ' + _turn.who}</span>
+         <span class="stage-turn-car"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg></span></button>`
     : '';
   if(capsWrap) capsWrap.innerHTML = visibleStages.map(sg => {
     const isActive = sg === viewSuper;

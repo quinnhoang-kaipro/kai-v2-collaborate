@@ -164,16 +164,44 @@ body.tb-hidden .tb-reveal{display:inline-flex}
    marks in one glance instead of role-plus-stage deduction.
    Yours is the accent; someone else's is quiet, because the point of it then
    is that there is nothing here for you. */
-.stage-turn{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;
-  min-width:22px;height:20px;padding:0 6px;
-  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;
-  border-radius:999px;background:rgba(255,255,255,.14);color:rgba(255,255,255,.72)}
-.stage-turn.is-mine{background:var(--accent);color:var(--ink)}
-/* It's a button now — two initials can't say who someone is, so it opens the
-   name, the role and what they owe. */
-.stage-turn{border:0;cursor:pointer;transition:background .12s,color .12s}
+/* ── whose move it is ────────────────────────────────────────────────
+   A labelled control, not a status dot. It used to be a 22px pill reading "You"
+   or two initials, which answered "who" when the bar is being asked "whose move
+   is it", and which looked exactly like the avatar chips it sits beside — so the
+   one clickable thing in that cluster was the one that looked least clickable.
+
+   Three things carry clickability in the space available: the caret, kept in its
+   own well behind a hairline so the pill visibly has a control end; a hover that
+   moves rather than just tints; and a pressed state that holds while the card is
+   open. */
+.stage-turn{flex-shrink:0;display:inline-flex;align-items:center;gap:0;height:22px;padding:0;
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  border-radius:999px;overflow:hidden;border:0;cursor:pointer;
+  background:rgba(255,255,255,.14);color:rgba(255,255,255,.78);
+  transition:background .12s,color .12s,box-shadow .12s}
+.stage-turn-lbl{padding:0 8px 0 10px;white-space:nowrap}
+/* The well. A divider plus a slightly deeper ground is enough to read as "this
+   end does something" at 9px, where a border would be too loud. */
+.stage-turn-car{display:flex;align-items:center;justify-content:center;align-self:stretch;
+  padding:0 6px;background:rgba(0,0,0,.16);box-shadow:inset 1px 0 0 0 rgba(255,255,255,.18)}
+.stage-turn-car svg{width:9px;height:9px;stroke:currentColor;stroke-width:2.1;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;transition:transform .16s}
 .stage-turn:hover{background:rgba(255,255,255,.26);color:#fff}
-.stage-turn.is-mine:hover{background:var(--accent);filter:brightness(1.06)}
+/* Moves, not just tints: a 1px nudge is small enough to stay elegant and is the
+   difference between "highlighted" and "responds to me". */
+.stage-turn:hover .stage-turn-car svg{transform:translateY(1px)}
+/* Yours. The accent stays, but the caret's well darkens it rather than tinting
+   white, so the control end reads on yellow as clearly as on grey. */
+.stage-turn.is-mine{background:var(--accent);color:var(--ink)}
+.stage-turn.is-mine .stage-turn-car{background:rgba(26,26,26,.14);
+  box-shadow:inset 1px 0 0 0 rgba(26,26,26,.16)}
+.stage-turn.is-mine:hover{background:var(--accent-deep)}
+/* Open. Flipped caret and a ring, held for as long as the card is showing. */
+.stage-turn.is-open{background:var(--white);color:var(--ink);box-shadow:0 0 0 2px rgba(253,255,134,.55)}
+.stage-turn.is-open .stage-turn-car{background:rgba(26,26,26,.1);
+  box-shadow:inset 1px 0 0 0 rgba(26,26,26,.14)}
+.stage-turn.is-open .stage-turn-car svg{transform:rotate(180deg)}
+.stage-turn.is-mine.is-open{background:var(--accent)}
 .stage-turn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* ── turn popover ────────────────────────────────────────────────────
