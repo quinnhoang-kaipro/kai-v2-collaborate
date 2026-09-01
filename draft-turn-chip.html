@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Draft · turn chip options</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* Tokens and toolbar rules lifted verbatim from shell.css so the bar below is
+   the product's bar, not an impression of it. Fonts fall back to the Google
+   equivalents the app already loads alongside its licensed faces. */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --white:#FFFFFF; --app-bg:#FFFDF8; --stroke:#DDD6C8; --midtone:#7D7469;
+  --ink:#1A1A1A; --accent:#FDFF86; --accent-deep:#EDEF60;
+  --sunken:#F4F0E6; --t2:#5C5750; --t3:#8A8470;
+  --display:'Maxeville','Space Grotesk',sans-serif;
+  --body:'Circular XX','Hanken Grotesk','Helvetica Neue',sans-serif;
+  --mono:'Maxeville Construct','Space Mono',monospace;
+}
+body{font-family:var(--body);background:var(--app-bg);color:var(--ink);
+  -webkit-font-smoothing:antialiased;padding:40px 32px 80px}
+
+/* ── page furniture (not part of the product) ───────────────────────── */
+.pg{max-width:1180px;margin:0 auto}
+.pg-h{font-family:var(--display);font-size:24px;font-weight:700;letter-spacing:-.01em}
+.pg-sub{font-size:14px;color:var(--t2);line-height:1.55;margin-top:8px;max-width:70ch}
+.opt{margin-top:44px}
+.opt-h{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
+.opt-tag{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--t3)}
+.opt-n{font-family:var(--display);font-size:17px;font-weight:700}
+.opt-note{font-size:13px;color:var(--t2);line-height:1.6;max-width:78ch;margin-bottom:14px}
+.opt-note b{color:var(--ink);font-weight:600}
+.opt-note code{font-family:var(--mono);font-size:11.5px;background:var(--sunken);padding:1px 5px}
+.bar-lbl{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--t3);margin:14px 0 6px}
+
+/* ── the product's toolbar, verbatim ────────────────────────────────── */
+.app-toolbar{height:56px;background:var(--ink);display:flex;align-items:center;flex-shrink:0;position:relative}
+.app-toolbar .tb-address{font-family:var(--display);font-size:15px;font-weight:700;color:var(--white);
+  white-space:nowrap;letter-spacing:-.01em;flex-shrink:0;padding:0 44px 0 22px;height:56px;
+  display:flex;align-items:center}
+.tb-steps{display:flex;align-items:center;gap:26px;flex:1;min-width:0}
+.stage{display:flex;align-items:center;gap:9px;position:relative;min-width:0}
+.stage-num{flex-shrink:0;width:24px;height:24px;border-radius:50%;border:1.5px solid rgba(255,255,255,.3);
+  background:transparent;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:11px;font-weight:700;color:rgba(255,255,255,.5)}
+.stage.active .stage-num{background:var(--accent);border-color:var(--accent);color:var(--ink)}
+.stage-label{font-size:13px;font-weight:600;color:rgba(255,255,255,.45);line-height:1.2;white-space:nowrap}
+.stage.active .stage-label{color:var(--white)}
+.stage-lock{flex-shrink:0;display:flex;color:rgba(255,255,255,.55)}
+.stage-lock svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.6;fill:none}
+.tb-cta{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;background:var(--accent);color:var(--ink);border:0;padding:10px 16px;
+  margin-right:16px;cursor:pointer;flex-shrink:0}
+.tb-role{font-family:var(--body);font-size:12px;font-weight:600;color:var(--white);
+  display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.3);
+  background:transparent;padding:7px 11px;margin-right:14px;cursor:pointer;flex-shrink:0}
+.tb-role svg{width:11px;height:11px;stroke:currentColor;stroke-width:1.5;fill:none}
+
+/* ── CURRENT · the chip as it ships ─────────────────────────────────── */
+.stage-turn{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;
+  min-width:22px;height:20px;padding:0 6px;
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;
+  border-radius:999px;background:rgba(255,255,255,.14);color:rgba(255,255,255,.72);
+  border:0;cursor:pointer;transition:background .12s,color .12s}
+.stage-turn.is-mine{background:var(--accent);color:var(--ink)}
+.stage-turn:hover{background:rgba(255,255,255,.26);color:#fff}
+.stage-turn.is-mine:hover{background:var(--accent);filter:brightness(1.06)}
+
+/* ── OPTION 1 · promote the tooltip, add a caret ────────────────────── */
+.turn-1{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 5px 0 8px;
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  border-radius:999px;border:0;cursor:pointer;
+  background:rgba(255,255,255,.14);color:rgba(255,255,255,.78);transition:background .12s,color .12s}
+.turn-1.is-mine{background:var(--accent);color:var(--ink)}
+.turn-1:hover{background:rgba(255,255,255,.26);color:#fff}
+.turn-1.is-mine:hover{background:var(--accent-deep)}
+.turn-1 svg{width:9px;height:9px;stroke:currentColor;stroke-width:2;fill:none;opacity:.75}
+
+/* ── OPTION 2 · the shape the bar's other controls use ──────────────── */
+.turn-2{flex-shrink:0;display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 8px 0 9px;
+  font-family:var(--body);font-size:11.5px;font-weight:600;letter-spacing:.01em;
+  border:1px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.82);
+  cursor:pointer;transition:border-color .12s,color .12s,background .12s}
+.turn-2:hover{border-color:var(--white);color:var(--white);background:rgba(255,255,255,.06)}
+/* Yellow means ownership, the button shape means clickable — one signal each,
+   instead of the accent trying to carry both. */
+.turn-2 .dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.35);flex-shrink:0}
+.turn-2.is-mine .dot{background:var(--accent)}
+.turn-2.is-mine{color:var(--white);border-color:rgba(253,255,134,.55)}
+.turn-2.is-mine:hover{border-color:var(--accent)}
+.turn-2 svg{width:10px;height:10px;stroke:currentColor;stroke-width:1.6;fill:none;opacity:.7}
+
+/* ── OPTION 3 · identity in the bar, obligation in the caption ──────── */
+.turn-3{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;
+  min-width:22px;height:20px;padding:0 6px;font-family:var(--mono);font-size:9px;font-weight:700;
+  letter-spacing:.06em;border-radius:999px;background:rgba(255,255,255,.14);
+  color:rgba(255,255,255,.72);border:0}
+.turn-3.is-mine{background:var(--accent);color:var(--ink)}
+.stage-captions{display:flex;gap:26px;background:var(--white);border-bottom:1px solid var(--stroke);
+  padding:9px 22px}
+.stage-cap{font-size:11.5px;color:var(--t2);line-height:1.45;white-space:nowrap}
+.cap-link{font-size:11.5px;font-weight:600;color:var(--ink);background:transparent;border:0;padding:0;
+  cursor:pointer;border-bottom:1px solid var(--stroke);display:inline-flex;align-items:center;gap:4px}
+.cap-link:hover{border-bottom-color:var(--ink)}
+.cap-link svg{width:9px;height:9px;stroke:currentColor;stroke-width:2;fill:none}
+
+/* Hover hint under each bar */
+.hint{font-size:12px;color:var(--t3);margin-top:7px;font-style:italic}
+</style>
+</head>
+<body>
+<div class="pg">
+
+  <div class="pg-h">Whose move is it — three ways to say so</div>
+  <p class="pg-sub">The chip on the Scope step is a button that opens the document's
+  state card, and today it reads as a status dot. Each option below pairs a copy change with a
+  visual one, shown in both states: when the move is <b>yours</b>, and when it belongs to
+  <b>someone else</b>. Hover them — the hover state is part of the answer.</p>
+
+  <!-- ─────────────────────────── CURRENT ─────────────────────────── -->
+  <div class="opt">
+    <div class="opt-h"><span class="opt-tag">Now</span><span class="opt-n">What ships today</span></div>
+    <p class="opt-note">Two problems in one mark. <b>“You” names an identity, not an obligation</b> —
+    it could as easily mean “this is you” as “this is yours to move”. And the pill has no affordance,
+    so it reads like the avatar chips beside it. The copy that would fix it already exists: the chip's
+    <code>title</code> is <code>“Your move — click for detail”</code>, visible only on hover.</p>
+
+    <div class="bar-lbl">Yours</div>
+    <div class="app-toolbar">
+      <span class="tb-address">3484 South Main Street</span>
+      <div class="tb-steps">
+        <div class="stage active"><span class="stage-num">1</span><span class="stage-label">Scope in draft</span>
+          <span class="stage-lock"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9"/><path d="M8 11V7.5a4 4 0 0 1 7.5-1.9"/></svg></span>
+          <button class="stage-turn is-mine">You</button></div>
+        <div class="stage"><span class="stage-num">2</span><span class="stage-label">Work not started</span></div>
+        <div class="stage"><span class="stage-num">3</span><span class="stage-label">Closeout unavailable</span></div>
+      </div>
+      <button class="tb-cta">Hand off</button>
+      <button class="tb-role">Role · Admin <svg viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3"/></svg></button>
+    </div>
+
+    <div class="bar-lbl">Someone else's</div>
+    <div class="app-toolbar">
+      <span class="tb-address">3484 South Main Street</span>
+      <div class="tb-steps">
+        <div class="stage active"><span class="stage-num">1</span><span class="stage-label">Scope in review</span>
+          <span class="stage-lock"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9"/><path d="M8.5 11V7.5a3.5 3.5 0 0 1 7 0V11"/></svg></span>
+          <button class="stage-turn">AN</button></div>
+        <div class="stage"><span class="stage-num">2</span><span class="stage-label">Work not started</span></div>
+        <div class="stage"><span class="stage-num">3</span><span class="stage-label">Closeout unavailable</span></div>
+      </div>
+      <button class="tb-role">Role · Admin <svg viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3"/></svg></button>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────── OPTION 1 ─────────────────────────── -->
+  <div class="opt">
+    <div class="opt-h"><span class="opt-tag">Option 1</span><span class="opt-n">Promote the tooltip, add a caret</span></div>
+    <p class="opt-note">Says the obligation out loud and borrows the chevron the bar already uses for
+    “this opens something” — same glyph as the role button to its right. <b>Smallest possible change</b>,
+    and it stops hiding the clearest copy in the feature. Costs about 45px of bar width, which is fine at
+    this step and tighter where step labels run long.</p>
+
+    <div class="bar-lbl">Yours</div>
+    <div class="app-toolbar">
+      <span class="tb-address">3484 South Main Street</span>
+      <div class="tb-steps">
+        <div class="stage active"><span class="stage-num">1</span><span class="stage-label">Scope in draft</span>
+          <span class="stage-lock"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9"/><path d="M8 11V7.5a4 4 0 0 1 7.5-1.9"/></svg></span>
+          <button class="turn-1 is-mine">Your move <svg viewBox="0 0 12 12"><path d="M4.5 2l4 4-4 4"/></svg></button></div>
+        <div class="stage"><span class="stage-num">2</span><span class="stage-label">Work not started</span></div>
+        <div class="stage"><span class="stage-num">3</span><span class="stage-label">Closeout unavailable</span></div>
+      </div>
+      <button class="tb-cta">Hand off</button>
+      <button class="tb-role">Role · Admin <svg viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3"/></svg></button>
+    </div>
+
+    <div class="bar-lbl">Someone else's</div>
+    <div class="app-toolbar">
+      <span class="tb-address">3484 South Main Street</span>
+      <div class="tb-steps">
+        <div class="stage active"><span class="stage-num">1</span><span class="stage-label">Scope in review</span>
+          <span class="stage-lock"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9"/><path d="M8.5 11V7.5a3.5 3.5 0 0 1 7 0V11"/></svg></span>
+          <button class="turn-1">With A. Novak <svg viewBox="0 0 12 12"><path d="M4.5 2l4 4-4 4"/></svg></button></div>
+        <div class="stage"><span class="stage-num">2</span><span class="stage-label">Work not started</span></div>
+        <div class="stage"><span class="stage-num">3</span><span class="stage-label">Closeout unavailable</span></div>
+      </div>
+      <button class="tb-role">Role · Admin <svg viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3"/></svg></button>
+    </div>
+    <p class="hint">The name replaces the initials, so “AN” stops being a riddle.</p>
+  </div>
+
+  <!-- ─────────────────────────── OPTION 2 ─────────────────────────── -->
+  <div class="opt">
+    <div class="opt-h"><span class="opt-tag">Option 2</span><span class="opt-n">The shape the bar's other controls use</span></div>
+    <p class="opt-note">Squared, bordered, with a caret — the treatment of <b>Role · Admin</b> a few inches
+    to the right. Reusing a control pattern already learned in this same black bar is the strongest
+    clickability signal available. It also <b>splits the two jobs the yellow is doing</b>: the dot carries
+    ownership, the button shape carries clickability, so the accent stops competing with the yellow CTA
+    beside it.</p>
+
+    <div class="bar-lbl">Yours</div>
+    <div class="app-toolbar">
+      <span class="tb-address">3484 South Main Street</span>
+      <div class="tb-steps">
+        <div class="stage active"><span class="stage-num">1</span><span class="stage-label">Scope in draft</span>
+          <span class="stage-lock"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9"/><path d="M8 11V7.5a4 4 0 0 1 7.5-1.9"/></svg></span>
+          <button class="turn-2 is-mine"><span class="dot"></span>Your move <svg viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3"/></svg></button></div>
+        <div class="stage"><span class="stage-num">2</span><span class="stage-label">Work not started</span></div>
+        <div class="stage"><span class="stage-num">3</span><span class="stage-label">Closeout unavailable</span></div>
+      </div>
+      <button class="tb-cta">Hand off</button>
+      <button class="tb-role">Role · Admin <svg viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3"/></svg></button>
+    </div>
+
+    <div class="bar-lbl">Someone else's</div>
+    <div class="app-toolbar">
+      <span class="tb-address">3484 South Main Street</span>
+      <div class="tb-steps">
+        <div class="stage active"><span class="stage-num">1</span><span class="stage-label">Scope in review</span>
+          <span class="stage-lock"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9"/><path d="M8.5 11V7.5a3.5 3.5 0 0 1 7 0V11"/></svg></span>
+          <button class="turn-2"><span class="dot"></span>With A. Novak <svg viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3"/></svg></button></div>
+        <div class="stage"><span class="stage-num">2</span><span class="stage-label">Work not started</span></div>
+        <div class="stage"><span class="stage-num">3</span><span class="stage-label">Closeout unavailable</span></div>
+      </div>
+      <button class="tb-role">Role · Admin <svg viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3"/></svg></button>
+    </div>
+    <p class="hint">Widest of the three. Compare it against the Role button — that resemblance is the point,
+    and also the risk: two similar controls in one bar.</p>
+  </div>
+
+  <!-- ─────────────────────────── OPTION 3 ─────────────────────────── -->
+  <div class="opt">
+    <div class="opt-h"><span class="opt-tag">Option 3</span><span class="opt-n">Identity in the bar, obligation in the caption</span></div>
+    <p class="opt-note">The chip goes back to being a quiet identity mark and stops pretending to be a
+    button. What you owe moves to the caption line under the step — which already exists, and is already
+    where “what happens next” copy lives — as a text link, which nobody has to be taught is clickable.
+    <b>Quietest in the bar</b>, but the cue is no longer on the thing you were looking at.</p>
+
+    <div class="bar-lbl">Yours</div>
+    <div class="app-toolbar">
+      <span class="tb-address">3484 South Main Street</span>
+      <div class="tb-steps">
+        <div class="stage active"><span class="stage-num">1</span><span class="stage-label">Scope in draft</span>
+          <span class="stage-lock"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9"/><path d="M8 11V7.5a4 4 0 0 1 7.5-1.9"/></svg></span>
+          <span class="turn-3 is-mine">You</span></div>
+        <div class="stage"><span class="stage-num">2</span><span class="stage-label">Work not started</span></div>
+        <div class="stage"><span class="stage-num">3</span><span class="stage-label">Closeout unavailable</span></div>
+      </div>
+      <button class="tb-cta">Hand off</button>
+      <button class="tb-role">Role · Admin <svg viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3"/></svg></button>
+    </div>
+    <div class="stage-captions">
+      <div class="stage-cap"><b>Yours to hand off.</b>
+        <button class="cap-link">See what's next <svg viewBox="0 0 12 12"><path d="M4.5 2l4 4-4 4"/></svg></button>
+      </div>
+    </div>
+
+    <div class="bar-lbl">Someone else's</div>
+    <div class="app-toolbar">
+      <span class="tb-address">3484 South Main Street</span>
+      <div class="tb-steps">
+        <div class="stage active"><span class="stage-num">1</span><span class="stage-label">Scope in review</span>
+          <span class="stage-lock"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9"/><path d="M8.5 11V7.5a3.5 3.5 0 0 1 7 0V11"/></svg></span>
+          <span class="turn-3">AN</span></div>
+        <div class="stage"><span class="stage-num">2</span><span class="stage-label">Work not started</span></div>
+        <div class="stage"><span class="stage-num">3</span><span class="stage-label">Closeout unavailable</span></div>
+      </div>
+      <button class="tb-role">Role · Admin <svg viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3"/></svg></button>
+    </div>
+    <div class="stage-captions">
+      <div class="stage-cap">With <b>A. Novak</b> to review.
+        <button class="cap-link">See what's next <svg viewBox="0 0 12 12"><path d="M4.5 2l4 4-4 4"/></svg></button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
