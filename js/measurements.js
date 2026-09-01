@@ -17,7 +17,7 @@ function renderPanoCloseout(){
   // "Only show tasks with photos" now lives in the tabs row (see
   // renderWorkHdr's scopeTools), not as a standalone bar here.
   body.innerHTML = `<div class="tl-root">
-    <div class="tl-hilite" id="tlHilite" hidden></div>
+    <div class="tl-hilite" id="tlHilite"></div>
     ${head}
     <div class="tl-body">${bandA}${bandB}</div>
     ${_pcSliderHtml(slots)}
