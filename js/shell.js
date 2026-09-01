@@ -646,37 +646,71 @@ function renderStatePop(){
      to change. The chip on the active step reports the move — whose it is and
      what happens next. One card showing both meant step 1 answered for step 2,
      which is wrong the moment more than one step is live. */
+  /* One labelled row, one vocabulary, one order — used by both cards.
+
+     The two cards had nine labels between them and named the person three
+     different ways: an avatar block on one, "With X (Role)" on the other,
+     "Waiting on X (Role)" in a third place. Reading two cards about the same
+     document meant learning two formats. The set is fixed now:
+
+       Responsible   who owns the move, and what they owe
+       Editing       who may change it right now
+       Budget        the frozen figure, or the two at a change order
+       Approved      who settled it and when
+       You           what the viewer can do about it
+       Then          what happens after the current move
+
+     Always in that order, always worded the same way. Which rows a card shows is
+     unchanged — the Scope step still reports the document and the active step
+     still reports the move — because that split is deliberate. What changes is
+     that the rows themselves match. */
+  const popRow = (label, value, sub) => !value ? '' :
+    `<div class="turn-pop-p"><span class="turn-pop-lbl">${label}</span> ${value}`
+    + (sub ? `<span class="turn-pop-sub">${sub}</span>` : '') + `</div>`;
+  // The person, spelled one way everywhere.
+  const whoLine = (t.role && t.who)
+    ? `${t.mine ? 'You' : t.who} (${roleName})` : '';
   const isScopeCard = statePopAnchor.indexOf('stage-turn') === -1;
   let body;
   if(isScopeCard){
     const appr = (id === 'approved') ? scopeApprover() : null;
     const co   = inChangeOrder() ? changeOrderInfo() : null;
+    /* The document's own facts. Responsible appears in every state now, not just
+       when the scope is locked and held by someone else — "who owns this" is the
+       first thing you want from a state card, and in draft it was the one thing
+       the card would not tell you. */
     body = `
-      ${appr ? `<div class="turn-pop-who"><span class="turn-pop-av">${initialsOf(appr.who)}</span>
-        <span class="turn-pop-name"><b>${appr.who}</b><span class="turn-pop-role">${appr.role}</span></span></div>
-        <div class="turn-pop-p"><span class="turn-pop-lbl">Approved</span> ${appr.date}</div>` : ''}
-      ${(id === 'locked' && t.role && !t.mine) ? `<div class="turn-pop-p"><span class="turn-pop-lbl">With</span> ${t.who} (${roleName})</div>` : ''}
+      ${appr ? popRow('Approved', `${appr.who} (${appr.role})`, appr.date) : ''}
+      ${!appr ? popRow('Responsible', whoLine) : ''}
       ${/* A change order swaps the editing line for the two figures. What editing
            costs is not the question here — the scope is already approved, so what
            you want to know is what the budget is and what approving would make
            it. Both come off the panel's stamped ladder. */
         co
-          ? `<div class="turn-pop-p"><span class="turn-pop-lbl">Approved budget</span> ${co.prevBudget || '\u2014'}</div>
-             <div class="turn-pop-p"><span class="turn-pop-lbl">New budget</span> ${co.budget || '\u2014'}</div>`
-          : `<div class="turn-pop-p"><span class="turn-pop-lbl">${lock.label}</span> ${lock.text}</div>`}
+          ? popRow('Approved budget', co.prevBudget || '\u2014') + popRow('New budget', co.budget || '\u2014')
+          : popRow(lock.label, lock.text)}
       ${(id !== 'approved') ? scopeHistoryHtml() : ''}`;
   } else {
-    const second = t.role
-      ? (t.mine ? turnNextFor(proj, state.twoStep, track)
-                : turnYoursFor(proj, state.role, state.twoStep, track))
-      : '';
+    /* The move. Same three labels every time: who has it and what they owe, then
+       what the viewer can do, then what follows. */
+    /* turnNeedFor already opens with "to" — it was written to sit after a name
+       ("waiting on X to review every task"). Capitalise it rather than prefixing,
+       or it reads "To to review every task". */
+    const need = turnNeedFor(proj, state.twoStep, track);
+    const owes = t.mine
+      ? turnMineFor(proj, state.twoStep, track)
+      : need.charAt(0).toUpperCase() + need.slice(1) + '.';
+    const yours = t.mine ? '' : turnYoursFor(proj, state.role, state.twoStep, track);
+    const then  = t.mine ? turnNextFor(proj, state.twoStep, track) : '';
+    /* The initials ride inside the Responsible row rather than heading the card.
+       A block naming the person above a row naming the person again is the exact
+       duplication this pass exists to remove — and the initials still echo the
+       chip that was pressed, which is what they were there for. */
+    const av = `<span class="turn-pop-av-sm${t.mine ? ' is-mine' : ''}">${t.initials}</span>`;
     body = !t.role ? '<div class="turn-pop-p">Nothing outstanding here.</div>' : `
-      <div class="turn-pop-who"><span class="turn-pop-av${t.mine ? ' is-mine' : ''}">${t.initials}</span>
-        <span class="turn-pop-name"><b>${t.who}</b><span class="turn-pop-role">${roleName}</span></span></div>
-      <div class="turn-pop-p">${t.mine
-        ? `<span class="turn-pop-lbl">You</span> ${turnMineFor(proj, state.twoStep, track)}`
-        : `<span class="turn-pop-lbl">Waiting on</span> ${t.who} (${roleName}) ${turnNeedFor(proj, state.twoStep, track)}.`}</div>
-      ${second ? `<div class="turn-pop-p"><span class="turn-pop-lbl">${t.mine ? 'Then' : 'You'}</span> ${second}</div>` : ''}
+      ${popRow('Responsible', av + ' ' + whoLine, owes)}
+      ${popRow('You', yours)}
+      ${popRow('Then', then)}
       ${prog}`;
   }
   el.innerHTML = `<div class="turn-pop-card is-${id}" role="dialog" aria-label="${isScopeCard ? 'Scope state' : 'Whose turn it is'}"
