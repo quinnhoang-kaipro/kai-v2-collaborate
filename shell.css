@@ -223,48 +223,12 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 .turn-pop-card.is-approved{border-left-color:var(--success)}
 .turn-pop-card{position:fixed;pointer-events:auto;width:268px;background:var(--white);
   border:1px solid var(--stroke);box-shadow:0 12px 30px rgba(26,26,26,.22);padding:13px 14px 14px}
-.turn-pop-who{display:flex;align-items:center;gap:9px;margin-bottom:11px}
-.turn-pop-av{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--midtone);
-  color:var(--white);font-family:var(--mono);font-size:10px;font-weight:700;
-  display:flex;align-items:center;justify-content:center}
-.turn-pop-av.is-mine{background:var(--ink);color:var(--accent)}
-.turn-pop-name{display:flex;flex-direction:column;gap:1px;min-width:0}
-.turn-pop-name b{font-size:13.5px;color:var(--ink);font-weight:600}
-.turn-pop-role{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--t3)}
-/* Two paragraphs, each led by its own label. The label is what makes the
-   subject unambiguous — the sentence alone can't say whose obligation it is. */
-.turn-pop-p{font-size:12.5px;color:var(--t2);line-height:1.5}
-.turn-pop-p + .turn-pop-p{margin-top:9px;padding-top:9px;border-top:1px solid var(--stroke)}
-/* ── the scope's dated events ────────────────────────────────────────
-   A log, so it reads as one: date in mono at a fixed column, the event beside
-   it. Not a labelled paragraph like the lines above — those are statements
-   about now, this is what has already happened. */
-.sh-list{margin-top:10px;padding-top:10px;border-top:1px solid var(--stroke)}
-/* Date above the event, not beside it. Side by side, a date column wide enough
-   for "Apr 11, 2026" left the sentence wrapping onto two lines while most of the
-   date column sat empty — and the hand-off rows are the longer sentences. */
-.sh-row + .sh-row{margin-top:9px}
-.sh-when{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.07em;
-  text-transform:uppercase;color:var(--t3);margin-bottom:2px}
-.sh-what{font-size:12px;line-height:1.4;color:var(--t2)}
-.sh-what b{font-weight:600;color:var(--ink)}
-.sh-role{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--t3)}
-.sh-foot{margin-top:9px;font-size:11.5px;font-style:italic;color:var(--t3)}
 .turn-pop-lbl{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--ink);margin-right:5px}
 /* The second half of a row — the obligation under a name, or a date under an
    approver. Its own line, because a row carries one fact and this is the same
    fact continued, not a new one. */
 .turn-pop-sub{display:block;margin-top:3px;color:var(--t2)}
-/* Initials inside a row rather than heading the card, so the person is named
-   once. Small enough to sit on a line of 12px text. */
-.turn-pop-av-sm{display:inline-flex;align-items:center;justify-content:center;
-  width:18px;height:18px;border-radius:50%;background:var(--midtone);color:var(--white);
-  font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.02em;
-  vertical-align:-4px;margin-right:2px}
-.turn-pop-av-sm.is-mine{background:var(--accent);color:var(--ink)}
 .turn-pop-lbl::after{content:':'}
 .turn-pop-prog{margin-top:10px;padding-top:9px;border-top:1px solid var(--stroke);
   font-size:12px;color:var(--t2)}

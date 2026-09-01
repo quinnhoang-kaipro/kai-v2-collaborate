@@ -624,19 +624,6 @@ function renderStatePop(){
   const prog = (d.total && !d.ready)
     ? `<div class="turn-pop-prog"><b>${d.done} of ${d.total}</b> ${d.verb === 'approve' ? 'approved' : 'reviewed'}</div>`
     : (d.total && d.ready ? `<div class="turn-pop-prog is-done"><b>All ${d.total}</b> ${d.verb === 'approve' ? 'approved' : 'reviewed'} \u2014 ready</div>` : '');
-  /* Who holds the move and what for, then what YOU can do about it. Dropped
-     entirely at a terminal stage, where nobody holds anything. */
-  const second = t.role
-    ? (t.mine ? turnNextFor(proj, state.twoStep, track)
-              : turnYoursFor(proj, state.role, state.twoStep, track))
-    : '';
-  const turnHtml = !t.role ? '' : `
-    <div class="turn-pop-who"><span class="turn-pop-av${t.mine ? ' is-mine' : ''}">${t.initials}</span>
-      <span class="turn-pop-name"><b>${t.who}</b><span class="turn-pop-role">${roleName}</span></span></div>
-    <div class="turn-pop-p">${t.mine
-      ? `<span class="turn-pop-lbl">You</span> ${turnMineFor(proj, state.twoStep, track)}`
-      : `<span class="turn-pop-lbl">Waiting on</span> ${t.who} (${roleName}) ${turnNeedFor(proj, state.twoStep, track)}.`}</div>
-    ${second ? `<div class="turn-pop-p"><span class="turn-pop-lbl">${t.mine ? 'Then' : 'You'}</span> ${second}</div>` : ''}`;
   const r = anchor.getBoundingClientRect();
   // Clamped, so opening from a chip further along the bar can't push the card
   // off the right edge.
@@ -702,13 +689,11 @@ function renderStatePop(){
       : need.charAt(0).toUpperCase() + need.slice(1) + '.';
     const yours = t.mine ? '' : turnYoursFor(proj, state.role, state.twoStep, track);
     const then  = t.mine ? turnNextFor(proj, state.twoStep, track) : '';
-    /* The initials ride inside the Responsible row rather than heading the card.
-       A block naming the person above a row naming the person again is the exact
-       duplication this pass exists to remove — and the initials still echo the
-       chip that was pressed, which is what they were there for. */
-    const av = `<span class="turn-pop-av-sm${t.mine ? ' is-mine' : ''}">${t.initials}</span>`;
+    /* Name in plain text, no initials disc. The chip that opened this card is
+       inches away and already carries them; repeating them here was a graphic
+       standing in for a name that is written out on the same line. */
     body = !t.role ? '<div class="turn-pop-p">Nothing outstanding here.</div>' : `
-      ${popRow('Responsible', av + ' ' + whoLine, owes)}
+      ${popRow('Responsible', whoLine, owes)}
       ${popRow('You', yours)}
       ${popRow('Then', then)}
       ${prog}`;
@@ -2238,10 +2223,7 @@ function setProjectStage(s){
 /* The signature that stands as the approval: the latest one on the version. Read
    across from the panel, same source as the roster, so the two cannot disagree
    about who signed and when. */
-/* Initials from a display name — the panel's roster gives names only. */
-function initialsOf(name){
-  return String(name || '').split(/[\s.]+/).filter(Boolean).map(w => w[0]).join('').slice(0,2).toUpperCase();
-}
+
 function scopeApprover(){
   const st = reviewState();
   if(!st || !st.signed || !st.signed.length) return null;
