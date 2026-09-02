@@ -67,15 +67,53 @@ const rn = id => String(roleName(id) || id).toLowerCase();
    Manager. See ROLES.) */
 const HANDOFF_ROLES = ['manager', 'admin', 'field_agent', 'field_agent_nr'];
 let coHandoffOpen = false;
-let coHandoffTo    = null;   // role id of the chosen teammate
+let coHandoffTo    = null;   // id of the chosen person in HANDOFF_PEOPLE
 let coHandoffNote  = '';
 let coHandoffQuery = '';     // what has been typed into the name search
 
+/* The people on this project, which is not the same list as the roles you can
+   switch to in the demo. A hand-off goes to a person, and a real project has one
+   project manager, a couple of managers and a crowd of field agents — the list
+   was four entries long only because it was built from the four role ids.
+
+   `roleId` is what the code reasons about: it orders the list, and it is how a
+   default recipient derived from turnRoleFor() resolves to a person. `label` is
+   what the row shows. They differ for the field agents on purpose — only one
+   agent holds the baton on any given scope, so the rest are non-responsible in
+   the model, but "Field agent" is their job and what a reader is looking for. */
+const HANDOFF_PEOPLE = [
+  {id:'okafor',   name:'T. Okafor',    roleId:'manager'},          // the one project manager
+  {id:'novak',    name:'A. Novak',     roleId:'admin'},
+  {id:'ibarra',   name:'R. Ibarra',    roleId:'admin'},
+  {id:'alvarez',  name:'M. Alvarez',   roleId:'field_agent'},      // holds the baton here
+  {id:'han',      name:'G. Han',       roleId:'field_agent_nr', label:'Field agent'},
+  {id:'duarte',   name:'J. Duarte',    roleId:'field_agent_nr', label:'Field agent'},
+  {id:'osei',     name:'P. Osei',      roleId:'field_agent_nr', label:'Field agent'},
+  {id:'whitfield',name:'L. Whitfield', roleId:'field_agent_nr', label:'Field agent'},
+  {id:'barros',   name:'C. Barros',    roleId:'field_agent_nr', label:'Field agent'},
+  {id:'haddad',   name:'N. Haddad',    roleId:'field_agent_nr', label:'Field agent'},
+  {id:'kwon',     name:'S. Kwon',      roleId:'field_agent_nr', label:'Field agent'},
+  {id:'meade',    name:'B. Meade',     roleId:'field_agent_nr', label:'Field agent'},
+];
 function coHandoffTeam(){
-  return HANDOFF_ROLES
-    .filter(r => r !== state.role)
-    .map(r => ({id:r, name:ROLE_PEOPLE[r].name, initials:ROLE_PEOPLE[r].initials,
-                role:(ROLES.find(x => x.id === r) || {}).name || r}));
+  // You are never in your own hand-off list.
+  const me = (ROLE_PEOPLE[state.role] || {}).name;
+  const rank = r => { const i = HANDOFF_ROLES.indexOf(r); return i < 0 ? 99 : i; };
+  return HANDOFF_PEOPLE
+    .filter(p => p.name !== me)
+    .map(p => ({
+      id: p.id, name: p.name, roleId: p.roleId,
+      role: p.label || roleName(p.roleId),
+      initials: p.name.split(/[\s.]+/).filter(Boolean).map(w => w[0]).join('').slice(0,2).toUpperCase(),
+    }))
+    // Seniority order, stable within a role so the baton holder leads the agents.
+    .sort((a, b) => rank(a.roleId) - rank(b.roleId));
+}
+/* A default recipient arrives as a role id from turnRoleFor(); the list holds
+   people. First person in that role is the one meant. */
+function coHandoffPersonForRole(roleId){
+  const p = coHandoffTeam().find(x => x.roleId === roleId);
+  return p ? p.id : null;
 }
 /* The result rows for the current query. Kept apart from renderCoHandoff so
    typing and picking can replace just this list — re-rendering the whole modal
@@ -105,8 +143,10 @@ function openHandoff(cfg){
   // is not you, else whatever the caller named. Pre-selecting it saves the
   // common case a click.
   const owner = turnRoleFor(state.projectStage, state.twoStep);
-  const preferred = (owner && owner !== state.role) ? owner : handoffCfg.defaultTo;
-  coHandoffTo    = (preferred && team.some(p => p.id === preferred)) ? preferred : (team[0] && team[0].id);
+  const wantRole = (owner && owner !== state.role) ? owner : handoffCfg.defaultTo;
+  // The list is people now, so a role has to be resolved to one of them.
+  const preferred = wantRole ? coHandoffPersonForRole(wantRole) : null;
+  coHandoffTo = preferred || (team[0] && team[0].id);
   coHandoffNote  = '';
   coHandoffQuery = '';
   handoffRosterOpen = false;
