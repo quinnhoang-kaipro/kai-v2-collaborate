@@ -101,7 +101,7 @@ const ROOMS = ['Kitchen','Living Room','Master Bath','Bathroom','Master Bed','Be
 const PHOTO_PEOPLE = [
   {who:'J. Chen',    role:'Field Agent'},
   {who:'M. Alvarez', role:'Field Agent'},
-  {who:'T. Okafor',  role:'Manager'},
+  {who:'T. Okafor',  role:'Project manager'},
   {who:'S. Patel',   role:'Ops'},
   {who:'R. Brooks',  role:'Field Agent'},
 ];

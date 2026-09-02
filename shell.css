@@ -493,7 +493,11 @@ body.tb-hidden .tb-reveal{display:inline-flex}
    same check the scrubber's sign-off lane uses; outstanding ones keep an empty
    well in the mark column so the two read as one list, not two. */
 .rv-list{margin-top:16px;border-top:1px solid var(--stroke);padding-top:4px}
-.rv-hdr{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);padding:8px 0 4px}
+/* A sentence now, not a mono label — it used to read "REVIEWED BY 2 OF 4", which
+   is a count, and it carries "Amy B. and Brandon C. have marked this as done"
+   instead. Uppercase mono at 9.5px cannot hold a sentence with names in it. */
+.rv-hdr{font-size:13px;line-height:1.5;color:var(--t2);padding:8px 0 6px}
+.rv-hdr b{color:var(--ink);font-weight:600}
 .rv-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--stroke)}
 .rv-row:first-of-type{border-top:0}
 .rv-mark{flex-shrink:0;width:17px;height:17px;border-radius:50%;border:1px solid var(--stroke);background:var(--white);display:flex;align-items:center;justify-content:center;color:var(--white)}

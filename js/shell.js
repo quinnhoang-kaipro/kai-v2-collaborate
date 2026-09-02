@@ -22,17 +22,31 @@ function KAI_PANEL_DOC(qs){
 
 /* ═══ shell stage/role model + app JS ═══ */
 /* ════════════ STAGE & ROLE MODEL ════════════ */
+/* ── roles ───────────────────────────────────────────────────────────
+   NOTE ON THE IDS. The two review roles were renamed and their ids were not:
+   id 'admin' is the Manager, and id 'manager' is the Project manager. The ids
+   are load-bearing across the access map, the turn table, a dozen predicates
+   and the ?role= query param, and renaming them in one pass is a hundred edits
+   with no way to prove none was missed. Read every `role === 'admin'` as "is
+   the manager" and every `role === 'manager'` as "is the project manager".
+
+   Baton: 'field_agent' is the field agent who holds it, 'field_agent_nr' the
+   one who does not. Holding it is what makes a hand-off theirs to make. */
 const ROLES = [
-  {id:'field_agent', name:'Field agent',    desc:'Walks the property and builds the initial scope.'},
-  {id:'admin',       name:'Admin',          desc:'Reviews the scope. Sends to manager for publish.'},
-  {id:'manager',     name:'Manager',        desc:'Publishes the scope so it can be shared externally.'},
-  /* A second field agent who isn't the one accountable for this scope. They can
-     see it and weigh in — mark a change order reviewed, ask for an edit — but
-     they own no stage, so they never hold the move. */
-  {id:'field_agent_nr', name:'Field agent · non-responsible', desc:'Sees the scope and can weigh in, but owns none of it.'},
+  {id:'field_agent', name:'Field agent',    desc:'Holds the baton. Walks the property, builds the scope, and hands it off.'},
+  {id:'admin',       name:'Manager',        desc:'Edits at any time. Reviews the scope and hands it on when it is their turn.'},
+  {id:'manager',     name:'Project manager',desc:'Edits, hands off and approves at any time.'},
+  /* The field agent without the baton. They can see the scope and weigh in —
+     edit it while it is unlocked, mark it as done — but they own no stage, so
+     they never hold the move and cannot hand it off. */
+  {id:'field_agent_nr', name:'Field agent · non-responsible', desc:'No baton. Edits while unlocked and marks as done instead of handing off.'},
   {id:'contractor',  name:'Contractor',     desc:'Shops products and executes the approved work.'},
   {id:'renter',      name:'Renter',         desc:'Views the scope without pricing or edit access.'},
 ];
+/* Role names inside running copy come from ROLES, never typed out. A dozen
+   sentences named "the admin" and "the manager" directly, so renaming the roles
+   in the dropdown left the copy naming roles that no longer existed. */
+const rn = id => String(roleName(id) || id).toLowerCase();
 
 /* ── change-order hand-off ───────────────────────────────────────────
    A manager or field agent looking at a change order under review holds no
@@ -143,20 +157,32 @@ function toggleHandoffRoster(){
   const host = document.getElementById('coHandoffRoster');
   if(host) host.innerHTML = handoffRosterHtml();
 }
+/* Who has marked it done, named — and nothing about who has not.
+
+   Every version of this line used to assert a denominator: "2 of 4 marked this
+   done", "2 still to mark it done". There is no such number. Nobody decides in
+   advance how many people are supposed to sign a scope, so the 4 was really "how
+   many are on the roster we happened to seed", and stating it invented a target
+   that a reader would then measure progress against. Only the people who
+   actually did it are known, so that is all this says. */
+function doneByLine(signed){
+  const n = (signed || []).length;
+  if(!n) return 'No one has marked this as done yet.';
+  const names = signed.map(p => p.who);
+  if(n === 1) return `<b>${names[0]}</b> has marked this as done.`;
+  if(n === 2) return `<b>${names[0]}</b> and <b>${names[1]}</b> have marked this as done.`;
+  return `<b>${names[0]}</b>, <b>${names[1]}</b>, and ${n - 2} more have marked this as done.`;
+}
 function handoffRosterHtml(){
   const st = reviewState();
-  if(!st || !st.total) return '';
-  const n = st.signed.length;
-  const names = st.signed.map(p => p.who).join(', ');
-  const summary = n
-    ? `<b>${n} of ${st.total}</b> marked this done${names ? ` \u2014 ${names}` : ''}`
-    : `<b>Nobody</b> has marked this done yet`;
+  if(!st) return '';
+  const signed = st.signed || [];
   return `<div class="co-ho-rv-line">
-      <span class="co-ho-rv-txt">${summary}</span>
-      <button type="button" class="co-ho-rv-more" onclick="toggleHandoffRoster()"
-        aria-expanded="${handoffRosterOpen}">${handoffRosterOpen ? 'Hide' : 'See all'}</button>
+      <span class="co-ho-rv-txt">${doneByLine(signed)}</span>
+      ${signed.length ? `<button type="button" class="co-ho-rv-more" onclick="toggleHandoffRoster()"
+        aria-expanded="${handoffRosterOpen}">${handoffRosterOpen ? 'Hide details' : 'See details'}</button>` : ''}
     </div>
-    ${handoffRosterOpen ? `<div class="rv-list co-ho-rv-open">${reviewRowsHtml(st)}</div>` : ''}`;
+    ${handoffRosterOpen && signed.length ? `<div class="rv-list co-ho-rv-open">${reviewRowsHtml(st)}</div>` : ''}`;
 }
 
 function renderCoHandoff(){
@@ -226,16 +252,31 @@ function approveChangeOrder(){
    their name to having read it; at the review they can ask for the document
    back. Both are contributions to someone else's decision rather than decisions
    of their own, which is why neither advances a stage. */
+/* Mark as done. The map grants it two ways, and they are not the same rule.
+
+   The no-baton field agent's row lists it outright, with no condition — it is
+   how they say "this is right as far as my work goes" when handing off was never
+   theirs to do. So they get it wherever there is something to attest to, which
+   is the draft and a change order out for approval.
+
+   The Manager gets it by the map's note instead: it is the hand-off alternative
+   for someone who can edit but cannot hand off, which for them is any stage that
+   is not their turn. Deriving it that way means it follows their other two
+   rights rather than being maintained beside them.
+
+   Not the baton holder in either case. They are defined by being able to hand
+   off, and their way of passing on a scope already out for review is Submit
+   scope — which this predicate is consulted before, so without the exclusion
+   they would be offered "mark as done" in its place. */
 function canMarkReviewedHere(){
-  if(state.role !== 'field_agent_nr') return false;
   const proj = state.projectStage;
-  // In draft their review is optional and can happen any time before the
-  // hand-off — which is what the card promises them, so the button has to
-  // actually be there.
-  if(proj === 'edit') return true;
-  // A change order sitting out for approval.
-  return proj === 'published' && state.workTrack === 'change_order';
+  const co   = proj === 'published' && state.workTrack === 'change_order';
+  if(state.role === 'field_agent_nr') return proj === 'edit' || co;
+  if(state.role === 'admin') return canEditHere() && !canHandOffHere()
+    && (docStateFor(proj) !== 'approved' || co);
+  return false;
 }
+
 function canRequestEditHere(){
   return state.role === 'field_agent_nr' && state.projectStage === 'reviewing';
 }
@@ -295,22 +336,51 @@ function renderScopeEditRequest(){
 /* True where a viewer with no decision can still pass the document on. Today
    that is the change-order review, for the two internal roles that are not the
    approver. */
+/* ── who may do what ─────────────────────────────────────────────────
+   From the access map. Reminder on the ids: 'admin' is the Manager, 'manager'
+   the Project manager.
+
+     Field agent (baton)    edit, hand off
+     Field agent (no baton) view, edit while unlocked, mark as done
+     Manager                edit any time, mark as done, hand off on their turn
+     Project manager        edit, hand off, approve — any time
+
+   Not modelled: the no-baton agent's view right is "if they are in the same
+   market", and a project here has no market to compare against. They can see it
+   regardless. */
+function canEditHere(){
+  const r = state.role;
+  // Any time: both managers, and the field agent holding the baton. The map puts
+  // the "if the artifact is not locked" caveat on the no-baton row only — putting
+  // it there would be pointless if it applied to both — and the baton holder's
+  // Submit scope CTA already assumes they can edit a scope that is out for
+  // review, which is how a second version gets sent at all.
+  if(r === 'manager' || r === 'admin' || r === 'field_agent') return true;
+  // No baton: only while the document is unlocked, which is draft.
+  if(r === 'field_agent_nr') return docStateFor(state.projectStage) === 'draft';
+  return false;                                          // contractor, renter
+}
 function canHandOffHere(){
   const proj = state.projectStage;
-  /* A manager is never blocked from moving the document along. They are not the
-     responsible party at draft or at review — that is the field agent and the
-     admin — but they can pass it to whoever it needs to reach next, which is
-     what their seniority is for. The dialogue says whose it is before they do. */
-  if(state.role === 'manager' && (proj === 'edit' || proj === 'reviewing')) return true;
-  if(proj !== 'published' || state.workTrack !== 'change_order') return false;
-  return state.role === 'manager' || state.role === 'field_agent';
+  // Project manager: any time. Seniority is the point — the dialogue names whose
+  // document it is before they move it.
+  if(state.role === 'manager') return true;
+  // Manager and the field agent holding the baton: when the move is theirs.
+  if((state.role === 'admin' || state.role === 'field_agent')
+     && whoseTurn(proj, state.role, state.twoStep).mine) return true;
+  /* A change order is the exception where the field agent can pass it on without
+     holding the move: they are on site, and what they saw is exactly the context
+     the order needs. */
+  return proj === 'published' && state.workTrack === 'change_order' && state.role === 'field_agent';
 }
-/* The manager's approve at review. Their own stage is the publish, so reaching
-   past it is a deliberate shortcut rather than the normal path — hence its own
-   confirm naming what it does to the budget. */
+/* The project manager approves, and by the map they may do it at any time rather
+   than only at review — so reaching past their own publish stage is available
+   throughout, with its own confirm naming what it does to the budget. Nothing
+   left to approve once it is approved. */
 function canApproveScopeHere(){
-  return state.role === 'manager' && state.projectStage === 'reviewing';
+  return state.role === 'manager' && docStateFor(state.projectStage) !== 'approved';
 }
+
 /* A manager can open the review before the draft is handed to them. It is out of
    order on purpose — the field agent is still working and has not passed it on —
    so it asks first rather than just doing it. */
@@ -367,7 +437,7 @@ function approveScopeAsManager(){
   openModal({
     icon:'check',
     title:'Approve the scope?',
-    body:`This publishes the scope and releases it to the field, ahead of the admin finishing their review. The budget freezes at ${(v && v.budget) || 'the current total'} and any change after this is a change order.${reviewRosterHtml()}`,
+    body:`This publishes the scope and releases it to the field, ahead of the ${rn('admin')} finishing their review. The budget freezes at ${(v && v.budget) || 'the current total'} and any change after this is a change order.${reviewRosterHtml()}`,
     confirm:'Approve & publish',
     onConfirm:()=>{
       setProjectStage('published');
@@ -399,7 +469,7 @@ function turnMineFor(stage, twoStep, track){
   switch(stage){
     case 'edit':         return 'Finish building the scope, then hand it off for review.';
     case 'submitted':    return 'Begin the review.';
-    case 'reviewing':    return twoStep ? 'Review every task, then hand off to the manager.'
+    case 'reviewing':    return twoStep ? `Review every task, then hand off to the ${rn('manager')}.`
                                         : 'Review every task, then approve to publish.';
     case 'review-done':  return 'Send the reviewed scope on to publish.';
     case 'awaiting-pub': return 'Approve and publish the scope to release it to the field.';
@@ -429,10 +499,10 @@ function turnYoursFor(stage, role, twoStep, track){
   switch(role){
     case 'manager':
       if(co)                 return 'If something is wrong with the change order, hand it off with a comment — request an edit and send it back for approval.';
-      if(stage === 'published') return 'Nothing to action while the field agent tracks the work. A change order would go to the admin to approve.';
-      if(stage === 'closeout')  return 'Nothing to action — the admin signs the closeout off.';
+      if(stage === 'published') return `Nothing to action while the field agent tracks the work. A change order would go to the ${rn('admin')} to approve.`;
+      if(stage === 'closeout')  return `Nothing to action — the ${rn('admin')} signs the closeout off.`;
       if(stage === 'edit')      return DRAFT_MANAGER;
-      return 'Nothing yet. It reaches you once the admin has finished their review.';
+      return `Nothing yet. It reaches you once the ${rn('admin')} has finished their review.`;
     case 'admin':
       if(stage === 'awaiting-pub') return 'Your review is done. You can recall the scope if something needs changing before it goes live.';
       // A live job is the field agent's now, so "nothing to action" needed to say
@@ -458,7 +528,7 @@ function turnYoursFor(stage, role, twoStep, track){
       // Matches the button, which says "Mark as done" in draft. What is being
       // marked is their own pass over the scope, not a verdict on it.
       if(stage === 'edit')      return 'You can edit the scope, and mark yourself done when you have finished (optional).';
-      if(co)                    return 'You can mark the change order as reviewed, so the admin knows you have read it.';
+      if(co)                    return `You can mark the change order as reviewed, so the ${rn('admin')} knows you have read it.`;
       if(stage === 'reviewing') return 'You can request an edit if the scope does not match what you saw on site.';
       if(stage === 'published') return 'You can add task progress from site. Submitting closeout is the responsible field agent\'s call.';
       return 'Nothing to action — this scope is not yours to move.';
@@ -475,17 +545,17 @@ function turnNextFor(stage, twoStep, track){
     // The draft's owner is the field agent, so what follows is somebody else's
     // review — it used to say "you review it next", which was only true while
     // the admin held the draft too.
-    case 'edit':         return 'It goes to the admin to review.';
-    case 'submitted':    return twoStep ? 'You review it next, then the manager publishes.'
+    case 'edit':         return `It goes to the ${rn('admin')} to review.`;
+    case 'submitted':    return twoStep ? `You review it next, then the ${rn('manager')} publishes.`
                                         : 'You review it next, then publish.';
-    case 'reviewing':    return twoStep ? 'It goes to the manager to publish.' : 'Publishing is yours too — the scope goes live.';
-    case 'review-done':  return 'It goes to the manager to publish.';
+    case 'reviewing':    return twoStep ? `It goes to the ${rn('manager')} to publish.` : 'Publishing is yours too — the scope goes live.';
+    case 'review-done':  return `It goes to the ${rn('manager')} to publish.`;
     case 'awaiting-pub': return 'The scope goes live and the contractor starts work.';
     // A change order and a live job share this stage but not what follows: one
     // releases the work to carry on, the other ends it.
     case 'published':    return track === 'change_order'
                                 ? 'The approved lines are released and the work carries on.'
-                                : 'It goes to the admin to review the closeout.';
+                                : `It goes to the ${rn('admin')} to review the closeout.`;
     case 'closeout':     return 'The project is complete.';
     default:             return '';
   }
@@ -513,13 +583,22 @@ function closeStatePop(){ if(!statePopOpen) return; statePopOpen = false; render
    Deliberately does NOT repeat who is holding it — the Waiting-on paragraph
    says that, and the two cards this replaces both did. */
 function docLockLine(id, mine){
-  if(id === 'draft')  return {label:'Editing', text:'Anyone with edit access can edit.'};
-  // Who the pause applies to depends on which side of it you are. "Paused until
-  // they pass it back" is only true when someone else is holding it; said to the
-  // person who has it, it points at nobody.
-  if(id === 'locked') return {label:'Editing', text: mine
-    ? 'Open — but the version submitted for review stays as it was until you send a new one.'
-    : 'You can edit, though nothing you change is reflected in the scope already submitted.'};
+  /* Addressed to the viewer, from their actual edit right — not from the
+     document's state alone. It used to be computed from the state and whose turn
+     it was, and so told a contractor and a renter "you can edit, though nothing
+     you change is reflected…", a sentence written for an editor and handed to
+     two roles that have never had edit access. The access map draws the line:
+     the two managers edit at any time, the field agents only while unlocked,
+     and nobody else edits at all. */
+  const may = canEditHere();
+  if(id === 'draft') return {label:'Editing', text: may
+    ? 'Anyone with edit access can edit.'
+    : 'Open to the field agents and managers. Not to you.'};
+  if(id === 'locked') return {label:'Editing', text: !may
+    ? 'Out for review. Only the ' + rn('admin') + ' and ' + rn('manager') + ' can change it now.'
+    : mine
+      ? 'Open — but the version submitted for review stays as it was until you send a new one.'
+      : 'You can edit, though nothing you change is reflected in the scope already submitted.'};
   /* The panel's ladder, not the shell's: budgets there are the sum of the lines
      that actually exist at each version, and the two lists had already drifted
      apart on both the figure and the dates. One source, so the approved budget
@@ -581,11 +660,9 @@ function scopeHistoryHtml(){
         <div class="sh-when">${e.when}</div>
         <div class="sh-what">${e.what}</div>
       </div>`).join('');
-  const left = ((st && st.pending) || []).length;
-  return `<div class="sh-list">
-    ${rows}
-    ${left ? `<div class="sh-foot">${left} still to mark it done</div>` : ''}
-  </div>`;
+  // No footer counting who has not signed — see doneByLine: there is no
+  // denominator to count against.
+  return `<div class="sh-list">${rows}</div>`;
 }
 
 function renderStatePop(){
@@ -1533,15 +1610,20 @@ function syncAppApproveBtn(){
       btn.hidden = false;
       /* At review a manager can also just approve it. Secondary, because passing
          it along is the normal move and approving early is the exception. */
-      if(secondBtn && canApproveScopeHere()){
-        secondBtn.textContent = 'Approve';
-        secondBtn.onclick = approveScopeAsManager;
-        secondBtn.hidden = false;
-      } else if(secondBtn && canStartReviewHere()){
+      /* Approval-mode first, approve second. The project manager may approve at
+         any time now, which made this branch true in draft as well and quietly
+         took the place of Enter approval mode there. From a draft the way to
+         approve is to open the review — so that button keeps the draft, and
+         Approve takes every stage after it. */
+      if(secondBtn && canStartReviewHere()){
         // Secondary, because handing it on is the ordinary move from a draft and
         // opening the review early is the exception.
         secondBtn.textContent = 'Enter approval mode';
         secondBtn.onclick = openStartReview;
+        secondBtn.hidden = false;
+      } else if(secondBtn && canApproveScopeHere()){
+        secondBtn.textContent = 'Approve';
+        secondBtn.onclick = approveScopeAsManager;
         secondBtn.hidden = false;
       }
       if(tipEl) tipEl.hidden = true;
@@ -1906,10 +1988,10 @@ function messageFor(role, stage){
   if(stage==='edit') return `Build and refine the scope. Hand off for review when ready.`;
   if(stage==='submitted') return `Scope is locked. Recall to keep editing.`;
   if(stage==='reviewing') return state.twoStep
-    ? `Admin reviews each task. Hand off to manager when done.`
-    : `Admin reviews each task. Approve to publish when done.`;
+    ? `The ${rn('admin')} reviews each task, then hands off to the ${rn('manager')}.`
+    : `The ${rn('admin')} reviews each task, then approves to publish.`;
   if(stage==='review-done') return state.twoStep
-    ? `Review complete. Hand off to the manager.`
+    ? `Review complete. Hand off to the ${rn('manager')}.`
     : `Review complete. Publish to send the scope live.`;
   if(stage==='awaiting-pub') return `Manager approves and publishes to make the scope live and begin construction.`;
   if(stage==='published'){
@@ -2244,23 +2326,26 @@ function reviewState(){
   }catch(e){ return null; }
   return null;
 }
+/* Signed rows only. The pending rows went with the denominator: a list of people
+   who have not marked it done is the same claim as "2 still to mark it done",
+   just drawn instead of counted — it names a set of people who were never
+   established as owing anything. */
 function reviewRowsHtml(st){
-  const row = (p, done) => `
-    <div class="rv-row${done?' is-done':''}">
-      <span class="rv-mark">${done ? ICONS.check : ''}</span>
+  return (st.signed || []).map(p => `
+    <div class="rv-row is-done">
+      <span class="rv-mark">${ICONS.check}</span>
       <span class="rv-who"><b>${p.who}</b><span class="rv-role">${p.role}</span></span>
-      <span class="rv-when">${done ? p.date : 'Not marked as done'}</span>
-    </div>`;
-  return st.signed.map(p => row(p, true)).join('') + st.pending.map(p => row(p, false)).join('');
+      <span class="rv-when">${p.date}</span>
+    </div>`).join('');
 }
 /* The full roster with its own heading — still what the approve and mark-all
    confirms want, where it is the substance of the decision. */
 function reviewRosterHtml(){
   const st = reviewState();
-  if(!st || !st.total) return '';
+  if(!st || !(st.signed || []).length) return '';
   return `
     <div class="rv-list">
-      <div class="rv-hdr">Reviewed by ${st.signed.length} of ${st.total}</div>
+      <div class="rv-hdr">${doneByLine(st.signed)}</div>
       ${reviewRowsHtml(st)}
     </div>`;
 }
@@ -2354,7 +2439,7 @@ function finishReview(){
   openModal({
     icon:'check',
     title:'Approve all scope?',
-    body:`This locks your review and moves the scope to ${state.twoStep?'<b>Awaiting publish</b> for the manager':'<b>Review finished</b> so you can publish'}.`,
+    body:`This locks your review and moves the scope to ${state.twoStep?`<b>Awaiting publish</b> for the ${rn('manager')}`:'<b>Review finished</b> so you can publish'}.`,
     confirm:'Approve all',
     onConfirm:()=>{
       setProjectStage('review-done');

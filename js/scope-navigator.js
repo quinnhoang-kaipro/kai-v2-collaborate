@@ -2736,7 +2736,7 @@ function dwNotes(notes, opts){
 function taskNotes(t){
   const pool=[
     {who:'Greg Han', role:'Field agent', when:'Apr 18 · 9:42a', body:'Captured during initial scan. Existing condition worse than listing photos suggested — see the wide shot for context. Please confirm you can work around the plumbing stub on the east wall.'},
-    {who:'Ada Novak', role:'Project manager', when:'Apr 21 · 2:15p', body:'Flagged this line for you to confirm before we lock scope. Send back any concerns or a revised estimate and we\'ll adjust before publish.'},
+    {who:'Ada Novak', role:'Manager', when:'Apr 21 · 2:15p', body:'Flagged this line for you to confirm before we lock scope. Send back any concerns or a revised estimate and we\'ll adjust before publish.'},
     {who:'Or Weiss', role:'Project manager', when:'Apr 22 · 8:30a', body:'Homeowner has approved the allowance shown. You\'re clear to proceed once the product SKU is picked. Ping me if the pricing runs long.'},
     {who:'Apex Carpentry', role:'Contractor · you', when:'Apr 24 · 1:12p', body:'Measured on site. Will need an extra day for the return panel.'},
   ];
@@ -2747,7 +2747,7 @@ function roomNotes(room){
   // room-level notes are about the space as a whole
   const base=[
     {who:'Greg Han', role:'Field agent', when:'Apr 18 · 9:40a', body:`Whole-room scan of the ${room.toLowerCase()}. Walkthrough video shows access, plumbing, and existing conditions — please review before you start on any line items in here.`},
-    {who:'Ada Novak', role:'Project manager', when:'Apr 21 · 2:05p', body:'General notes about the space: nothing structural to flag, but please protect adjacent surfaces during work. Let us know if you need a dumpster staged.'},
+    {who:'Ada Novak', role:'Manager', when:'Apr 21 · 2:05p', body:'General notes about the space: nothing structural to flag, but please protect adjacent surfaces during work. Let us know if you need a dumpster staged.'},
   ];
   return base;
 }
