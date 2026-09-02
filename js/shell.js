@@ -70,6 +70,7 @@ let coHandoffOpen = false;
 let coHandoffTo    = null;   // id of the chosen person in HANDOFF_PEOPLE
 let coHandoffNote  = '';
 let coHandoffQuery = '';     // what has been typed into the name search
+let coHandoffReady = false;  // "ready for approval" ticked on this hand-off
 
 /* The people on this project, which is not the same list as the roles you can
    switch to in the demo. A hand-off goes to a person, and a real project has one
@@ -149,6 +150,7 @@ function openHandoff(cfg){
   coHandoffTo = preferred || (team[0] && team[0].id);
   coHandoffNote  = '';
   coHandoffQuery = '';
+  coHandoffReady = false;
   handoffRosterOpen = false;
   coHandoffOpen  = true;
   renderCoHandoff();
@@ -178,6 +180,8 @@ function pickCoHandoff(id){
 function confirmCoHandoff(){
   const ta = document.getElementById('coHandoffNote');
   coHandoffNote = ta ? ta.value.trim() : '';
+  const cb = document.getElementById('coHandoffReady');
+  coHandoffReady = !!(cb && cb.checked);
   const to = coHandoffTeam().find(p => p.id === coHandoffTo);
   const cfg = handoffCfg || {};
   coHandoffOpen = false;
@@ -185,7 +189,8 @@ function confirmCoHandoff(){
   if(to){
     const me = ROLE_PEOPLE[state.role] || {name:'You'};
     const myRole = (ROLES.find(r => r.id === state.role) || {}).name || '';
-    sessionHandoffs.push({when:'Just now', from:me.name, fromRole:myRole, to:to.name});
+    sessionHandoffs.push({when:'Just now', from:me.name, fromRole:myRole, to:to.name,
+      ready:coHandoffReady});
   }
   if(typeof cfg.onDone === 'function') cfg.onDone(to, coHandoffNote);
 }
@@ -222,11 +227,11 @@ function handoffRosterHtml(){
   const st = reviewState();
   if(!st) return '';
   const signed = st.signed || [];
-  return `<div class="co-ho-rv-line">
-      <span class="co-ho-rv-txt">${doneByLine(signed)}</span>
-      ${signed.length ? `<button type="button" class="co-ho-rv-more" onclick="toggleHandoffRoster()"
-        aria-expanded="${handoffRosterOpen}">${handoffRosterOpen ? 'Hide details' : 'See details'}</button>` : ''}
-    </div>
+  // The link ends the sentence rather than being pushed to the far edge.
+  return `<div class="co-ho-rv-line"><span class="co-ho-rv-txt">${doneByLine(signed)}</span>${
+      signed.length ? `<button type="button" class="co-ho-rv-more" onclick="toggleHandoffRoster()"
+        aria-expanded="${handoffRosterOpen}">${handoffRosterOpen ? 'Hide details' : 'See details'}</button>` : ''
+    }</div>
     ${handoffRosterOpen && signed.length ? `<div class="rv-list co-ho-rv-open">${reviewRowsHtml(st)}</div>` : ''}`;
 }
 
@@ -267,6 +272,13 @@ function renderCoHandoff(){
       <div class="dsp-lbl">Add a comment <span class="co-ho-opt">optional</span></div>
       <textarea id="coHandoffNote" class="co-ho-note" rows="3"
         placeholder="${cfg.placeholder || 'Anything they should know.'}">${coHandoffNote}</textarea>
+      <!-- Optional, and last: it is the one thing here that says what the hand-off
+           is FOR. Everything above says who it goes to and what about; this says
+           whether you think it is finished. -->
+      <label class="co-ho-ready">
+        <input type="checkbox" id="coHandoffReady" ${coHandoffReady ? 'checked' : ''}>
+        <span>I confirm this is ready for approval</span>
+      </label>
       <div class="dsp-acts">
         <button type="button" class="dsp-btn" onclick="closeCoHandoff()">Cancel</button>
         <button type="button" class="dsp-btn is-primary" onclick="confirmCoHandoff()">${cfg.confirm || 'Hand off'}</button>
@@ -692,7 +704,9 @@ function scopeHistoryHtml(){
   const st = reviewState();
   const events = handoffLog().map(h => ({
     when: h.when,
+    // Shown, because a confirmation nobody can see afterwards is not one.
     what: `<b>${h.from}</b> handed off to <b>${h.to}</b>`
+      + (h.ready ? `<span class="sh-tag">ready for approval</span>` : '')
   })).concat(((st && st.signed) || []).map(p => ({
     when: p.date,
     what: `<b>${p.who}</b> <span class="sh-role">${p.role}</span> marked as done`
