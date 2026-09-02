@@ -1660,31 +1660,46 @@ function syncAppApproveBtn(){
       return;
     }
     if(canHandOffHere()){
-      /* One primary, always "Hand off" — passing the document on is the same act
-         wherever it happens, so it reads the same. What differs is what is being
-         passed, which the dialogue names. */
-      btn.textContent = 'Hand off';
-      btn.disabled = false;
-      btn.onclick = (proj === 'published') ? openCoHandoff : submitForReview;
-      btn.hidden = false;
-      /* At review a manager can also just approve it. Secondary, because passing
-         it along is the normal move and approving early is the exception. */
-      /* Approval-mode first, approve second. The project manager may approve at
-         any time now, which made this branch true in draft as well and quietly
-         took the place of Enter approval mode there. From a draft the way to
-         approve is to open the review — so that button keeps the draft, and
-         Approve takes every stage after it. */
+      const handOff = (proj === 'published') ? openCoHandoff : submitForReview;
+      const d = window.__KAI_DECISION || {};
+      const allReviewed = !!(d.total && d.ready);
+      /* Which of the two is the yellow one is a question about the screen, not
+         about the role. Ordinarily the hand-off is the primary: passing the
+         document on is the normal move and approving early is the exception.
+
+         Once every task carries a review that inverts. Nothing is outstanding,
+         the reader is the one person who can approve, and the decision is the
+         only thing left on the screen — so Approve takes the primary and the
+         hand-off steps back to the outline. Same two buttons, swapped slots; no
+         styles needed, since the slots carry the styling. */
+      /* Draft comes first and keeps its own pair. The project manager may approve
+         at any time, so both branches below are true in draft too, and either
+         would take the place of Enter approval mode there — which is the button
+         that belongs to a draft: from one, the way to approve is to open the
+         review. */
       if(secondBtn && canStartReviewHere()){
-        // Secondary, because handing it on is the ordinary move from a draft and
-        // opening the review early is the exception.
+        btn.textContent = 'Hand off';
+        btn.onclick = handOff;
         secondBtn.textContent = 'Enter approval mode';
         secondBtn.onclick = openStartReview;
         secondBtn.hidden = false;
-      } else if(secondBtn && canApproveScopeHere()){
-        secondBtn.textContent = 'Approve';
-        secondBtn.onclick = approveScopeAsManager;
+      } else if(secondBtn && canApproveScopeHere() && allReviewed){
+        btn.textContent = 'Approve';
+        btn.onclick = approveScopeAsManager;
+        secondBtn.textContent = 'Hand off';
+        secondBtn.onclick = handOff;
         secondBtn.hidden = false;
+      } else {
+        btn.textContent = 'Hand off';
+        btn.onclick = handOff;
+        if(secondBtn && canApproveScopeHere()){
+          secondBtn.textContent = 'Approve';
+          secondBtn.onclick = approveScopeAsManager;
+          secondBtn.hidden = false;
+        }
       }
+      btn.disabled = false;
+      btn.hidden = false;
       if(tipEl) tipEl.hidden = true;
       return;
     }
