@@ -60,7 +60,12 @@ const rn = id => String(roleName(id) || id).toLowerCase();
 
    The internal team only. Handing a change order to the renter or the
    contractor isn't a review, it's a disclosure. */
-const HANDOFF_ROLES = ['field_agent', 'field_agent_nr', 'admin', 'manager'];
+/* Ordered by how far up the chain the person sits: project manager, manager,
+   then the field agents. A hand-off is usually upward — you pass it to someone
+   who can approve or unblock it — so the likeliest recipients are the ones you
+   do not have to scroll for. (Ids: 'manager' is the Project manager, 'admin' the
+   Manager. See ROLES.) */
+const HANDOFF_ROLES = ['manager', 'admin', 'field_agent', 'field_agent_nr'];
 let coHandoffOpen = false;
 let coHandoffTo    = null;   // role id of the chosen teammate
 let coHandoffNote  = '';
@@ -211,7 +216,7 @@ function renderCoHandoff(){
            send it to, so it comes before the choice rather than after it. -->
       <div id="coHandoffRoster">${handoffRosterHtml()}</div>
       <div class="co-ho-top">
-        <div class="dsp-lbl">Pass it to</div>
+        <div class="dsp-lbl">Select the person to hand off</div>
         <input id="coHandoffSearch" class="co-ho-search" type="text" autocomplete="off"
           placeholder="Search by name or role" value="${coHandoffQuery}"
           oninput="filterCoHandoff(this.value)" aria-label="Search for a teammate">
