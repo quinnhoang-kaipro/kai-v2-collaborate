@@ -1594,6 +1594,11 @@ function syncAppApproveBtn(){
   // Off unless a branch below claims it, or it survives a stage or role change
   // that no longer offers a second action.
   if(secondBtn){ secondBtn.hidden = true; secondBtn.onclick = null; }
+  /* Which slot is yellow can be swapped below, and a class set on one render
+     would otherwise still be there on the next. Reset to the default emphasis
+     first: the right-hand slot is the primary, the left-hand one the outline. */
+  btn.classList.remove('btn-ghost'); btn.classList.add('btn-primary');
+  if(secondBtn){ secondBtn.classList.remove('btn-primary'); secondBtn.classList.add('btn-ghost'); }
   const proj = state.projectStage;
   // Hide entirely when viewing an archived / outdated scope (v1 / v2).
   if(currentVersionId && currentVersionId !== 'v3'){
@@ -1684,10 +1689,17 @@ function syncAppApproveBtn(){
         secondBtn.onclick = openStartReview;
         secondBtn.hidden = false;
       } else if(secondBtn && canApproveScopeHere() && allReviewed){
-        btn.textContent = 'Approve';
-        btn.onclick = approveScopeAsManager;
-        secondBtn.textContent = 'Hand off';
-        secondBtn.onclick = handOff;
+        /* Nothing outstanding, so the decision is the point of the screen and
+           Approve carries the accent. The buttons do not move to do it — they
+           keep the places they have had all along and trade emphasis, because a
+           control that jumps sides the moment the last task is ticked costs you
+           the muscle memory you built getting there. */
+        btn.textContent = 'Hand off';
+        btn.onclick = handOff;
+        btn.classList.remove('btn-primary'); btn.classList.add('btn-ghost');
+        secondBtn.textContent = 'Approve';
+        secondBtn.onclick = approveScopeAsManager;
+        secondBtn.classList.remove('btn-ghost'); secondBtn.classList.add('btn-primary');
         secondBtn.hidden = false;
       } else {
         btn.textContent = 'Hand off';
