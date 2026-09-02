@@ -126,11 +126,15 @@ function coHandoffRowsHtml(){
   if(!team.length) return `<div class="co-ho-none">No one by that name on this project.</div>`;
   return team.map(p => {
     const on = coHandoffTo === p.id;
-    /* Only the project manager gets a second line, and only once chosen. It says
-       the one thing about a recipient a sender cannot assume: that this hand-off
-       could end in an approval rather than more work. Saying it on every row
-       would spend words confirming the default — "M. Alvarez can only add to the
-       scope" tells you nothing you did not expect. */
+    /* Only the project manager gets a second line, and it is always there rather
+       than appearing on selection. What it says is the reason you might pick this
+       row at all — that the hand-off could end in an approval rather than more
+       work — and a reader cannot act on that if it only shows up after the
+       choice is made.
+
+       Still only this row. Every row carrying a line would spend words confirming
+       the default: "M. Alvarez can only add to the scope" tells you nothing you
+       did not already assume. */
     const canApprove = p.roleId === 'manager';
     return `
     <button type="button" class="dsp-row co-ho-row${on ? ' is-on' : ''}"
@@ -138,7 +142,7 @@ function coHandoffRowsHtml(){
       <span class="dsp-av">${p.initials}</span>
       <span class="dsp-who"><span class="dsp-name">${p.name}</span><span class="dsp-role">${p.role}</span></span>
       <span class="co-ho-tick">${ICONS.check}</span>
-      ${(on && canApprove) ? `<span class="co-ho-can">${p.name} can approve this, not just add to it.</span>` : ''}
+      ${canApprove ? `<span class="co-ho-can">${p.name} can edit and approve this when you hand off to them.</span>` : ''}
     </button>`;
   }).join('');
 }

@@ -610,10 +610,12 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 /* Cut off mid-row. A list that ends flush reads as the whole team; a clipped
    row says there are more people than fit, which is the truth for any real
    project. The fade sits above the scroll so it does not travel with it. */
-/* Four rows before it scrolls: a row is 41px and they sit 8px apart, so
-   4*41 + 3*8. At 116px it cut the third one in half, which reads as "the list
-   ends here" rather than "there is more". */
-.co-ho-results{max-height:188px}
+/* Four rows before it scrolls. Rows are 41px, 8px apart — except the project
+   manager's, which permanently carries a second line and stands at 65px, so the
+   first four come to 65 + 3*41 + 3*8. Sized for that row rather than for four
+   plain ones, since it is always the one at the top. Below it the same box shows
+   five, which is the harmless direction. */
+.co-ho-results{max-height:212px}
 .co-ho-top::after{content:'';position:absolute;left:0;right:0;bottom:0;height:34px;
   pointer-events:none;background:linear-gradient(to bottom,rgba(255,255,255,0),var(--white,#fff) 78%)}
 .co-ho-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
