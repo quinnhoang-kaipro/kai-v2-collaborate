@@ -241,6 +241,29 @@ body.tb-hidden .tb-reveal{display:inline-flex}
   font-size:12px;color:var(--t2)}
 .turn-pop-prog b{color:var(--ink)}
 .turn-pop-prog.is-done b{color:var(--success)}
+/* ── the scope's dated events ────────────────────────────────────────
+   A log, so it reads as one: date in mono above the event it belongs to. Not a
+   labelled paragraph like the rows above — those are statements about now, this
+   is what has already happened, so it sits a size below them.
+
+   These rules were deleted by accident in 048d675, an index-range edit that ran
+   from .turn-pop-who to .turn-pop-lbl and took everything between — including
+   this. The log has been inheriting the page's 16px ever since, which is why it
+   dwarfed the card. The card's scale: 9px labels, 12px log, 13.5px prose. */
+/* The size lives on the list, not only on the leaves. .sh-list and .sh-row carry
+   no text today, so their inherited 16px showed up nowhere — which is precisely
+   how the missing rules went unnoticed for six commits. Anything added inside the
+   log now starts at the log's size. */
+.sh-list{margin-top:10px;padding-top:10px;border-top:1px solid var(--stroke);
+  font-size:12px;line-height:1.45}
+.sh-row + .sh-row{margin-top:9px}
+.sh-when{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--t3);margin-bottom:2px}
+.sh-what{font-size:12px;line-height:1.45;color:var(--t2)}
+.sh-what b{font-weight:600;color:var(--ink)}
+.sh-role{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--t3);margin-left:2px}
+.sh-foot{margin-top:9px;font-size:11.5px;font-style:italic;color:var(--t3)}
 .turn-pop-note{margin-top:9px;font-size:11.5px;color:var(--t3);font-style:italic;line-height:1.4}
 .stage.done .stage-label{color:var(--midtone)}
 .stage.active .stage-label{color:var(--ink)}
