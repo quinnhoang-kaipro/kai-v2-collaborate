@@ -1028,7 +1028,16 @@ function _isDecisionStage(){
 function _decisionVerb(){
   const st = (typeof STAGE_ID !== 'undefined') ? STAGE_ID : '';
   const mode = (typeof PROJ_MODE !== 'undefined') ? PROJ_MODE : '';
-  return (st === 'awaiting-pub' || mode === 'closeout') ? 'approve' : 'review';
+  if(st === 'awaiting-pub' || mode === 'closeout') return 'approve';
+  /* The verb follows the viewer as well as the stage. A project manager approves
+     wherever they are — it is the right they hold at any time — so a row offering
+     them "Review" named somebody else's act. The manager who actually reviews
+     still sees Review; they review and hand on, and cannot approve.
+
+     USER_ROLE is the ?role= the shell passes in. Id note: 'manager' is the
+     Project manager and 'admin' the Manager — see ROLES in shell.js. */
+  if((typeof USER_ROLE !== 'undefined') && USER_ROLE === 'manager') return 'approve';
+  return 'review';
 }
 /* Step 7 (closeout sign-off) drops the confirm/with-note menu: the approve
    control is a single button that commits on click, and a success modal
