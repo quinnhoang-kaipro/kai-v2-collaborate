@@ -7,9 +7,9 @@
 
    Everything the prototype already knows is read, not written out again:
    the budget sums the visible tasks, the note and photo counts come off the
-   same pools the drawers use, the contractor rollup is TASKS grouped by
-   contractor, and the activity feed is built from Artifact 2's version ladder
-   and sign-offs — the same records the scrubber and the state card read.
+   same pools the drawers use, and the activity feed is built from Artifact 2's
+   version ladder and sign-offs — the same records the scrubber and the state
+   card read.
 
    The page has no cards. Sections are a mono label over their content with
    one hairline between them, and the activity feed hangs off a spine in the
@@ -196,24 +196,6 @@ function renderOverview(){
     ${S.dispatch ? `<p class="ov-dispatch">${esc(S.dispatch)}</p>`
                  : `<p class="ov-empty">Nothing for the crew yet.</p>`}`, 'ov-access');
 
-  // Contractors, by the work actually assigned to them.
-  const byGc = {};
-  ((typeof TASKS !== 'undefined') ? TASKS : []).forEach(t => {
-    const gc = t.gc || 'Unassigned';
-    byGc[gc] = byGc[gc] || {n:0, cost:0};
-    byGc[gc].n++;
-    byGc[gc].cost += dollars(t.cost);
-  });
-  const gcRows = Object.keys(byGc).sort((a, b) => byGc[b].cost - byGc[a].cost);
-  const gcSec = _ovSec('Contractors', `
-    <div class="ov-gcs">${gcRows.map(gc => `
-      <div class="ov-gc${gc === 'Unassigned' ? ' is-none' : ''}">
-        <span class="ov-gc-n">${esc(gc)}</span>
-        <span class="ov-gc-c">${byGc[gc].n} ${byGc[gc].n === 1 ? 'task' : 'tasks'}</span>
-        <span class="ov-gc-m">${money(byGc[gc].cost)}</span>
-      </div>`).join('')}</div>
-    <p class="ov-note">Whoever is set here becomes the default contractor on new tasks.</p>`,
-    'ov-gc-sec');
 
   /* The feed as a spine with dots on it, rather than rows in a panel. An
      approval is the mark worth finding at a glance, so it is the filled one. */
@@ -237,7 +219,7 @@ function renderOverview(){
     </header>
     ${stats}
     <div class="ov-cols">
-      <div class="ov-main">${jobSec}${accessSec}${gcSec}</div>
+      <div class="ov-main">${jobSec}${accessSec}</div>
       <aside class="ov-side">
         ${_ovSec('Activity', `<ul class="ov-acts">${feed}</ul>`, 'ov-act-sec')}
       </aside>

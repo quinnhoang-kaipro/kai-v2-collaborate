@@ -4372,7 +4372,6 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-side .ov-sec{border-bottom:0}
 .ov-sec-h{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.13em;
   text-transform:uppercase;color:var(--t3);margin:0 0 14px}
-.ov-note{font-size:11.5px;line-height:1.5;color:var(--t3);margin:12px 0 0}
 .ov-empty{font-size:12.5px;color:var(--t3);font-style:italic;margin:0}
 
 /* Label above value, in as many columns as the width allows. */
@@ -4394,18 +4393,6 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
   text-transform:uppercase;color:var(--t3)}
 .ov-code-v{font-family:var(--mono);font-size:19px;font-weight:700;letter-spacing:.1em;color:var(--ink)}
 .ov-dispatch{margin:15px 0 0;font-size:13px;line-height:1.55;color:var(--t2);max-width:52ch}
-
-/* ── contractors ── */
-.ov-gcs{display:flex;flex-direction:column}
-.ov-gc{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:baseline;
-  padding:8px 0;border-top:1px solid var(--hair,var(--stroke))}
-.ov-gc:first-child{border-top:0;padding-top:0}
-.ov-gc-n{font-size:13px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ov-gc-c{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--t3)}
-.ov-gc-m{font-size:13px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;
-  min-width:64px;text-align:right}
-.ov-gc.is-none .ov-gc-n{color:var(--t3);font-weight:500;font-style:italic}
 
 /* ── activity spine ──
    The dots sit on a single continuous line, so the feed reads as one thing
