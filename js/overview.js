@@ -31,6 +31,11 @@ const OVERVIEW_SEED = {
   endDate:  'May 22, 2026',
   scopeDue: 'Apr 12, 2026',
   updated:  'Apr 30, 2026 4:12pm',
+  /* The project's general contractor: the one set at the project level, which
+     is what a new task is assigned to unless someone picks another. Tasks
+     carry their own `gc` (see TASKS in data.js) and several here are with
+     other trades — this is the default, not a claim about who holds the work. */
+  gc:       'Stone Bros',
   access:   [{k:'Gate code', v:'4321'}, {k:'Door code', v:'1234'}],
   property: [
     {k:'KT ID',       v:'1234'},   {k:'Square feet', v:'1,590'},
@@ -331,6 +336,7 @@ function renderOverview(){
     {k:'Project type',    v:S.type},
     {k:'Project manager', v:people.manager},
     {k:'Field agent',     v:people.agent},
+    {k:'General contractor', v:S.gc},
     {k:'Template',        v:S.template.name},
     {k:'Last updated',    v:S.updated},
   ].concat(_ovPropFields())), 'ov-job');
