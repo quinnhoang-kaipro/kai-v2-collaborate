@@ -3,75 +3,25 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Kai — Project Comprehensive (ShopEdit variant)</title>
+<title>Kai — Change Order Review</title>
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shell.css">
 </head>
 <body>
-  <!-- TOP BAR — demo-only chrome (demo picker · role picker · collapse). Kai
-       brand, project address, and the yellow stage CTA all moved out of this
-       nav; they either live inside the iframe or are gone entirely now. -->
-  <header class="tb">
-    <span class="tb-demo-label" aria-hidden="true">Demo Nav</span>
-    <span class="tb-sp"></span>
+<!-- ═══════════════════════════════════════════════════════════════════
+     CHANGE ORDER REVIEW — one screen, no demo nav
+     The same shell and the same panel as index.html, pinned to a single
+     scenario: the closeout review step, seen by the Manager, open on
+     Artifact 2. KAI_VARIANT below is the whole of the difference — it tells
+     shell.js which preset to start from and stay on, which tab to hand the
+     panel, to drop the other tabs from the panel's tab bar, and to open
+     with the scope sidebar shut (the "Show scope" button pulls it back).
 
-    <!-- Demo trigger (to the left of the role picker) -->
-    <div class="tb-set" id="tbSet">
-      <button class="tb-set-btn" onclick="toggleSet(event)" aria-label="Demo scenarios" title="Demo scenarios">
-        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="2.5"/><path d="M9 1.5v3M9 13.5v3M1.5 9h3M13.5 9h3M3.6 3.6l2.1 2.1M12.3 12.3l2.1 2.1M3.6 14.4l2.1-2.1M12.3 5.7l2.1-2.1"/></svg>
-        Demo
-      </button>
-      <div class="tb-set-menu" id="setMenu">
-        <div class="tb-set-h">Demo scenarios</div>
-        <div class="tb-presets" id="tbPresets"></div>
-        <div class="tb-set-h" style="margin-top:14px">Approval flow</div>
-        <div class="tb-set-row">
-          <div>
-            <div class="ll">2-step approval</div>
-            <div class="sub">Admin reviews, manager publishes.</div>
-          </div>
-          <label class="tb-toggle"><input type="checkbox" id="twoStep" onchange="setTwoStep(this.checked)"><span class="sw"></span></label>
-        </div>
-        <!-- SCRATCH · picking a sidebar look. Goes with the sbopt-* rules in
-             panel.css once an option is chosen. -->
-        <div class="tb-set-h" style="margin-top:14px">Sidebar look</div>
-        <div class="tb-set-row">
-          <div>
-            <div class="ll">Group rows</div>
-            <div class="sub">Show the scope sidebar to compare.</div>
-          </div>
-          <div class="sb-opt-seg" id="sbOptSeg">
-            <button type="button" onclick="setSbOpt('')">Now</button>
-            <button type="button" onclick="setSbOpt('a')">A</button>
-            <button type="button" onclick="setSbOpt('b')">B</button>
-            <button type="button" onclick="setSbOpt('c')">C</button>
-          </div>
-        </div>
-        <div class="tb-set-foot">
-          <button class="reset" onclick="resetDemo()">Reset demo</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Role switcher -->
-    <div class="tb-role" id="tbRole">
-      <button class="tb-role-btn" onclick="toggleRole(event)">
-        Role · <span class="who" id="roleLabel">Admin</span>
-        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4.5l3 3 3-3"/></svg>
-      </button>
-      <div class="tb-role-menu" id="roleMenu"></div>
-    </div>
-
-    <!-- Stage CTA host removed — the primary action moved into the ScopePanel
-         toolbar. Kept as a hidden stub so any code that writes into it is safe. -->
-    <div class="tb-actions" id="tbActions" hidden></div>
-
-    <!-- Collapse the black bar to reclaim vertical space. Toggled via localStorage. -->
-    <button class="tb-collapse" id="tbCollapse" onclick="toggleTopBar()" aria-label="Hide top bar" title="Hide top bar">
-      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5l3-3 3 3"/></svg>
-    </button>
-  </header>
-
+     There is no demo picker, no role switcher and no reset here on purpose.
+     Everything else — the stepper, the state card, the primary CTA, the
+     approval flow — is the shell's own and behaves exactly as it does in
+     index.html, because it IS the shell.
+     ═══════════════════════════════════════════════════════════════════ -->
 <div class="app-shell">
 <!-- Global primary nav — collapsed left rail. Permanent decoration for
      the demo (icons + labels are baked into the SVG). The top ~43px of
@@ -104,10 +54,6 @@
 </aside>
 <div id="app">
 
-  <!-- Reveal strip: appears at top when the black bar is collapsed. Click to bring it back. -->
-  <button class="tb-reveal" id="tbReveal" onclick="toggleTopBar()" aria-label="Show top bar" title="Show top bar">
-    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"/></svg>
-  </button>
 
   <!-- APP TOOLBAR — Kai identity + inline progress stepper + primary CTA + avatar.
        Consolidated: the stepper now lives inside this dark bar; the Attention
@@ -182,11 +128,20 @@
 
 <div id="toast"></div>
 
-<!-- The panel document (previously inline here as a text/html script block)
-     now lives in js/panel-doc.js, so this page and the focused
-     Artifact-Change-Order-View load one copy of it. shell.js reads it as
-     window.KAI_PANEL_SRC and must load after it. -->
+<!-- The panel document, shared with index.html. shell.js reads it as
+     window.KAI_PANEL_SRC, so it must load first. -->
 <script src="js/panel-doc.js"></script>
+<script>
+  /* Read by shell.js as it boots — must be set before it loads. */
+  window.KAI_VARIANT = {
+    preset:'closeout',          // "Close out review" in the demo list
+    role:'admin',               // id 'admin' is the Manager (see ROLES in shell.js)
+    tab:'artifact2',            // the surface this page exists for
+    onlyTab:true,               // so the tab bar offers nothing else
+    collapseSidebar:true,       // scope list starts shut, pull-out brings it back
+    stateKey:'kai_co_view',     // its own storage, so index.html's demo state is untouched
+  };
+</script>
 <script src="js/shell.js"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
-/* Panel source, unescaped and ready to hand to the iframe. */
-const KAI_PANEL_RAW = (document.getElementById('kaiPanelSrc').textContent || '')
-  .replace(/<\\\/script/gi, '<\/script')
-  .replace(/<\\script/gi, '<scr' + 'ipt');
+/* Panel source, ready to hand to the iframe. Declared by js/panel-doc.js,
+   which every host page loads before this file — the markup is shared by
+   index.html and the focused Artifact-Change-Order-View. */
+const KAI_PANEL_RAW = window.KAI_PANEL_SRC || '';
 
 /* Build a panel document for a given query string.
    srcdoc doesn't carry two things the panel relies on, so we inject both
@@ -1098,6 +1098,17 @@ const PRESETS = [
 ];
 function presetLabel(p, n){ return `Step ${n} · ${p.name}`; }
 
+/* ── variants ────────────────────────────────────────────────────────
+   A host page can pin this shell to one scenario by declaring KAI_VARIANT
+   before loading it — that is what Artifact-Change-Order-View does. A
+   pinned shell ignores the saved demo state (and writes to its own key, so
+   the two pages do not overwrite each other's), skips the demo nav it has
+   no markup for, and can hand the panel a fixed tab, hide the other tabs,
+   and start with the scope sidebar shut.
+     {preset, role, tab, onlyTab, collapseSidebar, stateKey} */
+const KAI_VARIANT = window.KAI_VARIANT || {};
+const KAI_PINNED  = !!KAI_VARIANT.preset;
+
 /* ════════════ PERSISTED STATE ════════════ */
 const DEFAULTS={
   role:'admin',
@@ -1107,16 +1118,29 @@ const DEFAULTS={
   preset:'empty-draft',  // last-applied preset id (for highlighting)
   workTrack:'materials', // 'labor' | 'materials' — which track user is on at Work stage
 };
+const KAI_STATE_KEY = KAI_VARIANT.stateKey || 'kai_comp_state';
 let state=loadState();
 function loadState(){
+  /* A pinned shell always opens on its own scenario. Reading the saved state
+     first would mean whichever preset was last chosen in index.html decided
+     what this page showed. Its role is still switchable at runtime, and still
+     saved, so a reload comes back where you left it within the scenario. */
+  if(KAI_PINNED){
+    const p = PRESETS.find(x => x.id === KAI_VARIANT.preset) || {};
+    const saved = _savedState();
+    return {...DEFAULTS, ...p.state, preset:KAI_VARIANT.preset,
+            role: KAI_VARIANT.role || saved.role || (p.state||{}).role || DEFAULTS.role};
+  }
+  return {...DEFAULTS, ..._savedState()};
+}
+function _savedState(){
   try{
-    const raw=localStorage.getItem('kai_comp_state');
-    if(!raw) return {...DEFAULTS};
-    return {...DEFAULTS, ...JSON.parse(raw)};
-  }catch(e){ return {...DEFAULTS}; }
+    const raw=localStorage.getItem(KAI_STATE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  }catch(e){ return {}; }
 }
 function saveState(){
-  try{ localStorage.setItem('kai_comp_state', JSON.stringify(state)); }catch(e){}
+  try{ localStorage.setItem(KAI_STATE_KEY, JSON.stringify(state)); }catch(e){}
 }
 
 /* current view stage (may differ from project stage when role can't access project stage) */
@@ -1143,6 +1167,7 @@ function render(){
 
 function renderRoleMenu(){
   const menu=document.getElementById('roleMenu');
+  if(!menu) return;   // a pinned shell carries no demo nav
   menu.innerHTML=ROLES.map(r=>`
     <button class="tb-role-opt${state.role===r.id?' on':''}" onclick="setRole('${r.id}')">
       <span class="ck"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5L5 9L9.5 3.5"/></svg></span>
@@ -1153,7 +1178,8 @@ function renderRoleMenu(){
       <span class="lbl">Switch role · for testing the flow</span>
     </div>`;
   const lbl=ROLES.find(r=>r.id===state.role);
-  document.getElementById('roleLabel').textContent = lbl?lbl.name:'—';
+  const lblEl=document.getElementById('roleLabel');
+  if(lblEl) lblEl.textContent = lbl?lbl.name:'—';
 }
 
 function renderPresets(){
@@ -1188,7 +1214,7 @@ function applyPreset(id){
   const ifr=document.getElementById('iframe');
   if(ifr) ifr.setAttribute('src','');
   render();
-  document.getElementById('tbSet').classList.remove('open');
+  document.getElementById('tbSet')?.classList.remove('open');
   toast(`Loaded · ${presetLabel(p)}`);
 }
 
@@ -2142,6 +2168,9 @@ function btn(kind, label, onclick){
 function renderActions(){
   // The topbar holds the single primary CTA for the current stage
   const wrap=document.getElementById('tbActions');
+  // A hidden stub in index.html, absent entirely on a page with no demo bar.
+  // The CTA users actually see is #appApproveBtn, driven by syncAppApproveBtn.
+  if(!wrap) return;
   let main='';
   if(viewStage==='edit' && (state.role==='admin' || state.role==='field_agent')){
     main = btn('primary','Hand off for review','submitForReview()');
@@ -2222,6 +2251,11 @@ function renderIframe(){
   //   – contractor on published with workTrack=materials: Editor
   //     (the legacy shopping flow) so materials procurement stays put
   //   – contractor on published with workTrack=labor: Artifact
+  /* A pinned shell names the tab it exists for, and can ask the panel to
+     drop the others and open with the scope sidebar shut. */
+  if(KAI_VARIANT.tab)          params.push('tab=' + KAI_VARIANT.tab);
+  if(KAI_VARIANT.onlyTab)      params.push('only=' + (KAI_VARIANT.tab || ''));
+  if(KAI_VARIANT.collapseSidebar) params.push('sb=collapsed');
   const hasTabAlready = params.some(p => p.startsWith('tab='));
   if(!hasTabAlready){
     /* Overview is the landing tab now: it is the only one that says what the
@@ -2396,7 +2430,7 @@ function jumpStage(s){
 
 function setRole(r){
   state.role=r; saveState();
-  document.getElementById('tbRole').classList.remove('open');
+  document.getElementById('tbRole')?.classList.remove('open');
   viewStage=null; // re-home on next render
   render();
   toast(`Switched to ${roleName(r)}`);
@@ -2656,11 +2690,11 @@ function closeModal(){
 }
 
 /* ════════════ MENUS ════════════ */
-function toggleRole(e){ e.stopPropagation(); document.getElementById('tbRole').classList.toggle('open'); document.getElementById('tbSet').classList.remove('open'); }
-function toggleSet(e){ e.stopPropagation(); document.getElementById('tbSet').classList.toggle('open'); document.getElementById('tbRole').classList.remove('open'); }
+function toggleRole(e){ e.stopPropagation(); document.getElementById('tbRole')?.classList.toggle('open'); document.getElementById('tbSet')?.classList.remove('open'); }
+function toggleSet(e){ e.stopPropagation(); document.getElementById('tbSet')?.classList.toggle('open'); document.getElementById('tbRole')?.classList.remove('open'); }
 document.addEventListener('click',()=>{
-  document.getElementById('tbRole').classList.remove('open');
-  document.getElementById('tbSet').classList.remove('open');
+  document.getElementById('tbRole')?.classList.remove('open');
+  document.getElementById('tbSet')?.classList.remove('open');
 });
 
 /* ════════════ TOAST ════════════ */

@@ -2808,9 +2808,15 @@ const _WORK_MODES_ALL = [
   {id:'artifact2',label:'Artifact 2'},   // scope change history — js/a2/*.js
 ];
 const _projModeParam = new URLSearchParams(window.__KAI_QS || window.location.search).get('projMode');
-const WORK_MODES = _projModeParam === 'closeout-approved'
-  ? _WORK_MODES_ALL.filter(m => m.id !== 'shop')
-  : _WORK_MODES_ALL;
+/* ?only=<id> — a host page that exists for one surface (see
+   Artifact-Change-Order-View) keeps that tab and drops the rest, so the bar
+   names where you are without offering seven places you did not come for. */
+const _onlyTab = new URLSearchParams(window.__KAI_QS || window.location.search).get('only');
+const WORK_MODES = _onlyTab
+  ? _WORK_MODES_ALL.filter(m => m.id === _onlyTab)
+  : (_projModeParam === 'closeout-approved'
+      ? _WORK_MODES_ALL.filter(m => m.id !== 'shop')
+      : _WORK_MODES_ALL);
 // If the URL asked for the shop tab but the mode strips it out, fall
 // back to Artifact (the natural "read the finished doc" surface).
 if(_projModeParam === 'closeout-approved' && workMode === 'shop') workMode = 'artifact';

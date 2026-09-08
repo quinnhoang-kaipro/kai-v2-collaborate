@@ -67,6 +67,11 @@ function toast(msg){
 })();
 
 /* ════════════ INIT ════════════ */
+/* ?sb=collapsed — open with the scope list shut. The pull-out tab brings it
+   back, so this is a starting position rather than a missing panel. */
+if(new URLSearchParams(window.__KAI_QS || window.location.search).get('sb') === 'collapsed'){
+  window.collapseSidebar();
+}
 document.body.classList.toggle('shop-mode', workMode==='shop');
 renderWorkHdr();
 renderAll();
