@@ -10,6 +10,11 @@ function renderWork(){
   // Empty scope (Step 1 · Empty draft) — every remaining tab shows its own
   // empty state instead of an empty grid / strip. Sidebar handles its own
   // empty state separately.
+  /* Ahead of the empty-scope branch. An empty scope is exactly when you most
+     want the front page — it tells you what the project is, who is on it and
+     what is due, none of which depends on there being tasks yet. The working
+     tabs are the ones with nothing to show. */
+  if(workMode==='overview'){ renderOverview(); return; }
   if(TASKS.length === 0){
     if(_renderTabEmptyIfNeeded(workMode)) return;
   }

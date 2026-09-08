@@ -2224,20 +2224,18 @@ function renderIframe(){
   //   – contractor on published with workTrack=labor: Artifact
   const hasTabAlready = params.some(p => p.startsWith('tab='));
   if(!hasTabAlready){
-    // Revisiting-a-completed-step override — if the user is looking at a
-    // stepper node earlier than where the project actually is (e.g. Scope
-    // once Work has started), open on Artifact so they view the frozen
-    // approved doc rather than land on the Editor for a locked scope.
-    const _viewSuperIdx = SUPER_STAGES.findIndex(s => s.substages.includes(viewStage));
-    const _projSuperIdx = SUPER_STAGES.findIndex(s => s.substages.includes(state.projectStage));
-    const _isRevisitingCompletedStep = _viewSuperIdx >= 0 && _projSuperIdx > _viewSuperIdx;
-    // Editor is where the work is at every stage, so it's always the
-    // landing tab. This used to branch per role and stage — admins at
-    // Published landed on Progress, closeout on Artifact — which meant
-    // the tab you wanted was a click away in exactly the steps where you
-    // were most likely to want it. The panel still redirects to Artifact
-    // at closeout-approved, where Editor doesn't exist (see WORK_MODES).
-    const defaultTab = 'shop';
+    /* Overview is the landing tab now: it is the only one that says what the
+       project is before you have picked anything, and arriving already inside
+       a working surface assumes you brought the question with you.
+
+       This used to branch per role and stage — admins at Published landed on
+       Progress, closeout on Artifact — which put the tab you wanted one click
+       away in exactly the steps where you most wanted it. Then it was Editor
+       for everyone. Overview is a step back from both: one landing, and the
+       working tabs are a deliberate move rather than where you wake up.
+       (The panel still redirects to Artifact at closeout-approved, where
+       Editor does not exist — see WORK_MODES.) */
+    const defaultTab = 'overview';
     params.push('tab=' + defaultTab);
   }
   if(state.scopeSeed === 'full') params.push('seed=full');

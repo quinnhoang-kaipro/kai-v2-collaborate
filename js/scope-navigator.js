@@ -2782,7 +2782,11 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDrawer(); });
 
 /* ════════════ WORK SURFACE ════════════ */
 const _urlTab = new URLSearchParams(window.__KAI_QS || window.location.search).get('tab');
-let workMode = ['gallery','floorplan','shop','artifact','artifact2','progress','pano'].includes(_urlTab) ? _urlTab : 'shop';   // 'gallery' | 'floorplan' | 'shop' | 'artifact' | 'artifact2' | 'progress' | 'pano'
+/* Overview is the default: it is the only tab that says what this project is
+   before you have selected anything, which is what you want on arrival. Every
+   other tab answers a question you have to bring with you. ?tab= still wins,
+   so a link into the Editor or an artifact lands where it says. */
+let workMode = ['overview','gallery','floorplan','shop','artifact','artifact2','progress','pano'].includes(_urlTab) ? _urlTab : 'overview';
 // Tab ids intentionally kept as 'pano' / 'progress' (URL routing, body
 // classes, and postMessage payloads all key off them). Only the display
 // labels changed: Pano → "Progress" (compare-walks timeline is what the
@@ -2796,6 +2800,7 @@ let workMode = ['gallery','floorplan','shop','artifact','artifact2','progress','
    branches stay in place but are no longer reachable from the tab bar;
    photo tiles open the overlay directly rather than a gallery tab. */
 const _WORK_MODES_ALL = [
+  {id:'overview', label:'Overview'},   // the project's front page — js/overview.js
   {id:'shop',     label:'Editor'},
   {id:'floorplan',label:'Measurements'},   // id stays: it's the URL param and dispatch key
   {id:'pano',     label:'Progress'},
