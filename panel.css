@@ -4325,111 +4325,104 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 
 /* ══════════════════════════════════════════════════════════════════════
    OVERVIEW TAB
-   A front page, so it reads as one: a wide column of cards and a narrow
-   activity rail, on the app's own ground rather than the white the working
-   tabs use. Cards are the figure; the ground shows between them.
+   A document, not a dashboard: one white page, sections marked by a label
+   and a hairline, and a hairline-divided rail for the activity spine. There
+   are no cards here on purpose — the earlier version drew a bordered tile
+   around each of six short lists, and the borders outweighed the content.
    ══════════════════════════════════════════════════════════════════════ */
-.ov-root{padding:18px 20px 40px;background:var(--app-bg);min-height:100%}
-.ov-head{display:flex;align-items:flex-end;gap:14px;padding-bottom:14px;
-  border-bottom:1px solid var(--stroke);margin-bottom:18px}
-.ov-head h2{font-family:var(--display);font-size:21px;font-weight:700;letter-spacing:-.015em;margin:0}
-.ov-head-sub{font-size:12.5px;color:var(--t3);margin-top:3px}
+.ov-root{padding:26px 30px 52px;background:var(--white);min-height:100%}
+
+/* ── title ── */
+.ov-head{display:flex;align-items:flex-end;gap:14px;margin-bottom:20px}
+.ov-head h2{font-family:var(--display);font-size:25px;font-weight:700;letter-spacing:-.02em;margin:0}
+.ov-head-sub{font-size:12.5px;color:var(--t3);margin-top:4px}
 .ov-status{margin-left:auto;font-family:var(--mono);font-size:9px;font-weight:700;
   letter-spacing:.12em;text-transform:uppercase;color:var(--ink);
-  background:var(--accent);border:1px solid var(--accent-deep);padding:4px 9px;flex-shrink:0}
+  background:var(--accent);padding:4px 9px;flex-shrink:0}
 
-/* Two columns, the rail fixed so the cards take the slack. Stacks under
-   1100px of panel width, where a 300px rail leaves the cards too narrow to
-   hold two field columns. */
-.ov-cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
-@media (max-width:1100px){ .ov-cols{grid-template-columns:minmax(0,1fr)} }
-.ov-main{display:flex;flex-direction:column;gap:14px;min-width:0}
-.ov-side{min-width:0}
-.ov-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px}
-.ov-grid-2{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+/* ── the figure strip ──
+   Five numbers at figure size between two hairlines. The two counts are
+   buttons into the drawers, so they carry the only underline on the page. */
+.ov-stats{display:flex;flex-wrap:wrap;gap:0 40px;padding:15px 0 16px;
+  border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke)}
+.ov-stat{display:flex;flex-direction:column;gap:3px;align-items:flex-start;
+  padding:0;margin:0;border:0;background:none;text-align:left;font:inherit;color:inherit}
+.ov-stat-v{font-family:var(--display);font-size:19px;font-weight:700;letter-spacing:-.015em;
+  color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.1}
+.ov-stat-k{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--t3)}
+.ov-stat.is-link{cursor:pointer}
+.ov-stat.is-link .ov-stat-v{border-bottom:1.5px solid var(--stroke);transition:border-color .12s}
+.ov-stat.is-link:hover .ov-stat-v{border-bottom-color:var(--ink)}
+.ov-stat.is-link:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 
-.ov-card{background:var(--white);border:1px solid var(--stroke);padding:14px 16px 16px}
-.ov-card-h{display:flex;align-items:baseline;gap:12px;margin-bottom:12px}
-.ov-card-h h3{font-family:var(--display);font-size:14px;font-weight:700;letter-spacing:-.005em;margin:0}
-.ov-note{font-size:12px;line-height:1.5;color:var(--t3);margin:-4px 0 12px}
+/* ── two columns, split by a rule rather than a gutter of empty ground ── */
+.ov-cols{display:grid;grid-template-columns:minmax(0,1fr) 268px;align-items:start}
+.ov-main{min-width:0;padding-right:34px}
+.ov-side{min-width:0;padding-left:26px;border-left:1px solid var(--stroke);align-self:stretch}
+@media (max-width:1040px){
+  .ov-cols{grid-template-columns:minmax(0,1fr)}
+  .ov-main{padding-right:0}
+  .ov-side{padding-left:0;border-left:0;border-top:1px solid var(--stroke);margin-top:4px}
+}
+
+/* ── a section ── */
+.ov-sec{padding:20px 0 22px;border-bottom:1px solid var(--stroke)}
+.ov-main .ov-sec:last-child{border-bottom:0;padding-bottom:0}
+.ov-side .ov-sec{border-bottom:0}
+.ov-sec-h{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--t3);margin:0 0 14px}
+.ov-note{font-size:11.5px;line-height:1.5;color:var(--t3);margin:12px 0 0}
 .ov-empty{font-size:12.5px;color:var(--t3);font-style:italic;margin:0}
 
-/* Label above value, not beside it. A field list in a 215px card cannot
-   afford a label column wide enough for "Project manager" and still leave
-   the value room to be read. */
-.ov-fields{display:grid;gap:9px;margin:0}
-.ov-field{display:block}
+/* Label above value, in as many columns as the width allows. */
+.ov-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:14px 28px;margin:0}
+.ov-field{display:block;min-width:0}
 .ov-field dt{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--t3);margin-bottom:2px}
-.ov-field dd{margin:0;font-size:13px;color:var(--ink);line-height:1.35}
-/* Access codes are read aloud over a phone, so they get the mono treatment
-   and room to breathe between characters. */
-.ov-access .ov-field dd{font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:.08em}
-.ov-prop .ov-fields{grid-template-columns:1fr 1fr;gap:9px 18px}
+  text-transform:uppercase;color:var(--t3);margin-bottom:3px}
+.ov-field dd{margin:0;font-size:13.5px;color:var(--ink);line-height:1.35}
+/* The eight property facts as one line of running text. */
+.ov-spec{margin:16px 0 0;font-size:12.5px;line-height:1.6;color:var(--t2)}
 
-.ov-row-acts{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap}
-.ov-btn{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.09em;
-  text-transform:uppercase;padding:6px 10px;background:transparent;color:var(--ink);
-  border:1px solid var(--stroke);cursor:pointer;transition:border-color .12s,background .12s}
-.ov-btn:hover{border-color:var(--ink)}
-.ov-btn:disabled{opacity:.4;cursor:not-allowed;border-style:dashed}
-.ov-btn:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
-
-/* ── the four document slots ── */
-.ov-docs{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
-.ov-doc{display:flex;flex-direction:column;align-items:flex-start;gap:7px;
-  border:1px solid var(--stroke);padding:12px 13px 13px;min-height:118px}
-.ov-doc-t{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--ink)}
-.ov-doc-ico{width:15px;height:15px;flex-shrink:0}
-.ov-doc-meta{font-size:11.5px;line-height:1.45;color:var(--t3);margin-top:auto}
-.ov-doc-state{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.1em;
-  text-transform:uppercase;padding:2px 6px;border:1px solid var(--stroke);color:var(--t2)}
-.ov-state-approved{border-color:var(--success);color:var(--success)}
-.ov-state-in-review{border-color:var(--ink);color:var(--ink)}
-.ov-state-in-draft{border-color:var(--accent-deep);background:var(--accent);color:var(--ink)}
-/* A document that does not exist yet is drawn as absent — dashed, unfilled,
-   no button — rather than as a card that happens to be greyer. */
-.ov-doc.is-off{border-style:dashed;background:transparent}
-.ov-doc.is-off .ov-doc-t{color:var(--t3);font-weight:500}
+/* ── getting in ──
+   Codes are read aloud over a phone, so they are the largest mono on the
+   page and the only thing here that is spaced out. */
+.ov-codes{display:flex;flex-wrap:wrap;gap:10px 34px}
+.ov-code{display:flex;flex-direction:column;gap:3px}
+.ov-code-k{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--t3)}
+.ov-code-v{font-family:var(--mono);font-size:19px;font-weight:700;letter-spacing:.1em;color:var(--ink)}
+.ov-dispatch{margin:15px 0 0;font-size:13px;line-height:1.55;color:var(--t2);max-width:52ch}
 
 /* ── contractors ── */
 .ov-gcs{display:flex;flex-direction:column}
 .ov-gc{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:baseline;
-  padding:9px 0;border-top:1px solid var(--stroke)}
+  padding:8px 0;border-top:1px solid var(--hair,var(--stroke))}
 .ov-gc:first-child{border-top:0;padding-top:0}
 .ov-gc-n{font-size:13px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ov-gc-c{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3)}
-.ov-gc-m{font-size:13px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.ov-gc-m{font-size:13px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;
+  min-width:64px;text-align:right}
 .ov-gc.is-none .ov-gc-n{color:var(--t3);font-weight:500;font-style:italic}
 
-.ov-dispatch{margin:0;font-size:13px;line-height:1.55;color:var(--t2)}
-
-/* ── historical documents ── */
-.ov-hist{display:flex;flex-direction:column}
-.ov-hist-r{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;
-  padding:10px 0;border-top:1px solid var(--stroke)}
-.ov-hist-r:first-child{border-top:0;padding-top:0}
-.ov-hist-n{font-size:13px;font-weight:600;color:var(--ink)}
-.ov-hist-tag{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--t3);border:1px solid var(--stroke);padding:1px 5px;
-  margin-left:6px;vertical-align:1px}
-.ov-hist-d{font-size:11.5px;color:var(--t3);white-space:nowrap}
-
-/* ── activity rail ── */
-.ov-act-card{padding-bottom:6px}
-.ov-acts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
-.ov-act{padding:11px 0;border-top:1px solid var(--stroke)}
-.ov-act:first-child{border-top:0;padding-top:0}
-.ov-act-h{display:flex;align-items:center;gap:8px}
-.ov-act-h .ov-doc-ico{width:13px;height:13px;color:var(--t3)}
+/* ── activity spine ──
+   The dots sit on a single continuous line, so the feed reads as one thing
+   from top to bottom. An approval is the filled dot; everything else is
+   hollow, which is the whole of the colour coding. */
+.ov-acts{list-style:none;margin:0;padding:0}
+.ov-act{position:relative;padding:0 0 16px 18px}
+.ov-act:before{content:'';position:absolute;left:3.5px;top:6px;bottom:-2px;
+  width:1px;background:var(--stroke)}
+.ov-act:last-child:before{display:none}
+.ov-act-dot{position:absolute;left:0;top:4px;width:8px;height:8px;border-radius:50%;
+  border:1.5px solid var(--t3);background:var(--white);box-sizing:border-box}
+.ov-act-approved .ov-act-dot{border-color:var(--success);background:var(--success)}
+.ov-act-submitted .ov-act-dot{border-color:var(--ink)}
 .ov-act-w{font-size:12.5px;font-weight:600;color:var(--ink);line-height:1.35}
-.ov-act-m{display:flex;justify-content:space-between;gap:10px;margin-top:4px;
-  font-size:11px;color:var(--t3)}
-.ov-act-\$ {font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink);margin-top:5px;
-  font-variant-numeric:tabular-nums}
+.ov-act-sum{font-family:var(--mono);font-size:11px;font-weight:700;
+  font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:5px}
 .ov-act-was{font-weight:400;color:var(--t3);letter-spacing:0}
-/* The three kinds of event, told apart by the mark rather than by colour on
-   the text — an approval is the one worth finding at a glance. */
-.ov-act-approved .ov-act-h .ov-doc-ico{color:var(--success)}
-.ov-act-submitted .ov-act-h .ov-doc-ico{color:var(--ink)}
+.ov-act-m{font-size:11px;color:var(--t3);margin-top:2px}
+.ov-act-when:before{content:'· '}
