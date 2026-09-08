@@ -1096,7 +1096,7 @@ const PRESETS = [
   {id:'closeout-approved',  name:'Closeout approved',          desc:'Admin has signed off. Project is complete — read-only view.',
     state:{role:'admin', projectStage:'closeout-approved', viewStage:'closeout-approved', scopeSeed:'full'}},
 ];
-function presetLabel(p, n){ return `Step ${n} · ${p.name}`; }
+function presetLabel(p, n){ return n == null ? p.name : `Step ${n} · ${p.name}`; }
 
 /* ── variants ────────────────────────────────────────────────────────
    A host page can pin this shell to one scenario by declaring KAI_VARIANT

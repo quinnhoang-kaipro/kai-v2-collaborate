@@ -39,6 +39,9 @@ const OVERVIEW_SEED = {
     {k:'Garage',      v:'Yes'},    {k:'Market',      v:'Atlanta'},
   ],
   template: {name:'ATL Metro Turn Template 01:09:26', version:'Apr 2, 2026'},
+  /* The closeout is the one document the version ladder does not model — it
+     is not a scope, so it has no entry in VER. Its own three dates live here. */
+  closeout: {opened:'May 18, 2026', handed:'May 20, 2026', approved:'May 22, 2026'},
   dispatch: 'Lockbox is on the side gate, not the front door. Resident works nights — no entry before 10am.',
 };
 
@@ -60,6 +63,122 @@ function _ovBudget(){
     return __KAI_SCOPE_TOTAL_OVERRIDE;
   }
   return money(tasks.reduce((s, t) => s + dollars(t.cost), 0));
+}
+
+/* ── the project's standing, in three parts ──────────────────────────
+   One "Active" chip could not say which of a turn's phases the project was
+   in, or whether the phase was moving. Three segments read left to right as
+   programme, phase, state — the same order a person says it out loud: "the
+   turn, in closeout, in progress".  */
+function _ovStanding(){
+  const st   = (typeof STAGE_ID !== 'undefined') ? STAGE_ID : 'edit';
+  const mode = (typeof PROJ_MODE !== 'undefined') ? PROJ_MODE : '';
+  const co   = ['published', 'closeout', 'closeout-approved'].includes(st)
+            && (typeof WORK_TRACK !== 'undefined') && WORK_TRACK === 'change_order';
+  const phase =
+      st === 'closeout' || st === 'closeout-approved' ? 'Close out'
+    : st === 'published' ? (co ? 'Change order' : 'Construction')
+    : ['submitted', 'reviewing', 'review-done', 'awaiting-pub'].includes(st) ? 'Scope review'
+    : 'Scoping';
+  const state =
+      st === 'closeout-approved' ? 'Complete'
+    : st === 'closeout'  ? 'In review'
+    : st === 'published' ? (co ? 'In review' : 'In progress')
+    : st === 'edit'      ? 'In draft'
+    : 'In review';
+  return [
+    {k:'programme', v:OVERVIEW_SEED.type},
+    {k:'phase',     v:phase},
+    {k:'state',     v:state},
+  ];
+}
+function _ovStandingHtml(){
+  return `<div class="ov-standing" role="group" aria-label="Project status">${
+    _ovStanding().map(seg =>
+      `<span class="ov-stand ov-stand-${seg.k}">${esc(seg.v)}</span>`).join('')}</div>`;
+}
+
+/* ── who has had this document ───────────────────────────────────────
+   A project produces a run of documents — the scope, then a change order per
+   revision, then the closeout — and each of them passes through several pairs
+   of hands before it is approved. The ladder and the sign-off log already
+   record both halves of that: REVIEWS says who signed and when, in order, so
+   each signature is also the moment the document reached the next person.
+   Read that way the log is a chain of hand-offs, which is what this shows. */
+function _ovTrail(){
+  if(typeof VER_ORDER === 'undefined' || typeof VER === 'undefined') return [];
+  if(typeof buildOrdered === 'function') buildOrdered();
+  const pending = (typeof A2_PENDING_VER !== 'undefined') ? A2_PENDING_VER : null;
+  const revs    = (typeof REVIEWS !== 'undefined') ? REVIEWS : [];
+  const people  = _ovPeople();
+  const author  = {who:people.agent, role:'Field agent'};
+  const out = [];
+
+  VER_ORDER.forEach((id, i) => {
+    const m = VER[id] || {};
+    const prev = i > 0 ? VER[VER_ORDER[i - 1]] : null;
+    const signs = revs.filter(r => r.ver === id)
+      .slice().sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+    const evs = [{...author, act:'started it',
+                  when: m.opened || (prev && prev.date) || m.date, kind:'start'}];
+    /* Each signature is the point the document had reached that person, so
+       the hand-off is from whoever held it before them. */
+    let from = author;
+    signs.forEach(sig => {
+      evs.push({who:from.who, role:from.role, act:'handed off to ' + sig.who,
+                when:sig.date, kind:'handoff'});
+      from = sig;
+    });
+    if(id === pending){
+      evs.push({who:from.who, role:from.role, act:'has it for approval',
+                when:from.date, kind:'waiting'});
+    } else {
+      evs.push({who:people.manager, role:'Project manager', act:'approved it',
+                when:m.date, kind:'approved'});
+    }
+    out.push({name:m.label || id, state: id === pending ? 'In review' : 'Approved', evs:evs});
+  });
+
+  /* The closeout, when the project has one. Not a scope, so not in VER. */
+  const st   = (typeof STAGE_ID !== 'undefined') ? STAGE_ID : '';
+  const mode = (typeof PROJ_MODE !== 'undefined') ? PROJ_MODE : '';
+  if(mode === 'closeout' || st === 'closeout' || st === 'closeout-approved'){
+    const C = OVERVIEW_SEED.closeout;
+    const done = st === 'closeout-approved';
+    out.push({name:'Closeout', state: done ? 'Approved' : 'In review', evs:[
+      {...author, act:'started it', when:C.opened, kind:'start'},
+      {...author, act:'handed off to ' + people.manager, when:C.handed, kind:'handoff'},
+      done
+        ? {who:people.manager, role:'Project manager', act:'approved it',
+           when:C.approved, kind:'approved'}
+        : {who:people.manager, role:'Project manager', act:'has it for approval',
+           when:C.handed, kind:'waiting'},
+    ]});
+  }
+  return out.reverse();   // newest document first, like the activity feed
+}
+
+const _OV_TICK = `<svg class="ov-tr-ck" viewBox="0 0 12 12" fill="none" stroke="currentColor"
+  stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg>`;
+
+function _ovTrailHtml(){
+  const docs = _ovTrail();
+  if(!docs.length) return `<p class="ov-empty">No documents yet.</p>`;
+  return `<div class="ov-trail">${docs.map(d => `
+    <div class="ov-tr-doc">
+      <div class="ov-tr-h">
+        <span class="ov-tr-n">${esc(d.name)}</span>
+        <span class="ov-tr-st${d.state === 'Approved' ? ' is-done' : ''}">${esc(d.state)}</span>
+      </div>
+      ${d.evs.map(e => `
+        <div class="ov-tr-r ov-tr-${e.kind}">
+          <span class="ov-tr-mk">${e.kind === 'approved' ? _OV_TICK : ''}</span>
+          <span class="ov-tr-who">${esc(e.who)}</span>
+          <span class="ov-tr-role">${esc(e.role)}</span>
+          <span class="ov-tr-act">${esc(e.act)}</span>
+          <span class="ov-tr-d">${esc(e.when || '')}</span>
+        </div>`).join('')}
+    </div>`).join('')}</div>`;
 }
 
 /* ── activity ────────────────────────────────────────────────────────
@@ -116,7 +235,7 @@ function _ovAgo(when, now){
    rather than as a tray of tiles. */
 function _ovSec(label, body, cls){
   return `<section class="ov-sec${cls ? ' ' + cls : ''}">
-    <h3 class="ov-sec-h">${esc(label)}</h3>
+    ${label ? `<h3 class="ov-sec-h">${esc(label)}</h3>` : ''}
     ${body}
   </section>`;
 }
@@ -178,7 +297,9 @@ function renderOverview(){
   /* The job and the people on it, in one list. Two columns of label-over-value
      at this width, so "Project manager" gets its own line and the name gets
      the room it needs. */
-  const jobSec = _ovSec('The job', _ovFieldsHtml([
+  /* No heading: it is the block directly under the title, and "The job" only
+     ever restated where you already were. */
+  const jobSec = _ovSec('', _ovFieldsHtml([
     {k:'Project ID',      v:S.projectId},
     {k:'Project type',    v:S.type},
     {k:'Project manager', v:people.manager},
@@ -208,6 +329,8 @@ function renderOverview(){
       <div class="ov-act-m">${esc(a.who)} <span class="ov-act-when">${esc(_ovAgo(a.when, now))}</span></div>
     </li>`).join('') : `<li class="ov-empty">Nothing has happened yet.</li>`;
 
+  const trailSec = _ovSec('Documents and hand-offs', _ovTrailHtml(), 'ov-trail-sec');
+
   body.innerHTML = `
   <div class="ov-root">
     <header class="ov-head">
@@ -215,11 +338,11 @@ function renderOverview(){
         <h2>${esc(S.address)}</h2>
         <div class="ov-head-sub">${esc(S.city)}</div>
       </div>
-      <span class="ov-status">${esc(S.status)}</span>
+      ${_ovStandingHtml()}
     </header>
     ${stats}
     <div class="ov-cols">
-      <div class="ov-main">${jobSec}${accessSec}</div>
+      <div class="ov-main">${jobSec}${accessSec}${trailSec}</div>
       <aside class="ov-side">
         ${_ovSec('Activity', `<ul class="ov-acts">${feed}</ul>`, 'ov-act-sec')}
       </aside>

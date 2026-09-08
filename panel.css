@@ -4336,9 +4336,21 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-head{display:flex;align-items:flex-end;gap:14px;margin-bottom:20px}
 .ov-head h2{font-family:var(--display);font-size:25px;font-weight:700;letter-spacing:-.02em;margin:0}
 .ov-head-sub{font-size:12.5px;color:var(--t3);margin-top:4px}
-.ov-status{margin-left:auto;font-family:var(--mono);font-size:9px;font-weight:700;
-  letter-spacing:.12em;text-transform:uppercase;color:var(--ink);
-  background:var(--accent);padding:4px 9px;flex-shrink:0}
+/* ── the three-part standing ──
+   Programme · phase · state, reading left to right and getting lighter as it
+   goes, so the darkest block is the phase the project is actually in and the
+   outlined one is the part still moving. */
+.ov-standing{margin-left:auto;display:flex;flex-shrink:0}
+.ov-stand{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.11em;
+  text-transform:uppercase;padding:6px 12px;white-space:nowrap;
+  display:inline-flex;align-items:center}
+.ov-stand-programme{background:var(--t3);color:var(--white)}
+.ov-stand-phase{background:var(--ink);color:var(--white)}
+.ov-stand-state{background:var(--white);color:var(--ink);box-shadow:inset 0 0 0 1px var(--stroke)}
+@media (max-width:760px){
+  .ov-head{flex-wrap:wrap}
+  .ov-standing{margin-left:0;flex-basis:100%}
+}
 
 /* ── the figure strip ──
    Five numbers at figure size between two hairlines. The two counts are
@@ -4393,6 +4405,42 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
   text-transform:uppercase;color:var(--t3)}
 .ov-code-v{font-family:var(--mono);font-size:19px;font-weight:700;letter-spacing:.1em;color:var(--ink)}
 .ov-dispatch{margin:15px 0 0;font-size:13px;line-height:1.55;color:var(--t2);max-width:52ch}
+
+/* ── documents and hand-offs ──
+   One block per document, and inside it one line per pair of hands. The name
+   carries the weight, the role and the act stay quiet, and the date holds the
+   right edge so the chain can be read down the column as a sequence. */
+.ov-trail{display:flex;flex-direction:column;gap:20px}
+.ov-tr-h{display:flex;align-items:baseline;gap:9px;padding-bottom:7px;
+  border-bottom:1px solid var(--stroke);margin-bottom:3px}
+.ov-tr-n{font-size:13.5px;font-weight:700;color:var(--ink)}
+.ov-tr-st{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--t3)}
+.ov-tr-st.is-done{color:var(--success)}
+.ov-tr-r{display:grid;grid-template-columns:16px auto auto minmax(0,1fr) auto;
+  gap:0 8px;align-items:baseline;padding:6px 0}
+.ov-tr-r + .ov-tr-r{border-top:1px solid var(--hair,var(--stroke))}
+/* The mark is a column of its own whether or not it is filled, so every name
+   in the chain starts on the same line. */
+.ov-tr-mk{width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;
+  align-self:center;color:var(--white);background:var(--ink);border-radius:50%;
+  visibility:hidden}
+.ov-tr-approved .ov-tr-mk{visibility:visible}
+.ov-tr-ck{width:9px;height:9px}
+.ov-tr-who{font-size:12.5px;font-weight:600;color:var(--ink)}
+.ov-tr-role{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--t3);white-space:nowrap}
+.ov-tr-act{font-size:12px;color:var(--t2);min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+.ov-tr-d{font-size:11px;color:var(--t3);white-space:nowrap;font-variant-numeric:tabular-nums}
+/* Still with someone: the one line in the chain that has not resolved. */
+.ov-tr-waiting .ov-tr-act{color:var(--ink);font-weight:600}
+.ov-tr-start .ov-tr-act{font-style:italic}
+@media (max-width:620px){
+  .ov-tr-r{grid-template-columns:16px auto minmax(0,1fr);row-gap:2px}
+  .ov-tr-act{grid-column:2 / -1}
+  .ov-tr-d{grid-column:2 / -1}
+}
 
 /* ── activity spine ──
    The dots sit on a single continuous line, so the feed reads as one thing
