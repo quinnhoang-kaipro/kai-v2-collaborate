@@ -161,11 +161,8 @@ function _ovTrail(){
 const _OV_TICK = `<svg class="ov-tr-ck" viewBox="0 0 12 12" fill="none" stroke="currentColor"
   stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg>`;
 
-function _ovTrailHtml(){
-  const docs = _ovTrail();
-  if(!docs.length) return `<p class="ov-empty">No documents yet.</p>`;
-  return `<div class="ov-trail">${docs.map(d => `
-    <div class="ov-tr-doc">
+function _ovTrailDocHtml(d){
+  return `<div class="ov-tr-doc">
       <div class="ov-tr-h">
         <span class="ov-tr-n">${esc(d.name)}</span>
         <span class="ov-tr-st${d.state === 'Approved' ? ' is-done' : ''}">${esc(d.state)}</span>
@@ -178,7 +175,42 @@ function _ovTrailHtml(){
           <span class="ov-tr-act">${esc(e.act)}</span>
           <span class="ov-tr-d">${esc(e.when || '')}</span>
         </div>`).join('')}
-    </div>`).join('')}</div>`;
+    </div>`;
+}
+
+/* The current document is the one anyone came here to check; the ones before
+   it are the audit trail, which is a different errand. So only the latest is
+   open, and the rest are one click away with their number said up front —
+   collapsed without saying how much is behind it would be a mystery box. */
+function _ovTrailHtml(){
+  const docs = _ovTrail();
+  if(!docs.length) return `<p class="ov-empty">No documents yet.</p>`;
+  const [current, ...earlier] = docs;
+  if(!earlier.length) return `<div class="ov-trail">${_ovTrailDocHtml(current)}</div>`;
+  return `<div class="ov-trail">
+    ${_ovTrailDocHtml(current)}
+    <div class="ov-trail-rest" id="ovTrailRest" hidden>
+      ${earlier.map(_ovTrailDocHtml).join('')}
+    </div>
+    <button type="button" class="ov-more" id="ovTrailMore"
+            aria-expanded="false" aria-controls="ovTrailRest"
+            onclick="ovTrailToggle()"
+            data-open="Hide earlier documents"
+            data-shut="View all history (${earlier.length} earlier ${
+              earlier.length === 1 ? 'document' : 'documents'})">View all history (${
+              earlier.length} earlier ${earlier.length === 1 ? 'document' : 'documents'})</button>
+  </div>`;
+}
+/* A class toggle rather than a re-render: renderOverview would rebuild the
+   whole tab and lose the scroll position you were reading at. */
+function ovTrailToggle(){
+  const rest = document.getElementById('ovTrailRest');
+  const btn  = document.getElementById('ovTrailMore');
+  if(!rest || !btn) return;
+  const open = rest.hidden;             // about to become open
+  rest.hidden = !open;
+  btn.textContent = open ? btn.dataset.open : btn.dataset.shut;
+  btn.setAttribute('aria-expanded', String(open));
 }
 
 /* ── activity ────────────────────────────────────────────────────────
@@ -254,20 +286,16 @@ function _ovStat(label, value, go){
     : `<div class="ov-stat">${inner}</div>`;
 }
 
-/* The eight property facts as one line of text. Eight labelled cells was a
-   box's worth of chrome around numbers nobody reads one at a time. */
-function _ovSpecLine(){
-  const g = k => ((OVERVIEW_SEED.property.find(r => r.k === k) || {}).v || '');
-  return [
-    g('Square feet') && g('Square feet') + ' sq ft',
-    g('Beds')  && g('Beds')  + ' bd',
-    g('Baths') && g('Baths') + ' ba',
-    g('Acreage') && g('Acreage') + ' acres',
-    g('Year built') && 'built ' + g('Year built'),
-    g('Garage') === 'Yes' ? 'garage' : '',
-    g('Market') && g('Market') + ' market',
-    g('KT ID') && 'KT ' + g('KT ID'),
-  ].filter(Boolean).join('  ·  ');
+/* The property's own facts, ordered the way someone reads a listing rather
+   than the order the seed happens to hold them in. They join the field list
+   above rather than running together as one line of text: unlabelled, the
+   run had nothing to tell you which number was the acreage and which the
+   year, and it sat under the labelled fields looking like a caption. */
+function _ovPropFields(){
+  const g = k => (OVERVIEW_SEED.property.find(r => r.k === k) || {}).v || '';
+  return ['Square feet', 'Beds', 'Baths', 'Year built', 'Acreage', 'Garage', 'Market', 'KT ID']
+    .map(k => ({k:k, v:g(k)}))
+    .filter(r => r.v);
 }
 
 function renderOverview(){
@@ -294,9 +322,8 @@ function renderOverview(){
     ${_ovStat('Photos', String(photoCount), "openScopeDrawer('photos')")}
   </div>`;
 
-  /* The job and the people on it, in one list. Two columns of label-over-value
-     at this width, so "Project manager" gets its own line and the name gets
-     the room it needs. */
+  /* The job, the people on it, and the property itself — one list of
+     label-over-value fields, in as many columns as the width allows. */
   /* No heading: it is the block directly under the title, and "The job" only
      ever restated where you already were. */
   const jobSec = _ovSec('', _ovFieldsHtml([
@@ -306,7 +333,7 @@ function renderOverview(){
     {k:'Field agent',     v:people.agent},
     {k:'Template',        v:S.template.name},
     {k:'Last updated',    v:S.updated},
-  ]) + `<p class="ov-spec">${esc(_ovSpecLine())}</p>`, 'ov-job');
+  ].concat(_ovPropFields())), 'ov-job');
 
   /* Getting in and what to know once you are there are the same errand, so
      the codes and the dispatch note share a section. */

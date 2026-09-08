@@ -4393,8 +4393,6 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-field dt{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.1em;
   text-transform:uppercase;color:var(--t3);margin-bottom:3px}
 .ov-field dd{margin:0;font-size:13.5px;color:var(--ink);line-height:1.35}
-/* The eight property facts as one line of running text. */
-.ov-spec{margin:16px 0 0;font-size:12.5px;line-height:1.6;color:var(--t2)}
 
 /* ── getting in ──
    Codes are read aloud over a phone, so they are the largest mono on the
@@ -4441,6 +4439,16 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
   .ov-tr-act{grid-column:2 / -1}
   .ov-tr-d{grid-column:2 / -1}
 }
+
+/* The reveal for the earlier documents. Underlined because it is the one
+   thing in this section that acts, and the section is otherwise all text. */
+.ov-trail-rest{display:flex;flex-direction:column;gap:20px}
+.ov-trail-rest[hidden]{display:none}
+.ov-more{align-self:flex-start;padding:0;border:0;background:none;cursor:pointer;
+  font:inherit;font-size:12px;font-weight:600;color:var(--ink);
+  border-bottom:1.5px solid var(--stroke);transition:border-color .12s}
+.ov-more:hover{border-bottom-color:var(--ink)}
+.ov-more:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 
 /* ── activity spine ──
    The dots sit on a single continuous line, so the feed reads as one thing
