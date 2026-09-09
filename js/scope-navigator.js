@@ -254,6 +254,11 @@ window.addEventListener('message', e => {
   if(e.data.type === 'kai-duplicate-edit'){
     if(typeof confirmEditFromApproved === 'function') confirmEditFromApproved();
   }
+  /* The shell's take-the-turn dialogue was confirmed. Straight into edit mode:
+     the confirm was the gate, so toggleScopeEdit's own gating would ask twice. */
+  if(e.data.type === 'kai-enter-edit'){
+    if(typeof enterEditMode === 'function') enterEditMode(true);
+  }
   // Shell-triggered version switch (Return to current button, outdated-lock
   // modal). Route through switchVersion so all the local state updates + the
   // 'kai-version-changed' postMessage back to the shell all still fire.
@@ -1671,6 +1676,15 @@ function browseProductForTask(id){
 let editRequestFor = null;   // task id whose popover is open (null = closed)
 let ereqDraft = '';           // note-in-progress
 function openEditRequest(id){
+  /* The field agent without the baton does not request — they take the turn.
+     Their CTA reads "Request to edit" wherever it appears, and every one of
+     them opens the shell's take-the-turn dialogue, which names whoever is
+     holding the document. Asked of the shell because that is where the turn
+     model and the modal live. */
+  if(typeof USER_ROLE !== 'undefined' && USER_ROLE === 'field_agent_nr'){
+    try{ window.parent.postMessage({type:'kai-take-turn'}, '*'); }catch(e){}
+    return;
+  }
   // Mark the task as edit-requested (so the sidebar chip + card button
   // reflect the state) and open the Notes drawer so the user can drop
   // context on what needs to change. The old inline ereq popover is

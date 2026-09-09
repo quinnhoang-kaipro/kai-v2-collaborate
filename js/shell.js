@@ -364,10 +364,65 @@ function markAsReviewed(){
   const word = (state.projectStage === 'edit') ? 'done' : 'reviewed';
   if(typeof toast === 'function') toast(`Marked as ${word} · ${me.name}`);
 }
+/* ── taking the turn ─────────────────────────────────────────────────
+   The field agent without the baton does not have to ask. Nothing stops them
+   editing a document someone else is holding — the app's job is to say who is
+   holding it, take the decision on the record, and tell that person. So their
+   "Request to edit" is not a request: it names whoever has the turn, warns
+   that they may still be mid-sentence in it, and offers to start anyway.
+
+   Which document it is comes from the stage, because "start working on this"
+   with no noun is the one thing the dialogue cannot afford to be vague about. */
+function _turnArtifactName(){
+  const proj = state.projectStage;
+  if(proj === 'published' && state.workTrack === 'change_order') return 'change order';
+  if(proj === 'closeout' || proj === 'closeout-approved') return 'closeout';
+  return 'scope';
+}
+/* openModal serialises onConfirm with toString(), so a closure over the name
+   would not survive the round trip — it is parked here instead. */
+let takeTurnFrom = '';
+function openTakeTurn(){
+  const turn = whoseTurn(viewStage, state.role, state.twoStep);
+  // Already holding it — there is nobody to take it from, so this is just Edit.
+  if(turn.mine){ confirmTakeTurn(); return; }
+  const who  = turn.who || 'whoever has it';
+  const what = _turnArtifactName();
+  takeTurnFrom = who;
+  openModal({
+    icon:'alert',
+    title:`Take the turn from ${who}?`,
+    body:`${who} may still be working on this. You can start working on this ${what} `
+       + `anyway, and we'll notify ${who}.<br><br>`
+       + `You may hand it back to ${who}, or on to the next person, once you're finished.`,
+    confirm:'Start editing',
+    cancel:'Nevermind',
+    onConfirm:()=>{ confirmTakeTurn(); },
+  });
+}
+function confirmTakeTurn(){
+  const me = (ROLE_PEOPLE[state.role] || {}).name || 'You';
+  // The turn is theirs now, which is what makes the CTA a hand-off.
+  turnTaken = {role:state.role, stage:state.projectStage, from:takeTurnFrom};
+  /* The same record a hand-off leaves, because that is what this is — one made
+     by the person receiving it rather than the person giving it up. */
+  sessionHandoffs.push({when:'just now', from:takeTurnFrom, fromRole:'', to:me, ready:false});
+  const ifr = document.getElementById('iframe');
+  try{ if(ifr && ifr.contentWindow) ifr.contentWindow.postMessage({type:'kai-enter-edit'}, '*'); }catch(e){}
+  if(typeof toast === 'function'){
+    toast(takeTurnFrom ? `Editing — ${takeTurnFrom} notified` : 'Editing');
+  }
+  render();   // the stepper, the CTA and the caption all move with the turn
+}
+
 /* Asking for the document back. The reason is the point, so the field is the
    modal rather than an afterthought — an edit request with no "why" just
-   bounces the scope and stalls it. */
-function openScopeEditRequest(){ renderScopeEditRequest(); }
+   bounces the scope and stalls it. Only for roles that do have to ask; the
+   no-baton field agent takes the turn instead (openTakeTurn above). */
+function openScopeEditRequest(){
+  if(state.role === 'field_agent_nr'){ openTakeTurn(); return; }
+  renderScopeEditRequest();
+}
 function closeScopeEditRequest(){
   const el = document.getElementById('editReqModal');
   if(el) el.remove();
@@ -688,14 +743,18 @@ function handoffLog(){
   // Anything past draft got there by being handed off, so the record exists. A
   // change order got there the same way, on its own date — same event, same
   // words, because it is the same act on the same document.
+  /* Read off the turn table rather than named: it goes to whoever reviews, and
+     when that was the Manager the seed said A. Novak — a name that is a field
+     agent now, so the log had the scope handed off to the wrong desk. */
+  const reviewer = (ROLE_PEOPLE[turnRoleFor('reviewing', state.twoStep)] || {}).name || 'the reviewer';
   if(inChangeOrder()){
     const co = changeOrderInfo();
-    return [{when: co.submitted || co.date, from:'M. Alvarez', fromRole:'Field agent', to:'A. Novak'}]
+    return [{when: co.submitted || co.date, from:'M. Alvarez', fromRole:'Field agent', to:reviewer}]
       .concat(sessionHandoffs);
   }
   const seeded = (state.projectStage === 'edit')
     ? []
-    : [{when:'Apr 9, 2026', from:'M. Alvarez', fromRole:'Field agent', to:'A. Novak'}];
+    : [{when:'Apr 9, 2026', from:'M. Alvarez', fromRole:'Field agent', to:reviewer}];
   return seeded.concat(sessionHandoffs);
 }
 
@@ -800,8 +859,20 @@ function renderStatePop(){
   const whoLine = (t.role && t.who)
     ? `${t.mine ? 'You' : t.who} (${roleName})` : '';
   const isScopeCard = statePopAnchor.indexOf('stage-turn') === -1;
+  /* Which card the turn chip opens. The move card is written to you — what you
+     owe, what you can do about it, what follows — so it is for the person whose
+     decision the stage is waiting on. Everyone else gets the document card,
+     which answers the question they actually have: what state is this in, who
+     may change it, and who has signed it so far.
+
+     "Everyone else" includes both field agents even on their own move. What
+     they need from this chip is where the document has been and who has it
+     next, not a restatement of the CTA two inches to the right; the decision
+     card belongs to the role that holds decisions. */
+  const isAgent = (state.role === 'field_agent' || state.role === 'field_agent_nr');
+  const showDocCard = isScopeCard || !t.mine || isAgent;
   let body;
-  if(isScopeCard){
+  if(showDocCard){
     const appr = (id === 'approved') ? scopeApprover() : null;
     const co   = inChangeOrder() ? changeOrderInfo() : null;
     /* The document's own facts. Responsible appears in every state now, not just
@@ -840,9 +911,9 @@ function renderStatePop(){
       ${popRow('Then', then)}
       ${prog}`;
   }
-  el.innerHTML = `<div class="turn-pop-card is-${id}" role="dialog" aria-label="${isScopeCard ? 'Scope state' : 'Whose turn it is'}"
+  el.innerHTML = `<div class="turn-pop-card is-${id}" role="dialog" aria-label="${showDocCard ? 'Scope state' : 'Whose turn it is'}"
       style="top:${Math.round(r.bottom + 8)}px;left:${Math.round(left)}px">
-    ${isScopeCard ? `<div class="turn-pop-lockh">
+    ${showDocCard ? `<div class="turn-pop-lockh">
       <span class="turn-pop-lock">${id === 'approved' ? LOCK_SVG.shut : LOCK_SVG.open}</span>${(DOC_STATE[id] || {}).label || ''}
     </div>` : ''}
     ${body}
@@ -964,7 +1035,18 @@ function turnRoleFor(stage, twoStep){
 }
 /* {mine, role, who, initials}. `mine` is the only thing most callers need;
    the rest is for naming the person you are waiting on. */
+/* Set when someone takes the turn rather than being handed it — see
+   openTakeTurn. {role, stage, from}. Scoped to the stage it was taken at, so a
+   stage change hands the document back to whoever the model says owns it. */
+let turnTaken = null;
 function whoseTurn(stage, role, twoStep){
+  /* A taken turn belongs in here rather than beside it: the stepper's marker,
+     the CTA and the caption all read this one predicate, and a flag any of them
+     had to remember to check separately is how they would disagree. */
+  if(turnTaken && turnTaken.stage === stage){
+    const tp = ROLE_PEOPLE[turnTaken.role] || {name:turnTaken.role, initials:'?'};
+    return {mine: role === turnTaken.role, role:turnTaken.role, who:tp.name, initials:tp.initials, taken:true};
+  }
   const owner = turnRoleFor(stage, twoStep);
   if(!owner) return {mine:false, role:null, who:null, initials:null};
   const p = ROLE_PEOPLE[owner] || {name:owner, initials:'?'};
@@ -1210,6 +1292,7 @@ function applyPreset(id){
   const p=PRESETS.find(x=>x.id===id); if(!p) return;
   Object.assign(state, p.state, {preset:id});
   sessionHandoffs = []; // each preset is a fresh scenario, not a continuation
+  turnTaken = null;
   saveState();
   viewStage = p.state.viewStage || null;
   // Force iframe reload so seed param takes effect
@@ -1687,6 +1770,16 @@ function syncAppApproveBtn(){
      opposite of the truth here, and at awaiting-pub it also let an admin work
      through the manager's 18 approvals and publish. */
   const turn = whoseTurn(proj, state.role, state.twoStep);
+  /* Took the turn: they are holding the document, so the move that ends their
+     stint is the only one left — hand it back, or on to whoever is next. */
+  if(turn.taken && turn.mine){
+    btn.textContent = 'Hand off';
+    btn.disabled = false;
+    btn.onclick = (proj === 'published') ? openCoHandoff : submitForReview;
+    btn.hidden = false;
+    if(tipEl) tipEl.hidden = true;
+    return;
+  }
   if(turn.role && !turn.mine){
     /* No decision here, but not necessarily nothing to do: at a change order a
        manager or field agent can still pass the document on with a note. Where
@@ -1894,6 +1987,12 @@ window.addEventListener('message', (e)=>{
                              total:e.data.total, ready:e.data.ready};
     syncAppApproveBtn();
     return;
+  }
+  if(e.data.type === 'kai-take-turn'){
+    /* The panel's per-task "Request edit" for the no-baton field agent. Same
+       decision as the toolbar's, so it is the same dialogue and not a second
+       one that happens to look like it. */
+    openTakeTurn();
   }
   if(e.data.type === 'kai-tasks-complete'){
     window.__KAI_ALL_TASKS_COMPLETE = !!e.data.allComplete;
@@ -2420,6 +2519,8 @@ function setTwoStep(v){
 }
 
 function setProjectStage(s){
+  // Whoever held the document at the old stage does not hold it at the new one.
+  if(turnTaken && turnTaken.stage !== s) turnTaken = null;
   state.projectStage=s; saveState();
   // If user role allows, keep them in sync with the new project stage
   const access=ROLE_ACCESS[state.role]||[];
