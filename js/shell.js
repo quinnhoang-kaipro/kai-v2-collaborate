@@ -859,13 +859,18 @@ function renderStatePop(){
   const whoLine = (t.role && t.who)
     ? `${t.mine ? 'You' : t.who} (${roleName})` : '';
   const isScopeCard = statePopAnchor.indexOf('stage-turn') === -1;
-  /* Which card the turn chip opens depends on whether the move is yours.
-     The move card is written to you — what you owe, what you can do about it,
-     what follows — and to someone who owes nothing it had a Responsible row
-     naming a stranger and a You row saying what little they could do. The
-     document card answers the question they actually have instead: what state
-     is this in, who settled it, and who has signed it so far. */
-  const showDocCard = isScopeCard || !t.mine;
+  /* Which card the turn chip opens. The move card is written to you — what you
+     owe, what you can do about it, what follows — so it is for the person whose
+     decision the stage is waiting on. Everyone else gets the document card,
+     which answers the question they actually have: what state is this in, who
+     may change it, and who has signed it so far.
+
+     "Everyone else" includes both field agents even on their own move. What
+     they need from this chip is where the document has been and who has it
+     next, not a restatement of the CTA two inches to the right; the decision
+     card belongs to the role that holds decisions. */
+  const isAgent = (state.role === 'field_agent' || state.role === 'field_agent_nr');
+  const showDocCard = isScopeCard || !t.mine || isAgent;
   let body;
   if(showDocCard){
     const appr = (id === 'approved') ? scopeApprover() : null;
