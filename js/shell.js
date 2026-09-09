@@ -364,10 +364,60 @@ function markAsReviewed(){
   const word = (state.projectStage === 'edit') ? 'done' : 'reviewed';
   if(typeof toast === 'function') toast(`Marked as ${word} · ${me.name}`);
 }
+/* ── taking the turn ─────────────────────────────────────────────────
+   The field agent without the baton does not have to ask. Nothing stops them
+   editing a document someone else is holding — the app's job is to say who is
+   holding it, take the decision on the record, and tell that person. So their
+   "Request to edit" is not a request: it names whoever has the turn, warns
+   that they may still be mid-sentence in it, and offers to start anyway.
+
+   Which document it is comes from the stage, because "start working on this"
+   with no noun is the one thing the dialogue cannot afford to be vague about. */
+function _turnArtifactName(){
+  const proj = state.projectStage;
+  if(proj === 'published' && state.workTrack === 'change_order') return 'change order';
+  if(proj === 'closeout' || proj === 'closeout-approved') return 'closeout';
+  return 'scope';
+}
+/* openModal serialises onConfirm with toString(), so a closure over the name
+   would not survive the round trip — it is parked here instead. */
+let takeTurnFrom = '';
+function openTakeTurn(){
+  const turn = whoseTurn(viewStage, state.role, state.twoStep);
+  const who  = turn.who || 'whoever has it';
+  const what = _turnArtifactName();
+  takeTurnFrom = who;
+  openModal({
+    icon:'alert',
+    title:`Take the turn from ${who}?`,
+    body:`${who} may still be working on this. You can start working on this ${what} `
+       + `anyway, and we'll notify ${who}.<br><br>`
+       + `You may hand it back to ${who}, or on to the next person, once you're finished.`,
+    confirm:'Start editing',
+    cancel:'Nevermind',
+    onConfirm:()=>{ confirmTakeTurn(); },
+  });
+}
+function confirmTakeTurn(){
+  const me = (ROLE_PEOPLE[state.role] || {}).name || 'You';
+  /* The same record a hand-off leaves, because that is what this is — one made
+     by the person receiving it rather than the person giving it up. */
+  sessionHandoffs.push({when:'just now', from:takeTurnFrom, fromRole:'', to:me, ready:false});
+  const ifr = document.getElementById('iframe');
+  try{ if(ifr && ifr.contentWindow) ifr.contentWindow.postMessage({type:'kai-enter-edit'}, '*'); }catch(e){}
+  if(typeof toast === 'function'){
+    toast(takeTurnFrom ? `Editing — ${takeTurnFrom} notified` : 'Editing');
+  }
+}
+
 /* Asking for the document back. The reason is the point, so the field is the
    modal rather than an afterthought — an edit request with no "why" just
-   bounces the scope and stalls it. */
-function openScopeEditRequest(){ renderScopeEditRequest(); }
+   bounces the scope and stalls it. Only for roles that do have to ask; the
+   no-baton field agent takes the turn instead (openTakeTurn above). */
+function openScopeEditRequest(){
+  if(state.role === 'field_agent_nr'){ openTakeTurn(); return; }
+  renderScopeEditRequest();
+}
 function closeScopeEditRequest(){
   const el = document.getElementById('editReqModal');
   if(el) el.remove();
@@ -1894,6 +1944,12 @@ window.addEventListener('message', (e)=>{
                              total:e.data.total, ready:e.data.ready};
     syncAppApproveBtn();
     return;
+  }
+  if(e.data.type === 'kai-take-turn'){
+    /* The panel's per-task "Request edit" for the no-baton field agent. Same
+       decision as the toolbar's, so it is the same dialogue and not a second
+       one that happens to look like it. */
+    openTakeTurn();
   }
   if(e.data.type === 'kai-tasks-complete'){
     window.__KAI_ALL_TASKS_COMPLETE = !!e.data.allComplete;
