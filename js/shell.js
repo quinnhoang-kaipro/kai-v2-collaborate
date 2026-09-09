@@ -384,6 +384,8 @@ function _turnArtifactName(){
 let takeTurnFrom = '';
 function openTakeTurn(){
   const turn = whoseTurn(viewStage, state.role, state.twoStep);
+  // Already holding it — there is nobody to take it from, so this is just Edit.
+  if(turn.mine){ confirmTakeTurn(); return; }
   const who  = turn.who || 'whoever has it';
   const what = _turnArtifactName();
   takeTurnFrom = who;
@@ -400,6 +402,8 @@ function openTakeTurn(){
 }
 function confirmTakeTurn(){
   const me = (ROLE_PEOPLE[state.role] || {}).name || 'You';
+  // The turn is theirs now, which is what makes the CTA a hand-off.
+  turnTaken = {role:state.role, stage:state.projectStage, from:takeTurnFrom};
   /* The same record a hand-off leaves, because that is what this is — one made
      by the person receiving it rather than the person giving it up. */
   sessionHandoffs.push({when:'just now', from:takeTurnFrom, fromRole:'', to:me, ready:false});
@@ -408,6 +412,7 @@ function confirmTakeTurn(){
   if(typeof toast === 'function'){
     toast(takeTurnFrom ? `Editing — ${takeTurnFrom} notified` : 'Editing');
   }
+  render();   // the stepper, the CTA and the caption all move with the turn
 }
 
 /* Asking for the document back. The reason is the point, so the field is the
@@ -1014,7 +1019,18 @@ function turnRoleFor(stage, twoStep){
 }
 /* {mine, role, who, initials}. `mine` is the only thing most callers need;
    the rest is for naming the person you are waiting on. */
+/* Set when someone takes the turn rather than being handed it — see
+   openTakeTurn. {role, stage, from}. Scoped to the stage it was taken at, so a
+   stage change hands the document back to whoever the model says owns it. */
+let turnTaken = null;
 function whoseTurn(stage, role, twoStep){
+  /* A taken turn belongs in here rather than beside it: the stepper's marker,
+     the CTA and the caption all read this one predicate, and a flag any of them
+     had to remember to check separately is how they would disagree. */
+  if(turnTaken && turnTaken.stage === stage){
+    const tp = ROLE_PEOPLE[turnTaken.role] || {name:turnTaken.role, initials:'?'};
+    return {mine: role === turnTaken.role, role:turnTaken.role, who:tp.name, initials:tp.initials, taken:true};
+  }
   const owner = turnRoleFor(stage, twoStep);
   if(!owner) return {mine:false, role:null, who:null, initials:null};
   const p = ROLE_PEOPLE[owner] || {name:owner, initials:'?'};
@@ -1260,6 +1276,7 @@ function applyPreset(id){
   const p=PRESETS.find(x=>x.id===id); if(!p) return;
   Object.assign(state, p.state, {preset:id});
   sessionHandoffs = []; // each preset is a fresh scenario, not a continuation
+  turnTaken = null;
   saveState();
   viewStage = p.state.viewStage || null;
   // Force iframe reload so seed param takes effect
@@ -1737,6 +1754,16 @@ function syncAppApproveBtn(){
      opposite of the truth here, and at awaiting-pub it also let an admin work
      through the manager's 18 approvals and publish. */
   const turn = whoseTurn(proj, state.role, state.twoStep);
+  /* Took the turn: they are holding the document, so the move that ends their
+     stint is the only one left — hand it back, or on to whoever is next. */
+  if(turn.taken && turn.mine){
+    btn.textContent = 'Hand off';
+    btn.disabled = false;
+    btn.onclick = (proj === 'published') ? openCoHandoff : submitForReview;
+    btn.hidden = false;
+    if(tipEl) tipEl.hidden = true;
+    return;
+  }
   if(turn.role && !turn.mine){
     /* No decision here, but not necessarily nothing to do: at a change order a
        manager or field agent can still pass the document on with a note. Where
@@ -2476,6 +2503,8 @@ function setTwoStep(v){
 }
 
 function setProjectStage(s){
+  // Whoever held the document at the old stage does not hold it at the new one.
+  if(turnTaken && turnTaken.stage !== s) turnTaken = null;
   state.projectStage=s; saveState();
   // If user role allows, keep them in sync with the new project stage
   const access=ROLE_ACCESS[state.role]||[];
