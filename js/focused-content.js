@@ -10,11 +10,17 @@ function renderWork(){
   // Empty scope (Step 1 · Empty draft) — every remaining tab shows its own
   // empty state instead of an empty grid / strip. Sidebar handles its own
   // empty state separately.
+  /* Ahead of the empty-scope branch. An empty scope is exactly when you most
+     want the front page — it tells you what the project is, who is on it and
+     what is due, none of which depends on there being tasks yet. The working
+     tabs are the ones with nothing to show. */
+  if(workMode==='overview'){ renderOverview(); return; }
   if(TASKS.length === 0){
     if(_renderTabEmptyIfNeeded(workMode)) return;
   }
   if(workMode==='shop'){ renderShop(); return; }
   if(workMode==='artifact'){ renderArtifact(); return; }
+  if(workMode==='artifact2'){ renderArtifact2(); return; }
   if(workMode==='pano'){ renderPano(); return; }
   const sel=selId?TASKS.find(t=>t.id===selId):null;
   const modeLabel=WORK_MODES.find(m=>m.id===workMode).label;
@@ -144,6 +150,17 @@ function _pcInitState(){
 }
 // Build the flat slot list: interleave a group slot before each room's
 // tasks. Slot index is what the scrubber navigates through.
+/* How many columns one task takes: the most photos it has on any single walk on
+   show. Never zero — an unfiltered task with no photos still gets its column. */
+function _pcTaskCols(task, walkIds){
+  if(!walkIds || typeof PHOTOS === 'undefined' || !PHOTOS.length) return 1;
+  let m = 0;
+  walkIds.forEach(wid => {
+    const n = PHOTOS.filter(p => p.kind === 'task' && p.task === task.code && p.walk === wid).length;
+    if(n > m) m = n;
+  });
+  return Math.max(1, m);
+}
 function _pcBuildSlots(){
   const slots = [];
   const rooms = (typeof ROOMS !== 'undefined' && ROOMS.length) ? ROOMS : [...new Set(TASKS.map(t => t.room))];
@@ -166,7 +183,14 @@ function _pcBuildSlots(){
     const visibleTasks = panoOnlyWithPhotos ? allRoomTasks.filter(hasPhotoOnActiveWalks) : allRoomTasks;
     slots.push({type:'group', room, roomName: room});
     visibleTasks.forEach(task => {
-      slots.push({type:'task', task, room, roomName: room, isExtra:false});
+      /* A column is a photo, not a task. A visit that took a wide and a detail
+         of the same line has two things to show, and collapsing them to one
+         column threw the second away — which is also what the nested task bar in
+         the header measures itself against. Sized by the busiest visible walk so
+         both date rows have somewhere to put every shot they hold. */
+      for(let i = 0; i < _pcTaskCols(task, walkIds); i++){
+        slots.push({type:'task', task, room, roomName: room, photoIdx:i, isExtra: i > 0});
+      }
     });
   });
   return slots;
@@ -174,7 +198,8 @@ function _pcBuildSlots(){
 function _pcPhotoFor(slot, walkId){
   if(!slot || !PHOTOS || !PHOTOS.length) return null;
   if(slot.type === 'task'){
-    return PHOTOS.find(p => p.kind === 'task' && p.task === slot.task.code && p.walk === walkId) || null;
+    const shots = PHOTOS.filter(p => p.kind === 'task' && p.task === slot.task.code && p.walk === walkId);
+    return shots[slot.photoIdx || 0] || null;
   }
   return PHOTOS.find(p => p.kind === 'group' && p.room === slot.room && p.walk === walkId) || null;
 }
@@ -223,46 +248,215 @@ function _pcActiveGroupIdx(slots){
   }
   return -1;
 }
+/* How many photo columns the strip shows. Fixed as you scroll — it is a property
+   of how much room there is, so it changes when the scope sidebar opens or shuts
+   and at no other time. It used to be the length of the current group's run,
+   which meant a room with one task got two enormous columns and a room with four
+   got five small ones: the photographs changed size as you moved between rooms,
+   which reads as a bug because it is one. */
+let _pcColsRendered = null;  // the count the current DOM was built with
+let _pcSizeW = null;         // width poll; see _pcWatchSize for why not an observer
+function _pcMeasureCols(){
+  const host = document.getElementById('workBody');
+  const w = host && host.clientWidth ? host.clientWidth : 900;
+  // What is left for photos once the rail, the forward arrow, the gaps between
+  // them and the strip's own padding are taken out.
+  const inner = w - 112 - 26 - 16 - 32;
+  return Math.max(3, Math.min(6, Math.round(inner / 250)));
+}
+/* Measured every render, never cached. Caching it looked safe — the count only
+   changes with the width — but toggling the scope sidebar rebuilds the panel's
+   work area and re-renders this tab, and a cache meant that fresh render kept
+   the old count and simply stretched three columns to fill a wider strip. */
+function _pcColCount(){
+  _pcColsRendered = _pcMeasureCols();
+  return _pcColsRendered;
+}
+/* A light ground behind the groups you are NOT in — one band per group card,
+   since a fixed-width strip can show three rooms at once. The room you are in is
+   left on the page's own white, so the mark is the absence of shading rather than
+   the presence of it: what stands out is the clean column, and the neighbours
+   recede without anything being drawn on them.
 
-function _pcHeadColHtml(slot, isCurrent, arrowPos, idx, slotsLen){
-  // Whole prev / next card is clickable — arrow glyphs stay as visual
-  // affordances but the click target spans the entire cell so users can
-  // hit the task/group name to navigate too.
-  const canNavLeft  = arrowPos === 'left'  && idx > 0;
-  const canNavRight = arrowPos === 'right' && idx < slotsLen - 1;
-  const isClickable = canNavLeft || canNavRight;
-  const isDisabled  = arrowPos && !isClickable;
-  const arrowLeft  = arrowPos === 'left'  ? `<span class="tl-col-nav" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M7.5 2L3.5 6l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>` : '';
-  const arrowRight = arrowPos === 'right' ? `<span class="tl-col-nav" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 2l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>` : '';
-  let title = '', meta = '';
-  if(!slot){
-    title = '';
-  } else if(slot.type === 'group'){
-    title = slot.roomName;
-    meta = 'Group overview';
-  } else {
-    title = slot.task.name;
-    meta = slot.roomName;
+   Measured and absolutely positioned rather than placed in the grids, because a
+   band has to run from the top of the header down past the last photo row, and
+   those are three separate grids with the body's padding and row gap between
+   them. Grid-placed bands would need bleeding into each other with negative
+   margins tuned to that padding — three numbers that then have to stay in step
+   with the stylesheet. Measured off the cards, they cannot drift. */
+/* Parked. Flip to true to bring the bands back — the placer, the markup and the
+   styles are all still here and working; it is the look we are not sure about. */
+const PC_GROUP_BANDS = false;
+function _pcPlaceHilite(){
+  const root = document.querySelector('.tl-root');
+  const host = document.getElementById('tlHilite');
+  if(!root || !host) return;
+  if(!PC_GROUP_BANDS){
+    while(host.firstChild) host.firstChild.remove();
+    return;
   }
-  const label = title
-    ? `<span class="tl-col-title">${esc(title)}</span>${meta?`<span class="tl-col-meta">${esc(meta)}</span>`:''}`
-    : `<span class="tl-col-empty">—</span>`;
-  const clickAttr = canNavLeft  ? ' onclick="_pcNav(-1)" role="button" tabindex="0"'
-                  : canNavRight ? ' onclick="_pcNav(1)" role="button" tabindex="0"'
-                  : '';
-  const cls = ['tl-col-head'];
-  if(isCurrent) cls.push('current');
-  if(isClickable) cls.push('is-clickable');
-  if(isDisabled)  cls.push('is-disabled');
-  return `<div class="${cls.join(' ')}"${clickAttr} title="${canNavLeft?'Previous':canNavRight?'Next':''}">
-    ${arrowLeft}
-    <div class="tl-col-label">${label}</div>
-    ${arrowRight}
+  const head = document.querySelector('.tl-head');
+  const rows = document.querySelectorAll('.tl-cells');
+  const cards = document.querySelectorAll('.tl-hgroup:not(.is-active)');
+  if(!head || !rows.length || !cards.length){
+    while(host.firstChild) host.firstChild.remove();
+    return;
+  }
+  const r = root.getBoundingClientRect();
+  const h = head.getBoundingClientRect();
+  const last = rows[rows.length - 1].getBoundingClientRect();
+  const top = Math.round(h.top - r.top);
+  const height = Math.round(last.bottom - h.top);
+  /* Reuse the elements. This runs on every poll tick, and rebuilding the markup
+     each time churned the DOM 4-5 times a second for a layout that had not
+     moved. Only the count of bands ever changes. */
+  while(host.children.length > cards.length) host.lastElementChild.remove();
+  while(host.children.length < cards.length){
+    const el = document.createElement('div');
+    el.className = 'tl-hilite-band';
+    host.appendChild(el);
+  }
+  Array.prototype.forEach.call(cards, (card, i) => {
+    const c = card.getBoundingClientRect();
+    const st = host.children[i].style;
+    st.left = Math.round(c.left - r.left) + 'px';
+    st.width = Math.round(c.width) + 'px';
+    st.top = top + 'px';
+    st.height = height + 'px';
+  });
+}
+/* Re-measure and redraw only if the answer changed. */
+function _pcSyncCols(){
+  if(_pcMeasureCols() === _pcColsRendered) return;
+  if(typeof renderPanoCloseout === 'function') renderPanoCloseout();
+}
+/* A poll, for the reason a2-init.js already documents about its own: a
+   ResizeObserver never fires inside the shell's srcdoc iframe. Nothing else
+   here catches the two ways this width moves — hiding the scope sidebar, which
+   only widens the work area by CSS and re-renders nothing, and dragging it,
+   which fires no event of its own. Cheap: it compares two integers and only
+   does work when the answer actually changed. */
+function _pcWatchSize(){
+  if(_pcSizeW) return;
+  _pcSizeW = setInterval(() => {
+    if(!document.getElementById('workBody') || !document.querySelector('.tl-root')){
+      clearInterval(_pcSizeW); _pcSizeW = null; return;   // tab moved on
+    }
+    _pcSyncCols();
+    _pcPlaceHilite();   // the band is measured, so it moves when the width does
+  }, 220);
+}
+/* The columns on show. Always opens on a group's own column, because that column
+   is where the group's name lives — the bar and its tiles sit side by side on one
+   row, so the label needs a column of its own and the window may never begin
+   mid-run. Then it runs forward through the slot list, crossing into later groups
+   to fill the strip; each of those brings its own column with it, so every group
+   in view is named the same way.
+
+   A run longer than the strip pages its tasks with the group's column pinned.
+   The tail pads with blanks rather than sliding the start back, since sliding
+   would land mid-run and changing the count would change the photo size. */
+function _pcGroupRun(slots){
+  const n = _pcColCount();
+  const g = _pcActiveGroupIdx(slots);
+  const start = g < 0 ? 0 : g;
+  const cols = [start];
+  let from = start + 1;
+  if(__pcState.currentIdx >= start + n){
+    const per = n - 1;
+    from = start + 1 + Math.floor((__pcState.currentIdx - start - 1) / per) * per;
+  }
+  for(let k = from; cols.length < n && k < slots.length; k++) cols.push(k);
+  while(cols.length < n) cols.push(-1);   // blank, so the count never varies
+  return cols;
+}
+/* Where the arrows go: one column either way, counted from the real columns. */
+function _pcStepTarget(slots, cols, dir){
+  const real = cols.filter(i => i >= 0);
+  const t = dir > 0 ? real[real.length - 1] + 1 : real[0] - 1;
+  return (t >= 0 && t < slots.length) ? t : -1;
+}
+/* Where each group and each task begins and how far it reaches, over the
+   columns on show. One pass, used by the header's two tiers. */
+function _pcRuns(slots, cols){
+  const groups = [], tasks = [];
+  cols.forEach((si, k) => {
+    const slot = slots[si];
+    if(!slot) return;
+    const g = groups[groups.length - 1];
+    if(g && g.room === slot.room) g.span++;
+    else groups.push({room: slot.room, roomName: slot.roomName, at: k, span: 1,
+                      hasOverview: slot.type === 'group'});
+    if(slot.type !== 'task') return;
+    const t = tasks[tasks.length - 1];
+    if(t && t.task === slot.task) t.span++;
+    else tasks.push({task: slot.task, at: k, span: 1});
+  });
+  return {groups, tasks};
+}
+function _pcHeadHtml(slots, idx){
+  const cols = _pcGroupRun(slots);
+  const {groups, tasks} = _pcRuns(slots, cols);
+  const prevGroup = _pcStepTarget(slots, cols, -1);
+  const nextGroup = _pcStepTarget(slots, cols, 1);
+  const nav = (dir, target) => {
+    const glyph = dir < 0 ? 'M7.5 2L3.5 6l4 4' : 'M4.5 2l4 4-4 4';
+    const dis = target < 0 ? ' is-disabled' : '';
+    const click = target < 0 ? '' : ` onclick="_pcSetIdx(${target})"`;
+    return `<button type="button" class="tl-hnav${dis}"${click}
+      aria-label="${dir < 0 ? 'Back' : 'Forward'}"
+      title="${dir < 0 ? 'Back' : 'Forward'}"${target < 0 ? ' disabled' : ''}>
+      <svg viewBox="0 0 12 12" fill="none"><path d="${glyph}" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>`;
+  };
+  /* Which group you are looking at: the one whose card crosses the middle of the
+     strip. Not the one holding the cursor — with three rooms on screen at once
+     the cursor is a fine anchor for where the window starts and a poor answer to
+     "which of these am I in", and it would keep the mark on a group already
+     halfway off the left edge. Column widths are equal, so the midpoint is
+     arithmetic on spans rather than anything measured. */
+  const mid = cols.length / 2;
+  let activeAt = -1;
+  groups.forEach(g => { if(g.at <= mid && mid < g.at + g.span) activeAt = g.at; });
+  // The tail pads with blanks, so the middle can land outside every group.
+  if(activeAt < 0 && groups.length) activeAt = groups[groups.length - 1].at;
+  const groupBars = groups.map(g => `<div class="tl-hgroup${g.at === activeAt ? ' is-active' : ''}" style="grid-column:${g.at + 1} / span ${g.span}">
+      <span class="tl-hgroup-label">
+        <span class="tl-hgroup-cap">Group</span>
+        <span class="tl-hgroup-name">${esc(g.roomName)}</span>
+      </span>
+    </div>`).join('');
+  /* Nested, not stacked: the task bar sits on the group's bar over the columns it
+     owns, inset so the group's edge still reads around it. Same grid row, placed
+     after, so it paints on top. */
+  const taskBars = tasks.map(t => {
+    const isCur = slots[idx] && slots[idx].type === 'task' && slots[idx].task === t.task;
+    return `<div class="tl-htask${isCur ? ' current' : ''}" style="grid-column:${t.at + 1} / span ${t.span}"
+        onclick="_pcSetIdx(${cols[t.at]})" role="button" tabindex="0" title="${esc(t.task.name)}">
+        <span class="tl-htask-name">${esc(t.task.name)}</span>
+        ${t.span > 1 ? `<span class="tl-htask-count">${t.span} photos</span>` : ''}
+      </div>`;
+  }).join('');
+  // Columns belong to .tl-hgrid; .tl-head is the rail/grid/arrow frame and takes
+  // its columns from the stylesheet. Setting them here too overrode that frame.
+  return `<div class="tl-head">
+    ${nav(-1, prevGroup)}
+    <div class="tl-hgrid" style="grid-template-columns:repeat(${cols.length},1fr)">
+      ${groupBars}${taskBars}
+    </div>
+    ${nav(1, nextGroup)}
   </div>`;
 }
-
+/* Every photo on this line or room, across all walks — what the corner pill
+   counts. The strip only ever shows one walk per row, so "2 photos" is a pointer
+   to the rest of them, not a description of this row. */
+function _pcSlotShotCount(slot){
+  if(!slot || typeof PHOTOS === 'undefined') return 0;
+  return slot.type === 'task'
+    ? PHOTOS.filter(p => p.kind === 'task' && p.task === slot.task.code).length
+    : PHOTOS.filter(p => p.kind === 'group' && p.room === slot.room).length;
+}
 function _pcCellHtml(slot, walkId, isCurrent){
-  const walk = walkFor(walkId);
   if(!slot){
     return `<div class="tl-cell${isCurrent?' current':''}"><span class="tl-cell-empty">No slot</span></div>`;
   }
@@ -276,9 +470,14 @@ function _pcCellHtml(slot, walkId, isCurrent){
     </div>`;
   }
   const bg = _photoBg(photo, 0);
-  const taskLabel = slot.type === 'task' ? slot.task.name : slot.roomName;
-  const isExtra = slot.type === 'task' && !!slot.isExtra;
-  const walkTag = walk ? `<span class="tl-cell-walk">${esc(walk.short)}${isExtra?' · 2nd photo':''}</span>` : '';
+  /* No caption strip. The bar directly above the cell names the task, and the
+     band's own row says which walk it is — the overlay restated both across
+     every column and buried the photograph under a gradient. What it could not
+     say is how many shots exist, so that is what the corner carries, once per
+     task rather than on every column of it. */
+  const shots = _pcSlotShotCount(slot);
+  const countPill = (!slot.photoIdx && shots > 1)
+    ? `<span class="tl-cell-count">${shots} photos</span>` : '';
   // Only show the approved-hexagon badge on cells whose task has been
   // approved by the admin. Group-level cells don't carry a task id, so
   // they never render the badge.
@@ -289,10 +488,7 @@ function _pcCellHtml(slot, walkId, isCurrent){
   return `<div class="tl-cell${isCurrent?' current':''}" data-room-id="${slot.room}" style="--room-tint:${tint}" onclick="openGalleryPhoto(${photo.id||0})">
     <div class="tl-cell-img" style="background:${bg}"></div>
     ${statusBadge}
-    <span class="tl-cell-label">
-      <span class="tl-cell-task">${esc(taskLabel)}${isExtra?' · 2nd photo':''}</span>
-      ${walkTag}
-    </span>
+    ${countPill}
   </div>`;
 }
 
@@ -383,13 +579,14 @@ function _pcWalksRowHtml(bandKey){
   const isOpen = __pcCalOpen === bandKey;
   const closeBtn = bandKey === 'B' ? `<button class="tl-walks-remove" onclick="event.stopPropagation();_pcRemoveBand()" aria-label="Remove date row" title="Remove date row"><svg viewBox="0 0 10 10" fill="none"><line x1="2" y1="2" x2="8" y2="8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="8" y1="2" x2="2" y2="8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>` : '';
   return `<div class="tl-walks tl-walks-row" data-band="${bandKey}">
-    <span class="tl-walks-title">Walk ${bandKey}</span>
     <div class="tl-walk-picker">
-      <button class="tl-walk-picker-btn${isOpen?' is-open':''}" onclick="event.stopPropagation();_pcOpenCal('${bandKey}')" aria-haspopup="true" aria-expanded="${isOpen}">
-        <span class="tl-walk-dot" style="background:${w.color}"></span>
-        <span class="tl-walk-picker-name">${esc(w.short)}</span>
+      <button class="tl-walk-picker-btn${isOpen?' is-open':''}" onclick="event.stopPropagation();_pcOpenCal('${bandKey}')" aria-haspopup="true" aria-expanded="${isOpen}" aria-label="Walk ${bandKey} — ${esc(w.short)}, ${esc(w.date)}">
+        <span class="tl-walk-picker-top">
+          <span class="tl-walk-dot" style="background:${w.color}"></span>
+          <span class="tl-walk-picker-name">${esc(w.short)}</span>
+          <svg class="tl-walk-picker-caret" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
         <span class="tl-walk-picker-date">${esc(w.date)}</span>
-        <svg class="tl-walk-picker-caret" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       ${isOpen ? _pcCalendarHtml(bandKey) : ''}
     </div>
@@ -397,15 +594,19 @@ function _pcWalksRowHtml(bandKey){
   </div>`;
 }
 
+/* The date moved out of a row above the photos and into a rail beside them. As a
+   row it was a header for the photos under it, which is a fair description of
+   one row but not of two — with two dates on screen the thing you are comparing
+   is left-to-right within a column, and the label belongs at the start of the
+   row it names, not floating above it. */
 function _pcBandHtml(bandKey, slots){
   const walkId = bandKey === 'A' ? __pcState.walkA : __pcState.walkB;
   const idx = __pcState.currentIdx;
+  const cols = _pcGroupRun(slots);
   return `<div class="tl-band" data-band="${bandKey}">
     ${_pcWalksRowHtml(bandKey)}
-    <div class="tl-cells">
-      ${_pcCellHtml(slots[idx-1] || null, walkId, false)}
-      ${_pcCellHtml(slots[idx]   || null, walkId, true)}
-      ${_pcCellHtml(slots[idx+1] || null, walkId, false)}
+    <div class="tl-cells" style="grid-template-columns:repeat(${cols.length},1fr)">
+      ${cols.map(i => _pcCellHtml(slots[i] || null, walkId, i === idx)).join('')}
     </div>
   </div>`;
 }

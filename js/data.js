@@ -101,7 +101,7 @@ const ROOMS = ['Kitchen','Living Room','Master Bath','Bathroom','Master Bed','Be
 const PHOTO_PEOPLE = [
   {who:'J. Chen',    role:'Field Agent'},
   {who:'M. Alvarez', role:'Field Agent'},
-  {who:'T. Okafor',  role:'Manager'},
+  {who:'T. Okafor',  role:'Project manager'},
   {who:'S. Patel',   role:'Ops'},
   {who:'R. Brooks',  role:'Field Agent'},
 ];
@@ -120,12 +120,27 @@ let _pid = 1;
 // Each photo belongs to a "walk" — a scheduled site visit that captured
 // evidence. Users filter Pano/Gallery by walk to see how conditions
 // evolved: Initial → Progress → Change order → Progress → Closeout.
+/* Dates sit inside the project's own chronology rather than beside it. The
+   scope opens Apr 2 (VER.orig.opened in js/a2/a2-data.js) and is approved
+   Apr 12; Change Order 1 lands Apr 22 and Change Order 2 Apr 30. Each walk is
+   placed against those boundaries so "the latest photo as of this date" is a
+   real question with a changing answer:
+
+     initial      Apr 2   the scan the scope was built from
+     progress_1   Apr 14  first visit after the scope was approved
+     change_order Apr 21  the visit that surfaced Change Order 1
+     progress_2   Apr 27  between the two change orders
+     close_out    May 18  after the change history ends — construction done
+
+   These used to run Jan 8 – Mar 15, entirely before the scope existed, which
+   made every date-based lookup return the same photo no matter where the
+   playhead sat. Keep them ordered and inside the project's timeline. */
 const WALKS = [
-  {id:'initial',    label:'Initial walk',      short:'Initial',     date:'Jan 8, 2026',  conductor:'Sarah M.',   color:'#555555'},
-  {id:'progress_1', label:'Progress walk 1',   short:'Progress 1',  date:'Feb 3, 2026',  conductor:'Marcus W.',  color:'#567DA3'},
-  {id:'change_order',label:'Change order walk',short:'Change order',date:'Feb 17, 2026', conductor:'Diana R.',   color:'#B3643E'},
-  {id:'progress_2', label:'Progress walk 2',   short:'Progress 2',  date:'Feb 24, 2026', conductor:'Marcus W.',  color:'#5BAED4'},
-  {id:'close_out',  label:'Closeout walk',     short:'Closeout',    date:'Mar 15, 2026', conductor:'Sarah M.',   color:'#60926C'},
+  {id:'initial',    label:'Initial walk',      short:'Initial',     date:'Apr 2, 2026',  conductor:'Sarah M.',   color:'#555555'},
+  {id:'progress_1', label:'Progress walk 1',   short:'Progress 1',  date:'Apr 14, 2026', conductor:'Marcus W.',  color:'#567DA3'},
+  {id:'change_order',label:'Change order walk',short:'Change order',date:'Apr 21, 2026', conductor:'Diana R.',   color:'#B3643E'},
+  {id:'progress_2', label:'Progress walk 2',   short:'Progress 2',  date:'Apr 27, 2026', conductor:'Marcus W.',  color:'#5BAED4'},
+  {id:'close_out',  label:'Closeout walk',     short:'Closeout',    date:'May 18, 2026', conductor:'Sarah M.',   color:'#60926C'},
 ];
 // ── Room-color palette ────────────────────────────────────────────
 // Each room gets a signature color that shows up as a 2px outline on
@@ -183,12 +198,46 @@ function seedPhotos(){
   const walkIds = WALKS.map(w => w.id);
   let walkIdx = 0;
   const pickWalk = () => walkIds[walkIdx++ % walkIds.length];
+  /* Everything after a task's first shot comes from a later visit — and the
+     progress walks come first in that queue, ahead of the change-order and
+     closeout walks. In date order the change-order walk sits between the two
+     progress walks, so filling the queue in date order put a line's second shot
+     there and left Progress 2 — the default second date row — with nothing in it
+     at all. A routine progress photo belongs to a progress visit; the other two
+     walks exist for their own reasons. */
+  const laterWalks = ['progress_1', 'progress_2', 'change_order', 'close_out']
+    .filter(id => walkIds.includes(id))
+    .concat(walkIds.slice(1).filter(id => !['progress_1','progress_2','change_order','close_out'].includes(id)));
   ROOMS.forEach((room,ri)=>{
     const base=ri*13, gn=gCounts[ri]||2;
     for(let i=0;i<gn;i++) PHOTOS.push({id:_pid++, seed:base+i, room, kind:'group', task:null, walk:pickWalk()});
     let s=ri*13+50;
     TASKS.filter(t=>t.room===room).forEach(t=>{
-      for(let k=0;k<(t.photos||0);k++) PHOTOS.push({id:_pid++, seed:s++, room, kind:'task', task:t.code, walk:pickWalk()});
+      for(let k=0;k<(t.photos||0);k++){
+        // A task's FIRST shot is always the initial walk — that scan is what
+        // the task was scoped from, so every scoped line has evidence dated
+        // day one. Later shots come from the visits that followed. Without
+        // this, round-robin left most lines with nothing dated before the
+        // scope was even approved, and any "latest photo as of <date>" lookup
+        // came up empty for them through the whole draft and review phase.
+        /* And they come in order: shot two is the next visit, shot three the one
+           after. A global round-robin scattered a single task's shots across
+           unrelated walks, which left most walks holding a photo of one task per
+           room — so Progress, filtered to tasks with photos, showed a room and
+           then jumped straight to the next room. A task's photos are a sequence
+           in time; numbering them like one is both truer and denser per walk. */
+        /* One shot per later visit, except that a line photographed four or more
+           times got a pair on its last — a wide and a detail of finished work.
+           Pairing on the FIRST later visit instead emptied every walk after it,
+           since no task here has enough shots to cover five walks and double up
+           early as well. */
+        const n = t.photos || 0;
+        const later = (n >= 4 && k === n - 1) ? k - 2 : k - 1;
+        const walk = (k === 0)
+          ? walkIds[0]
+          : (laterWalks.length ? laterWalks[Math.min(later, laterWalks.length - 1)] : walkIds[0]);
+        PHOTOS.push({id:_pid++, seed:s++, room, kind:'task', task:t.code, walk});
+      }
     });
   });
   for(let i=0;i<9;i++) PHOTOS.push({id:_pid++, seed:900+i, room:'Project', kind:'unsorted', task:null, walk:pickWalk()});
@@ -220,6 +269,18 @@ const OPTIONS = ['Replace','Install','Reface','Repair','Remove','Full repaint','
    the one thing distinguishing step 5 from step 6. */
 const WORK_TRACK = new URLSearchParams(window.__KAI_QS || window.location.search).get('track') || '';
 const IS_CONTRACTOR = new URLSearchParams(window.__KAI_QS || window.location.search).get('role') === 'contractor';
+/* Which role is looking. The shell passes this for every role now, not just the
+   contractor — surfaces inside the panel that offer a role-specific action read
+   it. Defaults to the project manager so a panel opened without a query string behaves as it
+   always did. */
+const USER_ROLE = new URLSearchParams(window.__KAI_QS || window.location.search).get('role') || 'manager';
+/* Document lock state, from the shell's one mapping: 'draft' | 'locked' |
+   'approved'. Mirrored onto <body> as lock-<state> so styling can respond
+   without every surface re-deriving it from the stage. */
+const DOC_LOCK = new URLSearchParams(window.__KAI_QS || window.location.search).get('lock') || 'draft';
+document.addEventListener('DOMContentLoaded', () => {
+  document.body.classList.add('lock-' + DOC_LOCK);
+});
 const MY_CONTRACTOR = 'Apex Carpentry';
 
 const TASKS = [
@@ -653,6 +714,31 @@ if(PROJ_MODE === 'work' && WORK_TRACK === 'labor'){
     t.flags = [];
   });
 }
+/* Work under way. The statuses that came off the TASKS literal are the ones the
+   scope carried through review — 'pending', 'in_review' — which say nothing
+   about whether the work has been done. On a live job the only four answers are
+   not started, in progress, complete, and rework, so they get assigned here.
+
+   The pattern is fixed rather than random so the demo is the same every time,
+   and ordered so earlier rooms read as further along — which is how a job
+   actually progresses, one space at a time. Every one of the four appears. */
+/* Also the change-order-review step: work is under way there too, so the same
+   four live-job statuses apply. Only the labour track above forces a clean
+   not-started board. */
+if(PROJ_MODE === 'work' && (WORK_TRACK === 'materials' || WORK_TRACK === 'change_order')){
+  const RUN = ['complete','complete','in_progress','needs_rework',
+               'in_progress','complete','not_started','in_progress',
+               'needs_rework','not_started'];
+  TASKS.forEach((t, i) => {
+    t.status = RUN[i % RUN.length];
+    t.editRequested = false;
+    // A task that is finished or being redone has no outstanding scoping gaps —
+    // 'missing details' or 'unassigned' alongside 'complete' contradicts itself.
+    if(t.status === 'complete' || t.status === 'needs_rework'){
+      t.flags = (t.flags || []).filter(f => f !== 'missing' && f !== 'unassigned');
+    }
+  });
+}
 if(IS_CONTRACTOR){
   // Shop-mode focus only: swap the topbar identity + reframe notes as external
   // requests. The left panel still shows the full scope like the admin view.
@@ -733,7 +819,7 @@ function coSubmit(){
   const n = drafts.length || pendingChanges.length;
   if(!n){ toast('No pending changes to submit'); return; }
   drafts.forEach(t => __CO_SUBMITTED.add(t.id));
-  toast(`Change order submitted · ${n} change${n===1?'':'s'} sent to admin for review`);
+  toast(`Change order submitted · ${n} change${n===1?'':'s'} sent for review`);
   pendingChanges = [];
   renderChangeOrderBar();
   if(typeof renderAll === 'function') renderAll(); else renderSidebar();

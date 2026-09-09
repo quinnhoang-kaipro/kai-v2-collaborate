@@ -1,3 +1,10 @@
+/* Captions for a line's photo strip, in the order the photos were taken: the
+   walk that found the line, then the detail shots. Lost when this file was split
+   out — both this file and progress.js read it, neither defined it, so opening
+   any historical document threw before it rendered. It belongs here, with the
+   paper that shows the strip. */
+const ART_PHOTO_CAPS = ['Initial walk','Detail','Wide','Spec','Context','Angle'];
+
 function renderArtifact(){
   const body = document.getElementById('workBody');
   if(!body) return;
@@ -34,7 +41,6 @@ function _renderHistoricalSection(){
     const tag = versionTag(v);
     const isCurrent = v.id === currentVersionId;
     const isOriginal = v.num === 1;
-    const isCloseout = v.kind === 'closeout';
     // isOriginal is "Approved" only once it's been superseded by a later
     // version — if it's still the current one (nothing approved it yet),
     // fall through to versionMeta so an in-review submission reads as such.
@@ -44,10 +50,9 @@ function _renderHistoricalSection(){
     // computed tag (not the static v.tagCls) so terminal-state overrides
     // like "everything is Approved" flatten the outdated state.
     const stateCls = isCurrent ? ' is-current' : (tag.tagCls === 'outdated' ? ' is-outdated' : '');
-    const eyebrow = isCloseout ? 'Closeout document'
-                  : (isOriginal ? 'Original scope' : `Change order ${v.num - 1}`);
+    // No eyebrow: the card's own name already says which version it is, so
+    // "Original scope" over "Scope" only restated it.
     return `<button class="hist-card${stateCls}" onclick="openHistorical('${v.id}')" title="View ${esc(label)}">
-      <div class="hist-card-eyebrow">${esc(eyebrow)}</div>
       <div class="hist-card-name">${esc(label)}</div>
       <div class="hist-card-meta">${esc(meta)}</div>
       <div class="hist-card-docid">${esc(_sowIdFor(v.id))}</div>
@@ -116,6 +121,107 @@ function _sowIdFor(seed){
   for(let i = 0; i < s.length; i++){ h = ((h << 5) - h + s.charCodeAt(i)) | 0; }
   return 'SOW-' + Math.abs(h).toString(16).toUpperCase().padStart(8, '0').slice(0, 8);
 }
+/* ── the submitter's internal note ───────────────────────────────────
+   A document explains what the work is; it does not explain why it was sent
+   when it was. That belongs to whoever submitted it, and it is internal — so it
+   sits above the paper rather than in it, where a shared copy would carry it out
+   of the building.
+
+   Author and subject are read off the version's own changes rather than written
+   down again here: whoever authored the most of them submitted it, and the
+   contractor named is one actually assigned to a line that version touched. Both
+   come from Artifact 2's history, which is the same script scope. Falls back to
+   the review roster and the contractor list when that history is not loaded. */
+function _histVerId(v){
+  // VERSIONS is v1/v2/v3, the change history is orig/co1/co2 — same ladder,
+  // different names, matched by position.
+  if(typeof VER_ORDER === 'undefined') return null;
+  return VER_ORDER[(v.num || 1) - 1] || null;
+}
+function _histNoteFor(v){
+  const ver = _histVerId(v);
+  const changes = [];
+  if(ver && typeof SCOPE !== 'undefined'){
+    SCOPE.forEach(g => g.tasks.forEach(t => (t.changes || []).forEach(ch => {
+      if(ch.ver === ver) changes.push({ch, t});
+    })));
+  }
+  // Whoever made the most changes in this version is who sent it.
+  const tally = {};
+  changes.forEach(({ch}) => {
+    if(!ch.who) return;
+    tally[ch.who] = tally[ch.who] || {who:ch.who, role:ch.role || '', n:0};
+    tally[ch.who].n++;
+  });
+  const author = Object.values(tally).sort((a, b) => b.n - a.n)[0]
+    || (typeof REVIEWERS !== 'undefined' ? REVIEWERS[REVIEWERS.length - 1] : {who:'M. Alvarez', role:'Field Agent'});
+  // A contractor on one of the lines this version touched, so the note is about
+  // work the reader can actually find in the document below it.
+  const gcs = [...new Set(changes.map(({t}) => t.gc).filter(Boolean))];
+  // Stepped by version, so successive notes are not all about the same firm.
+  const gc = gcs[((v.num || 1) - 1) % (gcs.length || 1)] || gcs[0]
+    || (typeof CONTRACTORS !== 'undefined' ? CONTRACTORS[0] : 'the contractor');
+  const added   = changes.filter(({ch}) => ch.ct === 'added').length;
+  const removed = changes.filter(({ch}) => ch.ct === 'removed').length;
+  const lines = n => `${n} line${n === 1 ? '' : 's'}`;
+  const text = ((v.num || 1) === 1)
+    ? `Submitting scope for approval while ${gc}'s availability is pending. A change order may follow within the week to confirm.`
+    : removed
+      ? `${gc} confirmed dates and the resident took ${lines(removed)} back out, so this is the scope as it now stands. Nothing else is waiting on anyone.`
+      : `${gc} came back with dates, so this carries the revised labor${added ? ` and ${lines(added)} the last walk turned up` : ''}. Sending it up now rather than holding the whole scope for it.`;
+  /* The note was written when the version was submitted, not when it was
+     approved — so v.at is the wrong date to put on it. The earliest sign-off is
+     the last moment the document must already have existed, which is the closest
+     honest stand-in; a version nobody has signed falls back to its own date. */
+  const sigs = (ver && typeof REVIEWS !== 'undefined' ? REVIEWS.filter(r => r.ver === ver) : [])
+    .map(r => r.date).sort((a, b) => Date.parse(a) - Date.parse(b));
+  return {who:author.who, role:author.role, text, when: sigs[0] || v.at || ''};
+}
+// Local rather than Artifact 2's initials(): this file should not stop working
+// if that one is not on the page.
+function _histInitials(name){
+  return String(name || '').split(/[\s.]+/).filter(Boolean).map(w => w[0]).join('').slice(0,2).toUpperCase();
+}
+function _histNoteHtml(v){
+  const n = _histNoteFor(v);
+  if(!n) return '';
+  return `<div class="hist-note">
+    <div class="hist-note-hdr">
+      <span class="hist-note-av">${esc(_histInitials(n.who))}</span>
+      <span class="hist-note-who"><b>${esc(n.who)}</b>${n.role ? `<span class="hist-note-role">${esc(n.role)}</span>` : ''}${n.when ? `<span class="hist-note-when">${esc(n.when)}</span>` : ''}</span>
+      <span class="hist-note-sp"></span>
+      <span class="hist-note-tag" title="Visible to your team only — not part of the document or any shared copy">Internal note</span>
+    </div>
+    <p class="hist-note-body">${esc(n.text)}</p>
+  </div>`;
+}
+/* The same notes, for the Notes drawer opened from the Scope row. They are
+   scope-level internal notes that happen to live on a document, so a reader
+   going through the project's notes should find them there too — otherwise the
+   only way to know why a version was sent when it was is to open all three
+   artifacts. Shaped for dwNotes(), newest first.
+
+   Internal, so a contractor viewing the same drawer does not get them. The
+   drawer does not filter on `hidden` — it only badges it — so the filtering has
+   to happen here. */
+function _histSubmissionNotes(){
+  if(typeof IS_CONTRACTOR !== 'undefined' && IS_CONTRACTOR) return [];
+  if(typeof VERSIONS === 'undefined') return [];
+  return VERSIONS.slice()
+    .sort((a, b) => (b.num || 0) - (a.num || 0))
+    .map(v => {
+      const n = _histNoteFor(v);
+      if(!n) return null;
+      return {
+        who: n.who, role: n.role, when: n.when, body: n.text,
+        // The chip says what the note is attached to, and for these that is the
+        // document rather than a level in the scope.
+        level: versionLabel(v),
+        hidden: true,
+      };
+    })
+    .filter(Boolean);
+}
 // _renderHistoricalDoc — read-only view of a frozen version. Reuses
 // _renderCopyPaper with a synthetic "no filters" copy so we don't
 // duplicate the paper render logic. No filter strip, no Share button —
@@ -148,6 +254,7 @@ function _renderHistoricalDoc(v){
         Print
       </button>
     </div>
+    ${_histNoteHtml(v)}
     <div class="copy-paper hist-paper">${_renderCopyPaper(readOnlyCopy)}</div>
   </div>`;
 }

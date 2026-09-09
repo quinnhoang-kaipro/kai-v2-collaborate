@@ -4,6 +4,7 @@
    were hoisted across the whole script; split into separate <script> files,
    hoisting is per-file, so they must be declared up front. Keep only
    dependency-free utilities here. */
+function dollars(c){ return parseFloat(String(c).replace(/[$,]/g,''))||0; }
 function _fmtDollars(n){
   const abs = Math.abs(Math.round(n));
   return (n < 0 ? '-' : '') + '$' + abs.toLocaleString();

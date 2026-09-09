@@ -21,13 +21,36 @@ function toast(msg){
   clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),2000);
 }
 
-/* ════════════ RESIZE ════════════ */
+/* ════════════ RESIZE ════════════
+   The handle drags the sidebar between MIN and MAX. Drag it past the left
+   edge (under COLLAPSE_UNDER) and the sidebar shuts entirely, leaving the
+   .sb-reveal tab to pull it back to whatever width it had. The sidebar's own
+   min-width means the pointer runs ahead of the visible edge on the way in —
+   that gap is what makes "drag it all the way left" reachable. */
 (function(){
   const handle=document.getElementById('handle');
   const body=document.querySelector('.body');
   const sidebar=document.querySelector('.sidebar');
-  const DEFAULT=38,MIN=24,MAX=60; let dragging=false;
-  function setPct(p){ p=Math.min(MAX,Math.max(MIN,p)); sidebar.style.flexBasis=p+'%'; }
+  const DEFAULT=38,MIN=24,MAX=60,COLLAPSE_UNDER=16; let dragging=false;
+  let lastOpen=DEFAULT;   // width to restore to when re-opened
+  function collapsed(){ return document.body.classList.contains('sb-collapsed'); }
+  function setCollapsed(on){
+    if(on === collapsed()) return;
+    document.body.classList.toggle('sb-collapsed', on);
+    // The drag writes flex-basis inline, so the stylesheet can't shut the
+    // sidebar on its own — JS owns the width in both directions.
+    sidebar.style.flexBasis = on ? '0' : (lastOpen + '%');
+    // Tabs that size themselves off the work surface (Artifact 2 stacks its
+    // margin cards by measurement) need a nudge — nothing here fires resize.
+    window.dispatchEvent(new Event('resize'));
+  }
+  function setPct(p){
+    if(p < COLLAPSE_UNDER){ setCollapsed(true); return; }
+    setCollapsed(false);
+    p=Math.min(MAX,Math.max(MIN,p));
+    lastOpen=p;
+    sidebar.style.flexBasis=p+'%';
+  }
   function onMove(e){ if(!dragging)return; const r=body.getBoundingClientRect(); const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; setPct((x/r.width)*100); }
   function stop(){ if(!dragging)return; dragging=false; handle.classList.remove('dragging'); document.body.classList.remove('col-resizing'); }
   function start(e){ dragging=true; handle.classList.add('dragging'); document.body.classList.add('col-resizing'); e.preventDefault(); }
@@ -37,10 +60,27 @@ function toast(msg){
   window.addEventListener('touchmove',onMove,{passive:false});
   window.addEventListener('mouseup',stop);
   window.addEventListener('touchend',stop);
-  handle.addEventListener('dblclick',()=>{ sidebar.style.flexBasis=DEFAULT+'%'; });
+  handle.addEventListener('dblclick',()=>{ lastOpen=DEFAULT; setCollapsed(false); sidebar.style.flexBasis=DEFAULT+'%'; });
+  // Called by the pull-out tab in the markup.
+  window.expandSidebar=function(){ setCollapsed(false); };
+  window.collapseSidebar=function(){ setCollapsed(true); };
 })();
 
 /* ════════════ INIT ════════════ */
+/* ?sb=collapsed — open with the scope list shut. The pull-out tab brings it
+   back, so this is a starting position rather than a missing panel. */
+if(new URLSearchParams(window.__KAI_QS || window.location.search).get('sb') === 'collapsed'){
+  window.collapseSidebar();
+}
 document.body.classList.toggle('shop-mode', workMode==='shop');
 renderWorkHdr();
 renderAll();
+
+/* SCRATCH · flip between the sidebar look options in panel.css. sbOpt('a'),
+   sbOpt('b'), sbOpt('c'), or sbOpt('') for the current look. Goes when the
+   option is picked. */
+window.sbOpt = function(k){
+  document.body.classList.remove('sbopt-a','sbopt-b','sbopt-c');
+  if(k) document.body.classList.add('sbopt-' + k);
+  return k ? 'option ' + k.toUpperCase() : 'current look';
+};

@@ -179,7 +179,7 @@ function _shopTaskHeaderHtml(t){
   const coBannerInner = coApplies ? `<div class="sec-taskcard-co-banner${_coChanges.length ? ' has-changes' : ''}">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.5L14.5 5v6L8 14.5 1.5 11V5z"/><path d="M8 8v3.5M8 5.2v.2"/></svg>
     <span class="sec-taskcard-co-banner-body">${_coChanges.length
-      ? _coChangeSummaryHtml(t)
+      ? `<b>Change order is in draft.</b> Submit it for review and approval before it's finalized and shareable to contractors.`
       : `Edits to the contractor, options or products will create a <b>Change Order</b> since the scope is approved.`}</span>
   </div>` : '';
   /* Status chip beside the task name. Every stage shows one, resolved by the
@@ -293,7 +293,7 @@ function taskActivityFeed(t){
     return now >= want;
   };
   at(0, 'Event',           'Task created',                 'Jan 6, 2026',  'T. Okafor', 'decision');
-  at(1, 'Event',           'Submitted for review',         'Jan 9, 2026',  'T. Okafor', 'decision');
+  at(1, 'Event',           'Handed off for review',         'Jan 9, 2026',  'T. Okafor', 'decision');
   at(2, 'Approval status', 'Task reviewed',                'Jan 14, 2026', 'S. Patel',  'decision');
   at(3, 'Approval status', 'Task approved',                'Jan 16, 2026', 'T. Okafor', 'decision');
   at(3, 'Task status',     'Status → <b>Not started</b>',  'Jan 20, 2026', agent);
@@ -541,6 +541,7 @@ function _shopEditCardHtml(t){
                     </div>
                     <div class="sec-taskcard-product-total">
                       <span class="sec-taskcard-product-amt">${esc(_fmtDollars(productLineTotal(p)))}</span>
+                      ${(typeof productLineDelta === 'function' && typeof deltaChipHtml === 'function') ? deltaChipHtml(productLineDelta(t, o, p)) : ''}
                       ${prodModsHtml}
                     </div>
                   </div>`;
