@@ -11,7 +11,9 @@
 <!-- ═══════════════════════════════════════════════════════════════════
      CHANGE ORDER REVIEW — one screen, no demo nav
      The same shell and the same panel as index.html, pinned to a single
-     scenario: the closeout review step, seen by the Manager, open on
+     scenario: the change-order review step — the change order has been
+     submitted against the live scope and is waiting on approval — seen by
+     the Manager, open on
      Artifact 2. KAI_VARIANT below is the whole of the difference — it tells
      shell.js which preset to start from and stay on, which tab to hand the
      panel, to drop the other tabs from the panel's tab bar, and to open
@@ -134,8 +136,9 @@
 <script>
   /* Read by shell.js as it boots — must be set before it loads. */
   window.KAI_VARIANT = {
-    preset:'closeout',          // "Close out review" in the demo list
-    role:'admin',               // id 'admin' is the Manager (see ROLES in shell.js)
+    preset:'change-order-review', // "Change order review" in the demo list —
+                                  // change order submitted, awaiting approval
+    role:'manager',             // the Project manager (see ROLES in shell.js)
     tab:'artifact2',            // the surface this page exists for
     onlyTab:true,               // so the tab bar offers nothing else
     collapseSidebar:true,       // scope list starts shut, pull-out brings it back

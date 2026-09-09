@@ -271,9 +271,9 @@ const WORK_TRACK = new URLSearchParams(window.__KAI_QS || window.location.search
 const IS_CONTRACTOR = new URLSearchParams(window.__KAI_QS || window.location.search).get('role') === 'contractor';
 /* Which role is looking. The shell passes this for every role now, not just the
    contractor — surfaces inside the panel that offer a role-specific action read
-   it. Defaults to admin so a panel opened without a query string behaves as it
+   it. Defaults to the project manager so a panel opened without a query string behaves as it
    always did. */
-const USER_ROLE = new URLSearchParams(window.__KAI_QS || window.location.search).get('role') || 'admin';
+const USER_ROLE = new URLSearchParams(window.__KAI_QS || window.location.search).get('role') || 'manager';
 /* Document lock state, from the shell's one mapping: 'draft' | 'locked' |
    'approved'. Mirrored onto <body> as lock-<state> so styling can respond
    without every surface re-deriving it from the stage. */
@@ -819,7 +819,7 @@ function coSubmit(){
   const n = drafts.length || pendingChanges.length;
   if(!n){ toast('No pending changes to submit'); return; }
   drafts.forEach(t => __CO_SUBMITTED.add(t.id));
-  toast(`Change order submitted · ${n} change${n===1?'':'s'} sent to admin for review`);
+  toast(`Change order submitted · ${n} change${n===1?'':'s'} sent for review`);
   pendingChanges = [];
   renderChangeOrderBar();
   if(typeof renderAll === 'function') renderAll(); else renderSidebar();

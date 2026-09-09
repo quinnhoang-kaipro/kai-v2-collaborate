@@ -1035,7 +1035,7 @@ function _decisionVerb(){
      still sees Review; they review and hand on, and cannot approve.
 
      USER_ROLE is the ?role= the shell passes in. Id note: 'manager' is the
-     Project manager and 'admin' the Manager — see ROLES in shell.js. */
+     Project manager — see ROLES in shell.js. */
   if((typeof USER_ROLE !== 'undefined') && USER_ROLE === 'manager') return 'approve';
   return 'review';
 }
@@ -1319,7 +1319,7 @@ function deleteTask(id){
   const t=TASKS.find(x=>x.id===id); if(!t) return;
   // Change-order mode: stage a removal request instead of deleting the task.
   if(IS_CHANGE_ORDER){
-    if(!confirm(`Propose removing "${t.name}"? This is staged as a change order — admin has to approve before the task actually goes away.`)) return;
+    if(!confirm(`Propose removing "${t.name}"? This is staged as a change order — the project manager has to approve before the task actually goes away.`)) return;
     coAddChange({
       type: 'delete',
       taskId: t.id,

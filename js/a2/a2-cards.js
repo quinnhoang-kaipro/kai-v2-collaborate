@@ -24,7 +24,7 @@ let a2CardOpen = null;   // ch._ord of the expanded card, or null
    A change order arrives as a set of lines, and the admin reviewing it does not
    have to take or leave the whole thing — each card carries its own approve.
    Only on the order that is actually awaiting a decision (A2_PENDING_VER, set
-   by a2-stage.js at the change-order step) and only for the admin, who is the
+   by a2-stage.js at the change-order step) and only for the project manager, who is the
    one holding that decision. Everywhere else the cards stay read-only.
 
    Approved ords live in a Set rather than on the change, so buildCards can run
@@ -32,7 +32,7 @@ let a2CardOpen = null;   // ch._ord of the expanded card, or null
 const a2LineApproved = new Set();
 function a2CanApproveLine(ch){
   return !!ch && typeof A2_PENDING_VER !== 'undefined' && A2_PENDING_VER === ch.ver
-      && typeof USER_ROLE !== 'undefined' && USER_ROLE === 'admin';
+      && typeof USER_ROLE !== 'undefined' && USER_ROLE === 'manager';
 }
 function a2ApproveLine(ord, ev){
   if(ev) ev.stopPropagation();   // approving is not opening the card

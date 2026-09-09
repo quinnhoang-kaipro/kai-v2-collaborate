@@ -507,7 +507,7 @@ function stateBarSubmitForReview(){
   if(typeof approveAll === 'function') approveAll();
   if(wasEditing && !IS_DRAFT_STAGE && typeof enterEditMode === 'function'){
     enterEditMode(false);
-    if(typeof toast === 'function') toast('Change order submitted for admin review');
+    if(typeof toast === 'function') toast('Change order submitted for review');
   }
 }
 function stateBarDuplicateAndEdit(){

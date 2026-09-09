@@ -699,7 +699,7 @@ const SCOPE_MILESTONES = [
   {daysAgo:180, ms:'scope',      label:'Scope created',          who:'Sarah M.', role:'Field agent',
    sub:'Initial walk completed. 14 tasks captured across 6 groups.'},
   {daysAgo:171, ms:'pending',    label:'Scope pending review',   who:'Sarah M.', role:'Field agent',
-   sub:'Submitted to admin for pricing and approval.'},
+   sub:'Submitted to the project manager for pricing and approval.'},
   {daysAgo:164, ms:'approved',   label:'Scope approved',         who:'Or Ben-David', role:'Admin',
    sub:'v1 approved at $24,180. Distributed to 4 contractors.'},
   {daysAgo:146, ms:'co',         label:'Change order created',   who:'Diana R.', role:'Field agent',
@@ -717,7 +717,7 @@ const SCOPE_MILESTONES = [
   {daysAgo:9,   ms:'close',      label:'Closeout created',       who:'Sarah M.', role:'Field agent',
    sub:'Closeout walk completed. Punch list captured for remaining items.'},
   {daysAgo:4,   ms:'close_pending', label:'Closeout pending review', who:'Sarah M.', role:'Field agent',
-   sub:'Submitted to admin for final sign-off.'},
+   sub:'Submitted to the project manager for final sign-off.'},
 ];
 // Milestone tag copy per kind.
 const MS_TAG = {
@@ -1670,7 +1670,7 @@ function goToProgressPhotos(){
    is credited to someone who appears elsewhere in the product rather than to
    a name invented for this one surface. */
 function _pmMe(){
-  let r = 'admin';
+  let r = 'manager';
   try{
     const st = JSON.parse(localStorage.getItem('kai_comp_state') || '{}');
     if(st && st.role) r = String(st.role).toLowerCase();
