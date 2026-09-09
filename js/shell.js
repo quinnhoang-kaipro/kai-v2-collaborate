@@ -743,14 +743,18 @@ function handoffLog(){
   // Anything past draft got there by being handed off, so the record exists. A
   // change order got there the same way, on its own date — same event, same
   // words, because it is the same act on the same document.
+  /* Read off the turn table rather than named: it goes to whoever reviews, and
+     when that was the Manager the seed said A. Novak — a name that is a field
+     agent now, so the log had the scope handed off to the wrong desk. */
+  const reviewer = (ROLE_PEOPLE[turnRoleFor('reviewing', state.twoStep)] || {}).name || 'the reviewer';
   if(inChangeOrder()){
     const co = changeOrderInfo();
-    return [{when: co.submitted || co.date, from:'M. Alvarez', fromRole:'Field agent', to:'A. Novak'}]
+    return [{when: co.submitted || co.date, from:'M. Alvarez', fromRole:'Field agent', to:reviewer}]
       .concat(sessionHandoffs);
   }
   const seeded = (state.projectStage === 'edit')
     ? []
-    : [{when:'Apr 9, 2026', from:'M. Alvarez', fromRole:'Field agent', to:'A. Novak'}];
+    : [{when:'Apr 9, 2026', from:'M. Alvarez', fromRole:'Field agent', to:reviewer}];
   return seeded.concat(sessionHandoffs);
 }
 
@@ -855,8 +859,15 @@ function renderStatePop(){
   const whoLine = (t.role && t.who)
     ? `${t.mine ? 'You' : t.who} (${roleName})` : '';
   const isScopeCard = statePopAnchor.indexOf('stage-turn') === -1;
+  /* Which card the turn chip opens depends on whether the move is yours.
+     The move card is written to you — what you owe, what you can do about it,
+     what follows — and to someone who owes nothing it had a Responsible row
+     naming a stranger and a You row saying what little they could do. The
+     document card answers the question they actually have instead: what state
+     is this in, who settled it, and who has signed it so far. */
+  const showDocCard = isScopeCard || !t.mine;
   let body;
-  if(isScopeCard){
+  if(showDocCard){
     const appr = (id === 'approved') ? scopeApprover() : null;
     const co   = inChangeOrder() ? changeOrderInfo() : null;
     /* The document's own facts. Responsible appears in every state now, not just
@@ -895,9 +906,9 @@ function renderStatePop(){
       ${popRow('Then', then)}
       ${prog}`;
   }
-  el.innerHTML = `<div class="turn-pop-card is-${id}" role="dialog" aria-label="${isScopeCard ? 'Scope state' : 'Whose turn it is'}"
+  el.innerHTML = `<div class="turn-pop-card is-${id}" role="dialog" aria-label="${showDocCard ? 'Scope state' : 'Whose turn it is'}"
       style="top:${Math.round(r.bottom + 8)}px;left:${Math.round(left)}px">
-    ${isScopeCard ? `<div class="turn-pop-lockh">
+    ${showDocCard ? `<div class="turn-pop-lockh">
       <span class="turn-pop-lock">${id === 'approved' ? LOCK_SVG.shut : LOCK_SVG.open}</span>${(DOC_STATE[id] || {}).label || ''}
     </div>` : ''}
     ${body}
