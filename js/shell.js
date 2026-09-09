@@ -1909,25 +1909,6 @@ document.addEventListener('click', e => {
 function renderStages(){
   const wrap=document.getElementById('stages');
   const capsWrap=document.getElementById('stageCaps');
-  /* ── the Submit redirect ─────────────────────────────────────────────
-     Hand off is a new word for something people did with a button called
-     Submit, and if the toolbar does not say so they will not open the dialogue
-     to find out — so this cannot live inside it.
-
-     #stageCaps is parked (hidden in the markup) since the stepper moved into
-     the toolbar, which also means every string messageFor() returns is
-     currently invisible. Rather than restore that whole row for every stage,
-     it is unhidden for this one line: shown at draft, to whoever holds the
-     move, which is exactly the person Submit belonged to.
-
-     It names the project manager rather than saying "anyone". Approval is not
-     a property of handing off, it is a property of who you hand it to. */
-  const showRedirect = viewStage === 'edit'
-    && whoseTurn(viewStage, state.role, state.twoStep).mine
-    && canHandOffHere();
-  const redirectHtml = `<div class="stage-hint">
-      <b>Hand off replaces Submit.</b> To get it approved, hand it to the ${rn('manager')}.
-    </div>`;
   // Post-completion state: hide the stepper entirely and replace it with a
   // "Closeout Approved · Project completed" message in its place. There's
   // no further step to walk through, so a stepper is just noise.
@@ -1973,11 +1954,7 @@ function renderStages(){
          ><span class="stage-turn-lbl">${_turn.mine ? 'Your move' : 'With ' + _turn.who}</span>
          <span class="stage-turn-car"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg></span></button>`
     : '';
-  if(capsWrap){
-    capsWrap.hidden = !showRedirect;
-    if(showRedirect){ capsWrap.innerHTML = redirectHtml; }
-  }
-  if(capsWrap && !showRedirect) capsWrap.innerHTML = visibleStages.map(sg => {
+  if(capsWrap) capsWrap.innerHTML = visibleStages.map(sg => {
     const isActive = sg === viewSuper;
     const branched = sg.branched ? ' stage-cap-branched' : '';
     return `<div class="stage-cap${branched}${isActive?' active':''}">${isActive?captionText:''}</div>`;

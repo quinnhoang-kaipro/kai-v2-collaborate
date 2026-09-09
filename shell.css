@@ -467,12 +467,6 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 .app-toolbar .ver-chip svg{color:rgba(255,255,255,.55)}
 /* Caption row mirrors the stepper's flex columns so only the active stage's
    slot fills with text — sitting directly under whichever step is active. */
-/* The Submit redirect, under the toolbar. Sits on the accent's own wash so it
-   reads as a notice rather than as another row of chrome, and only appears at
-   draft for whoever holds the move — see renderStages. */
-.stage-hint{padding:8px 20px;background:rgba(253,255,134,.34);
-  border-bottom:1px solid var(--stroke);font-size:12px;line-height:1.45;color:var(--t2)}
-.stage-hint b{color:var(--ink);font-weight:600}
 .stage-captions{display:flex;padding:0 20px}
 .stage-cap{flex:1;padding:0 12px 10px 33px;font-size:11.5px;color:var(--t2);line-height:1.45;white-space:nowrap;overflow:visible}
 .stage-cap+.stage-cap{padding-left:calc(18px + 33px)}
