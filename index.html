@@ -28,9 +28,24 @@
         <div class="tb-set-row">
           <div>
             <div class="ll">2-step approval</div>
-            <div class="sub">Admin reviews, manager publishes.</div>
+            <div class="sub">Publishing becomes its own step after the review.</div>
           </div>
           <label class="tb-toggle"><input type="checkbox" id="twoStep" onchange="setTwoStep(this.checked)"><span class="sw"></span></label>
+        </div>
+        <!-- SCRATCH · picking a sidebar look. Goes with the sbopt-* rules in
+             panel.css once an option is chosen. -->
+        <div class="tb-set-h" style="margin-top:14px">Sidebar look</div>
+        <div class="tb-set-row">
+          <div>
+            <div class="ll">Group rows</div>
+            <div class="sub">Show the scope sidebar to compare.</div>
+          </div>
+          <div class="sb-opt-seg" id="sbOptSeg">
+            <button type="button" onclick="setSbOpt('')">Now</button>
+            <button type="button" onclick="setSbOpt('a')">A</button>
+            <button type="button" onclick="setSbOpt('b')">B</button>
+            <button type="button" onclick="setSbOpt('c')">C</button>
+          </div>
         </div>
         <div class="tb-set-foot">
           <button class="reset" onclick="resetDemo()">Reset demo</button>
@@ -75,13 +90,15 @@
   </div>
   <div class="global-nav-body">
     <nav class="gnav">
-    <button class="gnav-item on" type="button" aria-current="page"><svg viewBox="0 0 20 20" aria-hidden="true"><path d='M3 9.5L10 3.5l7 6V17H3V9.5Z'/><path d='M8 17v-4.5h4V17'/></svg><span class="lbl">Projects</span></button>
-    <button class="gnav-item" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><path d='M6.5 3.5h7a1 1 0 0 1 1 1V17H5.5V4.5a1 1 0 0 1 1-1Z'/><path d='M8 7.5h4M8 10.5h4M8 13.5h2.5'/></svg><span class="lbl">Scope</span></button>
-    <button class="gnav-item" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x='3.5' y='4.5' width='13' height='12'/><path d='M3.5 8h13M7 3v3M13 3v3'/></svg><span class="lbl">Schedule</span></button>
-    <button class="gnav-item" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x='3' y='4.5' width='14' height='11'/><path d='M3 12.5l3.5-3 3 2.5 3-3.5L17 12'/></svg><span class="lbl">Photos</span></button>
-    <button class="gnav-item" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><path d='M4 16V8.5M8 16V5M12 16v-6M16 16V3.5'/></svg><span class="lbl">Budget</span></button>
+    <button class="gnav-item on" type="button" aria-current="page"><span class="gnav-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 1.5H0.5V10.5H9.5V1.5Z"/><path d="M22.5 1.5H13.5V10.5H22.5V1.5Z"/><path d="M9.5 14.5H0.5V23.5H9.5V14.5Z"/><path d="M22.5 14.5H13.5V23.5H22.5V14.5Z"/></svg></span><span class="lbl">Dashboard</span></button>
+    <button class="gnav-item" type="button"><span class="gnav-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 23.5L4.5 11V5L12 0.5L19.5 5V11L12 23.5Z"/><path d="M8.5 6.59207L12 4.51807L15.5 6.59207V10.4441L12 12.5181L8.5 10.4441V6.59207Z"/></svg></span><span class="lbl">Markets</span></button>
+    <button class="gnav-item" type="button"><span class="gnav-ico"><svg viewBox="0 0 26 24" aria-hidden="true"><path d="M9.19601 9.56611L15.5606 3.9971L21.9252 9.56611V15.1351C21.9252 15.5571 21.9252 16.3019 21.9252 16.7263C21.5009 16.7263 20.756 16.7263 20.334 16.7263H10.7872C10.3652 16.7263 9.30209 16.7263 9.19601 16.7263C9.19601 16.4218 9.19601 15.5571 9.19601 15.1351V9.56611Z"/><path d="M3.71268 11.9161L10.0773 6.34711L16.4418 11.9161V17.4851C16.4418 17.9071 16.4418 18.652 16.4418 19.0763C16.0175 19.0763 15.2727 19.0763 14.8507 19.0763H5.30382C4.88183 19.0763 3.81875 19.0763 3.71268 19.0763C3.71268 18.7718 3.71268 17.9071 3.71268 17.4851V11.9161Z" style="fill:#1A1A1A"/></svg></span><span class="lbl">Properties</span></button>
+    <button class="gnav-item" type="button"><span class="gnav-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.9992 0.500244L7.99927 5.50015L18.499 15.9998L23.4989 10.9999L12.9992 0.500244Z"/><path d="M14.25 11.75L2.5 23.5L1 23L0.5 21.5L12.25 9.75"/><path d="M17.25 4.75L19 3L21 5L19.25 6.75"/></svg></span><span class="lbl">Contractors</span></button>
+    <button class="gnav-item" type="button"><span class="gnav-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.5 8.5L0.5 4.5L12 0.5L23.5 4.5L11.5 8.5Z"/><path d="M23.5 4.5V18.5L11.5 23.5L0.5 18.5V4.5"/><path d="M11.5 8.5V23.5"/><path d="M6 6.50003L17.625 2.45703"/></svg></span><span class="lbl">Products</span></button>
+    <button class="gnav-item" type="button"><span class="gnav-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22.5 1.5H0.5V23.5H22.5V1.5Z"/><path d="M0.5 7.5H22.5"/><path d="M7.5 7.5V23.5"/><path d="M7.5 15.5H22.5"/></svg></span><span class="lbl">Templates</span></button>
+    <button class="gnav-item" type="button"><span class="gnav-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.5 13L7.5 14.5L3.5 13V7.5L7.5 6L11.5 7.5V13Z"/><path d="M14.5 21.5V17L7.5 15.5L0.5 17V21.5"/><path d="M21.5 13L18.5 14.5L15.5 13V9.5L18.5 8L21.5 9.5V13Z"/><path d="M23.5 21.5V17L18.5 15.5L16.5 16.1"/></svg></span><span class="lbl">Users</span></button>
     <span class="gnav-sp"></span>
-    <button class="gnav-item" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="2.5"/><path d="M10 2v2.2M10 15.8V18M2 10h2.2M15.8 10H18M4.3 4.3l1.6 1.6M14.1 14.1l1.6 1.6M4.3 15.7l1.6-1.6M14.1 5.9l1.6-1.6"/></svg><span class="lbl">Settings</span></button>
+    <button class="gnav-item" type="button"><span class="gnav-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 7.5H20.5"/><path d="M2.5 7.5H5.5"/><path d="M10.5 17.5H2.5"/><path d="M20.5 17.5H17.5"/><path d="M7.232 10.5L5.5 7.5L7.232 4.5H10.768L12.5 7.5L10.768 10.5H7.232Z"/><path d="M12.232 20.5L10.5 17.5L12.232 14.5H15.768L17.5 17.5L15.768 20.5H12.232Z"/></svg></span><span class="lbl">Org Settings</span></button>
   </nav>
   </div>
 </aside>
@@ -108,6 +125,10 @@
          sits to the LEFT of the primary CTA so the destructive action
          doesn't pull focus. -->
     <button class="btn-ghost" id="appCancelCoBtn" onclick="triggerIframeCancelCo()" hidden>Cancel change order</button>
+    <!-- Generic secondary CTA, to the left of the primary. Label and handler are
+         set by syncAppApproveBtn; hidden unless a branch there claims it. Used
+         for the manager's Approve alongside Hand off at review. -->
+    <button class="btn-ghost" id="appSecondBtn" hidden></button>
     <span class="btn-tooltip-wrap" id="appApproveWrap">
       <button class="btn-primary" id="appApproveBtn" onclick="triggerIframeApprove()">Approve scope</button>
       <span class="btn-tooltip" id="appApproveTip" hidden>All tasks must be marked as Completed before you can submit the closeout.</span>
@@ -119,7 +140,10 @@
         <path d="M10 19.65V21.65L12 22.65L14 21.65V19.65"/>
       </svg>
     </button>
-    <span class="avatar" style="margin:0 16px 0 12px;display:none">QH</span>
+    <!-- The viewer's own identity. Was hidden; it's shown now because it is one
+         half of the "is this my turn" comparison — the other half is the turn
+         marker on the stepper's active node. -->
+    <span class="avatar" id="meAvatar" style="margin:0 16px 0 12px">QH</span>
   </div>
 
   <!-- UPPER NAV: just the state bar now. Stepper moved into the app-toolbar. -->
@@ -158,202 +182,11 @@
 
 <div id="toast"></div>
 
-<!-- ═══════════════════════════════════════════════════════════════════
-     EMBEDDED SCOPE PANEL
-     Previously ProjectReview_ScopePanel_ShopEdit.html, loaded by the iframe
-     as a separate file. Kept here verbatim (readable and editable) so this
-     prototype runs from a single file. Only change: the nine
-     `new URLSearchParams(window.location.search)` calls now read
-     window.__KAI_QS first. Literal script tags are escaped (<\script and
-     <\/script) so they can't close this block early or trip the HTML
-     tokenizer's double-escape rule; KAI_PANEL_RAW restores them.
-     ═══════════════════════════════════════════════════════════════════ -->
-<script type="text/html" id="kaiPanelSrc">
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Kai : Scope Review · Variants</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="panel.css">
-</head>
-<body>
-<div id="app">
-
-  <!-- toolbar : spans full width; mark tile caps the rail -->
-  <div class="toolbar">
-        <div class="tb-mark">
-          <svg viewBox="0 0 120 52" xmlns="http://www.w3.org/2000/svg" aria-label="Kai">
-            <path fill="#1A1A1A" d="M0 2h11v22.5L31 2h13.5L22 26.5 45.5 52H31.5L11 28.5V52H0Z"/>
-            <path fill="#1A1A1A" d="M70.5 17c-9.5 0-17 7.6-17 17.6S60.5 52 70 52c4.6 0 8.4-1.9 10.8-5.1V52H91V18.6H80.8v4.4C78.4 19.4 74.8 17 70.5 17Zm.7 9.4c4.7 0 8.2 3.6 8.2 8.2s-3.5 8.2-8.2 8.2-8.1-3.6-8.1-8.2 3.4-8.2 8.1-8.2Z"/>
-            <rect x="101" y="2" width="10.2" height="10.2" fill="#1A1A1A"/>
-            <rect x="101" y="18.6" width="10.2" height="33.4" fill="#1A1A1A"/>
-          </svg>
-        </div>
-        <span class="tb-address">3484 South Main Street</span>
-        <span class="tb-sp"></span>
-
-        <!-- Room/Contractor group toggle moved to the sidebar header (it only
-             affects the left panel), so the toolbar no longer carries it here.
-             Attention filter moved to the work-hdr tab bar (renderWorkHdr). -->
-        <button class="btn-primary" id="approveBtn" onclick="approveAll()">Approve scope</button>
-        <\script>/* Context flag from the shell: at Construction stage, the primary CTA is
-                    "Submit closeout" instead of "Approve scope". */
-          window.__KAI_CONTEXT = new URLSearchParams(window.__KAI_QS || window.location.search).get('context') || '';<\/script>
-
-        <span class="tb-div" style="margin:0 4px 0 18px"></span>
-        <div class="tb-right">
-          <span class="tb-bell">
-            <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17a5 5 0 0 1 10 0M12 3v2M9 19a3 3 0 0 0 6 0"/></svg>
-            <span class="ndot"></span>
-          </span>
-          <span class="org-chip" id="orgChip"><span class="dot"></span> Kaiizen</span>
-          <span class="avatar" id="orgAvatar">QH</span>
-        </div>
-      </div>
-
-  <div id="frame">
-    <div id="main">
-      <!-- two-pane body -->
-      <div class="body">
-        <!-- LEFT: shared task sidebar -->
-        <div class="sidebar">
-          <!-- Combined utility + state bar. Always shows the Group by toggle
-               + Filter icon; renderStateBar() injects the mode label + action
-               button for the current project state (draft / view-only / etc). -->
-          <div class="sb-state-bar" id="sbStateBar"></div>
-          <!-- The whole bar is the scope-level nav target (see
-               selectScope). Its own controls opt out via the closest()
-               guard in onScopeBarClick. -->
-          <div class="sb-hdr" id="sbHdr" role="button" tabindex="0"
-               onclick="onScopeBarClick(event)" onkeydown="onScopeBarKey(event)"
-               title="View the whole scope">
-            <span class="sb-hdr-title">Scope</span>
-            <span class="sb-hdr-count" id="sbHdrCount"></span>
-            <!-- Version chip: switches which snapshot of the scope this sidebar
-                 shows. Owned by the iframe now (was in the shell's stepper);
-                 shell mirrors currentVersionId via postMessage for its outdated-
-                 scope state bar logic. -->
-            <div class="ver-chip" id="verChip" onclick="event.stopPropagation()">
-              <button class="ver-chip-btn" onclick="toggleVersion(event)" aria-label="Scope version">
-                <span class="ver-chip-label" id="verChipLabel">v3</span>
-                <span class="ver-chip-tag" id="verChipTag"></span>
-                <svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
-              <div class="ver-menu" id="verMenu"></div>
-            </div>
-            <!-- Group by + Filters live in the right panel's work-hdr tab bar
-                 now — see renderWorkHdr in the JS below. -->
-            <span class="sb-hdr-sp"></span>
-            <!-- Edit-mode toggle: flip the whole sidebar into an editable scope.
-                 In draft stages, editing IS the mode — the button is replaced
-                 with a static "Edit mode" chip (see JS below that swaps it). -->
-            <button class="sb-edit-toggle" id="sbEditToggle" onclick="toggleScopeEdit()" aria-pressed="false" title="Edit scope">
-              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9.5 2.5l2 2-7 7H2.5v-2l7-7z" stroke-linejoin="round"/></svg>
-              <span>Edit</span>
-            </button>
-            <!-- State chips removed — the shell's #verNotice bar now shows the
-                 current version, mode, and primary CTA (Submit for review, etc.). -->
-            <span id="sbEditChip" hidden></span>
-            <span class="sb-rollup" id="sbRollup"></span>
-            <span id="sbScopeDec"></span>
-          </div>
-          <!-- Scope-edit banner (shows only when edit mode is on) -->
-          <div class="sb-edit-banner" id="sbEditBanner">
-            <div class="sb-edit-banner-l">
-              <span class="sb-edit-banner-tag">Editing scope</span>
-              <span class="sb-edit-banner-body">Submit for review when you're done and we'll notify your admin.</span>
-            </div>
-          </div>
-          <!-- Change-order banner removed — the approved-scope confirmation
-               now happens as a modal when the user clicks Edit. -->
-          <div id="coBanner" hidden></div>
-          <div class="sb-scroll" id="sbScroll"></div>
-          <!-- Change-order draft footer (visible when there are pending changes) -->
-          <div class="co-bar hidden" id="coBar"></div>
-          <!-- Scope-edit footer with the Submit action (shown in edit mode) -->
-          <div class="sb-edit-footer" id="sbEditFooter">
-            <button class="sb-edit-cancel" onclick="toggleScopeEdit()">Cancel</button>
-            <button class="sb-edit-submit" onclick="submitScopeChanges()">Submit for review</button>
-          </div>
-        </div>
-
-        <!-- resize -->
-        <div class="handle" id="handle"><span class="grip"><span></span><span></span><span></span></span></div>
-
-        <!-- RIGHT: work surface -->
-        <div class="work">
-          <div class="work-hdr" id="workHdr"></div>
-          <div class="work-body" id="workBody"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="drawer-scrim" onclick="closeDrawer()"></div>
-<div id="drawer">
-  <div class="dw-head">
-    <div class="dw-top">
-      <div>
-        <div class="dw-task" id="dwTask"></div>
-        <div class="dw-title" id="dwTitle"></div>
-      </div>
-      <button class="dw-close" onclick="closeDrawer()"><svg viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-linecap="round"/></svg></button>
-    </div>
-  </div>
-  <div class="dw-body" id="dwBody"></div>
-</div>
-
-<!-- Product detail flyaway -->
-<div id="fly-scrim" onclick="closeFly()"></div>
-<aside id="fly"></aside>
-
-<!-- Cart drawer -->
-<div id="cart-scrim" onclick="closeCart()"></div>
-<aside id="cart"></aside>
-
-<!-- Artifact photo lightbox -->
-<div id="artLightbox"></div>
-
-<!-- Confirm-edit modal (shown when the user hits Edit while the scope is approved) -->
-<div class="se-modal-scrim" id="seModalScrim" onclick="closeEditConfirm()"></div>
-<div class="se-modal" id="seModal">
-  <div class="se-modal-cap">Scope is locked</div>
-  <div class="se-modal-title">Approved scope — create a draft to edit</div>
-  <div class="se-modal-body">
-    This scope has been approved and is currently in Construction. To make changes, we'll create a draft copy that you can submit to admin for review. The current live scope stays untouched until admin approves the draft.
-  </div>
-  <div class="se-modal-actions">
-    <button class="se-btn se-btn-secondary" onclick="closeEditConfirm()">Cancel</button>
-    <button class="se-btn se-btn-primary" onclick="confirmEditFromApproved()">Create draft &amp; edit</button>
-  </div>
-</div>
-
-
-<div id="toast"></div>
-<datalist id="unitSuggestions">
-  <option value="each"><option value="ea"><option value="LF"><option value="SF"><option value="SY"><option value="gal"><option value="qt"><option value="kit"><option value="suite"><option value="set"><option value="box"><option value="pack"><option value="pallet"><option value="hour"><option value="day"><option value="bag"><option value="roll"><option value="sheet">
-</datalist>
-
-<\script src="js/panel-helpers.js"><\/script>
-<\script src="js/data.js"><\/script>
-<\script src="js/panel-core.js"><\/script>
-<\script src="js/scope-navigator.js"><\/script>
-<\script src="js/editor.js"><\/script>
-<\script src="js/product-picker.js"><\/script>
-<\script src="js/focused-content.js"><\/script>
-<\script src="js/measurements.js"><\/script>
-<\script src="js/progress.js"><\/script>
-<\script src="js/artifact.js"><\/script>
-<\script src="js/media-lightbox.js"><\/script>
-<\script src="js/panel-init.js"><\/script>
-</body>
-</html>
-</script>
+<!-- The panel document (previously inline here as a text/html script block)
+     now lives in js/panel-doc.js, so this page and the focused
+     Artifact-Change-Order-View load one copy of it. shell.js reads it as
+     window.KAI_PANEL_SRC and must load after it. -->
+<script src="js/panel-doc.js"></script>
 <script src="js/shell.js"></script>
 </body>
 </html>
