@@ -1792,13 +1792,13 @@ function syncAppApproveBtn(){
   if(proj === 'reviewing' && state.role === 'manager'){
     const d = window.__KAI_DECISION || {};
     btn.disabled = false;
-    if(d.total && !d.ready){
-      btn.textContent = 'Mark all as reviewed';
-      btn.onclick = markAllReviewed;
-    } else {
-      btn.textContent = 'Scope reviewed';
-      btn.onclick = openStageConfirm;
-    }
+    /* One label either way. What is behind it changes — with tasks still
+       untouched it approves them all in one go, and once they are all reviewed
+       it closes the review out — but "approve the scope" is the same intent
+       from here, and a button that renames itself as you tick tasks off reads
+       as a different button. The confirm says which of the two it is. */
+    btn.textContent = 'Approve Scope';
+    btn.onclick = (d.total && !d.ready) ? markAllReviewed : openStageConfirm;
     if(tipEl) tipEl.hidden = true;
     return;
   }
@@ -2490,13 +2490,13 @@ function markAllReviewed(){
   const done  = d.done  || 0;
   const left  = Math.max(0, total - done);
   const body = total
-    ? `<b>${done} of ${total}</b> task${total === 1 ? '' : 's'} reviewed so far. This marks the remaining ${left} as reviewed too — reviewing is one-way, so it cannot be undone task by task afterwards.${reviewRosterHtml()}`
-    : `This marks every task in the scope as reviewed. Reviewing is one-way, so it cannot be undone task by task afterwards.${reviewRosterHtml()}`;
+    ? `<b>${done} of ${total}</b> task${total === 1 ? '' : 's'} reviewed so far. Approving the scope marks the remaining ${left} as reviewed too — reviewing is one-way, so it cannot be undone task by task afterwards.${reviewRosterHtml()}`
+    : `Approving the scope marks every task in it as reviewed. Reviewing is one-way, so it cannot be undone task by task afterwards.${reviewRosterHtml()}`;
   openModal({
     icon:'check',
-    title: left ? `Mark the remaining ${left} as reviewed?` : 'Mark all as reviewed?',
+    title: left ? `Approve the scope with ${left} task${left === 1 ? '' : 's'} still unreviewed?` : 'Approve the whole scope?',
     body,
-    confirm:'Mark all as reviewed',
+    confirm:'Approve scope',
     onConfirm:()=>{
       const iframe = document.getElementById('iframe');
       if(iframe && iframe.contentWindow) iframe.contentWindow.postMessage({type:'kai-review-all'}, '*');
