@@ -110,10 +110,32 @@ function coHandoffTeam(){
     .map(p => ({
       id: p.id, name: p.name, roleId: p.roleId,
       role: p.label || roleName(p.roleId),
+      /* The right-hand label answers the question the row is being read for:
+         what happens to the document if it goes to this person. A job title
+         does not — "Project manager" only means "can approve" to someone who
+         already knows the access map. The title stays on `role` because the
+         search box matches against it. */
+      perm: p.roleId === 'manager' ? 'Can edit and approve' : 'Can edit',
       initials: p.name.split(/[\s.]+/).filter(Boolean).map(w => w[0]).join('').slice(0,2).toUpperCase(),
     }))
-    // Seniority order, stable within a role so the baton holder leads the agents.
-    .sort((a, b) => rank(a.roleId) - rank(b.roleId));
+    /* The project manager leads, always: theirs is the only row that can end in
+       an approval, which is the reason most hand-offs are made. Then seniority,
+       stable within a role so the baton holder leads the agents. HANDOFF_ROLES
+       already ranks 'manager' first — pinned explicitly so reordering that list
+       for any other reason cannot quietly demote them. */
+    .sort((a, b) => (a.roleId === 'manager' ? -1 : b.roleId === 'manager' ? 1 : 0)
+                 || rank(a.roleId) - rank(b.roleId));
+}
+/* Whether the list is scrolled to its end, which is when the fade over the
+   bottom row stops being true. Called on scroll and once after each render —
+   a filtered list can be short enough not to scroll at all. */
+function coHandoffScrolled(el){
+  const box = el || document.getElementById('coHandoffResults');
+  if(!box) return;
+  const top = box.closest('.co-ho-top');
+  if(!top) return;
+  const end = box.scrollTop + box.clientHeight >= box.scrollHeight - 2;
+  top.classList.toggle('is-end', end);
 }
 /* A default recipient arrives as a role id from turnRoleFor(); the list holds
    people. First person in that role is the one meant. */
@@ -145,7 +167,7 @@ function coHandoffRowsHtml(){
     <button type="button" class="dsp-row co-ho-row${on ? ' is-on' : ''}"
       onclick="pickCoHandoff('${p.id}')" aria-pressed="${on}">
       <span class="dsp-av">${p.initials}</span>
-      <span class="dsp-who"><span class="dsp-name">${p.name}</span><span class="dsp-role">${p.role}</span></span>
+      <span class="dsp-who"><span class="dsp-name">${p.name}</span><span class="dsp-role">${p.perm}</span></span>
       <span class="co-ho-tick">${ICONS.check}</span>
       ${canApprove ? `<span class="co-ho-can">${p.name} can edit and approve this when you hand off to them.</span>` : ''}
     </button>`;
@@ -187,12 +209,12 @@ function closeCoHandoff(){ coHandoffOpen = false; renderCoHandoff(); }
 function filterCoHandoff(v){
   coHandoffQuery = v || '';
   const host = document.getElementById('coHandoffResults');
-  if(host) host.innerHTML = coHandoffRowsHtml();
+  if(host){ host.innerHTML = coHandoffRowsHtml(); coHandoffScrolled(host); }
 }
 function pickCoHandoff(id){
   coHandoffTo = id;
   const host = document.getElementById('coHandoffResults');
-  if(host) host.innerHTML = coHandoffRowsHtml();
+  if(host){ host.innerHTML = coHandoffRowsHtml(); coHandoffScrolled(host); }
 }
 /* Note is read straight off the field on confirm rather than mirrored on every
    keystroke — re-rendering the modal under a cursor loses the caret. */
@@ -284,7 +306,8 @@ function renderCoHandoff(){
         <input id="coHandoffSearch" class="co-ho-search" type="text" autocomplete="off"
           placeholder="Search by name or role" value="${coHandoffQuery}"
           oninput="filterCoHandoff(this.value)" aria-label="Search for a teammate">
-        <div class="co-ho-results" id="coHandoffResults">${coHandoffRowsHtml()}</div>
+        <div class="co-ho-results" id="coHandoffResults"
+             onscroll="coHandoffScrolled(this)">${coHandoffRowsHtml()}</div>
       </div>
       <!-- Full width now that the roster has left this row: the comment is the
            only thing here you fill in. -->
@@ -305,6 +328,8 @@ function renderCoHandoff(){
     </div>`;
   const q = document.getElementById('coHandoffSearch');
   if(q) q.focus();
+  // A list short enough not to scroll must not be sitting under a fade.
+  coHandoffScrolled();
 }
 /* The project manager's move at a change-order review: approve the order. Without this the
    generic published-stage rule labelled their CTA "Submit closeout" — the right

@@ -626,15 +626,25 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 .co-ho-row .dsp-role{margin-left:auto;flex-shrink:0}
 /* Cut off mid-row. A list that ends flush reads as the whole team; a clipped
    row says there are more people than fit, which is the truth for any real
-   project. The fade sits above the scroll so it does not travel with it. */
+   project. The fade sits above the scroll so it does not travel with it, and it
+   is deep and opaque enough to swallow most of the row under it — a faint one
+   reads as a soft edge, where the point is to show that a row is being hidden
+   and there is somewhere further to go. It clears once you reach the bottom,
+   so it never lies about there being more. */
 /* Four rows before it scrolls. Rows are 41px, 8px apart — except the project
    manager's, which permanently carries a second line and stands at 65px, so the
    first four come to 65 + 3*41 + 3*8. Sized for that row rather than for four
    plain ones, since it is always the one at the top. Below it the same box shows
    five, which is the harmless direction. */
 .co-ho-results{max-height:212px}
-.co-ho-top::after{content:'';position:absolute;left:0;right:0;bottom:0;height:34px;
-  pointer-events:none;background:linear-gradient(to bottom,rgba(255,255,255,0),var(--white,#fff) 78%)}
+.co-ho-top::after{content:'';position:absolute;left:0;right:0;bottom:0;height:58px;
+  pointer-events:none;opacity:1;transition:opacity .15s ease-out;
+  background:linear-gradient(to bottom,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,.55) 30%,
+    rgba(255,255,255,.92) 62%,
+    var(--white,#fff) 86%)}
+.co-ho-top.is-end::after{opacity:0}
 .co-ho-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
 .co-ho-col{min-width:0}
 /* ── the roster, demoted to a line ───────────────────────────────────
@@ -662,8 +672,9 @@ body.tb-hidden .tb-reveal{display:inline-flex}
   font-family:var(--body);font-size:13.5px}
 .co-ho-search:focus{outline:none;border-color:var(--ink,#1A1A1A)}
 .co-ho-search::placeholder{color:var(--midtone,#7D7469)}
-/* Scrolls rather than growing, so a long team can't push the actions off. */
-.co-ho-results{overflow-y:auto}
+/* Scrolls rather than growing, so a long team can't push the actions off.
+   The bottom padding is the fade's depth, so the last row can clear it. */
+.co-ho-results{overflow-y:auto;padding-bottom:22px}
 .co-ho-none{padding:12px 2px;font-family:var(--body);font-size:12.5px;font-style:italic;
   color:var(--midtone,#7D7469)}
 /* No initials tile in the picker. Every row is a person, so a square of
