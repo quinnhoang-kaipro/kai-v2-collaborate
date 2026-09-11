@@ -56,7 +56,6 @@ body{background:var(--app-bg)}
   padding-bottom:22px;border-bottom:1px solid var(--stroke);margin-bottom:6px}
 .po-photo{position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--sunken);
   border:1px solid var(--stroke)}
-.po-photo svg{width:100%;height:100%;display:block}
 .po-photo-cap{position:absolute;left:0;bottom:0;padding:5px 9px;background:rgba(26,26,26,.72);
   color:#fff;font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.1em;
   text-transform:uppercase}
@@ -218,24 +217,8 @@ body.po-editing #poEditBtn{display:none}
     <!-- ── the property, as a header rather than a form ── -->
     <div class="po-hero">
       <figure class="po-photo">
-        <!-- Placeholder: the prototype has no property photography. Drawn
-             rather than a grey box so the slot reads as a photo. -->
-        <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Property photo placeholder">
-          <rect width="400" height="300" fill="#E9EDF2"/>
-          <circle cx="322" cy="58" r="26" fill="#F7F3E4"/>
-          <path d="M0 214h400v86H0z" fill="#DFE4D6"/>
-          <path d="M60 214V132l90-56 90 56v82z" fill="#C9B59C"/>
-          <path d="M150 62 44 128h212z" fill="#8E6E53"/>
-          <path d="M240 214v-58l60-38 60 38v58z" fill="#BFA98F"/>
-          <path d="M300 106l-70 44h140z" fill="#7E6047"/>
-          <rect x="96" y="152" width="34" height="34" fill="#F7F3E4"/>
-          <rect x="170" y="152" width="34" height="34" fill="#F7F3E4"/>
-          <rect x="122" y="196" width="30" height="18" fill="#8E6E53"/>
-          <rect x="268" y="170" width="64" height="44" fill="#8E6E53"/>
-          <path d="M0 258h400v10H0z" fill="#CFD4C6"/>
-          <circle cx="352" cy="204" r="22" fill="#B9C6A8"/>
-          <circle cx="30" cy="200" r="26" fill="#B9C6A8"/>
-        </svg>
+        <!-- The photo slot. The prototype has no property photography, so it
+             holds the tan rather than an illustration pretending to be one. -->
         <figcaption class="po-photo-cap">Street view</figcaption>
       </figure>
 
