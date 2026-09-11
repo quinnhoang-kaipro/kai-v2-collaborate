@@ -4520,6 +4520,24 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
   .ov-tr-delta,.ov-tr-d{padding-left:10px}
 }
 
+/* ── what happened on site between two documents ──
+   Set between the blocks rather than inside one, because it belongs to neither:
+   quieter than a document's own rows, and on the tan so the two white runs of
+   chain read as the documents and this reads as the gap between them. */
+.ov-walks{display:flex;flex-direction:column;gap:1px;margin:-4px 0 4px;
+  padding:9px 0 9px 24px;border-top:1px solid var(--hair,var(--stroke));
+  border-bottom:1px solid var(--hair,var(--stroke))}
+.ov-walk{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:0 14px;
+  align-items:baseline;padding:3px 0}
+.ov-walk-n{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3);white-space:nowrap}
+.ov-walk-c{font-size:12.5px;color:var(--t2);min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.ov-walk-s{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3);white-space:nowrap;text-align:right}
+.ov-walk-d{font-size:11px;color:var(--t3);white-space:nowrap;font-variant-numeric:tabular-nums;
+  text-align:right}
+
 /* The reveal for the earlier documents. Underlined because it is the one
    thing in this section that acts, and the section is otherwise all text. */
 .ov-trail-rest{display:flex;flex-direction:column;gap:20px}

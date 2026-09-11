@@ -290,6 +290,57 @@ function _ovDelta(now, before){
   return (d > 0 ? '+' : '\u2212') + _fmtDollars(Math.abs(d));
 }
 
+/* ── what happened on site between two documents ─────────────────────
+   A document's chain says who held it. It says nothing about the weeks in
+   between, where the job is actually being done — and those weeks are most of
+   the calendar. Every visit to the property is a walk, every photo is attached
+   to one, and the tasks those photos are on carry the notes. So a walk is the
+   event, and its counts are read off the same records the Progress tab draws.
+
+   The window is the boundary as it reads on screen: everything from the older
+   document's last event up to the newer one's. A change order is opened the
+   day the one before it is approved, so a strictly-between window would be
+   empty every time and these weeks would go unsaid. */
+function _ovWalksBetween(older, newer){
+  if(typeof WALKS === 'undefined') return [];
+  if(typeof seedPhotos === 'function' && (typeof PHOTOS === 'undefined' || !PHOTOS.length)) seedPhotos();
+  const photos = (typeof PHOTOS !== 'undefined') ? PHOTOS : [];
+  const all    = (typeof TASKS !== 'undefined') ? TASKS : [];
+  const from = Date.parse(older.evs[0] && older.evs[0].when);
+  const to   = Date.parse(newer.evs[0] && newer.evs[0].when);
+  if(isNaN(from) || isNaN(to)) return [];
+  return WALKS.filter(w => {
+    const d = Date.parse(w.date);
+    return !isNaN(d) && d >= from && d <= to;
+  }).map(w => {
+    const shots = photos.filter(ph => ph.walk === w.id);
+    const rooms = new Set(shots.map(ph => ph.room).filter(r => r && r !== 'Project'));
+    const codes = new Set(shots.map(ph => ph.task).filter(Boolean));
+    const hit   = all.filter(t => codes.has(t.code));
+    const notes = hit.reduce((n, t) => n + (t.notes || 0), 0);
+    return {label:w.label, date:w.date, photos:shots.length, notes:notes,
+            groups:rooms.size, tasks:codes.size};
+  }).filter(w => w.photos)
+    .sort((a, b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0));
+}
+function _ovWalksHtml(older, newer){
+  const runs = _ovWalksBetween(older, newer);
+  if(!runs.length) return '';
+  const n = (k, one, many) => `${k} ${k === 1 ? one : many}`;
+  const join = xs => xs.filter(Boolean).join(' \u00b7 ');
+  return `<div class="ov-walks">${runs.map(w => `
+    <div class="ov-walk">
+      <span class="ov-walk-n">${esc(w.label)}</span>
+      <span class="ov-walk-c">${esc(join([
+        w.photos && n(w.photos, 'photo', 'photos'),
+        w.notes  && n(w.notes,  'note',  'notes')]))} added</span>
+      <span class="ov-walk-s">${esc(join([
+        w.groups && n(w.groups, 'group', 'groups'),
+        w.tasks  && n(w.tasks,  'task',  'tasks')]))}</span>
+      <span class="ov-walk-d">${esc(w.date)}</span>
+    </div>`).join('')}</div>`;
+}
+
 const _OV_TICK = `<svg class="ov-tr-ck" viewBox="0 0 12 12" fill="none" stroke="currentColor"
   stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg>`;
 
@@ -345,10 +396,12 @@ function _ovTrailHtml(){
   if(!docs.length) return `<p class="ov-empty">No documents yet.</p>`;
   const [current, ...earlier] = docs;
   if(!earlier.length) return `<div class="ov-trail">${_ovTrailDocHtml(current)}</div>`;
+  /* Each earlier document is preceded by whatever happened on site between it
+     and the one after it — the boundary belongs with the pair it separates. */
   return `<div class="ov-trail">
     ${_ovTrailDocHtml(current)}
     <div class="ov-trail-rest" id="ovTrailRest" hidden>
-      ${earlier.map(_ovTrailDocHtml).join('')}
+      ${earlier.map((d, i) => _ovWalksHtml(d, docs[i]) + _ovTrailDocHtml(d)).join('')}
     </div>
     <button type="button" class="ov-more" id="ovTrailMore"
             aria-expanded="false" aria-controls="ovTrailRest"
