@@ -109,7 +109,15 @@ function _ovStandingHtml(){
    of hands before it is approved. The ladder and the sign-off log already
    record both halves of that: REVIEWS says who signed and when, in order, so
    each signature is also the moment the document reached the next person.
-   Read that way the log is a chain of hand-offs, which is what this shows. */
+   Read that way the log is a chain of hand-offs, which is what this shows.
+
+   This was two sections for a while — a hand-off chain here and an activity
+   feed in a rail beside it, both built from the same ladder and the same
+   sign-offs, saying "Change Order 2 submitted" in one place and "M. Alvarez
+   handed off to S. Patel" in the other about the same event on the same day.
+   The feed's one piece of extra information was the money, so the money moved
+   onto the rows that carry it: what a document was worth when it was sent, and
+   what it was worth when it was settled. */
 function _ovTrail(){
   if(typeof VER_ORDER === 'undefined' || typeof VER === 'undefined') return [];
   if(typeof buildOrdered === 'function') buildOrdered();
@@ -124,22 +132,28 @@ function _ovTrail(){
     const prev = i > 0 ? VER[VER_ORDER[i - 1]] : null;
     const signs = revs.filter(r => r.ver === id)
       .slice().sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+    /* What the document is worth, and what it was worth before — the two
+       figures the activity feed carried. */
+    const amount = m.budget != null ? _fmtDollars(m.budget) : null;
+    const was = prev && prev.budget != null ? _fmtDollars(prev.budget) : null;
     const evs = [{...author, act:'started it',
                   when: m.opened || (prev && prev.date) || m.date, kind:'start'}];
     /* Each signature is the point the document had reached that person, so
        the hand-off is from whoever held it before them. */
     let from = author;
-    signs.forEach(sig => {
+    signs.forEach((sig, n) => {
       evs.push({who:from.who, role:from.role, act:'handed off to ' + sig.who,
-                when:sig.date, kind:'handoff'});
+                when:sig.date, kind:'handoff',
+                // The first hand-off is the submission: the amount it went out at.
+                amount: n === 0 ? amount : null, was: n === 0 ? was : null});
       from = sig;
     });
     if(id === pending){
       evs.push({who:from.who, role:from.role, act:'has it for approval',
-                when:from.date, kind:'waiting'});
+                when:from.date, kind:'waiting', amount:amount, was:was});
     } else {
       evs.push({who:people.manager, role:'Project manager', act:'approved it',
-                when:m.date, kind:'approved'});
+                when:m.date, kind:'approved', amount:amount, was:was});
     }
     out.push({name:m.label || id, state: id === pending ? 'In review' : 'Approved', evs:evs});
   });
@@ -178,6 +192,8 @@ function _ovTrailDocHtml(d){
           <span class="ov-tr-who">${esc(e.who)}</span>
           <span class="ov-tr-role">${esc(e.role)}</span>
           <span class="ov-tr-act">${esc(e.act)}</span>
+          <span class="ov-tr-sum">${e.amount ? `${esc(e.amount)}${
+            e.was && e.was !== e.amount ? ` <span class="ov-tr-was">from ${esc(e.was)}</span>` : ''}` : ''}</span>
           <span class="ov-tr-d">${esc(e.when || '')}</span>
         </div>`).join('')}
     </div>`;
@@ -218,60 +234,15 @@ function ovTrailToggle(){
   btn.setAttribute('aria-expanded', String(open));
 }
 
-/* ── activity ────────────────────────────────────────────────────────
-   Built from the version ladder and its sign-offs rather than a written-out
-   feed, so it agrees with the scrubber and the state card by construction.
-   Each version yields the events it actually generated: created when its
-   first change landed, submitted when someone first signed it, approved on
-   its approval date — except the one still pending, which has no approval. */
-function _ovActivity(){
-  if(typeof VER_ORDER === 'undefined' || typeof VER === 'undefined') return [];
-  /* The version budgets are stamped by Artifact 2's time model, which builds
-     lazily on that tab's first render — and this tab now opens first, so
-     without this every amount reads $0. Guarded internally, so asking is free. */
-  if(typeof buildOrdered === 'function') buildOrdered();
-  const pending = (typeof A2_PENDING_VER !== 'undefined') ? A2_PENDING_VER : null;
-  const revs = (typeof REVIEWS !== 'undefined') ? REVIEWS : [];
-  const people = _ovPeople();
-  const out = [];
-  VER_ORDER.forEach((id, i) => {
-    const m = VER[id] || {};
-    const label = m.label || id;
-    const signs = revs.filter(r => r.ver === id)
-      .slice().sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
-    /* `amount`, not `money` — that name is the panel's currency formatter, and
-       a local const would have shadowed it for the rest of this function. */
-    const amount = m.budget != null ? _fmtDollars(m.budget) : null;
-    const prevM = i > 0 ? VER[VER_ORDER[i - 1]] : null;
-    const was = prevM && prevM.budget != null ? _fmtDollars(prevM.budget) : null;
-    out.push({what:`${label} created`, who:people.agent, when:m.opened || m.date, kind:'created'});
-    if(signs.length){
-      out.push({what:`${label} submitted`, who:people.agent, when:signs[0].date,
-                kind:'submitted', amount:amount, was:was});
-    }
-    if(id !== pending){
-      out.push({what:`${label} approved`, who:people.manager, when:m.date,
-                kind:'approved', amount:amount, was:was});
-    }
-  });
-  return out.sort((a, b) => (Date.parse(b.when) || 0) - (Date.parse(a.when) || 0));
-}
-/* "34d ago" against the project's own present rather than today's date — the
-   demo's calendar is April 2026, and a real clock would render every event as
-   months old. The latest thing that happened is the present. */
-function _ovAgo(when, now){
-  const t = Date.parse(when), n = Date.parse(now);
-  if(isNaN(t) || isNaN(n)) return '';
-  const d = Math.round((n - t) / 86400000);
-  return d <= 0 ? 'today' : d === 1 ? 'yesterday' : d + 'd ago';
-}
-
 /* ── the page's parts ────────────────────────────────────────────────
    No cards. A section is a mono label over its content, separated from the
    next by one hairline, so the page reads as a document with headings
    rather than as a tray of tiles. */
+/* A section is one of the Editor's modules: white, bordered once, sitting on
+   the app's tan with the ground showing between them. Same shape the property
+   overview uses, so the two pages are read the same way. */
 function _ovSec(label, body, cls){
-  return `<section class="ov-sec${cls ? ' ' + cls : ''}">
+  return `<section class="ov-mod${cls ? ' ' + cls : ''}">
     ${label ? `<h3 class="ov-sec-h">${esc(label)}</h3>` : ''}
     ${body}
   </section>`;
@@ -308,10 +279,6 @@ function renderOverview(){
   if(!body) return;
   const S = OVERVIEW_SEED;
   const people = _ovPeople();
-  const acts = _ovActivity();
-  // The project's present: the most recent thing on record.
-  const now = acts.length ? acts[0].when : S.updated;
-
   const notes = (typeof scopeNotesPool === 'function') ? scopeNotesPool() : [];
   // Photos seed lazily too, on the first tab that shows one. Same reason.
   if(typeof seedPhotos === 'function' && (typeof PHOTOS === 'undefined' || !PHOTOS.length)) seedPhotos();
@@ -351,34 +318,24 @@ function renderOverview(){
                  : `<p class="ov-empty">Nothing for the crew yet.</p>`}`, 'ov-access');
 
 
-  /* The feed as a spine with dots on it, rather than rows in a panel. An
-     approval is the mark worth finding at a glance, so it is the filled one. */
-  const feed = acts.length ? acts.map(a => `
-    <li class="ov-act ov-act-${a.kind}">
-      <span class="ov-act-dot" aria-hidden="true"></span>
-      <div class="ov-act-w">${esc(a.what)}
-        ${a.amount ? `<span class="ov-act-sum">${esc(a.amount)}${
-          a.was && a.was !== a.amount ? ` <span class="ov-act-was">from ${esc(a.was)}</span>` : ''}</span>` : ''}</div>
-      <div class="ov-act-m">${esc(a.who)} <span class="ov-act-when">${esc(_ovAgo(a.when, now))}</span></div>
-    </li>`).join('') : `<li class="ov-empty">Nothing has happened yet.</li>`;
+  const trailSec = _ovSec('Activity', _ovTrailHtml(), 'ov-trail-sec');
 
-  const trailSec = _ovSec('Documents and hand-offs', _ovTrailHtml(), 'ov-trail-sec');
-
+  /* The title and the figures are one module, split by a rule: the eyebrow
+     names the project, the title names the property, and the standing sits on
+     the title's line — the same head a task carries in the Editor. */
   body.innerHTML = `
   <div class="ov-root">
-    <header class="ov-head">
-      <div class="ov-head-l">
-        <h2>${esc(S.address)}</h2>
-        <div class="ov-head-sub">${esc(S.city)}</div>
-      </div>
-      ${_ovStandingHtml()}
-    </header>
-    ${stats}
-    <div class="ov-cols">
-      <div class="ov-main">${jobSec}${accessSec}${trailSec}</div>
-      <aside class="ov-side">
-        ${_ovSec('Activity', `<ul class="ov-acts">${feed}</ul>`, 'ov-act-sec')}
-      </aside>
-    </div>
+    <section class="ov-mod ov-mod-head">
+      <header class="ov-head">
+        <div class="ov-head-l">
+          <div class="ov-eyebrow">${esc(S.projectId)}<span class="sep">&middot;</span>${esc(S.type)}</div>
+          <h2>${esc(S.address)}</h2>
+          <div class="ov-head-sub">${esc(S.city)}</div>
+        </div>
+        ${_ovStandingHtml()}
+      </header>
+      ${stats}
+    </section>
+    ${jobSec}${accessSec}${trailSec}
   </div>`;
 }

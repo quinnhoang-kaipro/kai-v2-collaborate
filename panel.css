@@ -4325,22 +4325,34 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 
 /* ══════════════════════════════════════════════════════════════════════
    OVERVIEW TAB
-   A document, not a dashboard: one white page, sections marked by a label
-   and a hairline, and a hairline-divided rail for the activity spine. There
-   are no cards here on purpose — the earlier version drew a bordered tile
-   around each of six short lists, and the borders outweighed the content.
+   The Editor's vocabulary, which the property overview page also speaks:
+   white modules bordered once and set on the app's tan, a mono eyebrow over
+   a display title, mono labels for every band inside, and the ground showing
+   between modules instead of a rule drawn across a single white page.
+
+   It was that single page for a while, after being six bordered tiles before
+   that. The tiles were the problem, not the borders: one module per subject
+   with the page's ground between them is how every other tab is built, and a
+   tab that invents its own surface reads as a different product.
    ══════════════════════════════════════════════════════════════════════ */
-.ov-root{padding:26px 30px 52px;background:var(--white);min-height:100%}
+.ov-root{padding:18px 22px 40px;background:var(--app-bg);min-height:100%}
+/* The module. Same numbers as .sec-taskcard in the Editor. */
+.ov-mod{background:var(--white);border:1px solid var(--stroke);padding:16px 18px;margin-bottom:14px}
+.ov-mod-head{padding-bottom:0}
 
 /* ── title ── */
-.ov-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:20px}
-.ov-head h2{font-family:var(--display);font-size:25px;font-weight:700;letter-spacing:-.02em;margin:0}
-.ov-head-sub{font-size:12.5px;color:var(--t3);margin-top:4px}
+.ov-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px}
+.ov-eyebrow{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--t3);margin-bottom:2px}
+.ov-eyebrow .sep{margin:0 4px;color:var(--midtone)}
+.ov-head h2{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-.005em;
+  line-height:1.2;margin:0}
+.ov-head-sub{font-size:13px;color:var(--t2);margin-top:3px}
 /* ── the three-part standing ──
    Programme · phase · state, reading left to right and getting lighter as it
    goes, so the darkest block is the phase the project is actually in and the
    outlined one is the part still moving. */
-.ov-standing{margin-left:auto;display:flex;flex-shrink:0;align-self:flex-start;margin-top:5px}
+.ov-standing{margin-left:auto;display:flex;flex-shrink:0;align-self:flex-start;margin-top:14px}
 .ov-stand{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.11em;
   text-transform:uppercase;padding:6px 12px;white-space:nowrap;
   display:inline-flex;align-items:center}
@@ -4355,42 +4367,35 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 /* ── the figure strip ──
    Five numbers at figure size between two hairlines. The two counts are
    buttons into the drawers, so they carry the only underline on the page. */
-.ov-stats{display:flex;flex-wrap:wrap;gap:0 40px;padding:15px 0 16px;
-  border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke)}
+.ov-stats{display:flex;flex-wrap:wrap;gap:0 40px;padding:14px 0 16px;
+  border-top:1px solid var(--stroke);margin:0 -18px;padding-left:18px;padding-right:18px}
 .ov-stat{display:flex;flex-direction:column;gap:3px;align-items:flex-start;
   padding:0;margin:0;border:0;background:none;text-align:left;font:inherit;color:inherit}
-.ov-stat-v{font-family:var(--display);font-size:19px;font-weight:700;letter-spacing:-.015em;
+.ov-stat-v{font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:-.015em;
   color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.1}
-.ov-stat-k{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.11em;
+.ov-stat-k{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3)}
 .ov-stat.is-link{cursor:pointer}
 .ov-stat.is-link .ov-stat-v{border-bottom:1.5px solid var(--stroke);transition:border-color .12s}
 .ov-stat.is-link:hover .ov-stat-v{border-bottom-color:var(--ink)}
 .ov-stat.is-link:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 
-/* ── two columns, split by a rule rather than a gutter of empty ground ── */
-.ov-cols{display:grid;grid-template-columns:minmax(0,1fr) 268px;align-items:start}
-.ov-main{min-width:0;padding-right:34px}
-.ov-side{min-width:0;padding-left:26px;border-left:1px solid var(--stroke);align-self:stretch}
-@media (max-width:1040px){
-  .ov-cols{grid-template-columns:minmax(0,1fr)}
-  .ov-main{padding-right:0}
-  .ov-side{padding-left:0;border-left:0;border-top:1px solid var(--stroke);margin-top:4px}
-}
+/* ── two columns, with the ground showing between the modules ── */
+.ov-cols{display:grid;grid-template-columns:minmax(0,1fr) 284px;gap:0 14px;align-items:start}
+.ov-main{min-width:0}
+.ov-side{min-width:0}
+@media (max-width:1040px){ .ov-cols{grid-template-columns:minmax(0,1fr)} }
 
-/* ── a section ── */
-.ov-sec{padding:20px 0 22px;border-bottom:1px solid var(--stroke)}
-.ov-main .ov-sec:last-child{border-bottom:0;padding-bottom:0}
-.ov-side .ov-sec{border-bottom:0}
-.ov-sec-h{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.13em;
-  text-transform:uppercase;color:var(--t3);margin:0 0 14px}
+/* ── a section's label ── */
+.ov-sec-h{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3);margin:0 0 13px}
 .ov-empty{font-size:12.5px;color:var(--t3);font-style:italic;margin:0}
 
 /* Label above value, in as many columns as the width allows. */
-.ov-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-  gap:14px 28px;margin:0}
+.ov-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));
+  gap:14px 24px;margin:0}
 .ov-field{display:block;min-width:0}
-.ov-field dt{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.1em;
+.ov-field dt{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3);margin-bottom:3px}
 .ov-field dd{margin:0;font-size:13.5px;color:var(--ink);line-height:1.35}
 
@@ -4399,7 +4404,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    page and the only thing here that is spaced out. */
 .ov-codes{display:flex;flex-wrap:wrap;gap:10px 34px}
 .ov-code{display:flex;flex-direction:column;gap:3px}
-.ov-code-k{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.1em;
+.ov-code-k{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3)}
 .ov-code-v{font-family:var(--mono);font-size:19px;font-weight:700;letter-spacing:.1em;color:var(--ink)}
 .ov-dispatch{margin:15px 0 0;font-size:13px;line-height:1.55;color:var(--t2);max-width:52ch}
@@ -4412,10 +4417,10 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tr-h{display:flex;align-items:baseline;gap:9px;padding-bottom:7px;
   border-bottom:1px solid var(--stroke);margin-bottom:3px}
 .ov-tr-n{font-size:13.5px;font-weight:700;color:var(--ink)}
-.ov-tr-st{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.1em;
+.ov-tr-st{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3)}
 .ov-tr-st.is-done{color:var(--success)}
-.ov-tr-r{display:grid;grid-template-columns:16px auto auto minmax(0,1fr) auto;
+.ov-tr-r{display:grid;grid-template-columns:16px auto auto minmax(0,1fr) auto auto;
   gap:0 8px;align-items:baseline;padding:6px 0}
 .ov-tr-r + .ov-tr-r{border-top:1px solid var(--hair,var(--stroke))}
 /* The mark is a column of its own whether or not it is filled, so every name
@@ -4426,17 +4431,23 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tr-approved .ov-tr-mk{visibility:visible}
 .ov-tr-ck{width:9px;height:9px}
 .ov-tr-who{font-size:12.5px;font-weight:600;color:var(--ink)}
-.ov-tr-role{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.1em;
+.ov-tr-role{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3);white-space:nowrap}
 .ov-tr-act{font-size:12px;color:var(--t2);min-width:0;overflow:hidden;text-overflow:ellipsis;
   white-space:nowrap}
 .ov-tr-d{font-size:11px;color:var(--t3);white-space:nowrap;font-variant-numeric:tabular-nums}
+/* What the document was worth at that moment, on the row that moved it. The
+   activity feed carried these; the rows they belong to carry them now. */
+.ov-tr-sum{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink);
+  font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.ov-tr-was{font-weight:400;color:var(--t3);letter-spacing:0}
 /* Still with someone: the one line in the chain that has not resolved. */
 .ov-tr-waiting .ov-tr-act{color:var(--ink);font-weight:600}
 .ov-tr-start .ov-tr-act{font-style:italic}
 @media (max-width:620px){
   .ov-tr-r{grid-template-columns:16px auto minmax(0,1fr);row-gap:2px}
   .ov-tr-act{grid-column:2 / -1}
+  .ov-tr-sum{grid-column:2 / -1;text-align:left}
   .ov-tr-d{grid-column:2 / -1}
 }
 
@@ -4450,22 +4461,3 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-more:hover{border-bottom-color:var(--ink)}
 .ov-more:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 
-/* ── activity spine ──
-   The dots sit on a single continuous line, so the feed reads as one thing
-   from top to bottom. An approval is the filled dot; everything else is
-   hollow, which is the whole of the colour coding. */
-.ov-acts{list-style:none;margin:0;padding:0}
-.ov-act{position:relative;padding:0 0 16px 18px}
-.ov-act:before{content:'';position:absolute;left:3.5px;top:6px;bottom:-2px;
-  width:1px;background:var(--stroke)}
-.ov-act:last-child:before{display:none}
-.ov-act-dot{position:absolute;left:0;top:4px;width:8px;height:8px;border-radius:50%;
-  border:1.5px solid var(--t3);background:var(--white);box-sizing:border-box}
-.ov-act-approved .ov-act-dot{border-color:var(--success);background:var(--success)}
-.ov-act-submitted .ov-act-dot{border-color:var(--ink)}
-.ov-act-w{font-size:12.5px;font-weight:600;color:var(--ink);line-height:1.35}
-.ov-act-sum{font-family:var(--mono);font-size:11px;font-weight:700;
-  font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:5px}
-.ov-act-was{font-weight:400;color:var(--t3);letter-spacing:0}
-.ov-act-m{font-size:11px;color:var(--t3);margin-top:2px}
-.ov-act-when:before{content:'· '}
