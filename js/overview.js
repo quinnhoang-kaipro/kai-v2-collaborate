@@ -147,7 +147,7 @@ function _ovTrail(){
        version to have changed from — the first scope is not a revision. */
     const counts = prev ? _ovChangeCounts(id) : null;
     if(counts){
-      evs.push({who:'', role:'', kind:'changed',
+      evs.push({who:'', role:'', kind:'changed', ver:id, detail:counts.detail,
                 act:`${counts.groups} group${counts.groups === 1 ? '' : 's'} \u00b7 `
                   + `${counts.tasks} task${counts.tasks === 1 ? '' : 's'} changed`,
                 when: (signs[0] && signs[0].date) || m.date});
@@ -198,13 +198,54 @@ function _ovTrail(){
    walks, so it cannot disagree with what the Artifact 2 tab shows. */
 function _ovChangeCounts(verId){
   if(typeof SCOPE === 'undefined') return null;
-  const rooms = new Set();
+  /* The groups it touched, each with the tasks inside it that moved — the
+     count is the headline and this is what the headline is a count of. */
+  const groups = [];
   let tasks = 0;
-  SCOPE.forEach(g => g.tasks.forEach(t => {
-    if((t.changes || []).some(ch => ch.ver === verId)){ rooms.add(g.room); tasks++; }
-  }));
+  SCOPE.forEach(g => {
+    const hit = g.tasks.filter(t => (t.changes || []).some(ch => ch.ver === verId));
+    if(hit.length){
+      groups.push({room:g.room, tasks:hit.map(t => ({code:t.code, name:t.name}))});
+      tasks += hit.length;
+    }
+  });
   if(!tasks) return null;
-  return {groups:rooms.size, tasks:tasks};
+  return {groups:groups.length, tasks:tasks, detail:groups};
+}
+/* ── from the count to the thing itself ──────────────────────────────
+   A count you cannot open is a dead end: "7 tasks changed" is the beginning
+   of the question, and the answer is which seven. Each name goes to the
+   Editor at its own level, which is where you would act on it. */
+function ovGoGroup(room){
+  if(typeof setGroupBy === 'function' && typeof groupBy !== 'undefined' && groupBy !== 'room'){
+    // The group keys are room names only while the sidebar is grouped by room.
+    setGroupBy('room');
+  }
+  if(typeof selectGroup === 'function') selectGroup(room);
+}
+function ovGoTask(code, room, name){
+  /* SCOPE (Artifact 2's records) and TASKS (the sidebar's) are two lists of
+     the same work, seeded separately, and they do not agree line for line —
+     three of Change Order 2's twelve lines have no match here. Try the code,
+     then the name, then fall back to the group, which always exists: landing
+     one level up beats a link that does nothing. */
+  const all = (typeof TASKS !== 'undefined') ? TASKS : [];
+  const t = all.find(x => x.code === code)
+         || all.find(x => name && String(x.name).toLowerCase() === String(name).toLowerCase());
+  if(!t){
+    if(typeof toast === 'function') toast(`${name || code} isn't in the current scope — showing ${room}`);
+    ovGoGroup(room);
+    return;
+  }
+  if(typeof selectTask === 'function') selectTask(t.id);
+  if(typeof setWorkMode === 'function') setWorkMode('shop');
+}
+let _ovOpenChanges = {};   // which documents have their change list open
+function ovToggleChanges(verId, btn){
+  _ovOpenChanges[verId] = !_ovOpenChanges[verId];
+  const box = document.getElementById('ovCh-' + verId);
+  if(box) box.hidden = !_ovOpenChanges[verId];
+  if(btn) btn.setAttribute('aria-expanded', String(!!_ovOpenChanges[verId]));
 }
 /* "+$4,100" / "-$820". The previous total is one subtraction away and the
    direction is the thing people read a change order for. */
@@ -233,12 +274,27 @@ function _ovTrailDocHtml(d){
           <span class="ov-tr-ev">
             <span class="ov-tr-mk">${e.kind === 'approved' ? _OV_TICK : ''}</span>
             ${e.who ? `<span class="ov-tr-who">${esc(e.who)}</span>` : ''}
-            <span class="ov-tr-act">${esc(e.act)}</span>
+            ${e.detail
+              ? `<button type="button" class="ov-tr-act ov-tr-open"
+                   aria-expanded="${!!_ovOpenChanges[e.ver]}" aria-controls="ovCh-${e.ver}"
+                   onclick="ovToggleChanges('${e.ver}', this)">${esc(e.act)}
+                   <svg class="ov-tr-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
+                 </button>`
+              : `<span class="ov-tr-act">${esc(e.act)}</span>`}
           </span>
           <span class="ov-tr-sum">${e.amount ? esc(e.amount) : ''}</span>
           <span class="ov-tr-delta${(e.delta || '').charAt(0) === '+' ? ' is-up' : ' is-down'}">${esc(e.delta || '')}</span>
           <span class="ov-tr-d">${esc(e.when || '')}</span>
-        </div>`).join('')}
+        </div>
+        ${e.detail ? `<div class="ov-tr-detail" id="ovCh-${e.ver}"${_ovOpenChanges[e.ver] ? '' : ' hidden'}>
+          ${e.detail.map(g => `<div class="ov-ch-g">
+            <button type="button" class="ov-ch-grp" onclick="ovGoGroup('${esc(g.room).replace(/'/g, "\\'")}')">${esc(g.room)}</button>
+            <div class="ov-ch-ts">${g.tasks.map(t => `
+              <button type="button" class="ov-ch-task"
+                onclick="ovGoTask('${esc(t.code)}', '${esc(g.room).replace(/'/g, "\\'")}', '${esc(t.name).replace(/'/g, "\\'")}')">
+                <span class="ov-ch-code">${esc(t.code)}</span>${esc(t.name)}</button>`).join('')}</div>
+          </div>`).join('')}
+        </div>` : ''}`).join('')}
       </div>
     </div>`;
 }

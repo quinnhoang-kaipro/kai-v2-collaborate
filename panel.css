@@ -4471,9 +4471,37 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tr-d{font-size:11px;color:var(--t3);white-space:nowrap;font-variant-numeric:tabular-nums;
   text-align:right;padding-left:18px}
 /* What the editing came to. Its own line, in the product's label voice, since
-   it is a count rather than something a person said. */
+   it is a count rather than something a person said — and a control, because a
+   count you cannot open is a dead end: "7 tasks changed" is the beginning of
+   the question and the names are the answer. */
 .ov-tr-changed .ov-tr-act{font-family:var(--mono);font-size:9.5px;font-weight:700;
   letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.ov-tr-open{display:inline-flex;align-items:center;gap:6px;background:none;border:0;
+  padding:0;cursor:pointer;transition:color .12s}
+.ov-tr-open:hover{color:var(--ink)}
+.ov-tr-open:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.ov-tr-car{width:9px;height:9px;stroke:currentColor;stroke-width:1.8;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;transition:transform .12s}
+.ov-tr-open[aria-expanded="true"] .ov-tr-car{transform:rotate(180deg)}
+/* The names, indented under the count. Spans the row grid, since it belongs to
+   the line above rather than to any one column. */
+.ov-tr-detail{grid-column:1 / -1;padding:4px 0 10px 24px;
+  border-top:1px solid var(--hair,var(--stroke))}
+.ov-tr-detail[hidden]{display:none}
+.ov-ch-g{padding:7px 0}
+.ov-ch-g + .ov-ch-g{border-top:1px solid var(--hair,var(--stroke))}
+.ov-ch-grp{display:block;background:none;border:0;padding:0;cursor:pointer;font:inherit;
+  font-size:12.5px;font-weight:600;color:var(--ink);text-align:left;
+  border-bottom:1.5px solid transparent;transition:border-color .12s}
+.ov-ch-grp:hover{border-bottom-color:var(--ink)}
+.ov-ch-ts{display:flex;flex-direction:column;align-items:flex-start;gap:3px;margin-top:5px}
+.ov-ch-task{display:inline-flex;align-items:baseline;gap:8px;background:none;border:0;
+  padding:0;cursor:pointer;font:inherit;font-size:12.5px;color:var(--t2);text-align:left;
+  border-bottom:1.5px solid transparent;transition:border-color .12s,color .12s}
+.ov-ch-task:hover{color:var(--ink);border-bottom-color:var(--stroke)}
+.ov-ch-grp:focus-visible,.ov-ch-task:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.ov-ch-code{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
+  color:var(--t3);flex-shrink:0}
 /* Still with someone: the one line in the chain that has not resolved. */
 .ov-tr-waiting .ov-tr-act{color:var(--ink);font-weight:600}
 .ov-tr-start .ov-tr-act{font-style:italic}
