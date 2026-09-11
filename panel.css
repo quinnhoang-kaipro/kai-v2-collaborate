@@ -4437,12 +4437,19 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tr-st.is-done{color:var(--success)}
 /* The rows share one grid: each .ov-tr-r is display:contents, so its four
    cells land in the block's own tracks rather than in a grid of their own. */
+/* stretch, not baseline. Baseline-aligning the cells gave each of them a box
+   of its own height at its own offset, and the rule between rows is drawn on
+   those boxes — so the four columns' separators each started at a different
+   line and the right-hand side read as a staircase. Stretched, every cell in a
+   row is the row's height, the rules meet, and the content is centred inside
+   the cell rather than by where its baseline happens to fall. */
 .ov-tr-rows{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;
-  align-items:baseline}
+  align-items:stretch}
 .ov-tr-r{display:contents}
-.ov-tr-r > *{padding:7px 0}
+.ov-tr-r > *{padding:7px 0;display:flex;align-items:center}
+.ov-tr-r > .ov-tr-sum,.ov-tr-r > .ov-tr-delta,.ov-tr-r > .ov-tr-d{justify-content:flex-end}
 .ov-tr-r + .ov-tr-r > *{border-top:1px solid var(--hair,var(--stroke))}
-.ov-tr-ev{display:flex;align-items:center;gap:8px;min-width:0}
+.ov-tr-ev{gap:8px;min-width:0}
 /* The mark is a column of its own inside the event whether or not it is
    filled, so every name starts on the same line. */
 .ov-tr-mk{width:16px;height:16px;flex-shrink:0;display:inline-flex;align-items:center;
@@ -4473,7 +4480,6 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 @media (max-width:620px){
   .ov-tr-rows{grid-template-columns:minmax(0,1fr) auto}
   .ov-tr-delta,.ov-tr-d{padding-left:10px}
-}
 }
 
 /* The reveal for the earlier documents. Underlined because it is the one
