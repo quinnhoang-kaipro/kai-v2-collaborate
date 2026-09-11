@@ -17,8 +17,13 @@
    screen wearing a summary's clothes, and it pushed the thing anyone came for
    below the fold.
 
-   The whole header is one band: photo, address, specs, market. The projects
-   table starts inside the first screen and takes every pixel after it.
+   Built in the Editor tab's vocabulary, since this page sits beside it in the
+   product: white modules bordered once and set on the app's tan, a mono
+   eyebrow over a display title with the figure on the right, mono labels for
+   every section inside, and the panel's own field treatment when a value is
+   being typed rather than read. The numbers below are the Editor's own
+   (.sec-taskcard* in panel.css), mirrored rather than imported — this page
+   loads shell.css, not the panel's stylesheet.
    ════════════════════════════════════════════════════════════ */
 body{background:var(--app-bg)}
 
@@ -45,59 +50,66 @@ body{background:var(--app-bg)}
 
 /* ── page ── */
 .po-page{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
-.po-scroll{flex:1;min-height:0;overflow-y:auto;padding:22px 28px 40px}
+.po-scroll{flex:1;min-height:0;overflow-y:auto;padding:18px 22px 40px}
 .po-wrap{max-width:1280px;margin:0 auto}
 
-/* ── the header band ──
-   One row: the photo, then everything known about the property. It used to be
-   three stacked cards of unequal height with a column of empty white beside
-   the shortest one. */
-.po-hero{display:grid;grid-template-columns:300px minmax(0,1fr);gap:26px;align-items:start;
-  padding-bottom:22px;border-bottom:1px solid var(--stroke);margin-bottom:6px}
+/* ── a module ──
+   The Editor's card: white, one hairline all the way round, on the tan. Its
+   inner bands are separated by a rule rather than by more boxes. */
+.po-mod{background:var(--white);border:1px solid var(--stroke);margin-bottom:14px}
+.po-mod-pad{padding:16px 18px}
+.po-band{padding:16px 18px;border-top:1px solid var(--stroke)}
+
+/* ── the property header ──
+   Eyebrow, title, figure right — the same three-part head a task carries in
+   the Editor, so a property and a task are read the same way. */
+.po-hero{display:grid;grid-template-columns:232px minmax(0,1fr);gap:18px;align-items:start}
+.po-hero-r{min-width:0;display:flex;flex-direction:column}
 .po-photo{position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--sunken);
   border:1px solid var(--stroke)}
 .po-photo-cap{position:absolute;left:0;bottom:0;padding:5px 9px;background:rgba(26,26,26,.72);
   color:#fff;font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.1em;
   text-transform:uppercase}
-.po-id{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-.po-id h1{font-family:var(--display);font-size:27px;font-weight:700;letter-spacing:-.02em;
-  line-height:1.1;margin:0}
-.po-id-sub{font-size:13px;color:var(--t3);margin-top:5px}
-.po-chip{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.11em;
-  text-transform:uppercase;padding:4px 9px;background:var(--accent);color:var(--ink);
-  align-self:center;white-space:nowrap}
-.po-chip-q{background:transparent;color:var(--t2);box-shadow:inset 0 0 0 1px var(--stroke)}
-
-/* The facts. Label over value, no boxes — these are read far more often than
-   they are typed, and the page should look like what it mostly is. */
-.po-facts{margin-top:18px}
-.po-facts-h{display:flex;align-items:baseline;gap:12px;margin-bottom:12px}
-.po-facts-h .lbl{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.13em;
+.po-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.po-hdr-l{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.po-eyebrow{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.11em;
   text-transform:uppercase;color:var(--t3)}
-.po-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:15px 24px}
-.po-f{min-width:0}
-.po-f dt{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--t3);margin-bottom:3px}
-.po-f dd{margin:0;font-size:15px;color:var(--ink);line-height:1.25;font-variant-numeric:tabular-nums}
+.po-eyebrow .sep{margin:0 4px;color:var(--midtone)}
+.po-hdr h1{font-family:var(--display);font-size:20px;font-weight:700;color:var(--ink);
+  letter-spacing:-.005em;line-height:1.2;margin:0}
+.po-hdr-sub{font-family:var(--body);font-size:13px;color:var(--t2);line-height:1.35}
+.po-hdr-r{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.po-amt{font-family:var(--body);font-size:20px;font-weight:700;color:var(--ink);
+  font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+.po-lbl{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3)}
+.po-facts{margin-top:14px;padding-top:13px;border-top:1px solid var(--stroke)}
+.po-facts-h{display:flex;align-items:center;gap:12px;margin-bottom:11px}
+.po-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:14px 22px}
+.po-f{min-width:0;display:flex;flex-direction:column;gap:4px}
+.po-f dt{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3)}
+.po-f dd{margin:0;font-size:14px;color:var(--ink);line-height:1.35;font-variant-numeric:tabular-nums}
 .po-f dd .u{font-size:11.5px;color:var(--t3);margin-left:3px;font-variant-numeric:normal}
 .po-f-link{font-size:13px;color:var(--ink);text-decoration:underline;text-underline-offset:2px;
   text-decoration-color:var(--stroke);background:none;border:0;padding:0;cursor:pointer;font:inherit}
 .po-f-link:hover{text-decoration-color:var(--ink)}
 
-/* Edit mode: the same grid, with the values swapped for inputs. Nothing moves
-   — the inputs sit exactly where the values were, so the block does not
-   reflow under the cursor when you press Edit. */
-.po-f input,.po-f select{display:none;width:100%;box-sizing:border-box;padding:6px 8px;
-  border:1px solid var(--stroke);background:var(--white);color:var(--ink);
-  font-family:var(--body);font-size:14px}
-.po-f input:focus,.po-f select:focus{outline:none;border-color:var(--ink)}
+/* Edit mode: the panel's own field, in the cell the value was in, so the block
+   does not reflow under the cursor when you press Edit. */
+.po-f input,.po-f select{display:none;width:100%;box-sizing:border-box;
+  font-family:var(--body);font-size:14px;color:var(--ink);background:var(--white);
+  border:1px solid var(--stroke);padding:8px 10px;outline:none;line-height:1.4;
+  transition:border-color .12s,box-shadow .12s}
+.po-f input:hover,.po-f select:hover{border-color:var(--midtone)}
+.po-f input:focus,.po-f select:focus{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 body.po-editing .po-f dd{display:none}
 body.po-editing .po-f input,body.po-editing .po-f select{display:block}
-body.po-editing .po-f-static{display:block}
 
-.po-btn{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;
-  text-transform:uppercase;padding:7px 12px;border:1px solid var(--stroke);background:transparent;
-  color:var(--ink);cursor:pointer;transition:border-color .12s,background .12s}
+.po-btn{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;padding:6px 12px;border:1px solid var(--stroke);background:var(--white);
+  color:var(--ink);cursor:pointer;line-height:1.2;transition:border-color .12s,background .12s}
 .po-btn:hover{border-color:var(--ink)}
 .po-btn.is-primary{background:var(--accent);border-color:var(--accent-deep)}
 .po-btn.is-primary:hover{background:var(--accent-deep)}
@@ -108,67 +120,63 @@ body.po-editing .po-edit-acts{display:flex}
 body.po-editing #poEditBtn{display:none}
 
 /* ── projects ──
-   The reason for the page, so it gets the count in the heading, the filter as
-   a segmented control rather than a sentence on a button, and every pixel
-   below the header band. */
-.po-proj-h{display:flex;align-items:center;gap:14px;padding:18px 0 12px;
-  position:sticky;top:0;background:var(--app-bg);z-index:3}
-.po-proj-h h2{font-family:var(--display);font-size:19px;font-weight:700;letter-spacing:-.015em;margin:0}
-.po-count{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--t3)}
+   The reason for the page: its own module, with the count in the label and
+   the filter as a segmented control rather than a sentence on a button. */
+.po-proj-h{display:flex;align-items:center;gap:14px;padding:14px 18px;
+  border-bottom:1px solid var(--stroke)}
 .po-seg{display:flex;margin-left:auto}
-.po-seg button{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;
-  text-transform:uppercase;padding:7px 12px;border:1px solid var(--stroke);background:transparent;
-  color:var(--t3);cursor:pointer;margin-left:-1px}
+.po-seg button{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;padding:6px 12px;border:1px solid var(--stroke);background:var(--white);
+  color:var(--t3);cursor:pointer;margin-left:-1px;line-height:1.2}
 .po-seg button:first-child{margin-left:0}
 .po-seg button.on{background:var(--ink);border-color:var(--ink);color:#fff;position:relative;z-index:1}
 .po-seg button:hover:not(.on){color:var(--ink);border-color:var(--ink);position:relative;z-index:1}
 
-/* Hairlines, not a boxed table. The header row is the only thing that needs a
-   rule under it; the rows separate themselves with one line each. */
 .po-tbl{width:100%;border-collapse:collapse}
-.po-tbl thead th{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.11em;
-  text-transform:uppercase;color:var(--t3);text-align:left;padding:0 10px 9px;
-  border-bottom:1px solid var(--stroke);white-space:nowrap;position:sticky;top:53px;
-  background:var(--app-bg);z-index:2}
+.po-tbl thead th{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3);text-align:left;padding:10px 18px;
+  border-bottom:1px solid var(--stroke);white-space:nowrap;background:var(--sunken)}
 .po-tbl thead th.num{text-align:right}
 .po-tbl thead th button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;
   display:inline-flex;align-items:center;gap:5px;letter-spacing:inherit;text-transform:inherit}
 .po-tbl thead th button:hover{color:var(--ink)}
 .po-tbl thead th svg{width:9px;height:9px;stroke:currentColor;stroke-width:2;fill:none}
 .po-tbl tbody tr{border-bottom:1px solid var(--stroke);cursor:pointer;transition:background .1s}
+.po-tbl tbody tr:last-child{border-bottom:0}
 .po-tbl tbody tr:hover{background:var(--sunken)}
-.po-tbl td{padding:13px 10px;font-size:13.5px;color:var(--ink);vertical-align:middle}
-.po-tbl td.num{text-align:right;font-variant-numeric:tabular-nums}
+.po-tbl td{padding:12px 18px;font-size:14px;color:var(--ink);vertical-align:middle}
+.po-tbl td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
 .po-tbl td.dim{color:var(--t3);font-size:12.5px;font-variant-numeric:tabular-nums}
 /* The name is what people scan for, so it carries the weight and the type is
    the one thing beside it — as a quiet tag rather than its own column of
    repeated words. */
 .po-name{font-weight:600}
 .po-desc{display:block;font-size:12px;color:var(--t3);margin-top:2px}
-.po-type{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--t3);border:1px solid var(--stroke);padding:2px 6px;
-  white-space:nowrap}
-.po-st{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:8.5px;
-  font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.po-type{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3);margin-left:8px;white-space:nowrap}
+/* Status reads as the Editor's status control does: mono, uppercase, boxed,
+   with the colour carried by the border rather than a fill. */
+.po-st{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9.5px;
+  font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);
+  border:1px solid var(--stroke);padding:5px 10px;line-height:1.2}
 .po-st::before{content:'';width:7px;height:7px;border-radius:50%;border:1.5px solid currentColor;
   box-sizing:border-box}
-.po-st-completed{color:var(--success)}
+.po-st-completed{color:var(--success);border-color:var(--success)}
 .po-st-completed::before{background:currentColor}
-.po-st-active{color:var(--ink)}
+.po-st-active{color:var(--ink);border-color:var(--ink)}
 .po-st-active::before{background:var(--accent);border-color:var(--ink)}
 .po-st-draft{color:var(--t3)}
-.po-st-hold{color:var(--error)}
+.po-st-hold{color:var(--error);border-color:var(--error)}
 .po-kebab{opacity:0;background:none;border:0;padding:4px;cursor:pointer;color:var(--t3);
   transition:opacity .1s,color .12s}
 .po-tbl tbody tr:hover .po-kebab,.po-kebab:focus-visible{opacity:1}
 .po-kebab:hover{color:var(--ink)}
 .po-kebab svg{width:14px;height:14px;fill:currentColor}
-.po-empty{padding:34px 10px;font-size:13px;color:var(--t3);font-style:italic}
+.po-empty{padding:34px 18px;font-size:13px;color:var(--t3);font-style:italic}
 
 @media (max-width:900px){
   .po-hero{grid-template-columns:minmax(0,1fr)}
-  .po-photo{max-width:320px}
+  .po-photo{max-width:300px}
 }
 </style>
 </head>
@@ -215,73 +223,87 @@ body.po-editing #poEditBtn{display:none}
   <div class="po-wrap">
 
     <!-- ── the property, as a header rather than a form ── -->
-    <div class="po-hero">
-      <figure class="po-photo">
-        <!-- The photo slot. The prototype has no property photography, so it
-             holds the tan rather than an illustration pretending to be one. -->
-        <figcaption class="po-photo-cap">Street view</figcaption>
-      </figure>
+    <section class="po-mod">
+      <div class="po-mod-pad">
+        <div class="po-hero">
+          <figure class="po-photo">
+            <!-- The photo slot. The prototype has no property photography, so it
+                 holds the tan rather than an illustration pretending to be one. -->
+            <figcaption class="po-photo-cap">Street view</figcaption>
+          </figure>
+          <!-- Everything known about the property, in the photo's own row: a
+               details band under the module left a column of white beside the
+               title and made the module taller than it had to be. -->
+          <div class="po-hero-r">
+            <div class="po-hdr">
+              <div class="po-hdr-l">
+                <div class="po-eyebrow">Austin<span class="sep">&middot;</span>Test ID 9876</div>
+                <h1>2525 McDonald Way</h1>
+                <div class="po-hdr-sub">Austin, TX 78754 &nbsp;&middot;&nbsp;
+                  <button class="po-f-link" type="button">View market</button></div>
+              </div>
+              <div class="po-hdr-r">
+                <span class="po-amt" id="poTotal">&mdash;</span>
+                <span class="po-lbl">Active budget</span>
+              </div>
+            </div>
 
-      <div>
-        <div class="po-id">
-          <h1>2525 McDonald Way</h1>
-          <span class="po-chip">Austin</span>
-        </div>
-        <div class="po-id-sub">Austin, TX 78754 &nbsp;·&nbsp; <button class="po-f-link" type="button">View market</button></div>
-
-        <div class="po-facts">
-          <div class="po-facts-h">
-            <span class="lbl">Property details</span>
-            <button class="po-btn" id="poEditBtn" type="button" onclick="poEdit(true)">Edit</button>
-            <span class="po-edit-acts">
-              <button class="po-btn" type="button" onclick="poEdit(false)">Cancel</button>
-              <button class="po-btn is-primary" type="button" onclick="poSave()">Save details</button>
-            </span>
+            <div class="po-facts">
+              <div class="po-facts-h">
+                <span class="po-lbl">Property details</span>
+                <button class="po-btn" id="poEditBtn" type="button" onclick="poEdit(true)">Edit</button>
+                <span class="po-edit-acts">
+                  <button class="po-btn" type="button" onclick="poEdit(false)">Cancel</button>
+                  <button class="po-btn is-primary" type="button" onclick="poSave()">Save details</button>
+                </span>
+              </div>
+              <dl class="po-grid" id="poGrid">
+                <div class="po-f"><dt>Beds</dt><dd id="v-beds">3</dd><input id="i-beds" type="number" value="3" aria-label="Beds"></div>
+                <div class="po-f"><dt>Full baths</dt><dd id="v-full">3</dd><input id="i-full" type="number" value="3" aria-label="Full baths"></div>
+                <div class="po-f"><dt>Half baths</dt><dd id="v-half">0</dd><input id="i-half" type="number" value="0" aria-label="Half baths"></div>
+                <div class="po-f"><dt>Square feet</dt><dd id="v-sqft">1,422<span class="u">sqft</span></dd><input id="i-sqft" type="number" value="1422" aria-label="Square feet"></div>
+                <div class="po-f"><dt>Acres</dt><dd id="v-acres">0.101<span class="u">acres</span></dd><input id="i-acres" type="number" step="0.001" value="0.101" aria-label="Acres"></div>
+                <div class="po-f"><dt>Garage</dt><dd id="v-garage">Yes</dd>
+                  <select id="i-garage" aria-label="Garage"><option>Yes</option><option>No</option></select></div>
+                <div class="po-f"><dt>Market</dt><dd id="v-market">Austin</dd>
+                  <select id="i-market" aria-label="Market"><option>Austin</option><option>Atlanta</option><option>Dallas</option><option>Phoenix</option></select></div>
+                <div class="po-f"><dt>Test ID</dt><dd id="v-testid">9876</dd><input id="i-testid" value="9876" aria-label="Test ID"></div>
+              </dl>
+            </div>
           </div>
-          <dl class="po-grid" id="poGrid">
-            <div class="po-f"><dt>Beds</dt><dd id="v-beds">3</dd><input id="i-beds" type="number" value="3" aria-label="Beds"></div>
-            <div class="po-f"><dt>Full baths</dt><dd id="v-full">3</dd><input id="i-full" type="number" value="3" aria-label="Full baths"></div>
-            <div class="po-f"><dt>Half baths</dt><dd id="v-half">0</dd><input id="i-half" type="number" value="0" aria-label="Half baths"></div>
-            <div class="po-f"><dt>Square feet</dt><dd id="v-sqft">1,422<span class="u">sqft</span></dd><input id="i-sqft" type="number" value="1422" aria-label="Square feet"></div>
-            <div class="po-f"><dt>Acres</dt><dd id="v-acres">0.101<span class="u">acres</span></dd><input id="i-acres" type="number" step="0.001" value="0.101" aria-label="Acres"></div>
-            <div class="po-f"><dt>Garage</dt><dd id="v-garage">Yes</dd>
-              <select id="i-garage" aria-label="Garage"><option>Yes</option><option>No</option></select></div>
-            <div class="po-f"><dt>Market</dt><dd id="v-market">Austin</dd>
-              <select id="i-market" aria-label="Market"><option>Austin</option><option>Atlanta</option><option>Dallas</option><option>Phoenix</option></select></div>
-            <div class="po-f"><dt>Test ID</dt><dd id="v-testid">9876</dd><input id="i-testid" value="9876" aria-label="Test ID"></div>
-          </dl>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- ── the reason for the page ── -->
-    <div class="po-proj-h">
-      <h2>Projects</h2>
-      <span class="po-count" id="poCount">6 active</span>
-      <div class="po-seg" id="poSeg">
-        <button type="button" class="on" onclick="poFilter('active')">Active 6</button>
-        <button type="button" onclick="poFilter('archived')">Archived 7</button>
+    <section class="po-mod">
+      <div class="po-proj-h">
+        <span class="po-lbl" id="poCount">Projects &middot; 6 active</span>
+        <div class="po-seg" id="poSeg">
+          <button type="button" class="on" onclick="poFilter('active')">Active 6</button>
+          <button type="button" onclick="poFilter('archived')">Archived 7</button>
+        </div>
+        <button class="po-btn is-primary" type="button">New project</button>
       </div>
-      <button class="po-btn is-primary" type="button">New project</button>
-    </div>
 
-    <table class="po-tbl">
-      <thead>
-        <tr>
-          <th style="width:34%">Project</th>
-          <th style="width:14%">Status</th>
-          <th class="num" style="width:13%">Budget</th>
-          <th style="width:13%">Created</th>
-          <th style="width:16%">
-            <button type="button" onclick="poSort()">Updated
-              <svg id="poSortIco" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2v8M3 7l3 3 3-3"/></svg>
-            </button>
-          </th>
-          <th style="width:10%"></th>
-        </tr>
-      </thead>
-      <tbody id="poRows"></tbody>
-    </table>
+      <table class="po-tbl">
+        <thead>
+          <tr>
+            <th style="width:36%">Project</th>
+            <th style="width:15%">Status</th>
+            <th class="num" style="width:13%">Budget</th>
+            <th style="width:13%">Created</th>
+            <th style="width:15%">
+              <button type="button" onclick="poSort()">Updated
+                <svg id="poSortIco" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2v8M3 7l3 3 3-3"/></svg>
+              </button>
+            </th>
+            <th style="width:8%"></th>
+          </tr>
+        </thead>
+        <tbody id="poRows"></tbody>
+      </table>
+    </section>
 
   </div>
   </div>
@@ -331,6 +353,7 @@ function poRender(){
   host.innerHTML = rows.length ? rows.map(function(p){
     return '<tr>'
       + '<td><span class="po-name">' + p.name + '</span>'
+        + '<span class="po-type">' + p.type + '</span>'
         + (p.desc ? '<span class="po-desc">' + p.desc + '</span>' : '') + '</td>'
       + '<td><span class="po-st po-st-' + p.status + '">' + PO_STATUS[p.status] + '</span></td>'
       + '<td class="num">' + poFmtMoney(p.budget) + '</td>'
@@ -341,7 +364,14 @@ function poRender(){
         + '</button></td>'
       + '</tr>';
   }).join('') : '<tr><td colspan="6" class="po-empty">No ' + poView + ' projects on this property.</td></tr>';
-  document.getElementById('poCount').textContent = rows.length + ' ' + poView;
+  document.getElementById('poCount').innerHTML = 'Projects &middot; ' + rows.length + ' ' + poView;
+  /* The figure in the header is the money currently committed on this property:
+     the active projects' budgets, summed. Derived rather than written down, so
+     it cannot disagree with the table under it. */
+  var live = PO_PROJECTS.filter(function(x){ return !x.archived && x.status !== 'completed'; })
+    .reduce(function(t, x){ return t + (x.budget || 0); }, 0);
+  document.getElementById('poTotal').textContent =
+    '$' + live.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
 function poFilter(v){
   poView = v;
