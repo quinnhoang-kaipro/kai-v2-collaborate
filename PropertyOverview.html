@@ -37,6 +37,12 @@ body{background:var(--app-bg)}
   text-transform:uppercase;color:rgba(255,255,255,.45)}
 .po-top-crumb a{color:inherit;text-decoration:none}
 .po-top-crumb a:hover{color:rgba(255,255,255,.8)}
+.po-top-addr{font-family:var(--display);font-size:15px;font-weight:700;color:var(--white);
+  letter-spacing:-.01em;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* The city and zip sit on the same line a step quieter: the street is what
+   tells two properties apart, and the rest confirms you are on the right one
+   rather than being read first. */
+.po-top-addr .q{color:rgba(255,255,255,.55);font-weight:400}
 .po-sp{flex:1}
 .po-org{font-size:12.5px;color:rgba(255,255,255,.72)}
 .po-bell{position:relative;display:inline-flex;color:rgba(255,255,255,.72)}
@@ -256,7 +262,11 @@ body.po-editing #poEditBtn{display:none}
 <body>
 
 <header class="po-top">
-  <span class="po-top-crumb"><a href="#">Properties</a> ⁄ Austin</span>
+  <span class="po-top-crumb"><a href="#">Properties</a></span>
+  <!-- Which property, in the bar, in the same display type index.html's toolbar
+       uses for it — the black bar named the section and nothing else, and this
+       is the one line that stays put while the page scrolls. -->
+  <span class="po-top-addr">2525 McDonald Way<span class="q">, Austin, TX 78754</span></span>
   <span class="po-sp"></span>
   <span class="po-org">Kaiizen Testing</span>
   <span class="po-bell">
