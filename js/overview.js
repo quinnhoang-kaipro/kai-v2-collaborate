@@ -370,6 +370,12 @@ function renderOverview(){
   body.innerHTML = `
   <div class="ov-root">
     <section class="ov-mod ov-mod-head">
+      <!-- The property, photographed. The prototype has no property
+           photography, so the slot holds the tan rather than an illustration
+           pretending to be one — the same slot the property overview page
+           carries, in the same place. -->
+      <figure class="ov-photo"><figcaption>Street view</figcaption></figure>
+      <div class="ov-head-r">
       <header class="ov-head">
         <div class="ov-head-l">
           <div class="ov-eyebrow">${esc(S.projectId)}<span class="sep">&middot;</span>${esc(S.type)}</div>
@@ -379,6 +385,7 @@ function renderOverview(){
         ${_ovStandingHtml()}
       </header>
       ${stats}
+      </div>
     </section>
     ${jobSec}${accessSec}${trailSec}
   </div>`;

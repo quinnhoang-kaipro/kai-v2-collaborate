@@ -4338,7 +4338,21 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-root{padding:18px 22px 40px;background:var(--app-bg);min-height:100%}
 /* The module. Same numbers as .sec-taskcard in the Editor. */
 .ov-mod{background:var(--white);border:1px solid var(--stroke);padding:16px 18px;margin-bottom:14px}
-.ov-mod-head{padding-bottom:0}
+/* The head module is two columns: the photo, and everything said about the
+   property. The photo spans the title and the figures rather than sitting
+   beside the title alone, which would have left a column of white under it. */
+.ov-mod-head{padding-bottom:0;display:grid;grid-template-columns:196px minmax(0,1fr);
+  gap:0 18px;align-items:start}
+.ov-head-r{min-width:0}
+.ov-photo{position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--sunken);
+  border:1px solid var(--stroke);margin:0 0 16px}
+.ov-photo figcaption{position:absolute;left:0;bottom:0;padding:5px 9px;
+  background:rgba(26,26,26,.72);color:var(--white);font-family:var(--mono);font-size:8px;
+  font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+@media (max-width:720px){
+  .ov-mod-head{grid-template-columns:minmax(0,1fr)}
+  .ov-photo{max-width:260px}
+}
 
 /* ── title ── */
 .ov-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px}
@@ -4368,7 +4382,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    Five numbers at figure size between two hairlines. The two counts are
    buttons into the drawers, so they carry the only underline on the page. */
 .ov-stats{display:flex;flex-wrap:wrap;gap:0 40px;padding:14px 0 16px;
-  border-top:1px solid var(--stroke);margin:0 -18px;padding-left:18px;padding-right:18px}
+  border-top:1px solid var(--stroke)}
 .ov-stat{display:flex;flex-direction:column;gap:3px;align-items:flex-start;
   padding:0;margin:0;border:0;background:none;text-align:left;font:inherit;color:inherit}
 .ov-stat-v{font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:-.015em;
