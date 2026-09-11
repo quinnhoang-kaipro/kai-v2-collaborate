@@ -155,7 +155,12 @@ function _ovTrail(){
       evs.push({who:people.manager, role:'Project manager', act:'approved it',
                 when:m.date, kind:'approved', amount:amount, was:was});
     }
-    out.push({name:m.label || id, state: id === pending ? 'In review' : 'Approved', evs:evs});
+    /* Newest first, like the documents themselves. The chain is built in the
+       order it happened, so reversing it is exact — including the two events
+       that share a date, where sorting on the date alone would have put them
+       in whichever order the comparison happened to settle on. */
+    out.push({name:m.label || id, state: id === pending ? 'In review' : 'Approved',
+              evs:evs.reverse()});
   });
 
   /* The closeout, when the project has one. Not a scope, so not in VER. */
@@ -172,7 +177,7 @@ function _ovTrail(){
            when:C.approved, kind:'approved'}
         : {who:people.manager, role:'Project manager', act:'has it for approval',
            when:C.handed, kind:'waiting'},
-    ]});
+    ].reverse()});
   }
   return out.reverse();   // newest document first, like the activity feed
 }
