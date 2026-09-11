@@ -410,12 +410,19 @@ function renderOverview(){
 
   /* Getting in and what to know once you are there are the same errand, so
      the codes and the dispatch note share a section. */
+  /* The codes and the note on one row. The note under them made the module
+     twice as tall for a sentence, and the width was there. */
   const accessSec = _ovSec('Getting in', `
-    <div class="ov-codes">${S.access.map(a => `
+    <div class="ov-codes">
+      ${S.access.map(a => `
       <div class="ov-code"><span class="ov-code-k">${esc(a.k)}</span>
-        <span class="ov-code-v">${esc(a.v)}</span></div>`).join('')}</div>
-    ${S.dispatch ? `<p class="ov-dispatch">${esc(S.dispatch)}</p>`
-                 : `<p class="ov-empty">Nothing for the crew yet.</p>`}`, 'ov-access');
+        <span class="ov-code-v">${esc(a.v)}</span></div>`).join('')}
+      <div class="ov-code ov-code-note">
+        <span class="ov-code-k">On arrival</span>
+        ${S.dispatch ? `<p class="ov-dispatch">${esc(S.dispatch)}</p>`
+                     : `<p class="ov-empty">Nothing for the crew yet.</p>`}
+      </div>
+    </div>`, 'ov-access');
 
 
   const trailSec = _ovSec('Activity', _ovTrailHtml(), 'ov-trail-sec');
