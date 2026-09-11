@@ -196,6 +196,40 @@ function _ovTrail(){
    the whole document, and "Change Order 2" on its own does not say whether it
    moved one task or twenty. Counted off SCOPE, the same records the scrubber
    walks, so it cannot disagree with what the Artifact 2 tab shows. */
+/* What actually happened to one task in one version, in a line. The change
+   records hold rows of {field, from, to} — or an `add` / `remove` sentence for
+   a line that appeared or went — and the Artifact 2 tab renders all of them in
+   full. Here it is a summary, so each row comes down to its shortest true form
+   and the amount rows are dropped: the money is already in its own column two
+   cells to the right, and repeating it here would be the same figure twice on
+   one line. */
+function _ovTaskChangeSummary(task, verId){
+  /* A line added or removed is written as "Countertops \u2014 laminate is
+     delaminating at the sink": the half before the dash is the task's own name,
+     which is already the first thing on this row, so the half after it is the
+     part worth saying. */
+  const why = t => {
+    const bits = String(t).split(' \u2014 ');
+    return bits.length > 1 ? bits.slice(1).join(' \u2014 ') : bits[0];
+  };
+  const parts = [];
+  (task.changes || []).filter(ch => ch.ver === verId).forEach(ch => {
+    (ch.rows || []).forEach(r => {
+      if(r.field === 'Line added')     { parts.push('Added \u00b7 ' + why(r.add)); return; }
+      if(r.field === 'Line removed')   { parts.push('Removed \u00b7 ' + why(r.remove)); return; }
+      if(r.field === 'Modifier added') { parts.push('Modifier \u00b7 ' + r.add); return; }
+      if(r.add)          { parts.push(r.field + ' \u00b7 ' + why(r.add)); return; }
+      if(r.from && r.to) { parts.push(`${r.field} ${r.from} \u2192 ${r.to}`); return; }
+      if(r.to)           { parts.push(`${r.field} \u2192 ${r.to}`); }
+    });
+  });
+  if(!parts.length) return '';
+  /* Two is as much as fits beside the name without the line becoming the
+     paragraph this summary exists instead of. */
+  const shown = parts.slice(0, 2).join('  \u00b7  ');
+  return parts.length > 2 ? `${shown}  \u00b7  +${parts.length - 2} more` : shown;
+}
+
 function _ovChangeCounts(verId){
   if(typeof SCOPE === 'undefined') return null;
   /* The groups it touched, each with the tasks inside it that moved — the
@@ -205,7 +239,8 @@ function _ovChangeCounts(verId){
   SCOPE.forEach(g => {
     const hit = g.tasks.filter(t => (t.changes || []).some(ch => ch.ver === verId));
     if(hit.length){
-      groups.push({room:g.room, tasks:hit.map(t => ({code:t.code, name:t.name}))});
+      groups.push({room:g.room, tasks:hit.map(t => ({
+        code:t.code, name:t.name, what:_ovTaskChangeSummary(t, verId)}))});
       tasks += hit.length;
     }
   });
@@ -292,7 +327,9 @@ function _ovTrailDocHtml(d){
             <div class="ov-ch-ts">${g.tasks.map(t => `
               <button type="button" class="ov-ch-task"
                 onclick="ovGoTask('${esc(t.code)}', '${esc(g.room).replace(/'/g, "\\'")}', '${esc(t.name).replace(/'/g, "\\'")}')">
-                <span class="ov-ch-code">${esc(t.code)}</span>${esc(t.name)}</button>`).join('')}</div>
+                <span class="ov-ch-code">${esc(t.code)}</span>
+                <span class="ov-ch-name">${esc(t.name)}</span>
+                ${t.what ? `<span class="ov-ch-what">${esc(t.what)}</span>` : ''}</button>`).join('')}</div>
           </div>`).join('')}
         </div>` : ''}`).join('')}
       </div>

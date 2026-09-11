@@ -4497,11 +4497,18 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
   font-size:12.5px;font-weight:600;color:var(--ink);text-align:left;
   border-bottom:1.5px solid transparent;transition:border-color .12s}
 .ov-ch-grp:hover{border-bottom-color:var(--ink)}
-.ov-ch-ts{display:flex;flex-direction:column;align-items:flex-start;gap:3px;margin-top:5px}
-.ov-ch-task{display:inline-flex;align-items:baseline;gap:8px;background:none;border:0;
-  padding:0;cursor:pointer;font:inherit;font-size:12.5px;color:var(--t2);text-align:left;
-  border-bottom:1.5px solid transparent;transition:border-color .12s,color .12s}
-.ov-ch-task:hover{color:var(--ink);border-bottom-color:var(--stroke)}
+.ov-ch-ts{display:flex;flex-direction:column;align-items:stretch;gap:1px;margin-top:5px}
+/* Code, name, and what changed — one line per task, the summary quiet enough
+   that the names still scan as a list. */
+.ov-ch-task{display:grid;grid-template-columns:66px auto minmax(0,1fr);gap:0 10px;
+  align-items:baseline;width:100%;background:none;border:0;padding:3px 0;cursor:pointer;
+  font:inherit;font-size:12.5px;color:var(--t2);text-align:left;transition:color .12s}
+.ov-ch-task:hover{color:var(--ink)}
+.ov-ch-task:hover .ov-ch-name{border-bottom-color:var(--ink)}
+.ov-ch-name{font-weight:600;color:var(--ink);white-space:nowrap;
+  border-bottom:1.5px solid transparent;transition:border-color .12s}
+.ov-ch-what{color:var(--t3);font-size:12px;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
 .ov-ch-grp:focus-visible,.ov-ch-task:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .ov-ch-code{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
   color:var(--t3);flex-shrink:0}
