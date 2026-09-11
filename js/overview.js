@@ -132,28 +132,38 @@ function _ovTrail(){
     const prev = i > 0 ? VER[VER_ORDER[i - 1]] : null;
     const signs = revs.filter(r => r.ver === id)
       .slice().sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
-    /* What the document is worth, and what it was worth before — the two
-       figures the activity feed carried. */
+    /* What the document is worth, and what it moved by. Said once, on the
+       line that settles it — the submission carried the same pair a row above,
+       which read as two different figures until you compared them. */
     const amount = m.budget != null ? _fmtDollars(m.budget) : null;
-    const was = prev && prev.budget != null ? _fmtDollars(prev.budget) : null;
+    const delta = prev ? _ovDelta(m.budget, prev.budget) : '';
     const evs = [{...author, act:'started it',
                   when: m.opened || (prev && prev.date) || m.date, kind:'start'}];
     /* Each signature is the point the document had reached that person, so
        the hand-off is from whoever held it before them. */
+    /* What the editing came to, as its own event: it is the answer to "what
+       does this change order actually change", and it belongs in the run of
+       events rather than in a note about them. Only where there is a previous
+       version to have changed from — the first scope is not a revision. */
+    const counts = prev ? _ovChangeCounts(id) : null;
+    if(counts){
+      evs.push({who:'', role:'', kind:'changed',
+                act:`${counts.groups} group${counts.groups === 1 ? '' : 's'} \u00b7 `
+                  + `${counts.tasks} task${counts.tasks === 1 ? '' : 's'} changed`,
+                when: (signs[0] && signs[0].date) || m.date});
+    }
     let from = author;
-    signs.forEach((sig, n) => {
+    signs.forEach(sig => {
       evs.push({who:from.who, role:from.role, act:'handed off to ' + sig.who,
-                when:sig.date, kind:'handoff',
-                // The first hand-off is the submission: the amount it went out at.
-                amount: n === 0 ? amount : null, was: n === 0 ? was : null});
+                when:sig.date, kind:'handoff'});
       from = sig;
     });
     if(id === pending){
       evs.push({who:from.who, role:from.role, act:'has it for approval',
-                when:from.date, kind:'waiting', amount:amount, was:was});
+                when:from.date, kind:'waiting', amount:amount, delta:delta});
     } else {
       evs.push({who:people.manager, role:'Project manager', act:'approved it',
-                when:m.date, kind:'approved', amount:amount, was:was});
+                when:m.date, kind:'approved', amount:amount, delta:delta});
     }
     /* Newest first, like the documents themselves. The chain is built in the
        order it happened, so reversing it is exact — including the two events
@@ -182,25 +192,54 @@ function _ovTrail(){
   return out.reverse();   // newest document first, like the activity feed
 }
 
+/* How much of the scope a version actually touched. A change order is rarely
+   the whole document, and "Change Order 2" on its own does not say whether it
+   moved one task or twenty. Counted off SCOPE, the same records the scrubber
+   walks, so it cannot disagree with what the Artifact 2 tab shows. */
+function _ovChangeCounts(verId){
+  if(typeof SCOPE === 'undefined') return null;
+  const rooms = new Set();
+  let tasks = 0;
+  SCOPE.forEach(g => g.tasks.forEach(t => {
+    if((t.changes || []).some(ch => ch.ver === verId)){ rooms.add(g.room); tasks++; }
+  }));
+  if(!tasks) return null;
+  return {groups:rooms.size, tasks:tasks};
+}
+/* "+$4,100" / "-$820". The previous total is one subtraction away and the
+   direction is the thing people read a change order for. */
+function _ovDelta(now, before){
+  if(now == null || before == null || now === before) return '';
+  const d = now - before;
+  return (d > 0 ? '+' : '\u2212') + _fmtDollars(Math.abs(d));
+}
+
 const _OV_TICK = `<svg class="ov-tr-ck" viewBox="0 0 12 12" fill="none" stroke="currentColor"
   stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg>`;
 
+/* Four columns, shared by every row in the document so they line up: what
+   happened, what it is worth, what that moved by, and when. The roles are
+   gone from the event — the names are the roster's, and a title beside each
+   one was three words of the same answer on every line. */
 function _ovTrailDocHtml(d){
   return `<div class="ov-tr-doc">
       <div class="ov-tr-h">
         <span class="ov-tr-n">${esc(d.name)}</span>
         <span class="ov-tr-st${d.state === 'Approved' ? ' is-done' : ''}">${esc(d.state)}</span>
       </div>
+      <div class="ov-tr-rows">
       ${d.evs.map(e => `
         <div class="ov-tr-r ov-tr-${e.kind}">
-          <span class="ov-tr-mk">${e.kind === 'approved' ? _OV_TICK : ''}</span>
-          <span class="ov-tr-who">${esc(e.who)}</span>
-          <span class="ov-tr-role">${esc(e.role)}</span>
-          <span class="ov-tr-act">${esc(e.act)}</span>
-          <span class="ov-tr-sum">${e.amount ? `${esc(e.amount)}${
-            e.was && e.was !== e.amount ? ` <span class="ov-tr-was">from ${esc(e.was)}</span>` : ''}` : ''}</span>
+          <span class="ov-tr-ev">
+            <span class="ov-tr-mk">${e.kind === 'approved' ? _OV_TICK : ''}</span>
+            ${e.who ? `<span class="ov-tr-who">${esc(e.who)}</span>` : ''}
+            <span class="ov-tr-act">${esc(e.act)}</span>
+          </span>
+          <span class="ov-tr-sum">${e.amount ? esc(e.amount) : ''}</span>
+          <span class="ov-tr-delta${(e.delta || '').charAt(0) === '+' ? ' is-up' : ' is-down'}">${esc(e.delta || '')}</span>
           <span class="ov-tr-d">${esc(e.when || '')}</span>
         </div>`).join('')}
+      </div>
     </div>`;
 }
 
