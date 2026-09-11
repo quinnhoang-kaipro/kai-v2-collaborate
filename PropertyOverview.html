@@ -171,8 +171,6 @@ body.po-editing #poEditBtn{display:none}
 .po-st-completed::before{background:currentColor}
 .po-st-active{color:var(--ink);border-color:var(--ink)}
 .po-st-active::before{background:var(--accent);border-color:var(--ink)}
-.po-st-draft{color:var(--t3)}
-.po-st-hold{color:var(--error);border-color:var(--error)}
 .po-kebab{opacity:0;background:none;border:0;padding:4px;cursor:pointer;color:var(--t3);
   transition:opacity .1s,color .12s}
 .po-tbl tbody tr:hover .po-kebab,.po-kebab:focus-visible{opacity:1}
@@ -511,8 +509,8 @@ var PO_PROJECTS = [
   {name:'Dashboard testing Sep 8', desc:'', type:'Acquisition', budget:10000, status:'completed', created:'2026-09-08', updated:'2026-09-11', archived:false},
   {name:'Visibility test',         desc:'', type:'Acquisition', budget:null,  status:'active',    created:'2026-09-02', updated:'2026-09-10', archived:false},
   {name:'Unit 2 full turn',        desc:'Tenant out Sep 14 · 4 rooms', type:'Turn', budget:68242, status:'active', created:'2026-08-27', updated:'2026-09-09', archived:false},
-  {name:'Roof + gutter repair',    desc:'Storm damage claim', type:'Maintenance', budget:9800, status:'hold', created:'2026-08-19', updated:'2026-09-04', archived:false},
-  {name:'Kitchen scope v2',        desc:'', type:'Renovation', budget:26434, status:'draft',  created:'2026-08-11', updated:'2026-08-30', archived:false},
+  {name:'Roof + gutter repair',    desc:'Storm damage claim', type:'Maintenance', budget:9800, status:'active', created:'2026-08-19', updated:'2026-09-04', archived:false},
+  {name:'Kitchen scope v2',        desc:'', type:'Renovation', budget:26434, status:'active', created:'2026-08-11', updated:'2026-08-30', archived:false},
   {name:'Exterior paint',          desc:'', type:'Maintenance', budget:5400, status:'completed', created:'2026-07-30', updated:'2026-08-22', archived:false},
   {name:'2025 make-ready',         desc:'', type:'Turn', budget:41200, status:'completed', created:'2025-11-02', updated:'2026-01-14', archived:true},
   {name:'HVAC replacement',        desc:'', type:'Maintenance', budget:7350, status:'completed', created:'2025-09-18', updated:'2025-10-02', archived:true},
@@ -535,7 +533,11 @@ function poFmtMoney(n){
   if(n === null || n === undefined) return '<span class="dim">$&ndash;&ndash;</span>';
   return '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
-var PO_STATUS = {completed:'Completed', active:'Active', draft:'Draft', hold:'On hold'};
+/* Two states, and only two. A project on this property is either being worked
+   on or finished — draft and on-hold were states of the scope inside it, not of
+   the project, and putting them in this column asked the reader to hold two
+   different meanings of "status" at once. */
+var PO_STATUS = {active:'Active', completed:'Completed'};
 
 function poRender(){
   var rows = PO_PROJECTS.filter(function(p){ return p.archived === (poView === 'archived'); });
@@ -671,7 +673,7 @@ function poCreate(){
     desc: document.getElementById('np-notes').value.trim().slice(0, 60),
     type: type,
     budget: budget === '' ? null : Number(budget),
-    status: 'draft',
+    status: 'active',
     created: today,
     updated: today,
     archived: false
