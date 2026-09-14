@@ -143,6 +143,25 @@ window.KAI_PANEL_SRC = `<!DOCTYPE html>
   </div>
 </div>
 
+<!-- SCOPE SEARCH PALETTE — floats over the work surface, Jira-style.
+     Lives outside .sidebar so the sidebar's overflow can't clip it, and is
+     positioned on open by _sbPositionPalette (the sidebar is user-resizable,
+     so its left edge isn't a constant CSS can hold). -->
+<div class="sbq-scrim" id="sbqScrim" hidden onclick="closeSbSearch()"></div>
+<div class="sbq" id="sbq" hidden role="dialog" aria-label="Search the scope">
+  <div class="sbq-box">
+    <svg class="sbq-ico-search" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.75" stroke="currentColor" stroke-width="1.4"/><path d="M10.6 10.6 14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    <input class="sbq-input" id="sbqInput" type="text" autocomplete="off" spellcheck="false"
+           placeholder="Search the scope by group or task name" aria-label="Search the scope by group or task name"
+           oninput="setSbQuery(this.value)" onkeydown="onSbSearchKey(event)">
+    <button class="sbq-clear" id="sbqClear" onclick="sbqClearOrClose()" aria-label="Close search" title="Close search">
+      <!-- icons/Remove-Delete.svg, inlined so it takes currentColor. -->
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M0.5 1.5L22.5 23.5"/><path d="M22.5 1.5L0.5 23.5"/></svg>
+    </button>
+  </div>
+  <div class="sbq-results" id="sbqResults"></div>
+</div>
+
 <div id="drawer-scrim" onclick="closeDrawer()"></div>
 <div id="drawer">
   <div class="dw-head">

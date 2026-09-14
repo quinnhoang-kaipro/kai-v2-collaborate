@@ -121,21 +121,21 @@ html,body{width:100%;height:100%;font-family:var(--body);background:var(--app-bg
    Sits directly under the sidebar header. Condensed: no labels, segmented
    toggle in small mono, filter as icon-only with a red badge when active. */
 .sb-tools{display:flex;align-items:center;gap:8px;padding:6px 16px;border-bottom:1px solid var(--stroke);background:var(--white);flex-shrink:0}
-.sb-tools-seg{display:inline-flex;height:24px;border:1px solid var(--stroke);overflow:hidden}
-.sb-tools-seg button{font-family:var(--body);font-size:11px;font-weight:600;padding:0 8px;background:transparent;color:var(--t2);border:0;cursor:pointer;transition:background .12s,color .12s;letter-spacing:.02em;line-height:1;white-space:nowrap}
+.sb-tools-seg{display:inline-flex;height:30px;border:1px solid var(--stroke);overflow:hidden}
+.sb-tools-seg button{font-family:var(--body);font-size:12px;font-weight:600;padding:0 11px;background:transparent;color:var(--t2);border:0;cursor:pointer;transition:background .12s,color .12s;letter-spacing:.02em;line-height:1;white-space:nowrap}
 .sb-tools-seg button:hover{color:var(--ink)}
 .sb-tools-seg button.active{background:var(--ink);color:var(--white)}
 .sb-tools-seg button+button{border-left:1px solid var(--stroke)}
 .sb-tools-seg button.active+button,.sb-tools-seg button+button.active{border-left-color:transparent}
 /* Settings icon — toggles per-group tools (duplicate icon) on/off. */
-.sb-tools-settings{width:26px;height:24px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--stroke);background:transparent;color:var(--t2);cursor:pointer;transition:color .12s,border-color .12s,background .12s}
-.sb-tools-settings svg{width:14px;height:14px}
+.sb-tools-settings{width:30px;height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--stroke);background:transparent;color:var(--t2);cursor:pointer;transition:color .12s,border-color .12s,background .12s}
+.sb-tools-settings svg{width:15px;height:15px}
 .sb-tools-settings:hover{color:var(--ink);border-color:var(--ink)}
 .sb-tools-settings.active{color:var(--ink);border-color:var(--ink);background:var(--sunken)}
 /* Filter icon-only button. Turns red when filters are active. */
 .sb-tools-af{margin-right:0;margin-left:auto;position:relative}
-.sb-tools-af .af-btn{width:auto;height:26px;padding:0 10px;gap:6px;border:1px solid var(--stroke);background:transparent;color:var(--t2);position:relative;display:inline-flex;align-items:center;justify-content:center;font-family:var(--body);font-size:11px;font-weight:600;letter-spacing:.02em;text-transform:none;line-height:1}
-.sb-tools-af .af-btn svg{width:13px;height:13px}
+.sb-tools-af .af-btn{width:auto;height:30px;padding:0 11px;gap:6px;border:1px solid var(--stroke);background:transparent;color:var(--t2);position:relative;display:inline-flex;align-items:center;justify-content:center;font-family:var(--body);font-size:12px;font-weight:600;letter-spacing:.02em;text-transform:none;line-height:1}
+.sb-tools-af .af-btn svg{width:14px;height:14px}
 .sb-tools-af .af-btn-lbl{white-space:nowrap}
 .sb-tools-af .af-btn:hover{border-color:var(--ink);color:var(--ink)}
 .sb-tools-af.open .af-btn{border-color:var(--ink);color:var(--ink)}
@@ -301,7 +301,7 @@ body.scope-edit-mode .sb-edit-toggle:hover{background:#000}
    so all "which mode / what's next" copy lives right by the sidebar it scopes.
    The version identifier is redundant here — the version chip in the header
    already shows v3 · CURRENT — so we omit it and just show the mode. */
-.sb-state-bar{padding:8px 16px;background:var(--sunken,#F4F0E6);border-bottom:1px solid var(--stroke);display:flex;align-items:center;gap:10px;font-family:var(--body);font-size:12.5px;line-height:1.4;color:var(--t2);flex-shrink:0;flex-wrap:wrap}
+.sb-state-bar{padding:10px 16px;background:var(--sunken,#F4F0E6);border-bottom:1px solid var(--stroke);display:flex;align-items:center;gap:8px;row-gap:10px;font-family:var(--body);font-size:12.5px;line-height:1.4;color:var(--t2);flex-shrink:0;flex-wrap:wrap}
 /* Scope-organizing controls (Room/Contractor + Filter) cluster in the
    middle; the spacer between them and the action buttons does the pushing. */
 .sb-state-bar .sb-tools-af{margin-left:0}
@@ -319,6 +319,60 @@ body.scope-edit-mode .sb-edit-toggle:hover{background:#000}
    Submit for review in change-order editing mode. */
 .sb-state-bar-btn.sb-state-bar-btn-ghost{background:var(--white);border-color:var(--stroke);color:var(--ink)}
 .sb-state-bar-btn.sb-state-bar-btn-ghost:hover{background:var(--sunken);color:var(--ink);border-color:var(--ink)}
+
+/* ── SCOPE SEARCH ────────────────────────────────────────────────────
+   Trigger in the tools bar. Matches the Filters button next to it — the two
+   do the same kind of job and should read as one pair of controls. */
+.sb-tools-search{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 11px;border:1px solid var(--stroke);background:transparent;color:var(--t2);font-family:var(--body);font-size:12px;font-weight:600;letter-spacing:.02em;line-height:1;cursor:pointer;white-space:nowrap;transition:border-color .12s,color .12s,background .12s}
+.sb-tools-search svg{width:14px;height:14px;flex-shrink:0}
+.sb-tools-search:hover{border-color:var(--ink);color:var(--ink)}
+.sb-tools-search.active{border-color:var(--ink);color:var(--ink);background:var(--white)}
+
+/* The palette itself. Floats over the work surface; the scrim behind it is
+   what makes "click anywhere else" a dismissal rather than a stray click
+   landing in the scope underneath. */
+.sbq-scrim{position:fixed;inset:0;z-index:640;background:transparent}
+.sbq-scrim[hidden]{display:none}
+.sbq{position:fixed;z-index:641;display:flex;flex-direction:column;max-height:min(60vh,520px);
+  background:var(--white);border:1px solid var(--ink);box-shadow:0 18px 44px rgba(26,26,26,.22)}
+.sbq[hidden]{display:none}
+.sbq-box{display:flex;align-items:center;gap:10px;flex-shrink:0;height:46px;padding:0 12px 0 14px;border-bottom:1px solid var(--stroke)}
+.sbq-ico-search{width:16px;height:16px;flex-shrink:0;color:var(--t2)}
+.sbq-input{flex:1;min-width:0;border:0;outline:0;background:transparent;font-family:var(--body);font-size:15px;color:var(--ink);padding:0}
+.sbq-input::placeholder{color:var(--t2);opacity:.85}
+/* Always present, never hidden — it is the palette's visible way out, and
+   the empty state is exactly where a user needs to see one. */
+.sbq-clear{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;border:0;background:transparent;color:var(--t2);cursor:pointer;padding:0}
+.sbq-clear svg{width:13px;height:13px;stroke:currentColor;stroke-width:2;stroke-miterlimit:10}
+.sbq-clear:hover{color:var(--ink)}
+
+.sbq-results{overflow-y:auto;padding:6px 0}
+/* With nothing typed the results area has no content, so the palette is just
+   the input row — the placeholder already says what to type, and a second
+   line repeating it was the only thing holding the box open. */
+.sbq-results:empty{display:none}
+.sbq-hint{padding:18px 16px;font-family:var(--body);font-size:12.5px;color:var(--t2)}
+/* Rows are one hit target each: the whole row picks, so there is nothing to
+   aim for inside it. */
+.sbq-row{display:flex;align-items:center;gap:12px;width:100%;padding:9px 16px;border:0;background:transparent;cursor:pointer;text-align:left;font-family:var(--body)}
+/* One highlight, driven by the keyboard cursor — the mouse moves that cursor
+   rather than painting a second, competing :hover state. */
+.sbq-row.on{background:var(--sunken)}
+/* Tasks carried in by a matched group. Indented to the group name's column
+   so the nesting is legible, and without the group caption — the header they
+   sit under already says it. */
+.sbq-row.is-child{padding-left:46px}
+.sbq-row.is-child .sbq-name{font-size:13px;color:var(--t2)}
+.sbq-row.is-child.on .sbq-name{color:var(--ink)}
+.sbq-ico{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex-shrink:0;color:var(--t2)}
+.sbq-ico svg{width:15px;height:15px}
+.sbq-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.sbq-name{font-size:13.5px;color:var(--ink);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sbq-name b{font-weight:700;color:var(--ink)}
+.sbq-sub{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sbq-amt{flex-shrink:0;font-family:var(--mono);font-size:12px;color:var(--t2);white-space:nowrap}
+.sbq-more{padding:9px 16px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);border-top:1px solid var(--stroke);margin-top:6px}
+
 /* Now that the state bar carries both Cancel + Submit for review, the old
    yellow editing banner and the bottom Cancel/Submit footer are redundant.
    Hide them so we don't stack three near-identical bars. */
@@ -979,14 +1033,14 @@ body.sb-collapsed .handle{display:none}
 /* Hide scope — far right of the sidebar's utility bar. Same end state as
    dragging the handle off the left edge. */
 .sb-hide-scope{
-  display:inline-flex;align-items:center;gap:5px;flex-shrink:0;align-self:center;
-  height:24px;padding:0 8px 0 6px;
+  display:inline-flex;align-items:center;gap:6px;flex-shrink:0;align-self:center;
+  height:30px;padding:0 11px 0 8px;
   background:var(--white);border:1px solid var(--stroke);color:var(--t2);cursor:pointer;
-  font-family:var(--body);font-size:11px;font-weight:600;letter-spacing:.02em;line-height:1;white-space:nowrap;
+  font-family:var(--body);font-size:12px;font-weight:600;letter-spacing:.02em;line-height:1;white-space:nowrap;
   transition:background .12s,color .12s,border-color .12s;
 }
 .sb-hide-scope:hover{background:var(--sunken);color:var(--ink);border-color:var(--ink)}
-.sb-hide-scope svg{width:11px;height:11px;flex-shrink:0}
+.sb-hide-scope svg{width:12px;height:12px;flex-shrink:0}
 
 /* Show scope — leads the work-surface tab bar, but only while the sidebar is
    shut. Reads as a peer of the tabs (same mono caps) with a border, so it

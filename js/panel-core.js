@@ -11,6 +11,12 @@ let selGroupKey = null;
 // clicked the white Scope bar and neither a task nor a group is selected.
 let scopeView = false;
 let collapsedGrps = null;
+// Scope search. Unlike activeFilters this never touches what the sidebar
+// shows — the query lives only in the floating palette the Search button
+// opens, and picking a result navigates instead of narrowing. See the
+// SCOPE SEARCH block below for why.
+let sbQuery = '';
+let sbSearchOpen = false;
 let groupLabels = {};           // { groupKey: user-typed label string }, e.g. "Kitchen (including Pantry)"
 let editingGroupLabelFor = null; // group key currently showing the inline label input
 // Group-row tools (duplicate icon) are hidden by default and revealed via
@@ -204,6 +210,232 @@ function _groupTasksRaw(tasks){
   if(un.length) groups.push({key:'__un',name:'Unassigned',pinned:true,items:un});
   gcs.forEach(g=>groups.push({key:g,name:g,pinned:false,items:tasks.filter(t=>t.gc===g)}));
   return groups;
+}
+
+/* ════════════ SCOPE SEARCH (floating palette) ════════════ */
+/* Modelled on Jira's search: the Search button opens a panel floating over
+   the work surface, results live IN that panel, and the panel goes away when
+   you pick something or click off it. The sidebar is never filtered.
+
+   The earlier version filtered the sidebar from an inline box, which left no
+   honest moment to close: a still-narrowed scope list and an empty-looking
+   box are the same picture, so the box had to stay open indefinitely. A
+   palette has a natural end — you either take a result or you dismiss it. */
+
+/* Every whitespace-separated word has to appear somewhere in the name, so
+   "kitchen light" finds "Kitchen and Dining Lighting" without the user
+   having to type the phrase exactly. */
+function _sbQueryTerms(){
+  const q = (sbQuery || '').trim().toLowerCase();
+  return q ? q.split(/\s+/) : [];
+}
+function _sbNameHit(name, terms){
+  const s = (name || '').toLowerCase();
+  return terms.every(t => s.includes(t));
+}
+/* Bold the matched runs, the way Jira does. Walks the string once per term
+   marking covered spans, so overlapping terms ("tile til") can't produce
+   nested <b> tags — then escapes, because the marks are computed on indices
+   of the raw string and have to survive escaping intact. */
+function _sbMark(name, terms){
+  const src = String(name || '');
+  if(!terms.length) return esc(src);
+  const lower = src.toLowerCase();
+  const hit = new Array(src.length).fill(false);
+  terms.forEach(t => {
+    let i = lower.indexOf(t);
+    while(i !== -1){
+      for(let k = i; k < i + t.length; k++) hit[k] = true;
+      i = lower.indexOf(t, i + 1);
+    }
+  });
+  let out = '', run = '', on = false;
+  const flush = () => { if(run) out += on ? `<b>${esc(run)}</b>` : esc(run); run = ''; };
+  for(let i = 0; i < src.length; i++){
+    if(hit[i] !== on){ flush(); on = hit[i]; }
+    run += src[i];
+  }
+  flush();
+  return out;
+}
+
+/* Groups before tasks — a group is the bigger target and the one a short
+   query usually means. A matched group brings its tasks with it as child
+   rows: "kitchen" means the kitchen, and its contents are the useful thing
+   to show, so the user can jump straight to a task without a second search.
+   Capped: past a couple of dozen rows the list stops being a shortcut. */
+const SBQ_LIMIT = 30;
+function sbSearchResults(){
+  const terms = _sbQueryTerms();
+  if(!terms.length) return [];
+  const groups = (typeof groupTasks === 'function') ? groupTasks(visibleTasks()) : [];
+  const out = [];
+  const claimed = new Set();   // tasks already listed under their matched group
+  groups.forEach(g => {
+    if(!_sbNameHit(g.name, terms)) return;
+    out.push({kind:'group', key:g.key, name:g.name, n:g.items.length,
+              cost:g.items.reduce((a,t)=>a+dollars(t.cost),0)});
+    g.items.forEach(t => {
+      out.push({kind:'task', id:t.id, name:t.name, group:g.name, task:t, child:true});
+      claimed.add(t.id);
+    });
+  });
+  // Tasks matching on their own name. A task already shown under its group
+  // is skipped — listing it twice would just pad the result.
+  groups.forEach(g => {
+    g.items.forEach(t => {
+      if(claimed.has(t.id)) return;
+      if(_sbNameHit(t.name, terms)) out.push({kind:'task', id:t.id, name:t.name, group:g.name, task:t});
+    });
+  });
+  return out;
+}
+
+let _sbqRows = [];      // current results, index-aligned with the rendered rows
+let _sbqActive = -1;    // keyboard cursor
+
+function toggleSbSearch(open){
+  const next = (open === undefined) ? !sbSearchOpen : !!open;
+  if(next === sbSearchOpen){ if(next) _sbFocusSearch(); return; }
+  sbSearchOpen = next;
+  const pal = document.getElementById('sbq');
+  const scrim = document.getElementById('sbqScrim');
+  if(pal) pal.hidden = !sbSearchOpen;
+  if(scrim) scrim.hidden = !sbSearchOpen;
+  if(sbSearchOpen){
+    _sbPositionPalette();
+    renderSbResults();
+    _sbFocusSearch();
+  } else {
+    // Dismissing is the end of the search — nothing about it survives.
+    sbQuery = '';
+    _sbqRows = []; _sbqActive = -1;
+    const inp = document.getElementById('sbqInput');
+    if(inp) inp.value = '';
+  }
+  if(typeof renderStateBar === 'function') renderStateBar();
+}
+function closeSbSearch(){ toggleSbSearch(false); }
+function _sbFocusSearch(){
+  requestAnimationFrame(()=>{
+    const inp = document.getElementById('sbqInput');
+    if(inp){ inp.focus(); inp.select(); }
+  });
+}
+/* Anchored under the tools bar and aligned to the sidebar's left edge, so it
+   reads as the scope's search while spilling over the work surface. Measured
+   on open (and on resize) rather than positioned in CSS — the sidebar is
+   user-resizable, so its edge isn't a constant. */
+function _sbPositionPalette(){
+  const pal = document.getElementById('sbq');
+  const bar = document.getElementById('sbStateBar');
+  if(!pal || !bar) return;
+  const r = bar.getBoundingClientRect();
+  const width = Math.min(620, window.innerWidth - 32);
+  pal.style.top  = Math.round(r.bottom + 8) + 'px';
+  pal.style.left = Math.round(Math.min(Math.max(16, r.left), window.innerWidth - width - 16)) + 'px';
+  pal.style.width = width + 'px';
+}
+window.addEventListener('resize', () => { if(sbSearchOpen) _sbPositionPalette(); });
+
+function setSbQuery(v){
+  sbQuery = v || '';
+  renderSbResults();
+}
+/* The × is always there, and always does the most useful thing available:
+   empties a box with something in it, dismisses an empty one. A button that
+   sits visible but inert in the empty state would be worse than no button,
+   and a pure close-only × would make "clear and keep looking" a keyboard-only
+   move. The tooltip says which of the two it currently is. */
+function sbqClearOrClose(){
+  if((sbQuery || '').trim()) clearSbQuery();
+  else closeSbSearch();
+}
+function clearSbQuery(){
+  const inp = document.getElementById('sbqInput');
+  if(inp) inp.value = '';
+  setSbQuery('');
+  if(inp) inp.focus();
+}
+function renderSbResults(){
+  const list = document.getElementById('sbqResults');
+  const clr  = document.getElementById('sbqClear');
+  if(clr){
+    const label = (sbQuery || '').trim() ? 'Clear search' : 'Close search';
+    clr.title = label;
+    clr.setAttribute('aria-label', label);
+  }
+  if(!list) return;
+  const terms = _sbQueryTerms();
+  if(!terms.length){
+    _sbqRows = []; _sbqActive = -1;
+    list.innerHTML = '';   // :empty collapses the row — the placeholder says it
+    return;
+  }
+  const all = sbSearchResults();
+  _sbqRows = all.slice(0, SBQ_LIMIT);
+  // Keep the first row armed so Enter always has an obvious target.
+  _sbqActive = _sbqRows.length ? 0 : -1;
+  if(!_sbqRows.length){
+    list.innerHTML = `<div class="sbq-hint">No group or task named &ldquo;${esc(sbQuery.trim())}&rdquo;.</div>`;
+    return;
+  }
+  const rows = _sbqRows.map((r,i) => r.kind === 'group'
+    ? `<button class="sbq-row${i===_sbqActive?' on':''}" data-i="${i}" onclick="sbqPick(${i})" onmousemove="sbqHover(${i})">
+        <span class="sbq-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="4.5" width="21" height="15"/><path d="M1.5 9.5h21"/></svg></span>
+        <span class="sbq-txt"><span class="sbq-name">${_sbMark(r.name, terms)}</span><span class="sbq-sub">Group · ${r.n} ${r.n===1?'task':'tasks'}</span></span>
+        <span class="sbq-amt">${money(r.cost)}</span>
+      </button>`
+    : `<button class="sbq-row${i===_sbqActive?' on':''}${r.child?' is-child':''}" data-i="${i}" onclick="sbqPick(${i})" onmousemove="sbqHover(${i})">
+        ${r.child ? '' : `<span class="sbq-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 2.5h15v19h-15z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>`}
+        <span class="sbq-txt"><span class="sbq-name">${_sbMark(r.name, terms)}</span>${r.child ? '' : `<span class="sbq-sub">${esc(r.group)}</span>`}</span>
+        <span class="sbq-amt">${esc(r.task.cost || '')}</span>
+      </button>`).join('');
+  const more = all.length > _sbqRows.length
+    ? `<div class="sbq-more">${all.length - _sbqRows.length} more — keep typing to narrow</div>` : '';
+  list.innerHTML = rows + more;
+}
+function sbqHover(i){
+  if(i === _sbqActive) return;
+  _sbqActive = i;
+  _sbqPaintActive();
+}
+function _sbqPaintActive(){
+  const list = document.getElementById('sbqResults');
+  if(!list) return;
+  list.querySelectorAll('.sbq-row').forEach(el => {
+    el.classList.toggle('on', Number(el.dataset.i) === _sbqActive);
+  });
+  const el = list.querySelector('.sbq-row.on');
+  if(el) el.scrollIntoView({block:'nearest'});
+}
+/* Taking a result closes the palette — that IS the moment the search is
+   done, which is the whole reason for this shape. */
+function sbqPick(i){
+  const r = _sbqRows[i];
+  if(!r) return;
+  closeSbSearch();
+  if(r.kind === 'group'){
+    if(typeof selectGroup === 'function') selectGroup(r.key);
+  } else {
+    if(typeof selectTask === 'function') selectTask(r.id, {toEditor:true});
+  }
+}
+function onSbSearchKey(e){
+  if(e.key === 'Escape'){ e.stopPropagation(); closeSbSearch(); return; }
+  if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+    if(!_sbqRows.length) return;
+    e.preventDefault();
+    const d = e.key === 'ArrowDown' ? 1 : -1;
+    _sbqActive = (_sbqActive + d + _sbqRows.length) % _sbqRows.length;
+    _sbqPaintActive();
+    return;
+  }
+  if(e.key === 'Enter'){
+    if(_sbqActive < 0) return;
+    e.preventDefault();
+    sbqPick(_sbqActive);
+  }
 }
 
 /* ════════════ ATTENTION FILTER ════════════ */
@@ -471,6 +703,13 @@ function renderStateBar(){
     </button>
     <div class="af-menu" id="afMenu"></div>
   </div>`;
+  // Search trigger — sits with Filters because both narrow what the sidebar
+  // shows. Rendered here rather than kept static like the input below it: a
+  // button survives an innerHTML rewrite, an input mid-keystroke does not.
+  const searchBtn = `<button class="sb-tools-search${sbSearchOpen?' active':''}" onclick="toggleSbSearch()" title="Search groups and tasks" aria-label="Search groups and tasks" aria-expanded="${sbSearchOpen?'true':'false'}">
+    <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.75" stroke="currentColor" stroke-width="1.5"/><path d="M10.6 10.6 14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <span>Search</span>
+  </button>`;
   // The sidebar is always view-only in this variant, so we no longer
   // surface an "Editing" / "View only" chip or the yellow draft-state
   // background. The only surviving state-bar action is the "Return to
@@ -489,7 +728,7 @@ function renderStateBar(){
   </button>`;
   // Gear sits at the far right, aligned with the per-group duplicate icon
   // column it toggles (those sit flush with the sidebar's right edge too).
-  bar.innerHTML = `${groupBySeg}${filterIcon}<span class="sb-state-bar-sp"></span>${settingsIcon}${actions}${hideScope}`;
+  bar.innerHTML = `${groupBySeg}${filterIcon}${searchBtn}<span class="sb-state-bar-sp"></span>${settingsIcon}${actions}${hideScope}`;
   // Remember for renderFilter, which fills the menu; reopening here
   // would show it before it has any options in it.
   _afReopenPending = _afOpen;

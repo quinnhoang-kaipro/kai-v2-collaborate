@@ -1482,8 +1482,19 @@ function syncApproveBtn(){
 // expanded detail. Clicking a task row just selects it (the Editor card
 // on the right owns task detail). openIds is kept in sync as a Set-of-one
 // so downstream code that reads openIds still resolves to the active task.
-function selectTask(id){
-  if(selId === id) return;
+/* opts.toEditor — route the right panel to the Editor as part of the
+   selection. Passed by the search palette: a result is a destination, not a
+   highlight, so landing on it beats leaving the user on whatever tab they
+   searched from. Ordinary sidebar clicks don't pass it and keep their
+   existing "select in place" behavior. */
+function selectTask(id, opts){
+  const toEditor = !!(opts && opts.toEditor);
+  if(selId === id){
+    // Re-clicking the selected task is otherwise a no-op, but from a search
+    // result the click still means "show me this" — so honor the routing.
+    if(toEditor && workMode !== 'shop' && typeof setWorkMode === 'function') setWorkMode('shop');
+    return;
+  }
   scopeView = false;   // drilling into a task leaves the scope view
   // Any pending approve-confirm state belongs to the previously selected
   // task — clear it so switching tasks doesn't carry a stale confirm.
@@ -1493,7 +1504,20 @@ function selectTask(id){
   // "which task is currently active in the right panel".
   openIds = new Set([id]);
   selGroupKey = null;
+  // Switch before rendering so one pass paints the new tab and the new
+  // selection together. Mirrors setWorkMode's own stale-content guard —
+  // calling it outright would render the work surface twice.
+  const _switching = toEditor && workMode !== 'shop';
+  if(_switching){
+    workMode = 'shop';
+    document.body.classList.toggle('shop-mode', true);
+    const _wb = document.getElementById('workBody');
+    if(_wb) _wb.innerHTML = '';
+  }
   if(typeof renderAll === 'function') renderAll();
+  // renderAll leaves the tab bar alone, so the Editor tab wouldn't show as
+  // active without this.
+  if(_switching && typeof renderWorkHdr === 'function') renderWorkHdr();
   // Open at the top of the module stack. There's nothing to scroll *to*
   // when the pane renders a single task, and the old target (.sec-taskcard)
   // is the options module now, so aligning it to the top skipped the three
