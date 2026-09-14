@@ -263,12 +263,18 @@ function _sbMark(name, terms){
    query usually means. A matched group brings its tasks with it as child
    rows: "kitchen" means the kitchen, and its contents are the useful thing
    to show, so the user can jump straight to a task without a second search.
-   Capped: past a couple of dozen rows the list stops being a shortcut. */
+   Capped: past a couple of dozen rows the list stops being a shortcut.
+
+   Searches the WHOLE scope, not visibleTasks() — an active filter must not
+   decide what can be found. A search that silently inherited one would tell
+   a user with a forgotten filter on that a task does not exist, and being
+   wrong about that is worse than any tidiness gained. Picking a result the
+   filters exclude drops them; see _sbqRevealForPick. */
 const SBQ_LIMIT = 30;
 function sbSearchResults(){
   const terms = _sbQueryTerms();
   if(!terms.length) return [];
-  const groups = (typeof groupTasks === 'function') ? groupTasks(visibleTasks()) : [];
+  const groups = (typeof groupTasks === 'function') ? groupTasks(TASKS.slice()) : [];
   const out = [];
   const claimed = new Set();   // tasks already listed under their matched group
   groups.forEach(g => {
@@ -409,16 +415,42 @@ function _sbqPaintActive(){
   const el = list.querySelector('.sbq-row.on');
   if(el) el.scrollIntoView({block:'nearest'});
 }
+/* Search sees the whole scope, so a result can be something the sidebar is
+   currently filtering out. Navigating to it would then select a task the
+   scope list does not contain — the Editor showing one thing, the sidebar
+   unable to show where it sits. Dropping the filters is the honest fix:
+   the user asked to go here, so the list they land in has to contain it.
+   Returns true when it cleared, so the caller can say so. */
+function _sbqRevealForPick(r){
+  if(typeof activeFilters === 'undefined' || !activeFilters.size) return false;
+  const vis = new Set(visibleTasks().map(t => t.id));
+  const g = r.kind === 'group'
+    ? groupTasks(TASKS.slice()).find(x => x.key === r.key)
+    : null;
+  const needed = r.kind === 'group' ? (g ? g.items : []) : [r.task];
+  // An empty matched group has nothing to hide, so the filters can stand.
+  if(!needed.length || needed.every(t => vis.has(t.id))) return false;
+  activeFilters.clear();   // the selection below repaints; no render needed here
+  return true;
+}
 /* Taking a result closes the palette — that IS the moment the search is
    done, which is the whole reason for this shape. */
 function sbqPick(i){
   const r = _sbqRows[i];
   if(!r) return;
   closeSbSearch();
+  const cleared = _sbqRevealForPick(r);
   if(r.kind === 'group'){
     if(typeof selectGroup === 'function') selectGroup(r.key);
   } else {
     if(typeof selectTask === 'function') selectTask(r.id, {toEditor:true});
+  }
+  if(cleared){
+    // selectGroup doesn't run renderAll, so the Filters button would keep
+    // showing a count for filters that are gone.
+    if(typeof renderFilter === 'function') renderFilter();
+    if(typeof renderStateBar === 'function') renderStateBar();
+    if(typeof toast === 'function') toast('Filters cleared to show this result');
   }
 }
 function onSbSearchKey(e){
