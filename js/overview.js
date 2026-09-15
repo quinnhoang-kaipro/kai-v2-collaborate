@@ -135,8 +135,14 @@ function _ovTrail(){
     /* What the document is worth, and what it moved by. Said once, on the
        line that settles it — the submission carried the same pair a row above,
        which read as two different figures until you compared them. */
+    /* The document's worth belongs to the document, so it is stated once, on
+       its title line. It used to ride on whichever event settled it, which
+       put the same figure in a different row depending on whether the thing
+       had been approved yet — and made the header, the one line that names
+       what you are looking at, the only line that didn't say what it cost. */
     const amount = m.budget != null ? _fmtDollars(m.budget) : null;
-    const delta = prev ? _ovDelta(m.budget, prev.budget) : '';
+    const was = (prev && prev.budget != null && prev.budget !== m.budget)
+      ? _fmtDollars(prev.budget) : null;
     const evs = [{...author, act:'started it',
                   when: m.opened || (prev && prev.date) || m.date, kind:'start'}];
     /* Each signature is the point the document had reached that person, so
@@ -147,10 +153,16 @@ function _ovTrail(){
        version to have changed from — the first scope is not a revision. */
     const counts = prev ? _ovChangeCounts(id) : null;
     if(counts){
+      /* The edits are not a moment either — they run from the day the
+         document was opened to the day it left the author's hands. Same
+         reasoning as the site rows below: an aggregate gets the window it
+         covers, not the last day of it. */
+      const _edFrom = m.opened || (prev && prev.date) || m.date;
+      const _edTo   = (signs[0] && signs[0].date) || m.date;
       evs.push({who:'', role:'', kind:'changed', ver:id, detail:counts.detail,
                 act:`${counts.groups} group${counts.groups === 1 ? '' : 's'} \u00b7 `
                   + `${counts.tasks} task${counts.tasks === 1 ? '' : 's'} changed`,
-                when: (signs[0] && signs[0].date) || m.date});
+                when: _ovDateRange(_edFrom, _edTo)});
     }
     let from = author;
     signs.forEach(sig => {
@@ -158,19 +170,19 @@ function _ovTrail(){
                 when:sig.date, kind:'handoff'});
       from = sig;
     });
-    if(id === pending){
-      evs.push({who:from.who, role:from.role, act:'has it for approval',
-                when:from.date, kind:'waiting', amount:amount, delta:delta});
-    } else {
+    /* Nothing is added for a document still out for approval. "S. Patel has
+       it for approval" restated the hand-off directly above it and the
+       In review chip beside the title — three ways of saying one thing. */
+    if(id !== pending){
       evs.push({who:people.manager, role:'Project manager', act:'approved it',
-                when:m.date, kind:'approved', amount:amount, delta:delta});
+                when:m.date, kind:'approved'});
     }
     /* Newest first, like the documents themselves. The chain is built in the
        order it happened, so reversing it is exact — including the two events
        that share a date, where sorting on the date alone would have put them
        in whichever order the comparison happened to settle on. */
     out.push({name:m.label || id, state: id === pending ? 'In review' : 'Approved',
-              evs:evs.reverse()});
+              amount:amount, was:was, evs:evs.reverse()});
   });
 
   /* The closeout, when the project has one. Not a scope, so not in VER. */
@@ -182,11 +194,10 @@ function _ovTrail(){
     out.push({name:'Closeout', state: done ? 'Approved' : 'In review', evs:[
       {...author, act:'started it', when:C.opened, kind:'start'},
       {...author, act:'handed off to ' + people.manager, when:C.handed, kind:'handoff'},
-      done
-        ? {who:people.manager, role:'Project manager', act:'approved it',
-           when:C.approved, kind:'approved'}
-        : {who:people.manager, role:'Project manager', act:'has it for approval',
-           when:C.handed, kind:'waiting'},
+      ...(done
+        ? [{who:people.manager, role:'Project manager', act:'approved it',
+            when:C.approved, kind:'approved'}]
+        : []),
     ].reverse()});
   }
   return out.reverse();   // newest document first, like the activity feed
@@ -200,9 +211,8 @@ function _ovTrail(){
    records hold rows of {field, from, to} — or an `add` / `remove` sentence for
    a line that appeared or went — and the Artifact 2 tab renders all of them in
    full. Here it is a summary, so each row comes down to its shortest true form
-   and the amount rows are dropped: the money is already in its own column two
-   cells to the right, and repeating it here would be the same figure twice on
-   one line. */
+   and the amount rows are dropped: the money is on the document's own title
+   line, and repeating it per task would be the same figure many times over. */
 function _ovTaskChangeSummary(task, verId){
   /* A line added or removed is written as "Countertops \u2014 laminate is
      delaminating at the sink": the half before the dash is the task's own name,
@@ -282,14 +292,6 @@ function ovToggleChanges(verId, btn){
   if(box) box.hidden = !_ovOpenChanges[verId];
   if(btn) btn.setAttribute('aria-expanded', String(!!_ovOpenChanges[verId]));
 }
-/* "+$4,100" / "-$820". The previous total is one subtraction away and the
-   direction is the thing people read a change order for. */
-function _ovDelta(now, before){
-  if(now == null || before == null || now === before) return '';
-  const d = now - before;
-  return (d > 0 ? '+' : '\u2212') + _fmtDollars(Math.abs(d));
-}
-
 /* ── what happened on site between two documents ─────────────────────
    A document's chain says who held it. It says nothing about the weeks in
    between, where the job is actually being done — and those weeks are most of
@@ -319,26 +321,128 @@ function _ovWalksBetween(older, newer){
     const hit   = all.filter(t => codes.has(t.code));
     const notes = hit.reduce((n, t) => n + (t.notes || 0), 0);
     return {label:w.label, date:w.date, photos:shots.length, notes:notes,
-            groups:rooms.size, tasks:codes.size};
+            groups:rooms.size, tasks:codes.size, hit:hit};
   }).filter(w => w.photos)
     .sort((a, b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0));
 }
-function _ovWalksHtml(older, newer){
-  const runs = _ovWalksBetween(older, newer);
-  if(!runs.length) return '';
+
+/* ── the span an aggregate covers ────────────────────────────────────
+   These rows are not moments: "18 photos added" happened over the weeks
+   between two documents, and stamping them with one day says a visit took
+   place that day and nothing else did. So the stamp is the window — closed
+   up where the two ends share a month or a year, because "Apr 14 – Apr 27,
+   2026" says April twice to say one thing. */
+function _ovDateRange(a, b){
+  const da = Date.parse(a), db = Date.parse(b);
+  if(isNaN(da) && isNaN(db)) return '';
+  if(isNaN(da)) return b;
+  if(isNaN(db)) return a;
+  const [lo, hi] = da <= db ? [new Date(da), new Date(db)] : [new Date(db), new Date(da)];
+  const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const day = d => `${M[d.getMonth()]} ${d.getDate()}`;
+  if(lo.getTime() === hi.getTime()) return `${day(hi)}, ${hi.getFullYear()}`;
+  if(lo.getFullYear() !== hi.getFullYear())
+    return `${day(lo)}, ${lo.getFullYear()} \u2013 ${day(hi)}, ${hi.getFullYear()}`;
+  if(lo.getMonth() !== hi.getMonth())
+    return `${day(lo)} \u2013 ${day(hi)}, ${hi.getFullYear()}`;
+  return `${day(lo)} \u2013 ${hi.getDate()}, ${hi.getFullYear()}`;
+}
+
+/* ── what happened on site, as three kinds of event ──────────────────
+   The walks are how the records are filed, not what a reader came for. A
+   walk's name — "Change order walk", "Progress walk 1" — is the visit's
+   label, and the visit is the one thing on the line nobody is asking about:
+   what they want is what came back from site. So the walks in a window are
+   rolled into what they produced, and the name goes.
+
+   Three rows, each one a thing that happened to the scope: what was
+   captured, what finished, and what started. The status rows read off the
+   tasks the walks actually touched — the demo has no event log, so the
+   status a photographed task is sitting at is the closest true statement
+   about what those weeks did to it. Both open onto the tasks themselves,
+   the same way a change order's count does; a number you cannot follow is
+   where the question stops. */
+function _ovSiteRuns(older, newer){
+  const walks = _ovWalksBetween(older, newer);
+  if(!walks.length) return null;
   const n = (k, one, many) => `${k} ${k === 1 ? one : many}`;
   const join = xs => xs.filter(Boolean).join(' \u00b7 ');
-  return `<div class="ov-walks">${runs.map(w => `
-    <div class="ov-walk">
-      <span class="ov-walk-n">${esc(w.label)}</span>
-      <span class="ov-walk-c">${esc(join([
-        w.photos && n(w.photos, 'photo', 'photos'),
-        w.notes  && n(w.notes,  'note',  'notes')]))} added</span>
-      <span class="ov-walk-s">${esc(join([
-        w.groups && n(w.groups, 'group', 'groups'),
-        w.tasks  && n(w.tasks,  'task',  'tasks')]))}</span>
-      <span class="ov-walk-d">${esc(w.date)}</span>
-    </div>`).join('')}</div>`;
+  const dates = walks.map(w => w.date);
+  const span = _ovDateRange(dates[dates.length - 1], dates[0]);
+  const rows = [];
+
+  const photos = walks.reduce((k, w) => k + w.photos, 0);
+  const notes  = walks.reduce((k, w) => k + w.notes, 0);
+  /* One task can be shot on two walks, so the totals are over the set, not
+     the sum of the per-walk counts. */
+  const seen = new Map();
+  walks.forEach(w => (w.hit || []).forEach(t => seen.set(t.id, t)));
+  const touched = [...seen.values()];
+  const rooms = new Set(touched.map(t => t.room).filter(Boolean));
+  rows.push({
+    text: `${join([photos && n(photos, 'photo', 'photos'),
+                   notes && n(notes, 'note', 'notes')])} added`,
+    side: join([rooms.size && n(rooms.size, 'group', 'groups'),
+                touched.length && n(touched.length, 'task', 'tasks')]),
+    when: span
+  });
+
+  /* Grouped by room so the list opens the way the change list does, and so
+     a long one reads as a few places rather than twenty loose lines. */
+  const byRoom = ts => {
+    const m = new Map();
+    ts.forEach(t => {
+      const r = t.room || 'Project';
+      if(!m.has(r)) m.set(r, []);
+      m.get(r).push({code:t.code, name:t.name});
+    });
+    return [...m.entries()].map(([room, tasks]) => ({room, tasks}));
+  };
+  const mark = (status, label) => {
+    const ts = touched.filter(t => t.status === status);
+    if(!ts.length) return;
+    const gs = new Set(ts.map(t => t.room).filter(Boolean)).size;
+    rows.push({
+      text: `${n(ts.length, 'task', 'tasks')} marked ${label}`,
+      side: gs ? n(gs, 'group', 'groups') : '',
+      when: span,
+      detail: byRoom(ts)
+    });
+  };
+  mark('complete', 'complete');
+  mark('in_progress', 'in progress');
+  return rows;
+}
+/* `key` disambiguates the expand targets: every gap in the trail renders the
+   same row kinds, so the ids have to carry which gap they belong to. */
+function _ovWalksHtml(older, newer, key){
+  const rows = _ovSiteRuns(older, newer);
+  if(!rows) return '';
+  return `<div class="ov-walks">${rows.map((r, i) => {
+    const id = `ovSite-${key}-${i}`;
+    const open = !!_ovOpenChanges[id];
+    return `<div class="ov-walk">
+      <span class="ov-walk-c">${r.detail
+        ? `<button type="button" class="ov-tr-open ov-site-open"
+             aria-expanded="${open}" aria-controls="ovCh-${id}"
+             onclick="ovToggleChanges('${id}', this)">${esc(r.text)}
+             <svg class="ov-tr-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
+           </button>`
+        : esc(r.text)}</span>
+      <span class="ov-walk-s">${esc(r.side)}</span>
+      <span class="ov-walk-d">${esc(r.when)}</span>
+      ${r.detail ? `<div class="ov-tr-detail ov-site-detail" id="ovCh-${id}"${open ? '' : ' hidden'}>
+        ${r.detail.map(g => `<div class="ov-ch-g">
+          <button type="button" class="ov-ch-grp" onclick="ovGoGroup('${esc(g.room).replace(/'/g, "\\'")}')">${esc(g.room)}</button>
+          <div class="ov-ch-ts">${g.tasks.map(t => `
+            <button type="button" class="ov-ch-task"
+              onclick="ovGoTask('${esc(t.code)}', '${esc(g.room).replace(/'/g, "\\'")}', '${esc(t.name).replace(/'/g, "\\'")}')">
+              <span class="ov-ch-code">${esc(t.code)}</span>
+              <span class="ov-ch-name">${esc(t.name)}</span></button>`).join('')}</div>
+        </div>`).join('')}
+      </div>` : ''}
+    </div>`;
+  }).join('')}</div>`;
 }
 
 const _OV_TICK = `<svg class="ov-tr-ck" viewBox="0 0 12 12" fill="none" stroke="currentColor"
@@ -349,10 +453,19 @@ const _OV_TICK = `<svg class="ov-tr-ck" viewBox="0 0 12 12" fill="none" stroke="
    gone from the event — the names are the roster's, and a title beside each
    one was three words of the same answer on every line. */
 function _ovTrailDocHtml(d){
+  /* What it was, struck, then what it is. A signed delta said the same thing
+     in a number you had to do arithmetic on to place: +$4,100 against a total
+     leaves the reader to work out what it rose from. The pair states both
+     ends, and the strike is the direction. */
+  const money = d.amount
+    ? `<span class="ov-tr-money">${d.was ? `<s class="ov-tr-was">${esc(d.was)}</s>` : ''
+       }<span class="ov-tr-now">${esc(d.amount)}</span></span>`
+    : '';
   return `<div class="ov-tr-doc">
       <div class="ov-tr-h">
         <span class="ov-tr-n">${esc(d.name)}</span>
         <span class="ov-tr-st${d.state === 'Approved' ? ' is-done' : ''}">${esc(d.state)}</span>
+        ${money}
       </div>
       <div class="ov-tr-rows">
       ${d.evs.map(e => `
@@ -368,8 +481,6 @@ function _ovTrailDocHtml(d){
                  </button>`
               : `<span class="ov-tr-act">${esc(e.act)}</span>`}
           </span>
-          <span class="ov-tr-sum">${e.amount ? esc(e.amount) : ''}</span>
-          <span class="ov-tr-delta${(e.delta || '').charAt(0) === '+' ? ' is-up' : ' is-down'}">${esc(e.delta || '')}</span>
           <span class="ov-tr-d">${esc(e.when || '')}</span>
         </div>
         ${e.detail ? `<div class="ov-tr-detail" id="ovCh-${e.ver}"${_ovOpenChanges[e.ver] ? '' : ' hidden'}>
@@ -401,7 +512,7 @@ function _ovTrailHtml(){
   return `<div class="ov-trail">
     ${_ovTrailDocHtml(current)}
     <div class="ov-trail-rest" id="ovTrailRest" hidden>
-      ${earlier.map((d, i) => _ovWalksHtml(d, docs[i]) + _ovTrailDocHtml(d)).join('')}
+      ${earlier.map((d, i) => _ovWalksHtml(d, docs[i], i) + _ovTrailDocHtml(d)).join('')}
     </div>
     <button type="button" class="ov-more" id="ovTrailMore"
             aria-expanded="false" aria-controls="ovTrailRest"

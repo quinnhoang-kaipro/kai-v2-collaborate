@@ -1486,9 +1486,15 @@ function syncApproveBtn(){
    selection. Passed by the search palette: a result is a destination, not a
    highlight, so landing on it beats leaving the user on whatever tab they
    searched from. Ordinary sidebar clicks don't pass it and keep their
-   existing "select in place" behavior. */
+   existing "select in place" behavior.
+
+   Overview is the exception: it's the project's front page and renders
+   nothing per task, so selecting one there left the sidebar highlighted
+   against a pane that hadn't changed. Picking a task is a request to see
+   it, so route to the Editor — the same rule selectGroup already follows
+   for groups. */
 function selectTask(id, opts){
-  const toEditor = !!(opts && opts.toEditor);
+  const toEditor = !!(opts && opts.toEditor) || workMode === 'overview';
   if(selId === id){
     // Re-clicking the selected task is otherwise a no-op, but from a search
     // result the click still means "show me this" — so honor the routing.

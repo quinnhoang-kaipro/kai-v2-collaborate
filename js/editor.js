@@ -269,8 +269,11 @@ function taskActivityFeed(t){
   // `type` is the card's eyebrow — what kind of thing happened. `tone` is
   // separate because it drives the mark's colour, and the two don't line up:
   // an approval and a completion are different types but both read as done.
-  const at = (minRank, type, label, when, who, tone) => {
-    if(rank >= minRank) rows.push({type, label, when, who, tone: tone || ''});
+  // `st` is the plain status name a Task status row lands on. The timeline
+  // reads it to write "Marked In Progress" and the from → to line under it;
+  // the older consumers still read `label`, so both travel together.
+  const at = (minRank, type, label, when, who, tone, st) => {
+    if(rank >= minRank) rows.push({type, label, when, who, tone: tone || '', st: st || ''});
   };
   // What the row says this task is. Status entries below are gated on it: a
   // feed that claims a transition the task never made is worse than a short
@@ -296,16 +299,16 @@ function taskActivityFeed(t){
   at(1, 'Event',           'Handed off for review',         'Jan 9, 2026',  'T. Okafor', 'decision');
   at(2, 'Approval status', 'Task reviewed',                'Jan 14, 2026', 'S. Patel',  'decision');
   at(3, 'Approval status', 'Task approved',                'Jan 16, 2026', 'T. Okafor', 'decision');
-  at(3, 'Task status',     'Status → <b>Not started</b>',  'Jan 20, 2026', agent);
+  at(3, 'Task status',     'Status → <b>Not started</b>',  'Jan 20, 2026', agent, '', 'Not started');
   if(_reached('In progress'))
-    at(3, 'Task status',   'Status → <b>In progress</b>',  'Feb 3, 2026',  agent);
+    at(3, 'Task status',   'Status → <b>In progress</b>',  'Feb 3, 2026',  agent, 'progress', 'In progress');
   // Rework only appears on tasks that actually went back — otherwise every
   // task would claim a history it didn't have.
   if(t.editRequested || t.status === 'in_review'){
-    at(3, 'Task status',   'Status → <b>Rework</b>', 'Feb 24, 2026', 'S. Patel');
+    at(3, 'Task status',   'Status → <b>Rework</b>', 'Feb 24, 2026', 'S. Patel', 'rework', 'Rework');
   }
   if(_reached('Completed'))
-    at(3, 'Task status',   'Status → <b>Completed</b>',    'Mar 12, 2026', agent, 'done');
+    at(3, 'Task status',   'Status → <b>Completed</b>',    'Mar 12, 2026', agent, 'done', 'Completed');
   // Closeout is signed off one task at a time, so this follows the task
   // rather than the stage.
   if(typeof approved !== 'undefined' && approved.has(t.id))
@@ -313,28 +316,95 @@ function taskActivityFeed(t){
   return rows;
 }
 /* Newest first. taskActivityFeed builds forward because that's how the
-   stages accumulate; the reverse happens here, at the point of display. */
+   stages accumulate; the reverse happens here, at the point of display.
+
+   Drawn as a timeline rather than a stack of cards: a dated rail down the
+   left, month rules breaking it into spans, and the event itself in two
+   lines — what happened, then what changed. The date is a day, not a
+   timestamp; the hour was precision the feed doesn't actually have. */
+function _taskActOrd(n){
+  const t = n % 100;
+  if(t >= 11 && t <= 13) return 'th';
+  return ({1:'st', 2:'nd', 3:'rd'})[n % 10] || 'th';
+}
+/* 'Jan 6, 2026' → the pieces the timeline sets separately: the month rule's
+   label, the day stamp, and a key to group consecutive rows by. */
+function _taskActWhen(when){
+  const m = /^([A-Za-z]+)\s+(\d+),\s*(\d{4})$/.exec(String(when || '').trim());
+  if(!m) return {month: '', day: String(when || ''), ord: '', key: String(when || '')};
+  const [, mon, d, yr] = m;
+  return {
+    month: `${mon.toUpperCase()} ${yr}`,
+    day: `${mon} ${d}`,
+    ord: _taskActOrd(+d),
+    key: `${mon} ${yr}`
+  };
+}
+/* The mark's colour follows the status the row lands on, not the eyebrow:
+   an approval and a completion are different kinds of event and both read
+   as done. Rows with no status are the plain events on the rail. */
+function _taskActTone(r){
+  if(r.tone === 'rework' || r.st === 'Rework') return 'rework';
+  if(r.tone === 'progress' || r.st === 'In progress') return 'progress';
+  if(r.tone === 'done' || r.st === 'Completed' || r.st === 'Approved') return 'done';
+  if(r.st === 'Not started') return 'idle';
+  return 'event';
+}
+/* The feed's status names are sentence case because they're written into a
+   "Status → x" sentence elsewhere. On the timeline they're the headline, so
+   they're set as titles — and Rework says what it is: work sent back. */
+const TASKACT_ST_LABEL = {
+  'Not started': 'Not Started',
+  'In progress': 'In Progress',
+  'Rework': 'Needs Rework',
+  'Completed': 'Complete',
+  'Approved': 'Approved'
+};
+const _taskActSt = st => TASKACT_ST_LABEL[st] || st;
 function _shopTaskActivityHtml(t){
   if(!t) return '';
-  const rows = taskActivityFeed(t).slice().reverse();
-  const body = rows.length
-    ? `<ol class="sec-taskact-list">${rows.map(r => `<li class="sec-taskact-row${r.tone ? ' is-' + r.tone : ''}">
+  const feed = taskActivityFeed(t);
+  const rows = feed.slice().reverse();
+  let body;
+  if(!rows.length){
+    body = `<div class="pgd-photos-empty">No activity yet for this task.</div>`;
+  } else {
+    // Walking the feed forward gives each status row the one before it, so
+    // the second line can say what it moved from. Built here and read back
+    // on the reversed pass.
+    const prev = {};
+    let last = '';
+    feed.forEach((r, i) => { if(r.st){ prev[i] = last; last = r.st; } });
+    const idxOf = new Map(feed.map((r, i) => [r, i]));
+    let month = '';
+    const out = [];
+    rows.forEach(r => {
+      const w = _taskActWhen(r.when);
+      if(w.key !== month){
+        month = w.key;
+        out.push(`<li class="sec-taskact-month"><span>${esc(w.month)}</span></li>`);
+      }
+      const from = prev[idxOf.get(r)] || '';
+      const title = r.st ? `Marked ${esc(_taskActSt(r.st))}` : r.label;
+      const sub = r.st
+        ? (from ? `${esc(_taskActSt(from))} <i>&rarr;</i> ${esc(_taskActSt(r.st))}` : esc(r.type))
+        : esc(r.type);
+      out.push(`<li class="sec-taskact-row is-${_taskActTone(r)}">
+        <div class="sec-taskact-date">${esc(w.day)}<sup>${w.ord}</sup></div>
         <span class="sec-taskact-mark"></span>
-        <div class="sec-taskact-card">
-          <div class="sec-taskact-main">
-            <div class="sec-taskact-kind">${esc(r.type)}</div>
-            <div class="sec-taskact-label">${r.label}</div>
-          </div>
-          <div class="sec-taskact-meta">
-            <div class="sec-taskact-when">${esc(r.when)}</div>
-            <div class="sec-taskact-who">${esc(r.who)}</div>
-          </div>
+        <div class="sec-taskact-body">
+          <div class="sec-taskact-title">${title}</div>
+          <div class="sec-taskact-sub">${sub}</div>
         </div>
-      </li>`).join('')}</ol>`
-    : `<div class="pgd-photos-empty">No activity yet for this task.</div>`;
+        <div class="sec-taskact-who">${esc(r.who)}</div>
+      </li>`);
+    });
+    body = `<ol class="sec-taskact-list">${out.join('')}</ol>`;
+  }
   return `<div class="pgd-details-sec sec-taskact">
     <div class="pgd-sec-hd">
       <div class="pgd-details-title">Task activity</div>
+      <div class="sec-taskact-count">${rows.length} ${rows.length === 1 ? 'event' : 'events'}</div>
     </div>
     ${body}
   </div>`;
