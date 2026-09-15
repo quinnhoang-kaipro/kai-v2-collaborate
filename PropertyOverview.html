@@ -108,18 +108,35 @@ body{background:var(--app-bg)}
 .po-now-h{display:flex;align-items:center;gap:12px;margin-bottom:10px}
 .po-now-h .po-btn{margin-left:auto}
 .po-jobs{display:flex;flex-direction:column;gap:8px}
-.po-job{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 14px;align-items:center;
+.po-job{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px 14px;align-items:center;
   padding:11px 13px;border:1px solid var(--stroke);background:var(--white);cursor:pointer;
   text-align:left;width:100%;font:inherit;transition:border-color .12s,background .1s}
+/* The thumbnail. A job is work at a place, and the place is the thing people
+   recognise before they read anything — so the card leads with it, at the size
+   a row can carry rather than the size a hero can. */
+.po-job-ph{width:58px;height:44px;flex-shrink:0;position:relative;overflow:hidden;
+  background:var(--sunken);border:1px solid var(--stroke)}
+.po-job-ph img{width:100%;height:100%;object-fit:cover;display:block}
+/* No capture yet is a fact about the job, so it says so rather than showing a
+   grey rectangle that could be a loading state. Where there is one, the label
+   is what it is of — the same thing the hero photo's caption says. */
+.po-job-ph .c{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:7px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--t3);text-align:center;padding:0 3px;line-height:1.2}
 .po-job:hover{border-color:var(--ink);background:var(--sunken)}
 .po-job:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
 .po-job.is-late{border-left:3px solid var(--error)}
-.po-job-l{min-width:0;display:flex;flex-direction:column;gap:4px}
+.po-job-l{min-width:0;display:flex;flex-direction:column;gap:3px;justify-content:center}
+/* The job's title. Every job on this page is at this address, so every card
+   says the same words — which is the point: a job is work at a place, and the
+   place is what the dashboard and the black bar both call it. What tells two
+   cards apart is the line above, not this one. */
+.po-job-n{font-family:var(--display);font-size:14px;font-weight:700;color:var(--ink);
+  letter-spacing:-.005em;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .po-job-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .po-job-t{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;
   text-transform:uppercase;color:var(--ink)}
 .po-job-t .ph{color:var(--t3)}
-.po-job-n{font-size:13.5px;color:var(--t2);line-height:1.3}
 .po-job-r{display:flex;align-items:center;gap:16px;flex-shrink:0}
 .po-job-f{display:flex;flex-direction:column;gap:2px;align-items:flex-end}
 .po-job-f .k{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
@@ -486,8 +503,8 @@ body.po-editing #poEditBtn{display:none}
   .po-hero{grid-template-columns:minmax(0,1fr)}
   .po-photo{max-width:420px}
   .po-cmp-pair{grid-template-columns:1fr}
-  .po-job{grid-template-columns:minmax(0,1fr)}
-  .po-job-r{justify-content:space-between}
+  .po-job{grid-template-columns:auto minmax(0,1fr)}
+  .po-job-r{grid-column:1 / -1;justify-content:space-between}
 }
 
 /* ── the start-a-job modal ──
@@ -899,6 +916,7 @@ body.po-editing #poEditBtn{display:none}
    ════════════════════════════════════════════════════════════ */
 var PO_TODAY = '2026-09-14';
 var ME       = 'QH';
+var PO_ADDR  = '2525 McDonald Way';
 
 var PO_JOBS = [
   {name:'Unit 2 full turn', desc:'Tenant out Sep 14 · 4 rooms', type:'Turn', phase:'Change order',
@@ -910,7 +928,7 @@ var PO_JOBS = [
    created:'2026-08-19', updated:'2026-09-04', due:'2026-09-11', archived:false},
 
   {name:'Kitchen scope v2', desc:'', type:'Renovation', phase:'Scope',
-   budget:26434, status:'active', admin:'review', turn:'QH', cos:0, done:0, tasks:22,
+   budget:26434, status:'active', admin:'review', turn:'Aaron Mosny', cos:0, done:0, tasks:22,
    created:'2026-08-11', updated:'2026-08-30', due:'2026-09-30', archived:false},
 
   {name:'Dashboard testing Sep 8', desc:'', type:'Acquisition', phase:'Close out',
@@ -970,7 +988,6 @@ var PO_TEMPLATES = {Turn:'ATX Metro Turn Template 01:09:26',
                     Maintenance:'', Renovation:''};
 
 var PO_STATUS = {active:'Active', completed:'Completed'};
-var PO_ADMIN  = {approved:'Approved', progress:'In progress', review:'Review in progress'};
 
 /* ── helpers ── */
 function poEsc(s){
@@ -991,6 +1008,15 @@ function poDays(a, b){
 function poFmtMoney(n){
   if(n === null || n === undefined) return '<span class="dim">$&ndash;&ndash;</span>';
   return '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+/* The job's most recent capture, as a thumbnail. The prototype ships no
+   photography, so the slot holds the tan and says what the latest capture is
+   of — or that there is not one yet. Swap the caption for an <img> when real
+   media is wired up. */
+function poJobShot(j){
+  var shots = PO_MEDIA.filter(function(m){ return m.job === j.name; })
+    .sort(function(a, b){ return b.date.localeCompare(a.date); });
+  return '<span class="c">' + poEsc(shots.length ? shots[0].room : 'No photo') + '</span>';
 }
 function poIsLate(j){ return j.status === 'active' && j.due < PO_TODAY; }
 
@@ -1016,26 +1042,33 @@ function poNow(){
       var la = poIsLate(a) ? 0 : 1, lb = poIsLate(b) ? 0 : 1;
       return la !== lb ? la - lb : a.due.localeCompare(b.due);
     });
+    /* One "Your turn" on the page, on the job that moved most recently. Four
+       cards all claiming to be your turn is four calls to action competing,
+       which is the same as none — the chip only means something if it points
+       at one thing. A job that is yours but is not the newest simply says
+       nothing here; it is still yours in the log. */
+    var newest = live.slice().sort(function(a, b){
+      return b.updated.localeCompare(a.updated);
+    })[0];
     host.innerHTML = live.map(function(j){
       var late = poIsLate(j);
       var days = late ? poDays(j.due, PO_TODAY) : 0;
-      var mine = j.turn === ME;
+      var mine = j.turn === ME && j === newest;
+      var turn = j.turn && (mine || j.turn !== ME);
       return '<button class="po-job' + (late ? ' is-late' : '') + '" type="button" '
         + 'onclick="poOpenJob(\'' + poEsc(j.name).replace(/'/g,"") + '\')">'
+        + '<span class="po-job-ph">' + poJobShot(j) + '</span>'
         + '<span class="po-job-l">'
           + '<span class="po-job-top">'
             + '<span class="po-job-t">' + poEsc(j.type) + ' job'
               + ' <span class="ph">&middot; ' + poEsc(j.phase) + '</span></span>'
-            + '<span class="po-st po-st-' + j.admin + '">' + PO_ADMIN[j.admin] + '</span>'
-            + (j.turn ? '<span class="po-turn' + (mine ? ' is-mine' : '') + '">'
+            + (turn ? '<span class="po-turn' + (mine ? ' is-mine' : '') + '">'
                 + (mine ? 'Your turn' : 'With ' + poEsc(j.turn)) + '</span>' : '')
             + (late ? '<span class="po-late-chip">' + days + ' day' + (days === 1 ? '' : 's') + ' late</span>' : '')
           + '</span>'
-          + '<span class="po-job-n">' + poEsc(j.name) + '</span>'
+          + '<span class="po-job-n">' + poEsc(PO_ADDR) + '</span>'
         + '</span>'
         + '<span class="po-job-r">'
-          + '<span class="po-job-f"><span class="k">Work</span><span class="v">'
-            + j.done + '/' + j.tasks + ' tasks</span></span>'
           + '<span class="po-job-f"><span class="k">Due</span><span class="v'
             + (late ? ' is-late' : '') + '">' + poFmtDate(j.due) + '</span></span>'
           + '<span class="po-job-f"><span class="k">Budget</span><span class="v">'

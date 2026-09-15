@@ -3400,29 +3400,54 @@ body.scope-nav .sb-hdr.is-selscope .sb-hdr-title{color:var(--ink)}
 .pgd-filter-item.is-danger:hover{background:rgba(192,68,58,.08)}
 
 /* ── Task activity ───────────────────────────────────────────────────
-   Section chrome matches the photo strip — no box around the module — but
-   each entry is its own white card, so the rule that used to separate rows
-   is gone; the gap and the card edge do that work now. */
-.sec-taskact-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
-.sec-taskact-row{position:relative;display:flex;align-items:flex-start;gap:12px}
-/* The rail runs behind the marks and stops at the last entry. Spanning the
-   row plus the list gap keeps it unbroken however tall a card gets. */
-.sec-taskact-row::before{content:'';position:absolute;left:4px;top:0;bottom:-10px;width:1px;background:var(--stroke)}
+   A dated timeline, not a stack of cards. Four columns per entry: the day
+   on the left, a diamond on the rail, what happened, and who did it against
+   the right edge. The cards are gone — the rail and the month rules carry
+   the structure, so the entries can sit on the page surface.
+
+   Days only. The hour was invented precision on a feed that derives its
+   dates from the stage the demo is in. */
+.sec-taskact .pgd-sec-hd{align-items:baseline}
+.sec-taskact-count{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:lowercase;color:var(--t3)}
+.sec-taskact-list{list-style:none;margin:0;padding:0}
+/* Shared measures so the month rule and every row land on the same rail:
+   date column, gutter, mark, gutter. */
+.sec-taskact-list{--act-date:82px;--act-mark:11px;--act-gut:16px}
+/* ── Month rule ── */
+.sec-taskact-month{display:grid;grid-template-columns:var(--act-date) 1fr;align-items:center;gap:var(--act-gut);margin:22px 0 14px}
+.sec-taskact-list > .sec-taskact-month:first-child{margin-top:4px}
+.sec-taskact-month span{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);text-align:right}
+.sec-taskact-month::after{content:'';height:1px;background:var(--ink)}
+/* ── Entry ── */
+.sec-taskact-row{position:relative;display:grid;grid-template-columns:var(--act-date) var(--act-mark) minmax(0,1fr) auto;align-items:start;gap:var(--act-gut);padding-bottom:22px}
+/* The rail runs behind the marks, from each diamond down to the next. It
+   stops at the last entry rather than trailing into the section below. */
+.sec-taskact-row::before{content:'';position:absolute;left:calc(var(--act-date) + var(--act-gut) + (var(--act-mark) - 1px) / 2);top:18px;bottom:0;width:1px;background:var(--stroke)}
+.sec-taskact-row:last-child{padding-bottom:0}
 .sec-taskact-row:last-child::before{display:none}
-.sec-taskact-mark{position:relative;z-index:1;flex:0 0 9px;height:9px;margin-top:13px;background:var(--midtone)}
-.sec-taskact-row.is-decision .sec-taskact-mark{background:var(--ink)}
+/* Date stamp: mono, right-aligned against the rail, the ordinal set small
+   and raised the way a written date reads. */
+.sec-taskact-date{font-family:var(--mono);font-size:12.5px;color:var(--t2);text-align:right;white-space:nowrap;line-height:1.25}
+.sec-taskact-date sup{font-size:.72em;margin-left:.5px;vertical-align:.32em}
+/* A diamond, so a status change reads as a point on the line rather than
+   another square in the layout. Tone is the fill; rework is an outline —
+   the one event that says something is unfinished. */
+.sec-taskact-mark{position:relative;z-index:1;width:9px;height:9px;margin-top:4px;transform:rotate(45deg);background:var(--midtone)}
+.sec-taskact-row.is-event .sec-taskact-mark{background:var(--ink)}
+.sec-taskact-row.is-idle .sec-taskact-mark{background:var(--midtone)}
+.sec-taskact-row.is-progress .sec-taskact-mark{background:#3C6FC4}
 .sec-taskact-row.is-done .sec-taskact-mark{background:var(--success)}
-/* ── The card ── */
-.sec-taskact-card{flex:1;min-width:0;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:11px 14px;background:var(--white);border:1px solid var(--stroke)}
-.sec-taskact-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
-.sec-taskact-kind{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
-.sec-taskact-label{font-family:var(--body);font-size:14px;color:var(--ink);line-height:1.35}
-.sec-taskact-label b{font-weight:700}
-/* Date over person, right-aligned against the card's edge — the two read as
-   one stamp rather than a sentence running along the bottom. */
-.sec-taskact-meta{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:3px;text-align:right;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
-.sec-taskact-when{color:var(--t3)}
-.sec-taskact-who{color:var(--ink)}
+.sec-taskact-row.is-rework .sec-taskact-mark{background:transparent;box-shadow:inset 0 0 0 1.5px #B4463A}
+/* ── What happened ── */
+.sec-taskact-body{min-width:0;display:flex;flex-direction:column;gap:5px}
+.sec-taskact-title{font-family:var(--body);font-size:15px;font-weight:700;color:var(--ink);line-height:1.25}
+.sec-taskact-row.is-rework .sec-taskact-title{color:#B4463A}
+.sec-taskact-sub{font-family:var(--body);font-size:14px;color:var(--t2);line-height:1.3}
+/* The arrow sits between two states, so it keeps its own lighter weight
+   rather than reading as part of either word. */
+.sec-taskact-sub i{font-style:normal;color:var(--midtone);padding:0 2px}
+/* Who, against the right edge — a stamp, not part of the sentence. */
+.sec-taskact-who{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);white-space:nowrap;padding-top:3px}
 
 /* ── Drawer photos ───────────────────────────────────────────────────
    Same tiles as the page strips. The strips scroll sideways because they
@@ -4481,10 +4506,10 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-dispatch{margin:0;font-size:13px;line-height:1.5;color:var(--t2);max-width:60ch}
 
 /* ── documents and hand-offs ──
-   One block per document, and inside it one line per event. The four columns
-   are shared by every line in the block — what happened, what the document is
-   worth, what that moved it by, and when — because a column that re-measures
-   itself per row is not a column, and the money is the thing you scan down. */
+   One block per document, and inside it one line per event. The money used to
+   be two of those lines' columns; it is the document's, not any one event's,
+   so it sits on the title line and the events are down to what happened and
+   when. */
 .ov-trail{display:flex;flex-direction:column;gap:20px}
 .ov-tr-h{display:flex;align-items:baseline;gap:9px;padding-bottom:7px;
   border-bottom:1px solid var(--stroke);margin-bottom:3px}
@@ -4492,6 +4517,14 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tr-st{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3)}
 .ov-tr-st.is-done{color:var(--success)}
+/* Pushed to the far edge, over the date column the rows below end on. */
+.ov-tr-money{margin-left:auto;display:inline-flex;align-items:baseline;gap:8px;
+  font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* What it was: struck and stepped back, so it reads as the superseded figure
+   rather than a second price. */
+.ov-tr-was{font-size:11.5px;font-weight:700;color:var(--t3);text-decoration:line-through;
+  text-decoration-thickness:1px}
+.ov-tr-now{font-size:13px;font-weight:700;color:var(--ink)}
 /* The rows share one grid: each .ov-tr-r is display:contents, so its four
    cells land in the block's own tracks rather than in a grid of their own. */
 /* stretch, not baseline. Baseline-aligning the cells gave each of them a box
@@ -4500,11 +4533,11 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    line and the right-hand side read as a staircase. Stretched, every cell in a
    row is the row's height, the rules meet, and the content is centred inside
    the cell rather than by where its baseline happens to fall. */
-.ov-tr-rows{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;
+.ov-tr-rows{display:grid;grid-template-columns:minmax(0,1fr) auto;
   align-items:stretch}
 .ov-tr-r{display:contents}
 .ov-tr-r > *{padding:7px 0;display:flex;align-items:center}
-.ov-tr-r > .ov-tr-sum,.ov-tr-r > .ov-tr-delta,.ov-tr-r > .ov-tr-d{justify-content:flex-end}
+.ov-tr-r > .ov-tr-d{justify-content:flex-end}
 .ov-tr-r + .ov-tr-r > *{border-top:1px solid var(--hair,var(--stroke))}
 .ov-tr-ev{gap:8px;min-width:0}
 /* The mark is a column of its own inside the event whether or not it is
@@ -4517,14 +4550,6 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tr-who{font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap}
 .ov-tr-act{font-size:12.5px;color:var(--t2);min-width:0;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
-.ov-tr-sum{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--ink);
-  font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;padding-left:18px}
-/* Direction is the thing a change order is read for, so it gets its own
-   column and its own colour rather than a sign buried in the total. */
-.ov-tr-delta{font-family:var(--mono);font-size:11.5px;font-weight:700;
-  font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;padding-left:12px}
-.ov-tr-delta.is-up{color:var(--error)}
-.ov-tr-delta.is-down{color:var(--success)}
 .ov-tr-d{font-size:11px;color:var(--t3);white-space:nowrap;font-variant-numeric:tabular-nums;
   text-align:right;padding-left:18px}
 /* What the editing came to. Its own line, in the product's label voice, since
@@ -4566,12 +4591,9 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-ch-grp:focus-visible,.ov-ch-task:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .ov-ch-code{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
   color:var(--t3);flex-shrink:0}
-/* Still with someone: the one line in the chain that has not resolved. */
-.ov-tr-waiting .ov-tr-act{color:var(--ink);font-weight:600}
 .ov-tr-start .ov-tr-act{font-style:italic}
 @media (max-width:620px){
-  .ov-tr-rows{grid-template-columns:minmax(0,1fr) auto}
-  .ov-tr-delta,.ov-tr-d{padding-left:10px}
+  .ov-tr-d{padding-left:10px}
 }
 
 /* ── what happened on site between two documents ──
@@ -4581,12 +4603,18 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-walks{display:flex;flex-direction:column;gap:1px;margin:-4px 0 4px;
   padding:9px 0 9px 24px;border-top:1px solid var(--hair,var(--stroke));
   border-bottom:1px solid var(--hair,var(--stroke))}
-.ov-walk{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:0 14px;
+/* Three columns now the walk's name is gone: what came back, how much of the
+   scope it covers, and the window it happened over. The row can carry an
+   expanded task list under it, so it is a grid of its own rather than a line
+   in the block's. */
+.ov-walk{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:0 14px;
   align-items:baseline;padding:3px 0}
-.ov-walk-n{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--t3);white-space:nowrap}
 .ov-walk-c{font-size:12.5px;color:var(--t2);min-width:0;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
+/* The rows that open match the document rows that open — same button, same
+   caret — because they are the same promise: the count, then the tasks. */
+.ov-site-open{font-size:12.5px;color:var(--t2)}
+.ov-site-detail{padding-left:0}
 .ov-walk-s{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3);white-space:nowrap;text-align:right}
 .ov-walk-d{font-size:11px;color:var(--t3);white-space:nowrap;font-variant-numeric:tabular-nums;
