@@ -11,26 +11,35 @@
 <style>
 /* ════════════════════════════════════════════════════════════
    PROPERTY OVERVIEW
-   People come here for the projects. The property's own facts are a header
-   they read once and edit twice a year, so they are typeset as facts rather
-   than fielded as a form — nine bordered inputs in a column is a data-entry
-   screen wearing a summary's clothes, and it pushed the thing anyone came for
-   below the fold.
+   ────────────────────────────────────────────────────────────
+   Rebuilt against the 2026-09-08 design review. Tov: "right now it's almost
+   like the property is an afterthought, but it's critical to how things actually
+   work." The previous version was an afterthought in a specific way — it opened
+   with nine facts about the building and made you scroll to find out whether
+   anyone was working on it.
 
-   Built in the Editor tab's vocabulary, since this page sits beside it in the
-   product: white modules bordered once and set on the app's tan, a mono
-   eyebrow over a display title with the figure on the right, mono labels for
-   every section inside, and the panel's own field treatment when a value is
-   being typed rather than read. The numbers below are the Editor's own
-   (.sec-taskcard* in panel.css), mirrored rather than imported — this page
-   loads shell.css, not the panel's stylesheet.
+   So the page is now ordered by how long an answer stays true:
+
+     1  RIGHT NOW      what is happening at this property today — the active
+                       jobs, their phase, whose turn it is, what is late. This
+                       is the thing people came for and it is above the fold.
+     2  THE PROPERTY   who is assigned here, and the building's own facts. The
+                       facts are true for years, so they are collapsed by
+                       default rather than given the top of the page.
+     3  JOBS           every job at this address, active and finished, with the
+                       archived ones reachable rather than gone.
+     4  PROGRESS       the media, promoted up from the jobs, comparable across
+                       any two points in time.
+     5  ACTIVITY       the story, in the standard pattern, drilling down into a
+                       job and then into a task without leaving the page.
+
+   Terminology follows the review: a *job* has a type (acquisition, turn,
+   renovation, maintenance), and the scope is the plan inside the job rather
+   than a level of its own.
    ════════════════════════════════════════════════════════════ */
 body{background:var(--app-bg)}
 
-/* ── top bar ──
-   The address is the page's title, so it is the only thing in here at title
-   size. "Property:" is gone — the rail already says Properties, and a label
-   that repeats the navigation is a word you read past. */
+/* ── top bar ── */
 .po-top{height:56px;background:var(--ink);display:flex;align-items:center;gap:14px;
   padding:0 20px;flex-shrink:0;position:relative;z-index:10}
 .po-top-crumb{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.13em;
@@ -39,9 +48,6 @@ body{background:var(--app-bg)}
 .po-top-crumb a:hover{color:rgba(255,255,255,.8)}
 .po-top-addr{font-family:var(--display);font-size:15px;font-weight:700;color:var(--white);
   letter-spacing:-.01em;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
-/* The city and zip sit on the same line a step quieter: the street is what
-   tells two properties apart, and the rest confirms you are on the right one
-   rather than being read first. */
 .po-top-addr .q{color:rgba(255,255,255,.55);font-weight:400}
 .po-sp{flex:1}
 .po-org{font-size:12.5px;color:rgba(255,255,255,.72)}
@@ -56,27 +62,35 @@ body{background:var(--app-bg)}
 
 /* ── page ── */
 .po-page{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
-.po-scroll{flex:1;min-height:0;overflow-y:auto;padding:18px 22px 40px}
+.po-scroll{flex:1;min-height:0;overflow-y:auto;padding:18px 22px 48px}
 .po-wrap{max-width:1280px;margin:0 auto}
 
-/* ── a module ──
-   The Editor's card: white, one hairline all the way round, on the tan. Its
-   inner bands are separated by a rule rather than by more boxes. */
+/* ── a module ── */
 .po-mod{background:var(--white);border:1px solid var(--stroke);margin-bottom:14px}
 .po-mod-pad{padding:16px 18px}
-.po-band{padding:16px 18px;border-top:1px solid var(--stroke)}
+.po-band{padding:15px 18px;border-top:1px solid var(--stroke)}
+.po-lbl{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3)}
+/* The rule that names a section of the page, outside the modules. */
+.po-sec-h{display:flex;align-items:center;gap:12px;margin:26px 0 10px}
+.po-sec-h .t{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink)}
+.po-sec-h .r{flex:1;height:1px;background:var(--stroke)}
 
-/* ── the property header ──
-   Eyebrow, title, figure right — the same three-part head a task carries in
-   the Editor, so a property and a task are read the same way. */
-.po-hero{display:grid;grid-template-columns:232px minmax(0,1fr);gap:18px;align-items:start}
+/* ── the property header ── */
+.po-hero{display:grid;grid-template-columns:340px minmax(0,1fr);gap:20px;align-items:start}
 .po-hero-r{min-width:0;display:flex;flex-direction:column}
 .po-photo{position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--sunken);
   border:1px solid var(--stroke)}
 .po-photo-cap{position:absolute;left:0;bottom:0;padding:5px 9px;background:rgba(26,26,26,.72);
   color:#fff;font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.1em;
   text-transform:uppercase}
-.po-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+/* Tov: whatever is most recent is what lives at the property level. The caption
+   says which job it came from, so a photo is never orphaned from its reason. */
+.po-photo-src{position:absolute;left:0;top:0;padding:4px 8px;background:var(--accent);
+  color:var(--ink);font-family:var(--mono);font-size:7.5px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink)}
+.po-hdr{display:flex;align-items:flex-start;gap:14px}
 .po-hdr-l{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
 .po-eyebrow{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.11em;
   text-transform:uppercase;color:var(--t3)}
@@ -84,14 +98,111 @@ body{background:var(--app-bg)}
 .po-hdr h1{font-family:var(--display);font-size:20px;font-weight:700;color:var(--ink);
   letter-spacing:-.005em;line-height:1.2;margin:0}
 .po-hdr-sub{font-family:var(--body);font-size:13px;color:var(--t2);line-height:1.35}
-.po-hdr-r{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
-.po-amt{font-family:var(--body);font-size:20px;font-weight:700;color:var(--ink);
-  font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 
-.po-lbl{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+/* ── right now ──
+   The band the review asked for: "critical information regarding the current
+   state of a property and its active projects should be elevated to the top
+   level of the view." One line per active job, in the dashboard's own grammar so
+   the two screens agree about what a job looks like. */
+.po-now{margin-top:14px;padding-top:13px;border-top:1px solid var(--stroke)}
+.po-now-h{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.po-now-h .po-btn{margin-left:auto}
+.po-jobs{display:flex;flex-direction:column;gap:8px}
+.po-job{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 14px;align-items:center;
+  padding:11px 13px;border:1px solid var(--stroke);background:var(--white);cursor:pointer;
+  text-align:left;width:100%;font:inherit;transition:border-color .12s,background .1s}
+.po-job:hover{border-color:var(--ink);background:var(--sunken)}
+.po-job:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.po-job.is-late{border-left:3px solid var(--error)}
+.po-job-l{min-width:0;display:flex;flex-direction:column;gap:4px}
+.po-job-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.po-job-t{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink)}
+.po-job-t .ph{color:var(--t3)}
+.po-job-n{font-size:13.5px;color:var(--t2);line-height:1.3}
+.po-job-r{display:flex;align-items:center;gap:16px;flex-shrink:0}
+.po-job-f{display:flex;flex-direction:column;gap:2px;align-items:flex-end}
+.po-job-f .k{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3)}
-.po-facts{margin-top:14px;padding-top:13px;border-top:1px solid var(--stroke)}
-.po-facts-h{display:flex;align-items:center;gap:12px;margin-bottom:11px}
+.po-job-f .v{font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums}
+.po-job-f .v.is-late{color:var(--error);font-weight:600}
+.po-job-go{color:var(--t3);display:inline-flex}
+.po-job-go svg{width:13px;height:13px;stroke:currentColor;stroke-width:1.8;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
+.po-job:hover .po-job-go{color:var(--ink)}
+/* An address with nothing happening at it is a normal, frequent state — and the
+   moment a maintenance user most needs the button. */
+.po-none{padding:16px 14px;border:1px dashed var(--stroke);background:var(--sunken);
+  display:flex;align-items:center;gap:14px}
+.po-none .t{font-size:13px;color:var(--t2);flex:1}
+
+/* status + turn chips, shared with the dashboard
+   The status chip is a soft tinted pill rather than an outlined box. A hairline
+   rectangle is what every control on these pages wears, so a status wearing one
+   too read as something you could press; a wash of colour behind the word reads
+   as a state the row is in. The wash also lets the word carry the hue at full
+   strength — an outline had to darken the text to stay legible, which is why
+   the old chips all trended toward the same near-black.
+
+   The glyph is a diamond, filled when the state is settled and hollow while the
+   work is still moving. That is the part that survives being photocopied, read
+   by someone colourblind, or glanced at down a column of forty rows: the shape
+   says as much as the colour does. */
+:root{
+  --st-ok-fg:#2E7D42;    --st-ok-bg:#DCEBDD;   /* settled — completed, approved  */
+  --st-go-fg:#1E76B8;    --st-go-bg:#D9E9F6;   /* moving  — active, in progress  */
+  --st-alert-fg:#C0443A; --st-alert-bg:#F7DEDB;/* wants you — review in progress */
+}
+.po-st{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:9px;
+  font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);
+  background:var(--sunken);border:0;border-radius:999px;padding:5px 11px;line-height:1.2;
+  white-space:nowrap}
+/* A square on its corner. Sized in even pixels so the rotation lands on the
+   pixel grid instead of blurring at the points. */
+.po-st::before{content:'';width:7px;height:7px;box-sizing:border-box;flex-shrink:0;
+  background:currentColor;transform:rotate(45deg)}
+.po-st-completed,.po-st-approved{color:var(--st-ok-fg);background:var(--st-ok-bg)}
+.po-st-active,.po-st-progress{color:var(--st-go-fg);background:var(--st-go-bg)}
+/* Hollow while the work is still open. */
+.po-st-active::before,.po-st-progress::before{background:none;border:1.5px solid currentColor}
+.po-st-review{color:var(--st-alert-fg);background:var(--st-alert-bg)}
+.po-turn{display:inline-flex;align-items:center;font-family:var(--mono);font-size:9px;
+  font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);
+  border:1px solid var(--stroke);padding:3px 8px;line-height:1.2}
+.po-turn.is-mine{background:var(--accent);border-color:var(--ink);color:var(--ink)}
+.po-late-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;
+  font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--error);
+  border:1px solid var(--error);padding:3px 8px;line-height:1.2}
+.po-late-chip::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+
+/* ── who is assigned here ──
+   Aaron: assign builders at the property level rather than per job, so a mobile
+   user can open an address and find out it is theirs. */
+.po-team{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.po-person{display:flex;align-items:center;gap:9px;min-width:0}
+.po-av{width:26px;height:26px;border-radius:50%;background:var(--sunken);border:1px solid var(--stroke);
+  color:var(--t2);display:inline-flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:9px;font-weight:700;flex-shrink:0}
+.po-person .l{min-width:0}
+.po-person .r{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3)}
+.po-person .n{font-size:13px;color:var(--ink);line-height:1.3}
+.po-person .n.none{color:var(--t3);font-style:italic}
+.po-team .po-btn{margin-left:auto}
+
+/* ── the property's own facts ──
+   Demoted and folded shut. They are true for years; the jobs above them change
+   weekly. Opening is one click and the state is remembered for the session. */
+.po-disc-h{display:flex;align-items:center;gap:12px;width:100%;padding:0;background:none;
+  border:0;cursor:pointer;text-align:left}
+.po-disc-h .cv{color:var(--t3);display:inline-flex}
+.po-disc-h .cv svg{width:10px;height:10px;stroke:currentColor;stroke-width:2;fill:none;
+  transition:transform .15s}
+.po-disc.is-open .po-disc-h .cv svg{transform:rotate(180deg)}
+.po-disc-h:hover .po-lbl{color:var(--ink)}
+.po-disc-h .sum{font-size:12.5px;color:var(--t3);margin-left:auto;font-variant-numeric:tabular-nums}
+.po-disc-body{display:none;margin-top:13px}
+.po-disc.is-open .po-disc-body{display:block}
 .po-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:14px 22px}
 .po-f{min-width:0;display:flex;flex-direction:column;gap:4px}
 .po-f dt{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
@@ -101,9 +212,6 @@ body{background:var(--app-bg)}
 .po-f-link{font-size:13px;color:var(--ink);text-decoration:underline;text-underline-offset:2px;
   text-decoration-color:var(--stroke);background:none;border:0;padding:0;cursor:pointer;font:inherit}
 .po-f-link:hover{text-decoration-color:var(--ink)}
-
-/* Edit mode: the panel's own field, in the cell the value was in, so the block
-   does not reflow under the cursor when you press Edit. */
 .po-f input,.po-f select{display:none;width:100%;box-sizing:border-box;
   font-family:var(--body);font-size:14px;color:var(--ink);background:var(--white);
   border:1px solid var(--stroke);padding:8px 10px;outline:none;line-height:1.4;
@@ -112,6 +220,10 @@ body{background:var(--app-bg)}
 .po-f input:focus,.po-f select:focus{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 body.po-editing .po-f dd{display:none}
 body.po-editing .po-f input,body.po-editing .po-f select{display:block}
+/* Christine: a renovation can change the bedroom count, so the facts are the
+   *current* facts and the page says as of when. */
+.po-asof{font-size:12px;color:var(--t3);margin-top:12px;padding-top:10px;
+  border-top:1px solid var(--stroke)}
 
 .po-btn{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;padding:6px 12px;border:1px solid var(--stroke);background:var(--white);
@@ -120,14 +232,13 @@ body.po-editing .po-f input,body.po-editing .po-f select{display:block}
 .po-btn.is-primary{background:var(--accent);border-color:var(--accent-deep)}
 .po-btn.is-primary:hover{background:var(--accent-deep)}
 .po-btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-.po-facts-h .po-btn{margin-left:auto}
 .po-edit-acts{display:none;gap:8px;margin-left:auto}
 body.po-editing .po-edit-acts{display:flex}
 body.po-editing #poEditBtn{display:none}
+.po-facts-h{display:flex;align-items:center;gap:12px;margin-bottom:11px}
+.po-facts-h .po-btn{margin-left:auto}
 
-/* ── projects ──
-   The reason for the page: its own module, with the count in the label and
-   the filter as a segmented control rather than a sentence on a button. */
+/* ── jobs ── */
 .po-proj-h{display:flex;align-items:center;gap:14px;padding:14px 18px;
   border-bottom:1px solid var(--stroke)}
 .po-seg{display:flex;margin-left:auto}
@@ -138,7 +249,8 @@ body.po-editing #poEditBtn{display:none}
 .po-seg button.on{background:var(--ink);border-color:var(--ink);color:#fff;position:relative;z-index:1}
 .po-seg button:hover:not(.on){color:var(--ink);border-color:var(--ink);position:relative;z-index:1}
 
-.po-tbl{width:100%;border-collapse:collapse}
+.po-tbl-wrap{overflow-x:auto}
+.po-tbl{width:100%;border-collapse:collapse;min-width:720px}
 .po-tbl thead th{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3);text-align:left;padding:10px 18px;
   border-bottom:1px solid var(--stroke);white-space:nowrap;background:var(--sunken)}
@@ -153,24 +265,14 @@ body.po-editing #poEditBtn{display:none}
 .po-tbl td{padding:12px 18px;font-size:14px;color:var(--ink);vertical-align:middle}
 .po-tbl td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
 .po-tbl td.dim{color:var(--t3);font-size:12.5px;font-variant-numeric:tabular-nums}
-/* The name is what people scan for, so it carries the weight and the type is
-   the one thing beside it — as a quiet tag rather than its own column of
-   repeated words. */
 .po-name{font-weight:600}
-.po-desc{display:block;font-size:12px;color:var(--t3);margin-top:2px}
 .po-type{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3);margin-left:8px;white-space:nowrap}
-/* Status reads as the Editor's status control does: mono, uppercase, boxed,
-   with the colour carried by the border rather than a fill. */
-.po-st{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9.5px;
-  font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);
-  border:1px solid var(--stroke);padding:5px 10px;line-height:1.2}
-.po-st::before{content:'';width:7px;height:7px;border-radius:50%;border:1.5px solid currentColor;
-  box-sizing:border-box}
-.po-st-completed{color:var(--success);border-color:var(--success)}
-.po-st-completed::before{background:currentColor}
-.po-st-active{color:var(--ink);border-color:var(--ink)}
-.po-st-active::before{background:var(--accent);border-color:var(--ink)}
+/* A finished job still opens, with the same history as a live one — the review
+   was explicit that archived work keeps its story. */
+.po-co{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--t2);border:1px dashed var(--midtone);padding:2px 7px}
+.po-co.is-many{color:var(--error);border-color:var(--error);border-style:solid}
 .po-kebab{opacity:0;background:none;border:0;padding:4px;cursor:pointer;color:var(--t3);
   transition:opacity .1s,color .12s}
 .po-tbl tbody tr:hover .po-kebab,.po-kebab:focus-visible{opacity:1}
@@ -178,21 +280,221 @@ body.po-editing #poEditBtn{display:none}
 .po-kebab svg{width:14px;height:14px;fill:currentColor}
 .po-empty{padding:34px 18px;font-size:13px;color:var(--t3);font-style:italic}
 
+/* ── progress & comparison ──
+   Tov: "make it so that at the property level you can do the comparison of any
+   point in time." The strip is every capture promoted up from every job, oldest
+   left; you pick two and they sit side by side with what job each came from.
+   Christine's future toggle — by time, or by room — is here as the second mode,
+   since the two are the same pictures under different headings. */
+.po-cmp-h{display:flex;align-items:center;gap:12px;padding:14px 18px;
+  border-bottom:1px solid var(--stroke)}
+.po-cmp-h .po-seg{margin-left:auto}
+.po-cmp-pair{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--stroke)}
+.po-pane{background:var(--white);padding:14px 16px 16px;min-width:0}
+.po-pane-h{display:flex;align-items:baseline;gap:10px;margin-bottom:9px}
+.po-pane-h .ab{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:#fff;background:var(--ink);padding:3px 7px}
+.po-pane-h .dt{font-family:var(--body);font-size:14px;font-weight:700;color:var(--ink)}
+.po-pane-h .jb{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3);margin-left:auto;text-align:right;min-width:0}
+.po-shot{position:relative;aspect-ratio:16/10;max-height:300px;background:var(--sunken);
+  border:1px solid var(--stroke);display:flex;align-items:center;justify-content:center}
+.po-shot .room{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--t3)}
+.po-shot-cap{position:absolute;left:0;bottom:0;right:0;padding:5px 9px;background:rgba(26,26,26,.72);
+  color:#fff;font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;display:flex;gap:8px}
+.po-shot-cap .g{margin-left:auto;color:rgba(255,255,255,.7)}
+/* What actually changed between the two, said in words. A pair of photos is
+   evidence; the sentence under them is the finding. */
+.po-delta{padding:12px 18px;border-top:1px solid var(--stroke);font-size:13px;color:var(--t2);
+  line-height:1.45;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.po-delta .k{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3);flex-shrink:0}
+.po-delta b{color:var(--ink);font-weight:600}
+
+/* the scrubber of captures */
+.po-strip{border-top:1px solid var(--stroke);padding:12px 18px 14px;overflow-x:auto}
+.po-strip-row{display:flex;gap:8px;min-width:min-content}
+.po-cap{flex:0 0 112px;border:1px solid var(--stroke);background:var(--white);padding:0;
+  cursor:pointer;text-align:left;font:inherit;transition:border-color .12s}
+.po-cap:hover{border-color:var(--ink)}
+.po-cap:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.po-cap .im{aspect-ratio:4/3;background:var(--sunken);border-bottom:1px solid var(--stroke);
+  display:flex;align-items:center;justify-content:center;position:relative}
+.po-cap .im span{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3)}
+.po-cap .mt{padding:6px 8px}
+.po-cap .d{display:block;font-family:var(--mono);font-size:9px;font-weight:700;color:var(--ink);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.po-cap .j{display:block;font-family:var(--mono);font-size:7.5px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--t3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+/* The two picked captures are marked A and B rather than merely highlighted, so
+   the strip says which pane each one is in. */
+.po-cap.pick-a,.po-cap.pick-b{border-color:var(--ink)}
+.po-cap.pick-a .im::after,.po-cap.pick-b .im::after{position:absolute;top:0;left:0;
+  padding:2px 6px;background:var(--ink);color:#fff;font-family:var(--mono);font-size:8px;
+  font-weight:700;letter-spacing:.1em}
+.po-cap.pick-a .im::after{content:'A'}
+.po-cap.pick-b .im::after{content:'B';background:var(--accent);color:var(--ink);
+  border-right:1px solid var(--ink);border-bottom:1px solid var(--ink)}
+.po-strip-grp{display:flex;flex-direction:column;gap:6px;flex:0 0 auto}
+.po-strip-grp .gl{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--t3)}
+.po-strip-grp .gr{display:flex;gap:8px}
+.po-hint{padding:0 18px 14px;font-size:12px;color:var(--t3)}
+
+/* ── activity ──
+   The log is the shared pattern; what this page adds is the breadcrumb, because
+   drilling from the property into a job and then into a task is a move you have
+   to be able to undo. */
+/* ── activity: documents and hand-offs ──────────────────────────────
+   The property's log is a run of documents — a scope, a change order per
+   revision, a closeout — and each passes through several pairs of hands before
+   it is approved. So the block is the document and the line is the event, and
+   the four columns are shared by every line in the block: what happened, what
+   the document is worth, what that moved it by, and when. A column that
+   re-measures itself per row is not a column, and the money is the thing you
+   scan down.
+
+   Lifted from the job page's own trail (the ov-* rules in panel.css) rather
+   than reinvented — it is the same object at a different altitude, and the
+   point of the pattern was not redesigning it per level. */
+.po-trail{display:flex;flex-direction:column;gap:20px;padding:4px 18px 18px}
+.po-tr-h{display:flex;align-items:baseline;gap:9px;padding-bottom:7px;
+  border-bottom:1px solid var(--stroke);margin-bottom:3px}
+.po-tr-n{font-size:13.5px;font-weight:700;color:var(--ink)}
+.po-tr-st{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3)}
+.po-tr-st.is-done{color:var(--success)}
+/* Each row is display:contents, so its four cells land in the block's own
+   tracks rather than in a grid of their own. Stretch, not baseline: the rule
+   between rows is drawn on these cells, and baseline-aligned boxes each start
+   at a different line, which made the right-hand side read as a staircase. */
+.po-tr-rows{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:stretch}
+.po-tr-r{display:contents}
+.po-tr-r > *{padding:7px 0;display:flex;align-items:center}
+.po-tr-r > .po-tr-sum,.po-tr-r > .po-tr-delta,.po-tr-r > .po-tr-d{justify-content:flex-end}
+.po-tr-r + .po-tr-r > *{border-top:1px solid var(--stroke)}
+.po-tr-ev{gap:8px;min-width:0}
+/* The mark keeps its column whether or not it is filled, so every name starts
+   on the same line. */
+.po-tr-mk{width:16px;height:16px;flex-shrink:0;display:inline-flex;align-items:center;
+  justify-content:center;color:var(--white);background:var(--ink);border-radius:50%;
+  visibility:hidden}
+.po-tr-approved .po-tr-mk{visibility:visible}
+.po-tr-ck{width:9px;height:9px}
+.po-tr-who{font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap}
+.po-tr-act{font-size:12.5px;color:var(--t2);min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.po-tr-sum{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--ink);
+  font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;padding-left:18px}
+/* Direction is what a change order is read for, so it gets its own column and
+   its own colour rather than a sign buried in the total. */
+.po-tr-delta{font-family:var(--mono);font-size:11.5px;font-weight:700;
+  font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;padding-left:12px}
+.po-tr-delta.is-up{color:var(--error)}
+.po-tr-delta.is-down{color:var(--success)}
+.po-tr-d{font-size:11px;color:var(--t3);white-space:nowrap;font-variant-numeric:tabular-nums;
+  text-align:right;padding-left:18px}
+/* What the editing came to. Its own line, in the label voice, since it is a
+   count rather than something a person said — and a control, because a count
+   you cannot open is a dead end: "7 tasks changed" is the beginning of the
+   question and the names are the answer. */
+.po-tr-changed .po-tr-act{font-family:var(--mono);font-size:9.5px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.po-tr-open{display:inline-flex;align-items:center;gap:6px;background:none;border:0;
+  padding:0;cursor:pointer;transition:color .12s;font:inherit}
+.po-tr-open:hover{color:var(--ink)}
+.po-tr-open:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.po-tr-car{width:9px;height:9px;stroke:currentColor;stroke-width:1.8;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;transition:transform .12s}
+.po-tr-open[aria-expanded="true"] .po-tr-car{transform:rotate(180deg)}
+/* The names, indented under the count. Spans the grid, since it belongs to the
+   line above rather than to any one column. */
+.po-tr-detail{grid-column:1 / -1;padding:4px 0 10px 24px;border-top:1px solid var(--stroke)}
+.po-tr-detail[hidden]{display:none}
+.po-ch-g{padding:7px 0}
+.po-ch-g + .po-ch-g{border-top:1px solid var(--stroke)}
+.po-ch-grp{display:block;background:none;border:0;padding:0;cursor:pointer;font:inherit;
+  font-size:12.5px;font-weight:600;color:var(--ink);text-align:left;
+  border-bottom:1.5px solid transparent;transition:border-color .12s}
+.po-ch-grp:hover{border-bottom-color:var(--ink)}
+.po-ch-ts{display:flex;flex-direction:column;align-items:stretch;gap:1px;margin-top:5px}
+.po-ch-task{display:grid;grid-template-columns:66px auto minmax(0,1fr);gap:0 10px;
+  align-items:baseline;width:100%;background:none;border:0;padding:3px 0;cursor:pointer;
+  font:inherit;font-size:12.5px;color:var(--t2);text-align:left;transition:color .12s}
+.po-ch-task:hover{color:var(--ink)}
+.po-ch-task:hover .po-ch-name{border-bottom-color:var(--ink)}
+.po-ch-name{font-weight:600;color:var(--ink);white-space:nowrap;
+  border-bottom:1.5px solid transparent;transition:border-color .12s}
+.po-ch-what{color:var(--t3);font-size:12px;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.po-ch-grp:focus-visible,.po-ch-task:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.po-ch-code{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
+  color:var(--t3);flex-shrink:0}
+/* Still with someone: the one line in the chain that has not resolved. */
+.po-tr-waiting .po-tr-act{color:var(--ink);font-weight:600}
+.po-tr-start .po-tr-act{font-style:italic}
+
+/* What happened on site between two documents. Set between the blocks rather
+   than inside one, because it belongs to neither: a document's chain says who
+   held it and nothing about the weeks in between, where the work is actually
+   being done — and those weeks are most of the calendar. */
+.po-walks{display:flex;flex-direction:column;gap:1px;margin:-4px 0 4px;
+  padding:9px 0 9px 24px;border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke)}
+.po-walk{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:0 14px;
+  align-items:baseline;padding:3px 0}
+.po-walk-n{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3);white-space:nowrap}
+.po-walk-c{font-size:12.5px;color:var(--t2);min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.po-walk-s{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3);white-space:nowrap;text-align:right}
+.po-walk-d{font-size:11px;color:var(--t3);white-space:nowrap;font-variant-numeric:tabular-nums;
+  text-align:right}
+
+/* The reveal for the earlier documents. The current one is what anyone came to
+   check; the rest are the audit trail, which is a different errand — so only
+   the latest is open, and the count is said up front, because collapsed
+   without saying how much is behind it is a mystery box. */
+.po-trail-rest{display:flex;flex-direction:column;gap:20px}
+.po-trail-rest[hidden]{display:none}
+.po-more{align-self:flex-start;padding:0;border:0;background:none;cursor:pointer;
+  font:inherit;font-size:12px;font-weight:600;color:var(--ink);
+  border-bottom:1.5px solid var(--stroke);transition:border-color .12s}
+.po-more:hover{border-bottom-color:var(--ink)}
+.po-more:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+@media (max-width:620px){
+  .po-tr-rows{grid-template-columns:minmax(0,1fr) auto}
+  .po-tr-delta,.po-tr-d{padding-left:10px}
+}
+.po-crumbs{display:flex;align-items:center;gap:8px;padding:12px 18px;
+  border-bottom:1px solid var(--stroke);background:var(--sunken);flex-wrap:wrap}
+.po-crumb{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t2);background:none;border:0;padding:0;cursor:pointer;
+  transition:color .12s}
+.po-crumb:hover{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.po-crumb.on{color:var(--ink);cursor:default}
+.po-crumb.on:hover{text-decoration:none}
+.po-crumb-sep{color:var(--midtone);font-size:10px}
+.po-crumbs .note{margin-left:auto;font-family:var(--body);font-size:12px;color:var(--t3);
+  text-transform:none;letter-spacing:0;font-weight:400}
+
 @media (max-width:900px){
   .po-hero{grid-template-columns:minmax(0,1fr)}
-  .po-photo{max-width:300px}
+  .po-photo{max-width:420px}
+  .po-cmp-pair{grid-template-columns:1fr}
+  .po-job{grid-template-columns:minmax(0,1fr)}
+  .po-job-r{justify-content:space-between}
 }
 
-/* ── the new-project modal ──
-   Square corners, one hairline under the head and above the actions, and the
-   body divided into named sections rather than run as one column of twelve
-   fields. Eleven inputs in a row is a wall; three short sections with a label
-   each is a form you can see the end of.
-
-   Every field carries its label above it in the page's own mono, so the modal
-   and the property details behind it are read the same way. "(Optional)" is
-   said once per field, in the label, quietly — a required marker on the other
-   nine would be nine marks saying the ordinary thing. */
+/* ── the start-a-job modal ──
+   Already a modal rather than the side drawer the review retired: "the current
+   side drawer used for project setup is repetitive and inefficient … transition
+   this into a more prominent modal design." Its fields are grouped into three
+   named sections so twelve inputs read as three short lists. */
 .po-scrim{position:fixed;inset:0;background:rgba(26,26,26,.44);opacity:0;visibility:hidden;
   transition:opacity .14s ease-out,visibility .14s;z-index:60}
 .po-scrim.open{opacity:1;visibility:visible}
@@ -230,8 +532,6 @@ body.po-editing #poEditBtn{display:none}
 .po-m-f input:focus,.po-m-f select:focus,.po-m-f textarea:focus{border-color:var(--ink);
   box-shadow:inset 0 0 0 1px var(--ink)}
 .po-m-f input::placeholder,.po-m-f textarea::placeholder{color:var(--t3)}
-/* The dollar lives in the field rather than in the value, so the number the
-   user types is the number the field holds. */
 .po-m-money{position:relative}
 .po-m-money span{position:absolute;left:11px;top:50%;transform:translateY(-50%);
   color:var(--t3);font-size:14px;pointer-events:none}
@@ -239,8 +539,9 @@ body.po-editing #poEditBtn{display:none}
 .po-m-count{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;
   color:var(--t3);text-align:right;margin-top:5px}
 .po-m-count.is-full{color:var(--error)}
-/* Chips: the people already on the project, each removable, above the picker
-   that adds the next one. */
+.po-m-note{font-size:12.5px;color:var(--t3);line-height:1.45;padding:9px 12px;
+  border-left:2px solid var(--stroke);background:var(--sunken);margin-top:8px}
+.po-m-note b{color:var(--ink)}
 .po-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .po-chips:empty{display:none}
 .po-chip-p{display:inline-flex;align-items:center;gap:7px;padding:5px 8px 5px 10px;
@@ -256,16 +557,12 @@ body.po-editing #poEditBtn{display:none}
 .po-m-acts .po-btn:first-of-type{margin-left:auto}
 .po-m-req{font-size:12px;color:var(--t3)}
 @media (max-width:620px){ .po-m-grid{grid-template-columns:1fr} }
-
 </style>
 </head>
 <body>
 
 <header class="po-top">
-  <span class="po-top-crumb"><a href="#">Properties</a></span>
-  <!-- Which property, in the bar, in the same display type index.html's toolbar
-       uses for it — the black bar named the section and nothing else, and this
-       is the one line that stays put while the page scrolls. -->
+  <span class="po-top-crumb"><a href="dashboard.html">Properties</a></span>
   <span class="po-top-addr">2525 McDonald Way<span class="q">, Austin, TX 78754</span></span>
   <span class="po-sp"></span>
   <span class="po-org">Kaiizen Testing</span>
@@ -300,23 +597,24 @@ body.po-editing #poEditBtn{display:none}
     <button class="gnav-item" type="button"><span class="gnav-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 7.5H20.5"/><path d="M2.5 7.5H5.5"/><path d="M10.5 17.5H2.5"/><path d="M20.5 17.5H17.5"/><path d="M7.232 10.5L5.5 7.5L7.232 4.5H10.768L12.5 7.5L10.768 10.5H7.232Z"/><path d="M12.232 20.5L10.5 17.5L12.232 14.5H15.768L17.5 17.5L15.768 20.5H12.232Z"/></svg></span><span class="lbl">Org Settings</span></button>
   </nav>
   </div>
-</aside>
-<div class="po-page">
+</aside><div class="po-page">
   <div class="po-scroll">
   <div class="po-wrap">
 
-    <!-- ── the property, as a header rather than a form ── -->
+    <!-- ══ 1 · RIGHT NOW ══════════════════════════════════════════
+         What is happening at this address today. Everything descriptive moved
+         below it — the review's "elevate the current state of the property and
+         its active jobs to the top level of the view". -->
     <section class="po-mod">
       <div class="po-mod-pad">
         <div class="po-hero">
           <figure class="po-photo">
-            <!-- The photo slot. The prototype has no property photography, so it
-                 holds the tan rather than an illustration pretending to be one. -->
-            <figcaption class="po-photo-cap">Street view</figcaption>
+            <!-- Promoted up from the most recent capture at this property, per
+                 Tov: "whatever was the most recent, that's what we promote, and
+                 that lives at the property level." -->
+            <figcaption class="po-photo-src" id="poHeroSrc">Latest</figcaption>
+            <figcaption class="po-photo-cap" id="poHeroCap">Street view</figcaption>
           </figure>
-          <!-- Everything known about the property, in the photo's own row: a
-               details band under the module left a column of white beside the
-               title and made the module taller than it had to be. -->
           <div class="po-hero-r">
             <div class="po-hdr">
               <div class="po-hdr-l">
@@ -325,67 +623,153 @@ body.po-editing #poEditBtn{display:none}
                 <div class="po-hdr-sub">Austin, TX 78754 &nbsp;&middot;&nbsp;
                   <button class="po-f-link" type="button">View market</button></div>
               </div>
-              <div class="po-hdr-r">
-                <span class="po-amt" id="poTotal">&mdash;</span>
-                <span class="po-lbl">Active budget</span>
-              </div>
             </div>
 
-            <div class="po-facts">
-              <div class="po-facts-h">
-                <span class="po-lbl">Property details</span>
-                <button class="po-btn" id="poEditBtn" type="button" onclick="poEdit(true)">Edit</button>
-                <span class="po-edit-acts">
-                  <button class="po-btn" type="button" onclick="poEdit(false)">Cancel</button>
-                  <button class="po-btn is-primary" type="button" onclick="poSave()">Save details</button>
-                </span>
+            <div class="po-now">
+              <div class="po-now-h">
+                <span class="po-lbl" id="poNowLbl">Projects</span>
+                <button class="po-btn is-primary" type="button" onclick="poNew(true)">+ Start a job</button>
               </div>
-              <dl class="po-grid" id="poGrid">
-                <div class="po-f"><dt>Beds</dt><dd id="v-beds">3</dd><input id="i-beds" type="number" value="3" aria-label="Beds"></div>
-                <div class="po-f"><dt>Full baths</dt><dd id="v-full">3</dd><input id="i-full" type="number" value="3" aria-label="Full baths"></div>
-                <div class="po-f"><dt>Half baths</dt><dd id="v-half">0</dd><input id="i-half" type="number" value="0" aria-label="Half baths"></div>
-                <div class="po-f"><dt>Square feet</dt><dd id="v-sqft">1,422<span class="u">sqft</span></dd><input id="i-sqft" type="number" value="1422" aria-label="Square feet"></div>
-                <div class="po-f"><dt>Acres</dt><dd id="v-acres">0.101<span class="u">acres</span></dd><input id="i-acres" type="number" step="0.001" value="0.101" aria-label="Acres"></div>
-                <div class="po-f"><dt>Garage</dt><dd id="v-garage">Yes</dd>
-                  <select id="i-garage" aria-label="Garage"><option>Yes</option><option>No</option></select></div>
-                <div class="po-f"><dt>Market</dt><dd id="v-market">Austin</dd>
-                  <select id="i-market" aria-label="Market"><option>Austin</option><option>Atlanta</option><option>Dallas</option><option>Phoenix</option></select></div>
-                <div class="po-f"><dt>Test ID</dt><dd id="v-testid">9876</dd><input id="i-testid" value="9876" aria-label="Test ID"></div>
-              </dl>
+              <div class="po-jobs" id="poNowJobs"></div>
             </div>
           </div>
         </div>
       </div>
+
+      <!-- Assigned at the property, not per job — so a tech opening this address
+           on a phone can tell at once whether it is theirs. -->
+      <div class="po-band">
+        <div class="po-team">
+          <div class="po-person"><span class="po-av">MA</span>
+            <span class="l"><span class="r">Maintenance tech</span><span class="n">M. Alvarez</span></span></div>
+          <div class="po-person"><span class="po-av">GH</span>
+            <span class="l"><span class="r">Builder</span><span class="n">G. Han</span></span></div>
+          <div class="po-person"><span class="po-av">AM</span>
+            <span class="l"><span class="r">Approver</span><span class="n">Aaron Mosny</span></span></div>
+          <div class="po-person"><span class="po-av">&mdash;</span>
+            <span class="l"><span class="r">Field user</span><span class="n none">Unassigned</span></span></div>
+          <button class="po-btn" type="button">Manage property team</button>
+        </div>
+      </div>
+
+      <!-- The building's own facts, folded shut. -->
+      <div class="po-band po-disc" id="poDisc">
+        <button class="po-disc-h" type="button" onclick="poDiscToggle()" aria-expanded="false" aria-controls="poDiscBody">
+          <span class="cv"><svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3"/></svg></span>
+          <span class="po-lbl">Property details</span>
+          <span class="sum" id="poDiscSum">3 bed &middot; 3 bath &middot; 1,422 sqft &middot; 0.101 acres</span>
+        </button>
+        <div class="po-disc-body" id="poDiscBody">
+          <div class="po-facts-h">
+            <span class="po-lbl">As recorded today</span>
+            <button class="po-btn" id="poEditBtn" type="button" onclick="poEdit(true)">Edit</button>
+            <span class="po-edit-acts">
+              <button class="po-btn" type="button" onclick="poEdit(false)">Cancel</button>
+              <button class="po-btn is-primary" type="button" onclick="poSave()">Save details</button>
+            </span>
+          </div>
+          <dl class="po-grid" id="poGrid">
+            <div class="po-f"><dt>Beds</dt><dd id="v-beds">3</dd><input id="i-beds" type="number" value="3" aria-label="Beds"></div>
+            <div class="po-f"><dt>Full baths</dt><dd id="v-full">3</dd><input id="i-full" type="number" value="3" aria-label="Full baths"></div>
+            <div class="po-f"><dt>Half baths</dt><dd id="v-half">0</dd><input id="i-half" type="number" value="0" aria-label="Half baths"></div>
+            <div class="po-f"><dt>Square feet</dt><dd id="v-sqft">1,422<span class="u">sqft</span></dd><input id="i-sqft" type="number" value="1422" aria-label="Square feet"></div>
+            <div class="po-f"><dt>Acres</dt><dd id="v-acres">0.101<span class="u">acres</span></dd><input id="i-acres" type="number" step="0.001" value="0.101" aria-label="Acres"></div>
+            <div class="po-f"><dt>Garage</dt><dd id="v-garage">Yes</dd>
+              <select id="i-garage" aria-label="Garage"><option>Yes</option><option>No</option></select></div>
+            <div class="po-f"><dt>Market</dt><dd id="v-market">Austin</dd>
+              <select id="i-market" aria-label="Market"><option>Austin</option><option>Atlanta</option><option>Dallas</option><option>Phoenix</option></select></div>
+            <div class="po-f"><dt>Test ID</dt><dd id="v-testid">9876</dd><input id="i-testid" value="9876" aria-label="Test ID"></div>
+          </dl>
+          <!-- A property is not a constant. The 2025 make-ready added a bathroom,
+               so the page says which job last changed these numbers. -->
+          <div class="po-asof">Last changed by <b>2025 make-ready</b> on 01-14-26 — that job took the
+            property from 3 bed / 2 bath to 3 bed / 3 bath.</div>
+        </div>
+      </div>
     </section>
 
-    <!-- ── the reason for the page ── -->
+    <!-- ══ 2 · JOBS ═══════════════════════════════════════════════ -->
+    <div class="po-sec-h"><span class="t">Jobs at this property</span>
+      <span class="r"></span></div>
+
     <section class="po-mod">
       <div class="po-proj-h">
-        <span class="po-lbl" id="poCount">Projects &middot; 6 active</span>
+        <span class="po-lbl" id="poCount">Jobs</span>
         <div class="po-seg" id="poSeg">
           <button type="button" class="on" onclick="poFilter('active')" id="poSegActive">Active</button>
           <button type="button" onclick="poFilter('archived')" id="poSegArch">Archived</button>
         </div>
-        <button class="po-btn is-primary" type="button" onclick="poNew(true)">New project</button>
+        <button class="po-btn is-primary" type="button" onclick="poNew(true)">+ Start a job</button>
       </div>
 
+      <div class="po-tbl-wrap">
       <table class="po-tbl">
         <thead>
           <tr>
-            <th style="width:36%">Project</th>
+            <th style="width:32%">Job</th>
             <th style="width:15%">Status</th>
-            <th class="num" style="width:13%">Budget</th>
-            <th style="width:13%">Created</th>
-            <th style="width:15%">
+            <th class="num" style="width:12%">Budget</th>
+            <th style="width:13%">Change orders</th>
+            <th style="width:11%">Created</th>
+            <th style="width:13%">
               <button type="button" onclick="poSort()">Updated
                 <svg id="poSortIco" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2v8M3 7l3 3 3-3"/></svg>
               </button>
             </th>
-            <th style="width:8%"></th>
+            <th style="width:4%"></th>
           </tr>
         </thead>
         <tbody id="poRows"></tbody>
       </table>
+      </div>
+    </section>
+
+    <!-- ══ 3 · PROGRESS & COMPARISON ══════════════════════════════
+         Every capture from every job, promoted to the property, comparable in
+         pairs. The review's example: the original acquisition against the
+         current state, five years apart, without opening either job. -->
+    <div class="po-sec-h"><span class="t">Progress &amp; comparison</span>
+      <span class="r"></span></div>
+
+    <section class="po-mod">
+      <div class="po-cmp-h">
+        <span class="po-lbl" id="poCmpLbl">Comparing</span>
+        <div class="po-seg" id="poCmpSeg">
+          <button type="button" class="on" onclick="poCmpMode('time')">By time</button>
+          <button type="button" onclick="poCmpMode('room')">By room</button>
+        </div>
+      </div>
+
+      <div class="po-cmp-pair">
+        <div class="po-pane">
+          <div class="po-pane-h"><span class="ab">A</span><span class="dt" id="poAdate">&mdash;</span>
+            <span class="jb" id="poAjob"></span></div>
+          <div class="po-shot" id="poAshot"></div>
+        </div>
+        <div class="po-pane">
+          <div class="po-pane-h"><span class="ab">B</span><span class="dt" id="poBdate">&mdash;</span>
+            <span class="jb" id="poBjob"></span></div>
+          <div class="po-shot" id="poBshot"></div>
+        </div>
+      </div>
+
+      <div class="po-delta" id="poDelta"></div>
+
+      <div class="po-strip">
+        <div class="po-strip-row" id="poStrip"></div>
+      </div>
+      <div class="po-hint">Click a capture to set <b>B</b>; click it again to set <b>A</b>. Oldest on the left.</div>
+    </section>
+
+    <!-- ══ 4 · ACTIVITY ═══════════════════════════════════════════
+         The standardized pattern, at the property level, drilling into a job and
+         then into a task without leaving the page — Maria's flow, end to end. -->
+    <div class="po-sec-h"><span class="t">Activity</span>
+      <span class="r"></span></div>
+
+    <section class="po-mod" style="padding:0;border:0">
+      <div class="po-crumbs" id="poCrumbs"></div>
+      <div id="poActivity"></div>
     </section>
 
   </div>
@@ -393,18 +777,15 @@ body.po-editing #poEditBtn{display:none}
 </div>
 </div>
 
-
-<!-- ── create a project ─────────────────────────────────────────────
-     The form the New project button opens. Its fields are the product's; the
-     grouping into three named sections is this page's, so a twelve-field
-     column reads as three short ones. -->
+<!-- ── start a job ─────────────────────────────────────────────────
+     The side drawer the review retired, rebuilt as a modal. Its fields are the
+     product's; the grouping into three named sections is this page's, so twelve
+     fields read as three short lists instead of one wall. -->
 <div class="po-scrim" id="poScrim" onclick="poNew(false)"></div>
 <div class="po-modal" id="poModal" role="dialog" aria-modal="true" aria-labelledby="poModalTitle">
   <div class="po-m-head">
     <div class="po-m-head-l">
-      <h2 id="poModalTitle">Create new project</h2>
-      <!-- Which property, and nothing else. The sentence that was here spent a
-           paragraph saying what the fields already say. -->
+      <h2 id="poModalTitle">Start a job</h2>
       <div class="po-m-head-sub">2525 McDonald Way, Austin, TX 78754</div>
     </div>
     <button class="po-m-x" type="button" onclick="poNew(false)" aria-label="Close">
@@ -414,40 +795,44 @@ body.po-editing #poEditBtn{display:none}
 
   <div class="po-m-body">
     <div class="po-m-sec">
-      <span class="po-lbl">The project</span>
+      <span class="po-lbl">The job</span>
       <div class="po-m-grid">
         <div class="po-m-f">
-          <label for="np-type">Project type</label>
-          <select id="np-type">
+          <label for="np-type">Job type</label>
+          <select id="np-type" onchange="poTypeChanged()">
             <option value="">Select a type&hellip;</option>
             <option>Acquisition</option><option>Turn</option>
             <option>Renovation</option><option>Maintenance</option>
           </select>
         </div>
         <div class="po-m-f">
-          <label for="np-budget">Project budget <span class="opt">optional</span></label>
+          <label for="np-budget">Budget <span class="opt">optional</span></label>
           <div class="po-m-money"><span>$</span><input id="np-budget" type="number" min="0" step="100" placeholder="0.00"></div>
         </div>
         <div class="po-m-f wide">
-          <label for="np-name">Project name <span class="opt">optional</span></label>
-          <input id="np-name" placeholder="Defaults to the project type and today&rsquo;s date">
+          <label for="np-name">Job name <span class="opt">optional</span></label>
+          <input id="np-name" placeholder="Defaults to the job type and today&rsquo;s date">
         </div>
         <div class="po-m-f">
           <label for="np-due">Scope due date</label>
-          <input id="np-due" type="date" value="2026-09-11">
+          <input id="np-due" type="date" value="2026-09-14">
         </div>
         <div class="po-m-f">
-          <label for="np-end">Project end date</label>
-          <input id="np-end" type="date" value="2026-09-11">
+          <label for="np-end">Job end date</label>
+          <input id="np-end" type="date" value="2026-09-14">
         </div>
         <div class="po-m-f wide">
-          <label for="np-template">Project template</label>
+          <label for="np-template">Template</label>
           <select id="np-template">
             <option value="">No template</option>
             <option>ATX Metro Turn Template 01:09:26</option>
             <option>ATX Acquisition Inspection 04:22:26</option>
             <option>Maintenance &mdash; Standard</option>
           </select>
+          <!-- Austin had no default template set in staging, which turned a
+               decision nobody needed to make into a required step. Say which
+               default applied, or say plainly that there isn't one. -->
+          <div class="po-m-note" id="npTplNote">Pick a job type and Kai will preselect this market&rsquo;s default template.</div>
         </div>
       </div>
     </div>
@@ -485,91 +870,230 @@ body.po-editing #poEditBtn{display:none}
         <div class="po-m-f wide">
           <label for="np-field">Field user</label>
           <select id="np-field">
-            <option value="">Unassigned for now</option>
+            <option value="">Inherit the property&rsquo;s team</option>
             <option>M. Alvarez</option><option>G. Han</option>
             <option>J. Duarte</option><option>S. Kwon</option>
           </select>
+          <!-- Aaron: assignment belongs at the property, so a job inherits it
+               and only overrides when someone means to. -->
+          <div class="po-m-note">Left alone, this job uses the property team &mdash;
+            <b>M. Alvarez</b> (maintenance) and <b>G. Han</b> (builder).</div>
         </div>
       </div>
     </div>
   </div>
 
   <div class="po-m-acts">
-    <span class="po-m-req" id="npHint">Project type is required.</span>
+    <span class="po-m-req" id="npHint">Job type is required.</span>
     <button class="po-btn" type="button" onclick="poNew(false)">Cancel</button>
-    <button class="po-btn is-primary" type="button" onclick="poCreate()">Create project</button>
+    <button class="po-btn is-primary" type="button" onclick="poCreate()">Create job</button>
   </div>
 </div>
 
 <script>
-/* The rows the screenshot shows, plus the rest of the six it counts. Dates are
-   ISO here and formatted on render, so sorting is a comparison rather than a
-   date parse of whatever the cell happens to say. */
-var PO_PROJECTS = [
-  {name:'Dashboard testing Sep 8', desc:'', type:'Acquisition', budget:10000, status:'completed', created:'2026-09-08', updated:'2026-09-11', archived:false},
-  {name:'Visibility test',         desc:'', type:'Acquisition', budget:null,  status:'active',    created:'2026-09-02', updated:'2026-09-10', archived:false},
-  {name:'Unit 2 full turn',        desc:'Tenant out Sep 14 · 4 rooms', type:'Turn', budget:68242, status:'active', created:'2026-08-27', updated:'2026-09-09', archived:false},
-  {name:'Roof + gutter repair',    desc:'Storm damage claim', type:'Maintenance', budget:9800, status:'active', created:'2026-08-19', updated:'2026-09-04', archived:false},
-  {name:'Kitchen scope v2',        desc:'', type:'Renovation', budget:26434, status:'active', created:'2026-08-11', updated:'2026-08-30', archived:false},
-  {name:'Exterior paint',          desc:'', type:'Maintenance', budget:5400, status:'completed', created:'2026-07-30', updated:'2026-08-22', archived:false},
-  {name:'2025 make-ready',         desc:'', type:'Turn', budget:41200, status:'completed', created:'2025-11-02', updated:'2026-01-14', archived:true},
-  {name:'HVAC replacement',        desc:'', type:'Maintenance', budget:7350, status:'completed', created:'2025-09-18', updated:'2025-10-02', archived:true},
-  {name:'Acquisition inspection',  desc:'', type:'Acquisition', budget:1200, status:'completed', created:'2025-08-04', updated:'2025-08-20', archived:true},
-  {name:'Flooring replacement',    desc:'', type:'Renovation', budget:14750, status:'completed', created:'2025-06-11', updated:'2025-07-01', archived:true},
-  {name:'Landscaping refresh',     desc:'', type:'Maintenance', budget:2950, status:'completed', created:'2025-05-22', updated:'2025-06-03', archived:true},
-  {name:'Water heater',            desc:'', type:'Maintenance', budget:1850, status:'completed', created:'2025-04-09', updated:'2025-04-19', archived:true},
-  {name:'Initial turn 2024',       desc:'', type:'Turn', budget:38900, status:'completed', created:'2024-10-30', updated:'2025-01-08', archived:true}
-];
-var poView = 'active';
-var poDesc = true;   // newest first
+/* ════════════════════════════════════════════════════════════
+   THE DATA
+   Jobs at 2525 McDonald Way. Each one carries what the review said the property
+   page was failing to show: what kind of job it is, what phase it is in, whose
+   turn it is, and how many change orders it has absorbed.
+   ════════════════════════════════════════════════════════════ */
+var PO_TODAY = '2026-09-14';
+var ME       = 'QH';
 
+var PO_JOBS = [
+  {name:'Unit 2 full turn', desc:'Tenant out Sep 14 · 4 rooms', type:'Turn', phase:'Change order',
+   budget:68242, status:'active', admin:'progress', turn:'QH', cos:4, done:12, tasks:38,
+   created:'2026-08-27', updated:'2026-09-12', due:'2026-10-02', archived:false},
+
+  {name:'Roof + gutter repair', desc:'Storm damage claim', type:'Maintenance', phase:'Dispatch',
+   budget:9800, status:'active', admin:'progress', turn:'J. Duarte', cos:0, done:2, tasks:6,
+   created:'2026-08-19', updated:'2026-09-04', due:'2026-09-11', archived:false},
+
+  {name:'Kitchen scope v2', desc:'', type:'Renovation', phase:'Scope',
+   budget:26434, status:'active', admin:'review', turn:'QH', cos:0, done:0, tasks:22,
+   created:'2026-08-11', updated:'2026-08-30', due:'2026-09-30', archived:false},
+
+  {name:'Dashboard testing Sep 8', desc:'', type:'Acquisition', phase:'Close out',
+   budget:10000, status:'completed', admin:'approved', turn:null, cos:0, done:9, tasks:9,
+   created:'2026-09-08', updated:'2026-09-11', due:'2026-09-11', archived:false},
+
+  {name:'Visibility test', desc:'', type:'Acquisition', phase:'Scope',
+   budget:null, status:'active', admin:'review', turn:'G. Han', cos:0, done:0, tasks:4,
+   created:'2026-09-02', updated:'2026-09-10', due:'2026-09-25', archived:false},
+
+  {name:'Exterior paint', desc:'', type:'Maintenance', phase:'Close out',
+   budget:5400, status:'completed', admin:'approved', turn:null, cos:1, done:7, tasks:7,
+   created:'2026-07-30', updated:'2026-08-22', due:'2026-08-20', archived:false},
+
+  {name:'2025 make-ready', desc:'Added the third bathroom', type:'Turn', phase:'Close out',
+   budget:41200, status:'completed', admin:'approved', turn:null, cos:2, done:33, tasks:33,
+   created:'2025-11-02', updated:'2026-01-14', due:'2026-01-10', archived:true},
+
+  {name:'HVAC replacement', desc:'', type:'Maintenance', phase:'Close out',
+   budget:7350, status:'completed', admin:'approved', turn:null, cos:0, done:5, tasks:5,
+   created:'2025-09-18', updated:'2025-10-02', due:'2025-10-01', archived:true},
+
+  {name:'Acquisition inspection', desc:'The original walk', type:'Acquisition', phase:'Close out',
+   budget:1200, status:'completed', admin:'approved', turn:null, cos:0, done:12, tasks:12,
+   created:'2025-08-04', updated:'2025-08-20', due:'2025-08-18', archived:true},
+
+  {name:'Flooring replacement', desc:'', type:'Renovation', phase:'Close out',
+   budget:14750, status:'completed', admin:'approved', turn:null, cos:1, done:8, tasks:8,
+   created:'2025-06-11', updated:'2025-07-01', due:'2025-06-30', archived:true},
+
+  {name:'Water heater', desc:'', type:'Maintenance', phase:'Close out',
+   budget:1850, status:'completed', admin:'approved', turn:null, cos:0, done:3, tasks:3,
+   created:'2025-04-09', updated:'2025-04-19', due:'2025-04-18', archived:true}
+];
+
+/* Every capture ever promoted to this property, oldest first. Each one says
+   which job it came from and which room it is of — the two ways the review
+   wanted to slice them. */
+var PO_MEDIA = [
+  {date:'2025-08-06', job:'Acquisition inspection', type:'Acquisition', room:'Exterior',  note:'As purchased'},
+  {date:'2025-08-06', job:'Acquisition inspection', type:'Acquisition', room:'Kitchen',   note:'Original cabinets'},
+  {date:'2025-08-06', job:'Acquisition inspection', type:'Acquisition', room:'Bath 1',    note:'Original tile'},
+  {date:'2025-06-24', job:'Flooring replacement',   type:'Renovation',  room:'Living',    note:'New LVP'},
+  {date:'2025-10-01', job:'HVAC replacement',       type:'Maintenance', room:'Exterior',  note:'Condenser pad'},
+  {date:'2026-01-09', job:'2025 make-ready',        type:'Turn',        room:'Kitchen',   note:'Refaced'},
+  {date:'2026-01-09', job:'2025 make-ready',        type:'Turn',        room:'Bath 3',    note:'Bath added'},
+  {date:'2026-01-09', job:'2025 make-ready',        type:'Turn',        room:'Exterior',  note:'After make-ready'},
+  {date:'2026-08-18', job:'Exterior paint',         type:'Maintenance', room:'Exterior',  note:'Repainted'},
+  {date:'2026-09-03', job:'Unit 2 full turn',       type:'Turn',        room:'Kitchen',   note:'Demo started'},
+  {date:'2026-09-12', job:'Unit 2 full turn',       type:'Turn',        room:'Exterior',  note:'Current state'}
+];
+
+/* Per-market template defaults — Austin's gaps are the configuration bug Aaron
+   found, spelled out rather than silently becoming an extra required field. */
+var PO_TEMPLATES = {Turn:'ATX Metro Turn Template 01:09:26',
+                    Acquisition:'ATX Acquisition Inspection 04:22:26',
+                    Maintenance:'', Renovation:''};
+
+var PO_STATUS = {active:'Active', completed:'Completed'};
+var PO_ADMIN  = {approved:'Approved', progress:'In progress', review:'Review in progress'};
+
+/* ── helpers ── */
+function poEsc(s){
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 function poFmtDate(iso){
   var d = new Date(iso + 'T00:00:00');
   return (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear();
 }
-/* A budget that has not been set is not zero, and "$0.00" would read as a
-   decision someone made. The screenshot's own "$--" says it better. */
+function poShortDate(iso){
+  var d = new Date(iso + 'T00:00:00');
+  var M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return M[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+}
+function poDays(a, b){
+  return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
+}
 function poFmtMoney(n){
   if(n === null || n === undefined) return '<span class="dim">$&ndash;&ndash;</span>';
   return '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
-/* Two states, and only two. A project on this property is either being worked
-   on or finished — draft and on-hold were states of the scope inside it, not of
-   the project, and putting them in this column asked the reader to hold two
-   different meanings of "status" at once. */
-var PO_STATUS = {active:'Active', completed:'Completed'};
+function poIsLate(j){ return j.status === 'active' && j.due < PO_TODAY; }
+
+/* ════════════════════════════════════════════════════════════
+   1 · RIGHT NOW
+   ════════════════════════════════════════════════════════════ */
+function poNow(){
+  var live = PO_JOBS.filter(function(j){ return !j.archived && j.status === 'active'; });
+  var host = document.getElementById('poNowJobs');
+
+  document.getElementById('poNowLbl').innerHTML = live.length
+    ? 'Projects &middot; ' + live.length + ' active'
+    : 'Projects';
+
+  if(!live.length){
+    host.innerHTML = '<div class="po-none"><span class="t">No job is open at this property. '
+      + 'The last one closed on ' + poFmtDate('2026-09-11') + '.</span>'
+      + '<button class="po-btn is-primary" type="button" onclick="poNew(true)">Start a job</button></div>';
+  } else {
+    /* Late first, then soonest due — the same rule the dashboard uses, so a
+       property and the list it came from agree about what is urgent. */
+    live.sort(function(a, b){
+      var la = poIsLate(a) ? 0 : 1, lb = poIsLate(b) ? 0 : 1;
+      return la !== lb ? la - lb : a.due.localeCompare(b.due);
+    });
+    host.innerHTML = live.map(function(j){
+      var late = poIsLate(j);
+      var days = late ? poDays(j.due, PO_TODAY) : 0;
+      var mine = j.turn === ME;
+      return '<button class="po-job' + (late ? ' is-late' : '') + '" type="button" '
+        + 'onclick="poOpenJob(\'' + poEsc(j.name).replace(/'/g,"") + '\')">'
+        + '<span class="po-job-l">'
+          + '<span class="po-job-top">'
+            + '<span class="po-job-t">' + poEsc(j.type) + ' job'
+              + ' <span class="ph">&middot; ' + poEsc(j.phase) + '</span></span>'
+            + '<span class="po-st po-st-' + j.admin + '">' + PO_ADMIN[j.admin] + '</span>'
+            + (j.turn ? '<span class="po-turn' + (mine ? ' is-mine' : '') + '">'
+                + (mine ? 'Your turn' : 'With ' + poEsc(j.turn)) + '</span>' : '')
+            + (late ? '<span class="po-late-chip">' + days + ' day' + (days === 1 ? '' : 's') + ' late</span>' : '')
+          + '</span>'
+          + '<span class="po-job-n">' + poEsc(j.name) + '</span>'
+        + '</span>'
+        + '<span class="po-job-r">'
+          + '<span class="po-job-f"><span class="k">Work</span><span class="v">'
+            + j.done + '/' + j.tasks + ' tasks</span></span>'
+          + '<span class="po-job-f"><span class="k">Due</span><span class="v'
+            + (late ? ' is-late' : '') + '">' + poFmtDate(j.due) + '</span></span>'
+          + '<span class="po-job-f"><span class="k">Budget</span><span class="v">'
+            + (j.budget == null ? '&mdash;' : '$' + j.budget.toLocaleString('en-US')) + '</span></span>'
+          + '<span class="po-job-go"><svg viewBox="0 0 12 12"><path d="M2.5 6h7M6.5 3l3 3-3 3"/></svg></span>'
+        + '</span>'
+      + '</button>';
+    }).join('');
+  }
+
+  /* The hero photo is whatever was captured most recently anywhere on the
+     property, and it says which job produced it. */
+  var latest = PO_MEDIA.slice().sort(function(a, b){ return b.date.localeCompare(a.date); })[0];
+  document.getElementById('poHeroSrc').textContent = 'Latest · ' + latest.job;
+  document.getElementById('poHeroCap').textContent = latest.room + ' · ' + poShortDate(latest.date);
+}
+
+function poDiscToggle(){
+  var d = document.getElementById('poDisc');
+  var open = d.classList.toggle('is-open');
+  d.querySelector('.po-disc-h').setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+/* ════════════════════════════════════════════════════════════
+   2 · JOBS
+   ════════════════════════════════════════════════════════════ */
+var poView = 'active';
+var poDesc = true;
 
 function poRender(){
-  var rows = PO_PROJECTS.filter(function(p){ return p.archived === (poView === 'archived'); });
+  var rows = PO_JOBS.filter(function(j){ return j.archived === (poView === 'archived'); });
   rows.sort(function(a, b){
     return poDesc ? b.updated.localeCompare(a.updated) : a.updated.localeCompare(b.updated);
   });
-  var host = document.getElementById('poRows');
-  host.innerHTML = rows.length ? rows.map(function(p){
-    return '<tr>'
-      + '<td><span class="po-name">' + p.name + '</span>'
-        + '<span class="po-type">' + p.type + '</span>'
-        + (p.desc ? '<span class="po-desc">' + p.desc + '</span>' : '') + '</td>'
-      + '<td><span class="po-st po-st-' + p.status + '">' + PO_STATUS[p.status] + '</span></td>'
-      + '<td class="num">' + poFmtMoney(p.budget) + '</td>'
-      + '<td class="dim">' + poFmtDate(p.created) + '</td>'
-      + '<td class="dim">' + poFmtDate(p.updated) + '</td>'
-      + '<td class="num"><button class="po-kebab" type="button" aria-label="More actions for ' + p.name + '">'
+
+  document.getElementById('poRows').innerHTML = rows.length ? rows.map(function(j){
+    var co = j.cos
+      ? '<span class="po-co' + (j.cos >= 3 ? ' is-many' : '') + '">' + j.cos + '</span>'
+      : '<span class="dim">&mdash;</span>';
+    return '<tr onclick="poOpenJob(\'' + poEsc(j.name).replace(/'/g,"") + '\')">'
+      + '<td><span class="po-name">' + poEsc(j.name) + '</span>'
+        + '<span class="po-type">' + poEsc(j.type) + ' job</span>'
+        + '</td>'
+      + '<td><span class="po-st po-st-' + j.status + '">' + PO_STATUS[j.status] + '</span></td>'
+      + '<td class="num">' + poFmtMoney(j.budget) + '</td>'
+      + '<td>' + co + '</td>'
+      + '<td class="dim">' + poFmtDate(j.created) + '</td>'
+      + '<td class="dim">' + poFmtDate(j.updated) + '</td>'
+      + '<td class="num"><button class="po-kebab" type="button" aria-label="More actions for ' + poEsc(j.name) + '">'
         + '<svg viewBox="0 0 14 14"><circle cx="7" cy="3" r="1.4"/><circle cx="7" cy="7" r="1.4"/><circle cx="7" cy="11" r="1.4"/></svg>'
         + '</button></td>'
       + '</tr>';
-  }).join('') : '<tr><td colspan="6" class="po-empty">No ' + poView + ' projects on this property.</td></tr>';
-  document.getElementById('poCount').innerHTML = 'Projects &middot; ' + rows.length + ' ' + poView;
-  var nLive = PO_PROJECTS.filter(function(x){ return !x.archived; }).length;
+  }).join('') : '<tr><td colspan="7" class="po-empty">No ' + poView + ' jobs on this property.</td></tr>';
+
+  document.getElementById('poCount').innerHTML = 'Jobs &middot; ' + rows.length + ' ' + poView;
+  var nLive = PO_JOBS.filter(function(x){ return !x.archived; }).length;
   document.getElementById('poSegActive').textContent = 'Active ' + nLive;
-  document.getElementById('poSegArch').textContent = 'Archived ' + (PO_PROJECTS.length - nLive);
-  /* The figure in the header is the money currently committed on this property:
-     the active projects' budgets, summed. Derived rather than written down, so
-     it cannot disagree with the table under it. */
-  var live = PO_PROJECTS.filter(function(x){ return !x.archived && x.status !== 'completed'; })
-    .reduce(function(t, x){ return t + (x.budget || 0); }, 0);
-  document.getElementById('poTotal').textContent =
-    '$' + live.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  document.getElementById('poSegArch').textContent  = 'Archived ' + (PO_JOBS.length - nLive);
 }
 function poFilter(v){
   poView = v;
@@ -583,11 +1107,425 @@ function poSort(){
   poRender();
 }
 
-/* Editing is a mode, not the resting state. Values and inputs occupy the same
-   cells, so pressing Edit swaps them in place without the block reflowing. */
+/* ════════════════════════════════════════════════════════════
+   3 · PROGRESS & COMPARISON
+   Two picks, side by side, each labelled with the job that produced it. In room
+   mode the same captures are grouped by where they were taken instead of when —
+   Christine's toggle, since a gallery and a timeline are the same pictures.
+   ════════════════════════════════════════════════════════════ */
+var poCmpBy = 'time';
+var poA = 0, poB = PO_MEDIA.length - 1;
+
+function poSorted(){
+  return PO_MEDIA.map(function(m, i){ return {m:m, i:i}; })
+    .sort(function(a, b){ return a.m.date.localeCompare(b.m.date); });
+}
+
+function poCmpMode(mode){
+  poCmpBy = mode;
+  var btns = document.getElementById('poCmpSeg').children;
+  for(var i = 0; i < btns.length; i++) btns[i].classList.toggle('on', (i === 0) === (mode === 'time'));
+  poDrawStrip();
+}
+
+function poPick(i){
+  /* One control, two slots: a click sets B, and clicking the same capture again
+     moves it to A. Two separate pickers meant four clicks to compare two things. */
+  if(poB === i) poA = i;
+  else { poA = poB; poB = i; }
+  poDrawCmp(); poDrawStrip();
+}
+
+function poShot(m, el){
+  el.innerHTML = '<span class="room">' + poEsc(m.room) + '</span>'
+    + '<span class="po-shot-cap">' + poEsc(m.note)
+    + '<span class="g">' + poEsc(m.room) + '</span></span>';
+}
+
+function poDrawCmp(){
+  var a = PO_MEDIA[poA], b = PO_MEDIA[poB];
+  document.getElementById('poAdate').textContent = poShortDate(a.date);
+  document.getElementById('poBdate').textContent = poShortDate(b.date);
+  document.getElementById('poAjob').textContent  = a.type + ' job · ' + a.job;
+  document.getElementById('poBjob').textContent  = b.type + ' job · ' + b.job;
+  poShot(a, document.getElementById('poAshot'));
+  poShot(b, document.getElementById('poBshot'));
+
+  var days = Math.abs(poDays(a.date, b.date));
+  var yrs  = (days / 365).toFixed(1);
+  var lo = a.date < b.date ? a.date : b.date, hi = a.date < b.date ? b.date : a.date;
+  /* Jobs that saw activity between the two captures — the reason the picture
+     changed, which is what the comparison is really being asked. */
+  var between = PO_JOBS.filter(function(j){ return j.updated > lo && j.updated <= hi; });
+
+  document.getElementById('poDelta').innerHTML =
+    '<span class="k">Between A and B</span>'
+    + '<span>' + (days >= 365 ? yrs + ' years' : days + ' days')
+      + (between.length
+          ? ' and <b>' + between.length + ' job' + (between.length === 1 ? '' : 's') + '</b> — '
+            + between.map(function(j){ return poEsc(j.name); }).join(', ')
+          : ' and no job activity in between')
+      + '.</span>';
+
+  document.getElementById('poCmpLbl').innerHTML = 'Comparing &middot; '
+    + PO_MEDIA.length + ' captures across ' + new Set(PO_MEDIA.map(function(m){ return m.job; })).size + ' jobs';
+}
+
+function poCapHtml(x){
+  var cls = x.i === poA ? ' pick-a' : (x.i === poB ? ' pick-b' : '');
+  return '<button class="po-cap' + cls + '" type="button" onclick="poPick(' + x.i + ')" '
+    + 'aria-label="' + poEsc(x.m.room + ' ' + poShortDate(x.m.date)) + '">'
+    + '<span class="im"><span>' + poEsc(x.m.room) + '</span></span>'
+    + '<span class="mt"><span class="d">' + poShortDate(x.m.date) + '</span>'
+    + '<span class="j">' + poEsc(x.m.type) + ' &middot; ' + poEsc(x.m.job) + '</span></span>'
+  + '</button>';
+}
+
+function poDrawStrip(){
+  var host = document.getElementById('poStrip');
+  var all  = poSorted();
+
+  if(poCmpBy === 'time'){
+    host.innerHTML = all.map(poCapHtml).join('');
+    return;
+  }
+  var rooms = [];
+  all.forEach(function(x){ if(rooms.indexOf(x.m.room) < 0) rooms.push(x.m.room); });
+  host.innerHTML = rooms.map(function(r){
+    return '<span class="po-strip-grp"><span class="gl">' + poEsc(r) + '</span><span class="gr">'
+      + all.filter(function(x){ return x.m.room === r; }).map(poCapHtml).join('')
+      + '</span></span>';
+  }).join('');
+}
+
+/* ════════════════════════════════════════════════════════════
+   4 · ACTIVITY
+   ════════════════════════════════════════════════════════════ */
+
+/* ════════════════════════════════════════════════════════════
+   ACTIVITY — the documents, and who has had them
+   ────────────────────────────────────────────────────────────
+   A job produces a run of documents: the scope, then a change order per
+   revision, then the closeout. Each passes through several pairs of hands
+   before it is approved, and the log is that chain of hand-offs — which is
+   what people actually ask the activity feed for. "Change order 2 submitted"
+   in a feed and "M. Alvarez handed off to S. Patel" in a hand-off list were
+   two sentences about the same event on the same day; the feed's one extra
+   piece of information was the money, so the money moved onto the rows that
+   carry it — what a document was worth when it was sent, and what it was
+   worth when it settled.
+
+   The same object the job page draws (the ov-* trail in js/overview.js), at
+   the property's altitude. Seeded from PO_JOBS and PO_MEDIA so it cannot
+   disagree with the table above it.
+   ════════════════════════════════════════════════════════════ */
+
+var PO_ROSTER = {field:'M. Alvarez', builder:'G. Han', approver:'Aaron Mosny', tech:'J. Duarte'};
+
+function poTrMoney(n){ return '$' + Math.round(n).toLocaleString('en-US'); }
+function poTrDelta(d){
+  if(!d) return '';
+  return (d > 0 ? '+' : '−') + poTrMoney(Math.abs(d));
+}
+function poTrDate(iso){
+  var d = new Date(iso + 'T00:00:00');
+  var M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return M[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+}
+function poTrShift(iso, days){
+  var d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/* The rooms and tasks a revision touched. Derived from the job's own totals so
+   the counts move with the data rather than being written down twice. */
+var PO_TR_ROOMS = ['Kitchen','Bath 1','Bath 2','Living','Exterior','Bedroom 2','Hall'];
+var PO_TR_WORK  = [
+  ['Cabinet boxes','Qty 12 → 16'], ['Countertop','Quartz → granite'],
+  ['Tile surround','Added'], ['Sink + faucet','Unit price → $340'],
+  ['Subfloor patch','Added'], ['Vanity','Qty 1 → 2'],
+  ['Paint, walls','Sq ft 420 → 610'], ['Trim replace','Removed'],
+  ['LVP flooring','Sq ft 980 → 1,140'], ['Door hardware','Qty 6 → 9'],
+  ['Light fixtures','Added'], ['Gutter run','Lf 60 → 84']
+];
+
+/* What one revision changed, as groups of named tasks. Deterministic off the
+   document's index so re-rendering does not reshuffle the list under anyone. */
+function poTrDetail(jobIdx, docIdx, groups, tasks){
+  var out = [], seed = jobIdx * 7 + docIdx * 3, t = 0;
+  for(var g = 0; g < groups; g++){
+    var room = PO_TR_ROOMS[(seed + g) % PO_TR_ROOMS.length];
+    var n = Math.max(1, Math.round(tasks / groups) + (g === 0 ? tasks % groups : 0));
+    var list = [];
+    for(var i = 0; i < n && t < tasks; i++, t++){
+      var w = PO_TR_WORK[(seed + t) % PO_TR_WORK.length];
+      list.push({code:'T-' + (100 + ((seed + t * 13) % 800)), name:w[0], what:w[1]});
+    }
+    if(list.length) out.push({room:room, tasks:list});
+  }
+  return out;
+}
+
+/* The documents a job produced, newest first, each with its chain of events.
+   A scope always; a change order per revision the job recorded; a closeout
+   once the job reached that phase. */
+function poTrDocs(job){
+  var idx  = PO_JOBS.indexOf(job);
+  var open = job.created, end = job.updated;
+  var span = Math.max(1, Math.round((Date.parse(end) - Date.parse(open)) / 86400000));
+  var nDoc = 1 + (job.cos || 0) + (job.phase === 'Close out' ? 1 : 0);
+  var step = Math.max(2, Math.floor(span / Math.max(1, nDoc)));
+  var live = job.status === 'active' && job.admin !== 'approved';
+
+  /* The scope is the starting figure; each change order moves it, and the last
+     one lands on the job's actual budget, so the column sums to the table. */
+  var total = job.budget || 0;
+  var lift  = job.cos ? Math.round(total * 0.28) : 0;
+  var base  = total - lift;
+
+  var docs = [], at = open, running = base;
+
+  function chain(name, state, amount, delta, startAt, groups, tasks, dIdx){
+    var evs = [];
+    var a0 = startAt;
+    var a1 = poTrShift(a0, Math.max(1, Math.round(step * 0.6)));
+    var a2 = poTrShift(a1, 1);
+    var a3 = poTrShift(a2, 1);
+    evs.push({who:PO_ROSTER.field, act:'started it', kind:'start', when:a0});
+    if(groups){
+      evs.push({who:'', kind:'changed', id:'d' + idx + '-' + dIdx,
+                act:groups + ' group' + (groups === 1 ? '' : 's') + ' · '
+                  + tasks + ' task' + (tasks === 1 ? '' : 's') + ' changed',
+                when:a1, detail:poTrDetail(idx, dIdx, groups, tasks)});
+    }
+    evs.push({who:PO_ROSTER.field, act:'handed off to ' + PO_ROSTER.builder,
+              kind:'handoff', when:a1});
+    evs.push({who:PO_ROSTER.builder, act:'handed off to ' + PO_ROSTER.approver,
+              kind:'handoff', when:a2});
+    if(state === 'In review'){
+      evs.push({who:PO_ROSTER.approver, act:'has it for approval', kind:'waiting',
+                when:a2, amount:amount, delta:delta});
+    } else {
+      evs.push({who:PO_ROSTER.approver, act:'approved it', kind:'approved',
+                when:a3, amount:amount, delta:delta});
+    }
+    return {name:name, state:state, evs:evs.reverse(), from:a0, to:a3};
+  }
+
+  /* The scope. In review only when the job has not moved past it. */
+  var scopeState = (live && job.phase === 'Scope') ? 'In review' : 'Approved';
+  docs.push(chain('Scope', scopeState, total ? poTrMoney(base) : null, '', at, 0, 0, 0));
+  at = poTrShift(at, step);
+
+  for(var c = 1; c <= (job.cos || 0); c++){
+    var moveNow = c === job.cos ? (total - running) : Math.round(lift / job.cos);
+    running += moveNow;
+    var last   = c === job.cos;
+    var st     = (live && last && job.phase === 'Change order') ? 'In review' : 'Approved';
+    var groups = 3 + ((idx + c) % 4);
+    var tasks  = groups + 2 + ((idx * 3 + c) % 5);
+    docs.push(chain('Change Order ' + c, st, poTrMoney(running),
+                    poTrDelta(moveNow), at, groups, tasks, c));
+    at = poTrShift(at, step);
+  }
+
+  if(job.phase === 'Close out'){
+    docs.push(chain('Closeout', live ? 'In review' : 'Approved',
+                    total ? poTrMoney(total) : null, '', at, 0, 0, 99));
+  }
+  return docs.reverse();
+}
+
+/* Every visit to the property is a walk, and its counts are read off the same
+   media records the Progress strip draws. The window is the boundary as it
+   reads on screen — everything from the older document's first event up to the
+   newer one's — because a change order opens the day the one before it is
+   approved, and a strictly-between window would be empty every time. */
+function poTrWalks(job, older, newer){
+  var from = Date.parse(older.from), to = Date.parse(newer.to || newer.from);
+  var shots = PO_MEDIA.filter(function(m){
+    var d = Date.parse(m.date);
+    return m.job === job.name && !isNaN(d) && d >= from && d <= to;
+  });
+  if(!shots.length) return [];
+  var byDate = {};
+  shots.forEach(function(m){ (byDate[m.date] = byDate[m.date] || []).push(m); });
+  return Object.keys(byDate).sort().reverse().map(function(date, i){
+    var run   = byDate[date];
+    var rooms = {}; run.forEach(function(m){ rooms[m.room] = 1; });
+    return {label:'Progress walk ' + (i + 1), date:date, photos:run.length,
+            notes:run.filter(function(m){ return m.note; }).length,
+            groups:Object.keys(rooms).length, tasks:run.length};
+  });
+}
+
+var PO_TR_TICK = '<svg class="po-tr-ck" viewBox="0 0 12 12" fill="none" stroke="currentColor"'
+  + ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg>';
+var poTrOpen = {};
+
+function poTrWalksHtml(runs){
+  if(!runs.length) return '';
+  function n(k, one, many){ return k + ' ' + (k === 1 ? one : many); }
+  function join(xs){ return xs.filter(Boolean).join(' · '); }
+  return '<div class="po-walks">' + runs.map(function(w){
+    return '<div class="po-walk">'
+      + '<span class="po-walk-n">' + poEsc(w.label) + '</span>'
+      + '<span class="po-walk-c">' + poEsc(join([
+          w.photos && n(w.photos, 'photo', 'photos'),
+          w.notes  && n(w.notes,  'note',  'notes')])) + ' added</span>'
+      + '<span class="po-walk-s">' + poEsc(join([
+          w.groups && n(w.groups, 'group', 'groups'),
+          w.tasks  && n(w.tasks,  'task',  'tasks')])) + '</span>'
+      + '<span class="po-walk-d">' + poTrDate(w.date) + '</span>'
+    + '</div>';
+  }).join('') + '</div>';
+}
+
+function poTrDocHtml(d){
+  return '<div class="po-tr-doc">'
+    + '<div class="po-tr-h">'
+      + '<span class="po-tr-n">' + poEsc(d.name) + '</span>'
+      + '<span class="po-tr-st' + (d.state === 'Approved' ? ' is-done' : '') + '">'
+        + poEsc(d.state) + '</span>'
+    + '</div>'
+    + '<div class="po-tr-rows">'
+    + d.evs.map(function(e){
+      var row = '<div class="po-tr-r po-tr-' + e.kind + '">'
+        + '<span class="po-tr-ev">'
+          + '<span class="po-tr-mk">' + (e.kind === 'approved' ? PO_TR_TICK : '') + '</span>'
+          + (e.who ? '<span class="po-tr-who">' + poEsc(e.who) + '</span>' : '')
+          + (e.detail && e.detail.length
+              ? '<button type="button" class="po-tr-act po-tr-open"'
+                + ' aria-expanded="' + (poTrOpen[e.id] ? 'true' : 'false') + '"'
+                + ' aria-controls="poCh-' + e.id + '"'
+                + ' onclick="poTrToggle(\'' + e.id + '\', this)">' + poEsc(e.act)
+                + '<svg class="po-tr-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>'
+                + '</button>'
+              : '<span class="po-tr-act">' + poEsc(e.act) + '</span>')
+        + '</span>'
+        + '<span class="po-tr-sum">' + poEsc(e.amount || '') + '</span>'
+        + '<span class="po-tr-delta' + ((e.delta || '').charAt(0) === '+' ? ' is-up' : ' is-down')
+          + '">' + poEsc(e.delta || '') + '</span>'
+        + '<span class="po-tr-d">' + poTrDate(e.when) + '</span>'
+      + '</div>';
+      if(e.detail && e.detail.length){
+        row += '<div class="po-tr-detail" id="poCh-' + e.id + '"'
+          + (poTrOpen[e.id] ? '' : ' hidden') + '>'
+          + e.detail.map(function(g){
+            return '<div class="po-ch-g">'
+              + '<button type="button" class="po-ch-grp" onclick="poTrGoGroup(\''
+                + poEsc(g.room).replace(/'/g, "") + '\')">' + poEsc(g.room) + '</button>'
+              + '<div class="po-ch-ts">' + g.tasks.map(function(t){
+                return '<button type="button" class="po-ch-task" onclick="poTrGoTask(\''
+                  + poEsc(t.name).replace(/'/g, "") + '\')">'
+                  + '<span class="po-ch-code">' + poEsc(t.code) + '</span>'
+                  + '<span class="po-ch-name">' + poEsc(t.name) + '</span>'
+                  + (t.what ? '<span class="po-ch-what">' + poEsc(t.what) + '</span>' : '')
+                + '</button>';
+              }).join('') + '</div>'
+            + '</div>';
+          }).join('')
+        + '</div>';
+      }
+      return row;
+    }).join('')
+    + '</div></div>';
+}
+
+/* A count you can open. A class toggle rather than a re-render, so the page
+   does not jump back to the top of the section you were reading. */
+function poTrToggle(id, btn){
+  poTrOpen[id] = !poTrOpen[id];
+  var box = document.getElementById('poCh-' + id);
+  if(box) box.hidden = !poTrOpen[id];
+  if(btn) btn.setAttribute('aria-expanded', poTrOpen[id] ? 'true' : 'false');
+}
+function poTrRestToggle(){
+  var rest = document.getElementById('poTrailRest');
+  var btn  = document.getElementById('poTrailMore');
+  if(!rest || !btn) return;
+  var show = rest.hidden;
+  rest.hidden = !show;
+  btn.setAttribute('aria-expanded', show ? 'true' : 'false');
+  btn.textContent = show ? btn.dataset.open : btn.dataset.shut;
+}
+/* The names in an opened change go somewhere: the group and the task both land
+   on the job's own scope, which in this prototype is the change-order view. */
+function poTrGoGroup(){ window.location.href = 'Artifact-Change-Order-View.html'; }
+function poTrGoTask(){  window.location.href = 'Artifact-Change-Order-View.html'; }
+
+function poTrailHtml(job){
+  var docs = poTrDocs(job);
+  if(!docs.length) return '<div class="po-hint">No documents on this job yet.</div>';
+  var current = docs[0], earlier = docs.slice(1);
+  if(!earlier.length) return '<div class="po-trail">' + poTrDocHtml(current) + '</div>';
+  var rest = earlier.map(function(d, i){
+    return poTrWalksHtml(poTrWalks(job, d, docs[i])) + poTrDocHtml(d);
+  }).join('');
+  var word = earlier.length === 1 ? 'document' : 'documents';
+  var shut = 'View all history (' + earlier.length + ' earlier ' + word + ')';
+  return '<div class="po-trail">'
+    + poTrDocHtml(current)
+    + '<div class="po-trail-rest" id="poTrailRest" hidden>' + rest + '</div>'
+    + '<button type="button" class="po-more" id="poTrailMore" aria-expanded="false"'
+      + ' aria-controls="poTrailRest" onclick="poTrRestToggle()"'
+      + ' data-open="Hide earlier documents" data-shut="' + shut + '">' + shut + '</button>'
+  + '</div>';
+}
+
+/* ── which job's documents are on screen ──
+   The log is a job's run of documents, so the section names the job it is
+   showing. Clicking any job above switches it; the property crumb goes back to
+   whichever job moved most recently, which is the one anyone opening this page
+   is most likely to be here about. */
+var poJobSel = null;
+
+function poDefaultJob(){
+  var live = PO_JOBS.filter(function(j){ return !j.archived && j.status === 'active'; });
+  var pool = live.length ? live : PO_JOBS.filter(function(j){ return !j.archived; });
+  return pool.slice().sort(function(a, b){ return b.updated.localeCompare(a.updated); })[0] || null;
+}
+
+function poCrumbs(job){
+  var host = document.getElementById('poCrumbs');
+  host.innerHTML =
+      '<button class="po-crumb" type="button" onclick="poActTo(0)">2525 McDonald Way</button>'
+    + (job ? '<span class="po-crumb-sep">&rsaquo;</span>'
+           + '<button class="po-crumb on" type="button" aria-current="true">'
+           + poEsc(job.name) + '</button>' : '')
+    + '<span class="note">Documents on this job, newest first</span>';
+}
+
+function poActDraw(){
+  if(!poJobSel || PO_JOBS.indexOf(poJobSel) === -1) poJobSel = poDefaultJob();
+  poCrumbs(poJobSel);
+  document.getElementById('poActivity').innerHTML =
+    poJobSel ? poTrailHtml(poJobSel) : '<div class="po-hint">No jobs at this property yet.</div>';
+}
+
+/* The property crumb: back to the job that moved most recently. */
+function poActTo(){
+  poJobSel = poDefaultJob();
+  poActDraw();
+}
+function poOpenJob(name){
+  var j = PO_JOBS.filter(function(x){ return x.name === name; })[0];
+  if(!j) return;
+  poJobSel = j;
+  poActDraw();
+  document.getElementById('poCrumbs').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ════════════════════════════════════════════════════════════
+   EDITING THE PROPERTY'S FACTS
+   ════════════════════════════════════════════════════════════ */
 function poEdit(on){
   document.body.classList.toggle('po-editing', !!on);
-  if(on){ var f = document.getElementById('i-beds'); if(f) f.focus(); }
+  if(on){
+    document.getElementById('poDisc').classList.add('is-open');
+    var f = document.getElementById('i-beds'); if(f) f.focus();
+  }
 }
 function poSave(){
   var g = function(id){ return document.getElementById(id).value; };
@@ -600,19 +1538,19 @@ function poSave(){
   s('v-garage', g('i-garage'));
   s('v-market', g('i-market'));
   s('v-testid', g('i-testid'));
-  document.querySelector('.po-chip').textContent = g('i-market');
+  /* The folded summary is what most people will ever see of these numbers, so it
+     has to follow the edit. */
+  document.getElementById('poDiscSum').innerHTML =
+    g('i-beds') + ' bed &middot; ' + g('i-full') + ' bath &middot; '
+    + Number(g('i-sqft')).toLocaleString('en-US') + ' sqft &middot; ' + g('i-acres') + ' acres';
   poEdit(false);
 }
-document.addEventListener('keydown', function(e){
-  if(e.key === 'Escape' && document.body.classList.contains('po-editing')) poEdit(false);
-});
 
-/* ── create a project ────────────────────────────────────────────────
-   The modal writes into the same array the table renders from, so a project
-   created here appears in the list behind it rather than being a form that
-   only looks like one. */
+/* ════════════════════════════════════════════════════════════
+   START A JOB
+   ════════════════════════════════════════════════════════════ */
 var PO_MANAGERS = ['Aaron Mosny', 'T. Okafor', 'R. Ibarra', 'A. Novak'];
-var poPicked = ['Aaron Mosny'];   // the manager the product pre-assigns
+var poPicked = ['Aaron Mosny'];
 
 function poChips(){
   document.getElementById('npChips').innerHTML = poPicked.map(function(n){
@@ -639,53 +1577,82 @@ function poCount(){
   el.textContent = ta.value.length + ' / 300';
   el.classList.toggle('is-full', ta.value.length >= 300);
 }
+/* Preselect the market's default template and say so — or say plainly that the
+   market has no default, which is the state that was costing people a step. */
+function poTypeChanged(){
+  var type = document.getElementById('np-type').value;
+  var note = document.getElementById('npTplNote');
+  var sel  = document.getElementById('np-template');
+  if(!type){
+    note.innerHTML = 'Pick a job type and Kai will preselect this market&rsquo;s default template.';
+    sel.value = '';
+    return;
+  }
+  var def = PO_TEMPLATES[type] || '';
+  if(def){
+    sel.value = def;
+    note.innerHTML = 'Preselected <b>' + poEsc(def) + '</b>, the Austin default for '
+      + poEsc(type.toLowerCase()) + ' jobs.';
+  } else {
+    sel.value = '';
+    note.innerHTML = 'Austin has no default <b>' + poEsc(type.toLowerCase())
+      + '</b> template — pick one, or start from an empty scope.';
+  }
+}
 function poNew(on){
   document.getElementById('poScrim').classList.toggle('open', !!on);
   document.getElementById('poModal').classList.toggle('open', !!on);
-  if(on){
-    poReset();
-    document.getElementById('np-type').focus();
-  }
+  if(on){ poReset(); document.getElementById('np-type').focus(); }
 }
-/* Opened empty every time. Without this the second project inherits whatever
-   was typed for the first, which is the kind of thing you only notice after
-   creating it. */
 function poReset(){
   ['np-type','np-budget','np-name','np-door','np-gate','np-notes','np-template','np-field']
     .forEach(function(id){ document.getElementById(id).value = ''; });
-  document.getElementById('np-due').value = '2026-09-11';
-  document.getElementById('np-end').value = '2026-09-11';
+  document.getElementById('np-due').value = PO_TODAY;
+  document.getElementById('np-end').value = PO_TODAY;
   poPicked = ['Aaron Mosny'];
-  poChips(); poCount();
-  document.getElementById('npHint').textContent = 'Project type is required.';
+  poChips(); poCount(); poTypeChanged();
+  document.getElementById('npHint').textContent = 'Job type is required.';
 }
 function poCreate(){
   var type = document.getElementById('np-type').value;
   if(!type){
-    document.getElementById('npHint').textContent = 'Pick a project type first.';
+    document.getElementById('npHint').textContent = 'Pick a job type first.';
     document.getElementById('np-type').focus();
     return;
   }
   var budget = document.getElementById('np-budget').value;
-  var today  = new Date().toISOString().slice(0, 10);
-  PO_PROJECTS.unshift({
-    name: document.getElementById('np-name').value.trim() || (type + ' ' + poFmtDate(today)),
-    desc: document.getElementById('np-notes').value.trim().slice(0, 60),
-    type: type,
-    budget: budget === '' ? null : Number(budget),
-    status: 'active',
-    created: today,
-    updated: today,
-    archived: false
+  var name   = document.getElementById('np-name').value.trim() || (type + ' ' + poFmtDate(PO_TODAY));
+  PO_JOBS.unshift({
+    name:name, desc:document.getElementById('np-notes').value.trim().slice(0, 60),
+    type:type, phase:'Scope', budget:budget === '' ? null : Number(budget),
+    status:'active', admin:'review', turn:ME, cos:0, done:0, tasks:0,
+    created:PO_TODAY, updated:PO_TODAY,
+    due:document.getElementById('np-due').value || PO_TODAY, archived:false
   });
+  /* A new job shows up everywhere it belongs at once — the band at the top, the
+     table, and the property's log — rather than only in the list you happened to
+     be looking at. */
   poNew(false);
   poFilter('active');
+  poNow();
+  /* A new job shows up everywhere it belongs at once — the band at the top, the
+     table, and the log — rather than only in the list you happened to be
+     looking at. It is the newest thing here, so the log opens on it. */
+  poJobSel = PO_JOBS.filter(function(x){ return x.name === name; })[0] || null;
+  poActDraw();
 }
+
 document.addEventListener('keydown', function(e){
-  if(e.key === 'Escape' && document.getElementById('poModal').classList.contains('open')) poNew(false);
+  if(e.key !== 'Escape') return;
+  if(document.getElementById('poModal').classList.contains('open')) return poNew(false);
+  if(document.body.classList.contains('po-editing')) poEdit(false);
 });
 
+poNow();
 poRender();
+poDrawCmp();
+poDrawStrip();
+poActDraw();
 </script>
 </body>
 </html>
