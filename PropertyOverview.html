@@ -68,7 +68,6 @@ body{background:var(--app-bg)}
 /* ── a module ── */
 .po-mod{background:var(--white);border:1px solid var(--stroke);margin-bottom:14px}
 .po-mod-pad{padding:16px 18px}
-.po-band{padding:15px 18px;border-top:1px solid var(--stroke)}
 .po-lbl{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3)}
 /* The rule that names a section of the page, outside the modules. */
@@ -78,18 +77,24 @@ body{background:var(--app-bg)}
 .po-sec-h .r{flex:1;height:1px;background:var(--stroke)}
 
 /* ── the property header ── */
-.po-hero{display:grid;grid-template-columns:340px minmax(0,1fr);gap:20px;align-items:start}
-.po-hero-r{min-width:0;display:flex;flex-direction:column}
+/* Photo, identity, facts — one row of three, then the jobs across the whole
+   card beneath it. The facts were the last band on a card whose first row was
+   two-thirds white, and the jobs were in a column narrower than the space they
+   had. Level with the address, the facts are read as what the address *is*;
+   full width, the jobs get the room they were always the reason for. */
+.po-hero{display:grid;grid-template-columns:260px minmax(200px,0.7fr) minmax(0,2fr);
+  gap:20px 26px;align-items:stretch}
+/* A hairline between the identity and the facts, so the two columns read as two
+   answers rather than one paragraph that happens to wrap. */
+.po-hero-facts{min-width:0;padding-left:26px;border-left:1px solid var(--stroke);
+  display:flex;flex-direction:column}
+.po-hero-facts .po-asof{margin-top:auto}
 .po-photo{position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--sunken);
   border:1px solid var(--stroke)}
 .po-photo-cap{position:absolute;left:0;bottom:0;padding:5px 9px;background:rgba(26,26,26,.72);
   color:#fff;font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.1em;
   text-transform:uppercase}
-/* Tov: whatever is most recent is what lives at the property level. The caption
-   says which job it came from, so a photo is never orphaned from its reason. */
-.po-photo-src{position:absolute;left:0;top:0;padding:4px 8px;background:var(--accent);
-  color:var(--ink);font-family:var(--mono);font-size:7.5px;font-weight:700;letter-spacing:.09em;
-  text-transform:uppercase;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink)}
+.po-hero-id{min-width:0;display:flex;flex-direction:column;justify-content:center;height:100%}
 .po-hdr{display:flex;align-items:flex-start;gap:14px}
 .po-hdr-l{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
 .po-eyebrow{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.11em;
@@ -99,59 +104,6 @@ body{background:var(--app-bg)}
   letter-spacing:-.005em;line-height:1.2;margin:0}
 .po-hdr-sub{font-family:var(--body);font-size:13px;color:var(--t2);line-height:1.35}
 
-/* ── right now ──
-   The band the review asked for: "critical information regarding the current
-   state of a property and its active projects should be elevated to the top
-   level of the view." One line per active job, in the dashboard's own grammar so
-   the two screens agree about what a job looks like. */
-.po-now{margin-top:14px;padding-top:13px;border-top:1px solid var(--stroke)}
-.po-now-h{display:flex;align-items:center;gap:12px;margin-bottom:10px}
-.po-now-h .po-btn{margin-left:auto}
-.po-jobs{display:flex;flex-direction:column;gap:8px}
-.po-job{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px 14px;align-items:center;
-  padding:11px 13px;border:1px solid var(--stroke);background:var(--white);cursor:pointer;
-  text-align:left;width:100%;font:inherit;transition:border-color .12s,background .1s}
-/* The thumbnail. A job is work at a place, and the place is the thing people
-   recognise before they read anything — so the card leads with it, at the size
-   a row can carry rather than the size a hero can. */
-.po-job-ph{width:58px;height:44px;flex-shrink:0;position:relative;overflow:hidden;
-  background:var(--sunken);border:1px solid var(--stroke)}
-.po-job-ph img{width:100%;height:100%;object-fit:cover;display:block}
-/* No capture yet is a fact about the job, so it says so rather than showing a
-   grey rectangle that could be a loading state. Where there is one, the label
-   is what it is of — the same thing the hero photo's caption says. */
-.po-job-ph .c{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-size:7px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
-  color:var(--t3);text-align:center;padding:0 3px;line-height:1.2}
-.po-job:hover{border-color:var(--ink);background:var(--sunken)}
-.po-job:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
-.po-job.is-late{border-left:3px solid var(--error)}
-.po-job-l{min-width:0;display:flex;flex-direction:column;gap:3px;justify-content:center}
-/* The job's title. Every job on this page is at this address, so every card
-   says the same words — which is the point: a job is work at a place, and the
-   place is what the dashboard and the black bar both call it. What tells two
-   cards apart is the line above, not this one. */
-.po-job-n{font-family:var(--display);font-size:14px;font-weight:700;color:var(--ink);
-  letter-spacing:-.005em;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.po-job-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.po-job-t{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--ink)}
-.po-job-t .ph{color:var(--t3)}
-.po-job-r{display:flex;align-items:center;gap:16px;flex-shrink:0}
-.po-job-f{display:flex;flex-direction:column;gap:2px;align-items:flex-end}
-.po-job-f .k{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--t3)}
-.po-job-f .v{font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums}
-.po-job-f .v.is-late{color:var(--error);font-weight:600}
-.po-job-go{color:var(--t3);display:inline-flex}
-.po-job-go svg{width:13px;height:13px;stroke:currentColor;stroke-width:1.8;fill:none;
-  stroke-linecap:round;stroke-linejoin:round}
-.po-job:hover .po-job-go{color:var(--ink)}
-/* An address with nothing happening at it is a normal, frequent state — and the
-   moment a maintenance user most needs the button. */
-.po-none{padding:16px 14px;border:1px dashed var(--stroke);background:var(--sunken);
-  display:flex;align-items:center;gap:14px}
-.po-none .t{font-size:13px;color:var(--t2);flex:1}
 
 /* status + turn chips, shared with the dashboard
    The status chip is a soft tinted pill rather than an outlined box. A hairline
@@ -169,6 +121,7 @@ body{background:var(--app-bg)}
   --st-ok-fg:#2E7D42;    --st-ok-bg:#DCEBDD;   /* settled — completed, approved  */
   --st-go-fg:#1E76B8;    --st-go-bg:#D9E9F6;   /* moving  — active, in progress  */
   --st-alert-fg:#C0443A; --st-alert-bg:#F7DEDB;/* wants you — review in progress */
+  --st-warn-fg:#B0741C;  --st-warn-bg:#F7ECD8; /* running out — a forecast, not a fact */
 }
 .po-st{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:9px;
   font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);
@@ -183,44 +136,20 @@ body{background:var(--app-bg)}
 /* Hollow while the work is still open. */
 .po-st-active::before,.po-st-progress::before{background:none;border:1.5px solid currentColor}
 .po-st-review{color:var(--st-alert-fg);background:var(--st-alert-bg)}
-.po-turn{display:inline-flex;align-items:center;font-family:var(--mono);font-size:9px;
-  font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);
-  border:1px solid var(--stroke);padding:3px 8px;line-height:1.2}
-.po-turn.is-mine{background:var(--accent);border-color:var(--ink);color:var(--ink)}
-.po-late-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;
-  font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--error);
-  border:1px solid var(--error);padding:3px 8px;line-height:1.2}
-.po-late-chip::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
 
-/* ── who is assigned here ──
-   Aaron: assign builders at the property level rather than per job, so a mobile
-   user can open an address and find out it is theirs. */
-.po-team{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
-.po-person{display:flex;align-items:center;gap:9px;min-width:0}
-.po-av{width:26px;height:26px;border-radius:50%;background:var(--sunken);border:1px solid var(--stroke);
-  color:var(--t2);display:inline-flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-size:9px;font-weight:700;flex-shrink:0}
-.po-person .l{min-width:0}
-.po-person .r{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--t3)}
-.po-person .n{font-size:13px;color:var(--ink);line-height:1.3}
-.po-person .n.none{color:var(--t3);font-style:italic}
-.po-team .po-btn{margin-left:auto}
 
 /* ── the property's own facts ──
-   Demoted and folded shut. They are true for years; the jobs above them change
-   weekly. Opening is one click and the state is remembered for the session. */
-.po-disc-h{display:flex;align-items:center;gap:12px;width:100%;padding:0;background:none;
-  border:0;cursor:pointer;text-align:left}
-.po-disc-h .cv{color:var(--t3);display:inline-flex}
-.po-disc-h .cv svg{width:10px;height:10px;stroke:currentColor;stroke-width:2;fill:none;
-  transition:transform .15s}
-.po-disc.is-open .po-disc-h .cv svg{transform:rotate(180deg)}
-.po-disc-h:hover .po-lbl{color:var(--ink)}
-.po-disc-h .sum{font-size:12.5px;color:var(--t3);margin-left:auto;font-variant-numeric:tabular-nums}
-.po-disc-body{display:none;margin-top:13px}
-.po-disc.is-open .po-disc-body{display:block}
+   On the page rather than behind a chevron. They are true for years while the
+   jobs above them change weekly, which is a reason to set them quietly — not a
+   reason to make someone click to find out how many bathrooms a house has.
+
+   The summary that used to sit on the closed header is gone with it: it was a
+   preview of what was folded, and the grid three lines below now says the same
+   four numbers. */
+.po-band-h{display:flex;align-items:center;gap:12px;width:100%;margin-bottom:13px}
+.po-band-h .po-btn{margin-left:auto}
 .po-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:14px 22px}
+.po-hero-facts .po-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 20px}
 .po-f{min-width:0;display:flex;flex-direction:column;gap:4px}
 .po-f dt{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3)}
@@ -235,8 +164,8 @@ body{background:var(--app-bg)}
   transition:border-color .12s,box-shadow .12s}
 .po-f input:hover,.po-f select:hover{border-color:var(--midtone)}
 .po-f input:focus,.po-f select:focus{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
-body.po-editing .po-f dd{display:none}
-body.po-editing .po-f input,body.po-editing .po-f select{display:block}
+body.po-editing #poGrid .po-f dd{display:none}
+body.po-editing #poGrid .po-f input,body.po-editing #poGrid .po-f select{display:block}
 /* Christine: a renovation can change the bedroom count, so the facts are the
    *current* facts and the page says as of when. */
 .po-asof{font-size:12px;color:var(--t3);margin-top:12px;padding-top:10px;
@@ -252,10 +181,16 @@ body.po-editing .po-f input,body.po-editing .po-f select{display:block}
 .po-edit-acts{display:none;gap:8px;margin-left:auto}
 body.po-editing .po-edit-acts{display:flex}
 body.po-editing #poEditBtn{display:none}
-.po-facts-h{display:flex;align-items:center;gap:12px;margin-bottom:11px}
-.po-facts-h .po-btn{margin-left:auto}
 
 /* ── jobs ── */
+.po-mod-name{font-family:var(--display);font-size:15px;font-weight:700;color:var(--ink);
+  letter-spacing:-.005em;line-height:1.2}
+/* The count sits against the name as its qualifier, not as a second heading. */
+.po-proj-h .po-mod-name + .po-lbl{margin-left:-6px}
+/* .po-seg pushes itself right by default; in a module head the name
+   already owns the left, and the filter is part of that phrase. */
+.po-proj-h .po-seg{margin-left:0}
+.po-proj-h .po-btn.is-primary{margin-left:auto}
 .po-proj-h{display:flex;align-items:center;gap:14px;padding:14px 18px;
   border-bottom:1px solid var(--stroke)}
 .po-seg{display:flex;margin-left:auto}
@@ -266,8 +201,9 @@ body.po-editing #poEditBtn{display:none}
 .po-seg button.on{background:var(--ink);border-color:var(--ink);color:#fff;position:relative;z-index:1}
 .po-seg button:hover:not(.on){color:var(--ink);border-color:var(--ink);position:relative;z-index:1}
 
+[hidden]{display:none !important}
 .po-tbl-wrap{overflow-x:auto}
-.po-tbl{width:100%;border-collapse:collapse;min-width:720px}
+.po-tbl{width:100%;border-collapse:collapse;min-width:840px}
 .po-tbl thead th{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3);text-align:left;padding:10px 18px;
   border-bottom:1px solid var(--stroke);white-space:nowrap;background:var(--sunken)}
@@ -276,20 +212,71 @@ body.po-editing #poEditBtn{display:none}
   display:inline-flex;align-items:center;gap:5px;letter-spacing:inherit;text-transform:inherit}
 .po-tbl thead th button:hover{color:var(--ink)}
 .po-tbl thead th svg{width:9px;height:9px;stroke:currentColor;stroke-width:2;fill:none}
-.po-tbl tbody tr{border-bottom:1px solid var(--stroke);cursor:pointer;transition:background .1s}
+.po-tbl tbody tr{border-bottom:1px solid var(--stroke);transition:background .1s}
 .po-tbl tbody tr:last-child{border-bottom:0}
-.po-tbl tbody tr:hover{background:var(--sunken)}
+.po-tbl tbody tr.po-asset-row:hover{background:var(--sunken)}
 .po-tbl td{padding:12px 18px;font-size:14px;color:var(--ink);vertical-align:middle}
 .po-tbl td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.po-desc-c{min-width:90px}
+.po-chg{color:var(--t2);font-weight:500}
+.po-lifetime{display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:14px 18px;border-top:1px solid var(--stroke);background:var(--sunken)}
+.po-lifetime .k{font-size:13px;font-weight:600;color:var(--ink)}
+.po-lifetime .v{font-size:14px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
 .po-tbl td.dim{color:var(--t3);font-size:12.5px;font-variant-numeric:tabular-nums}
-.po-name{font-weight:600}
+/* Every row is a job at this property, so every row says the same address —
+   which makes the type beside it the thing that tells two rows apart. The word
+   "job" is gone from it: the table is called Jobs and the column is called Job,
+   so saying it a third time on every row was the same word three times. */
+.po-name{font-family:var(--display);font-size:14px;font-weight:700;color:var(--ink);
+  letter-spacing:-.005em}
 .po-type{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3);margin-left:8px;white-space:nowrap}
 /* A finished job still opens, with the same history as a live one — the review
    was explicit that archived work keeps its story. */
-.po-co{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--t2);border:1px dashed var(--midtone);padding:2px 7px}
-.po-co.is-many{color:var(--error);border-color:var(--error);border-style:solid}
+/* ── the property's activity ──
+   One row per event, newest first, split into the columns the tables above it
+   use: what happened, which job, what it was worth, who, when. The feed
+   reports — it is not a way into anything, so its rows do not respond to a
+   click and carry no affordance that says they would. */
+.po-ev-filter{margin-left:auto;font-family:var(--mono);font-size:9px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--t2);background:var(--white);
+  border:1px solid var(--stroke);padding:7px 9px;cursor:pointer;outline:none;
+  max-width:200px;transition:border-color .12s}
+.po-ev-filter:hover{border-color:var(--midtone)}
+.po-ev-filter:focus-visible{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.po-ev-t{display:block;font-family:var(--display);font-size:14px;font-weight:700;
+  color:var(--ink);letter-spacing:-.005em;line-height:1.3}
+/* The size of the thing, under its name — the tasks a scope covered, the make
+   an asset record captured. */
+.po-ev-s{display:block;font-size:12.5px;color:var(--t3);line-height:1.35;margin-top:2px}
+.po-ev-job{font-size:14px;color:var(--ink)}
+.po-ev .is-sys{font-style:italic}
+.po-ev-more{padding:12px 18px;border-top:1px solid var(--stroke)}
+.po-ev-more:empty{display:none}
+.po-ev-more button{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t2);background:none;border:0;padding:0;cursor:pointer}
+.po-ev-more button:hover{color:var(--ink)}
+
+/* ── assets ──
+   A component with a service life. The warranty column is the only thing here
+   that can go wrong, so it is the only thing that carries a colour: expired
+   reads in the alert hue, a live date reads as an ordinary date, and a thing
+   that was never under warranty says nothing rather than saying "none". */
+.po-asset-row{cursor:pointer}
+.po-asset-n{font-family:var(--display);font-size:14px;font-weight:700;color:var(--ink);
+  letter-spacing:-.005em}
+/* A forecast, not a fact — so it wears the softer chip rather than the status
+   pill, and the footnote under the table says what it is not. */
+.po-life{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:700;
+  letter-spacing:.06em;color:var(--st-warn-fg);background:var(--st-warn-bg);
+  padding:4px 9px;margin-left:10px;line-height:1.2;white-space:nowrap}
+.po-warn{color:var(--st-warn-fg)}
+.po-chev{background:none;border:0;padding:4px;cursor:pointer;color:var(--t3);
+  display:inline-flex;transition:color .12s}
+.po-tbl tbody tr:hover .po-chev{color:var(--ink)}
+.po-chev svg{width:12px;height:12px;stroke:currentColor;stroke-width:1.8;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
 .po-kebab{opacity:0;background:none;border:0;padding:4px;cursor:pointer;color:var(--t3);
   transition:opacity .1s,color .12s}
 .po-tbl tbody tr:hover .po-kebab,.po-kebab:focus-visible{opacity:1}
@@ -324,11 +311,6 @@ body.po-editing #poEditBtn{display:none}
 .po-shot-cap .g{margin-left:auto;color:rgba(255,255,255,.7)}
 /* What actually changed between the two, said in words. A pair of photos is
    evidence; the sentence under them is the finding. */
-.po-delta{padding:12px 18px;border-top:1px solid var(--stroke);font-size:13px;color:var(--t2);
-  line-height:1.45;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.po-delta .k{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--t3);flex-shrink:0}
-.po-delta b{color:var(--ink);font-weight:600}
 
 /* the scrubber of captures */
 .po-strip{border-top:1px solid var(--stroke);padding:12px 18px 14px;overflow-x:auto}
@@ -499,12 +481,18 @@ body.po-editing #poEditBtn{display:none}
 .po-crumbs .note{margin-left:auto;font-family:var(--body);font-size:12px;color:var(--t3);
   text-transform:none;letter-spacing:0;font-weight:400}
 
+/* Two rows before one column: the facts drop under the identity while the photo
+   keeps its place, which is a smaller change than stacking everything. */
+@media (max-width:1180px){
+  .po-hero{grid-template-columns:300px minmax(0,1fr)}
+  .po-hero-facts{grid-column:2;padding-left:0;border-left:0;padding-top:15px;
+    border-top:1px solid var(--stroke)}
+}
 @media (max-width:900px){
   .po-hero{grid-template-columns:minmax(0,1fr)}
+  .po-hero-facts{grid-column:auto}
   .po-photo{max-width:420px}
   .po-cmp-pair{grid-template-columns:1fr}
-  .po-job{grid-template-columns:auto minmax(0,1fr)}
-  .po-job-r{grid-column:1 / -1;justify-content:space-between}
 }
 
 /* ── the start-a-job modal ──
@@ -574,6 +562,82 @@ body.po-editing #poEditBtn{display:none}
 .po-m-acts .po-btn:first-of-type{margin-left:auto}
 .po-m-req{font-size:12px;color:var(--t3)}
 @media (max-width:620px){ .po-m-grid{grid-template-columns:1fr} }
+
+/* ── the market, from the side ──
+   Ported from the panel's drawer (js/overview.js + panel.css) so the Market
+   link here opens the same thing it opens there. This page is self-contained,
+   so the chrome the panel's #drawer supplied comes with it — the rules below
+   are copies of .dw-* from panel.css, unchanged, rather than a second look for
+   the same object. */
+.dw-head{flex-shrink:0;border-bottom:1px solid var(--stroke);background:var(--white)}
+.dw-top{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 18px 12px}
+.dw-task{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--t3);margin-bottom:4px}
+.dw-title{font-family:var(--display);font-size:17px;font-weight:700;color:var(--ink);line-height:1.2}
+.dw-close{flex-shrink:0;width:30px;height:30px;border:1px solid var(--stroke);background:var(--white);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t2);transition:all .12s}
+.dw-close:hover{border-color:var(--ink);color:var(--ink)}
+.dw-close svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.6}
+.dw-body{flex:1;overflow-y:auto;padding:18px}
+
+#mkt-scrim,#ast-scrim{position:fixed;inset:0;background:rgba(26,26,26,.32);opacity:0;pointer-events:none;
+  transition:opacity .2s;z-index:300}
+#mkt-scrim.open,#ast-scrim.open{opacity:1;pointer-events:auto}
+#mkt-drawer,#ast-drawer{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:90vw;
+  background:var(--white);border-left:1px solid var(--stroke);
+  transform:translateX(100%);transition:transform .24s cubic-bezier(.4,0,.2,1);
+  z-index:301;display:flex;flex-direction:column;box-shadow:-8px 0 28px rgba(26,26,26,.12)}
+#mkt-drawer.open,#ast-drawer.open{transform:translateX(0)}
+@media (prefers-reduced-motion:reduce){ #mkt-drawer,#ast-drawer{transition:none} }
+.mkt-body{display:flex;flex-direction:column;gap:0}
+/* Sections divided by a rule rather than boxed — the drawer is already a box,
+   and a card inside a card is two edges saying one thing. */
+.mkt-sec{padding:16px 0;border-bottom:1px solid var(--stroke);
+  display:flex;flex-direction:column;gap:14px}
+.mkt-sec:first-child{padding-top:0}
+.mkt-sec:last-child{border-bottom:0}
+.mkt-sec-h{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--t3);margin-bottom:-4px}
+.mkt-f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.mkt-f label{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3)}
+.mkt-f label .opt{color:var(--midtone);font-weight:400;letter-spacing:.04em}
+.mkt-f input,.mkt-f select{width:100%;box-sizing:border-box;font-family:var(--body);
+  font-size:14px;color:var(--ink);background:var(--white);border:1px solid var(--stroke);
+  padding:9px 11px;outline:none;line-height:1.4;transition:border-color .12s,box-shadow .12s}
+.mkt-f input:hover,.mkt-f select:hover{border-color:var(--midtone)}
+.mkt-f input:focus,.mkt-f select:focus{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.mkt-f input::placeholder{color:var(--t3)}
+.mkt-f textarea{width:100%;box-sizing:border-box;font-family:var(--body);font-size:14px;
+  color:var(--ink);background:var(--white);border:1px solid var(--stroke);padding:9px 11px;
+  outline:none;line-height:1.45;resize:vertical;min-height:62px;
+  transition:border-color .12s,box-shadow .12s}
+.mkt-f textarea:hover{border-color:var(--midtone)}
+.mkt-f textarea:focus{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.mkt-f textarea::placeholder{color:var(--t3)}
+/* A pair that answers one question — brand and model, installed and warranty —
+   sits on one line, so the section reads as four questions rather than eight. */
+.mkt-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mkt-note{font-size:12px;color:var(--t3);line-height:1.4}
+/* Chips sit under the control that adds them, so the pair reads as one field. */
+.mkt-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:3px}
+.mkt-chips:empty{display:none}
+.mkt-chip{display:inline-flex;align-items:center;gap:7px;padding:5px 8px 5px 10px;
+  background:var(--sunken);border:1px solid var(--stroke);font-size:12.5px;color:var(--ink)}
+.mkt-chip button{border:0;background:none;padding:0;cursor:pointer;color:var(--t3);
+  display:inline-flex;transition:color .12s}
+.mkt-chip button:hover{color:var(--error)}
+.mkt-chip svg{width:10px;height:10px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round}
+/* Actions pinned to the foot, so a long roster scrolls behind them. */
+.mkt-acts{flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;gap:10px;
+  padding:14px 18px;border-top:1px solid var(--stroke);background:var(--white)}
+.mkt-btn{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink);background:var(--white);
+  border:1px solid var(--stroke);padding:9px 14px;cursor:pointer;transition:all .12s}
+.mkt-btn:hover{border-color:var(--ink)}
+.mkt-btn.is-primary{background:var(--accent);border-color:var(--accent-deep,var(--ink))}
+.mkt-btn.is-primary:hover{background:var(--accent-deep,var(--accent));border-color:var(--ink)}
+.mkt-btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 </style>
 </head>
 <body>
@@ -628,107 +692,78 @@ body.po-editing #poEditBtn{display:none}
           <figure class="po-photo">
             <!-- Promoted up from the most recent capture at this property, per
                  Tov: "whatever was the most recent, that's what we promote, and
-                 that lives at the property level." -->
-            <figcaption class="po-photo-src" id="poHeroSrc">Latest</figcaption>
-            <figcaption class="po-photo-cap" id="poHeroCap">Street view</figcaption>
+                 that lives at the property level." The caption says when, and
+                 only when — the job and the room were two more labels on a
+                 picture that shows the room and sits on the job's own page. -->
+            <figcaption class="po-photo-cap" id="poHeroCap">&mdash;</figcaption>
           </figure>
-          <div class="po-hero-r">
+          <div class="po-hero-id">
             <div class="po-hdr">
               <div class="po-hdr-l">
                 <div class="po-eyebrow">Austin<span class="sep">&middot;</span>Test ID 9876</div>
                 <h1>2525 McDonald Way</h1>
                 <div class="po-hdr-sub">Austin, TX 78754 &nbsp;&middot;&nbsp;
-                  <button class="po-f-link" type="button">View market</button></div>
+                  <button class="po-f-link" type="button" onclick="poMarketOpen()">View market</button></div>
               </div>
             </div>
+          </div>
 
-            <div class="po-now">
-              <div class="po-now-h">
-                <span class="po-lbl" id="poNowLbl">Jobs</span>
-                <button class="po-btn is-primary" type="button" onclick="poNew(true)">+ Start a job</button>
-              </div>
-              <div class="po-jobs" id="poNowJobs"></div>
+          <!-- The building's own facts, level with the address rather than
+               stacked under the jobs: they are what the address *is*, and they
+               were the last thing on a card whose first row had space to spare. -->
+          <div class="po-hero-facts" id="poDisc">
+            <div class="po-band-h">
+              <span class="po-lbl">Property info</span>
+              <button class="po-btn" id="poEditBtn" type="button" onclick="poEdit(true)">Edit</button>
+              <span class="po-edit-acts">
+                <button class="po-btn" type="button" onclick="poEdit(false)">Cancel</button>
+                <button class="po-btn is-primary" type="button" onclick="poSave()">Save info</button>
+              </span>
             </div>
+            <dl class="po-grid" id="poGrid">
+              <div class="po-f"><dt>Beds</dt><dd id="v-beds">3</dd><input id="i-beds" type="number" value="3" aria-label="Beds"></div>
+              <div class="po-f"><dt>Full baths</dt><dd id="v-full">3</dd><input id="i-full" type="number" value="3" aria-label="Full baths"></div>
+              <div class="po-f"><dt>Half baths</dt><dd id="v-half">0</dd><input id="i-half" type="number" value="0" aria-label="Half baths"></div>
+              <div class="po-f"><dt>Square feet</dt><dd id="v-sqft">1,422<span class="u">sqft</span></dd><input id="i-sqft" type="number" value="1422" aria-label="Square feet"></div>
+              <div class="po-f"><dt>Acres</dt><dd id="v-acres">0.101<span class="u">acres</span></dd><input id="i-acres" type="number" step="0.001" value="0.101" aria-label="Acres"></div>
+              <div class="po-f"><dt>Garage</dt><dd id="v-garage">Yes</dd>
+                <select id="i-garage" aria-label="Garage"><option>Yes</option><option>No</option></select></div>
+              <div class="po-f"><dt>Market</dt><dd id="v-market">Austin</dd>
+                <select id="i-market" aria-label="Market"><option>Austin</option><option>Atlanta</option><option>Dallas</option><option>Phoenix</option></select></div>
+              <div class="po-f"><dt>Test ID</dt><dd id="v-testid">9876</dd><input id="i-testid" value="9876" aria-label="Test ID"></div>
+            </dl>
+            <div class="po-asof">Last changed by <b>Expansion &mdash; 2525 McDonald Way</b> completed on
+              01-14-26 &mdash; that job took the property from 3 bed / 2 bath to 3 bed / 3 bath.</div>
           </div>
         </div>
+
       </div>
 
-      <!-- Assigned at the property, not per job — so a tech opening this address
-           on a phone can tell at once whether it is theirs. -->
-      <div class="po-band">
-        <div class="po-team">
-          <div class="po-person"><span class="po-av">MA</span>
-            <span class="l"><span class="r">Maintenance tech</span><span class="n">M. Alvarez</span></span></div>
-          <div class="po-person"><span class="po-av">GH</span>
-            <span class="l"><span class="r">Builder</span><span class="n">G. Han</span></span></div>
-          <div class="po-person"><span class="po-av">AM</span>
-            <span class="l"><span class="r">Approver</span><span class="n">Aaron Mosny</span></span></div>
-          <div class="po-person"><span class="po-av">&mdash;</span>
-            <span class="l"><span class="r">Field user</span><span class="n none">Unassigned</span></span></div>
-          <button class="po-btn" type="button">Manage property team</button>
-        </div>
-      </div>
-
-      <!-- The building's own facts, folded shut. -->
-      <div class="po-band po-disc" id="poDisc">
-        <button class="po-disc-h" type="button" onclick="poDiscToggle()" aria-expanded="false" aria-controls="poDiscBody">
-          <span class="cv"><svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3"/></svg></span>
-          <span class="po-lbl">Property info</span>
-          <span class="sum" id="poDiscSum">3 bed &middot; 3 bath &middot; 1,422 sqft &middot; 0.101 acres</span>
-        </button>
-        <div class="po-disc-body" id="poDiscBody">
-          <div class="po-facts-h">
-            <span class="po-lbl">As recorded today</span>
-            <button class="po-btn" id="poEditBtn" type="button" onclick="poEdit(true)">Edit</button>
-            <span class="po-edit-acts">
-              <button class="po-btn" type="button" onclick="poEdit(false)">Cancel</button>
-              <button class="po-btn is-primary" type="button" onclick="poSave()">Save info</button>
-            </span>
-          </div>
-          <dl class="po-grid" id="poGrid">
-            <div class="po-f"><dt>Beds</dt><dd id="v-beds">3</dd><input id="i-beds" type="number" value="3" aria-label="Beds"></div>
-            <div class="po-f"><dt>Full baths</dt><dd id="v-full">3</dd><input id="i-full" type="number" value="3" aria-label="Full baths"></div>
-            <div class="po-f"><dt>Half baths</dt><dd id="v-half">0</dd><input id="i-half" type="number" value="0" aria-label="Half baths"></div>
-            <div class="po-f"><dt>Square feet</dt><dd id="v-sqft">1,422<span class="u">sqft</span></dd><input id="i-sqft" type="number" value="1422" aria-label="Square feet"></div>
-            <div class="po-f"><dt>Acres</dt><dd id="v-acres">0.101<span class="u">acres</span></dd><input id="i-acres" type="number" step="0.001" value="0.101" aria-label="Acres"></div>
-            <div class="po-f"><dt>Garage</dt><dd id="v-garage">Yes</dd>
-              <select id="i-garage" aria-label="Garage"><option>Yes</option><option>No</option></select></div>
-            <div class="po-f"><dt>Market</dt><dd id="v-market">Austin</dd>
-              <select id="i-market" aria-label="Market"><option>Austin</option><option>Atlanta</option><option>Dallas</option><option>Phoenix</option></select></div>
-            <div class="po-f"><dt>Test ID</dt><dd id="v-testid">9876</dd><input id="i-testid" value="9876" aria-label="Test ID"></div>
-          </dl>
-          <!-- A property is not a constant. The 2025 make-ready added a bathroom,
-               so the page says which job last changed these numbers. -->
-          <div class="po-asof">Last changed by <b>2025 make-ready</b> on 01-14-26 — that job took the
-            property from 3 bed / 2 bath to 3 bed / 3 bath.</div>
-        </div>
-      </div>
     </section>
 
     <!-- ══ 2 · JOBS ═══════════════════════════════════════════════ -->
-    <div class="po-sec-h"><span class="t">Jobs at this property</span>
-      <span class="r"></span></div>
-
-    <section class="po-mod">
+        <section class="po-mod">
       <div class="po-proj-h">
-        <span class="po-lbl" id="poCount">Jobs</span>
+        <span class="po-mod-name">Jobs</span>
         <div class="po-seg" id="poSeg">
           <button type="button" class="on" onclick="poFilter('active')" id="poSegActive">Active</button>
           <button type="button" onclick="poFilter('archived')" id="poSegArch">Archived</button>
         </div>
-        <button class="po-btn is-primary" type="button" onclick="poNew(true)">+ Start a job</button>
+        <button class="po-btn is-primary" type="button" onclick="poNew(true)">+ New job</button>
       </div>
 
       <div class="po-tbl-wrap">
       <table class="po-tbl">
         <thead>
           <tr>
-            <th style="width:32%">Job</th>
-            <th style="width:15%">Status</th>
-            <th class="num" style="width:12%">Budget</th>
-            <th style="width:13%">Change orders</th>
-            <th style="width:11%">Created</th>
-            <th style="width:13%">
+            <th style="width:25%">Job</th>
+            <th style="width:8%">Description</th>
+            <th style="width:11%">Status</th>
+            <th class="num" style="width:12%">Initial scope</th>
+            <th class="num" style="width:11%">Changes</th>
+            <th class="num" style="width:12%">Total</th>
+            <th style="width:8%">Created</th>
+            <th style="width:9%">
               <button type="button" onclick="poSort()">Updated
                 <svg id="poSortIco" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2v8M3 7l3 3 3-3"/></svg>
               </button>
@@ -739,13 +774,58 @@ body.po-editing #poEditBtn{display:none}
         <tbody id="poRows"></tbody>
       </table>
       </div>
+
+      <!-- Every job ever run here, active and archived, added up. It sits
+           outside the table on purpose: it does not foot the filtered view,
+           it foots the property. -->
+      <div class="po-lifetime">
+        <span class="k">Lifetime approved value</span>
+        <span class="v" id="poLifetime"></span>
+      </div>
     </section>
 
-    <!-- ══ 3 · PROGRESS & COMPARISON ══════════════════════════════
+
+    <!-- ══ 3 · ASSETS ═════════════════════════════════════════════
+         What is installed at the address rather than what was done to it. An
+         asset has a service life, so it outlives the job that put it in and
+         belongs to the property — which is why it sits under the jobs rather
+         than inside one. -->
+        <section class="po-mod">
+      <div class="po-proj-h">
+        <span class="po-mod-name">Assets</span>
+        <span class="po-lbl" id="poAssetCount">4</span>
+        <button class="po-btn is-primary" type="button" onclick="poAssetNew()">+ New asset</button>
+      </div>
+
+      <div class="po-tbl-wrap">
+      <table class="po-tbl">
+        <thead>
+          <tr>
+            <th style="width:36%">Asset</th>
+            <th style="width:12%">Location</th>
+            <th style="width:22%">Make &amp; model</th>
+            <th style="width:13%">Installed</th>
+            <th style="width:13%">Warranty</th>
+            <th style="width:4%"></th>
+          </tr>
+        </thead>
+        <tbody id="poAssetRows"></tbody>
+      </table>
+      </div>
+      <div class="po-hint">Service life remaining is a forecast. It carries no dollar figure and is
+        never added to the Register.</div>
+    </section>
+
+    <!-- ══ 4 · PROGRESS & COMPARISON ══════════════════════════════
          Every capture from every job, promoted to the property, comparable in
          pairs. The review's example: the original acquisition against the
-         current state, five years apart, without opening either job. -->
-    <div class="po-sec-h"><span class="t">Progress &amp; comparison</span>
+         current state, five years apart, without opening either job.
+
+         PARKED — hidden on purpose, not removed. Everything below still works;
+         drop the `hidden` on #poProgress and flip PO_SHOW_PROGRESS to true to
+         bring the section back exactly as it was. -->
+    <div id="poProgress" hidden>
+    <div class="po-sec-h"><span class="t">Progress</span>
       <span class="r"></span></div>
 
     <section class="po-mod">
@@ -753,7 +833,7 @@ body.po-editing #poEditBtn{display:none}
         <span class="po-lbl" id="poCmpLbl">Comparing</span>
         <div class="po-seg" id="poCmpSeg">
           <button type="button" class="on" onclick="poCmpMode('time')">By time</button>
-          <button type="button" onclick="poCmpMode('room')">By room</button>
+          <button type="button" onclick="poCmpMode('group')">By group</button>
         </div>
       </div>
 
@@ -770,21 +850,48 @@ body.po-editing #poEditBtn{display:none}
         </div>
       </div>
 
-      <div class="po-delta" id="poDelta"></div>
 
       <div class="po-strip">
         <div class="po-strip-row" id="poStrip"></div>
       </div>
       <div class="po-hint">Click a capture to set <b>B</b>; click it again to set <b>A</b>. Oldest on the left.</div>
     </section>
+    </div><!-- /#poProgress -->
 
     <!-- ══ 4 · ACTIVITY ═══════════════════════════════════════════
          The standardized pattern, at the property level, drilling into a job and
          then into a task without leaving the page — Maria's flow, end to end. -->
-    <div class="po-sec-h"><span class="t">Activity</span>
-      <span class="r"></span></div>
+        <section class="po-mod">
+      <div class="po-proj-h">
+        <span class="po-mod-name">Activities</span>
+        <span class="po-lbl" id="poEvCount"></span>
+        <select class="po-ev-filter" id="poEvFilter" onchange="poEvDraw()"
+                aria-label="Filter activity by job"></select>
+      </div>
+      <div class="po-tbl-wrap">
+      <table class="po-tbl">
+        <thead>
+          <tr>
+            <th style="width:35%">Activity</th>
+            <th style="width:25%">Job</th>
+            <th class="num" style="width:14%">Total</th>
+            <th style="width:13%">User</th>
+            <th style="width:13%">Date</th>
+          </tr>
+        </thead>
+        <tbody id="poEvents"></tbody>
+      </table>
+      </div>
+      <div class="po-ev-more" id="poEvMore"></div>
+    </section>
 
-    <section class="po-mod" style="padding:0;border:0">
+    <!-- The job's document trail — the chain of hand-offs behind each document.
+
+         PARKED — nothing opens it any more, now that neither the feed nor the
+         jobs table responds to a click. The markup and poOpenJob() are intact:
+         call poOpenJob('<job name>') from whatever should open it, and it
+         un-hides itself and draws that job. -->
+    <section class="po-mod" id="poTrail" style="padding:0" hidden>
       <div class="po-crumbs" id="poCrumbs"></div>
       <div id="poActivity"></div>
     </section>
@@ -794,7 +901,7 @@ body.po-editing #poEditBtn{display:none}
 </div>
 </div>
 
-<!-- ── start a job ─────────────────────────────────────────────────
+<!-- ── new job ─────────────────────────────────────────────────────
      The side drawer the review retired, rebuilt as a modal. Its fields are the
      product's; the grouping into three named sections is this page's, so twelve
      fields read as three short lists instead of one wall. -->
@@ -802,7 +909,7 @@ body.po-editing #poEditBtn{display:none}
 <div class="po-modal" id="poModal" role="dialog" aria-modal="true" aria-labelledby="poModalTitle">
   <div class="po-m-head">
     <div class="po-m-head-l">
-      <h2 id="poModalTitle">Start a job</h2>
+      <h2 id="poModalTitle">New job</h2>
       <div class="po-m-head-sub">2525 McDonald Way, Austin, TX 78754</div>
     </div>
     <button class="po-m-x" type="button" onclick="poNew(false)" aria-label="Close">
@@ -847,9 +954,10 @@ body.po-editing #poEditBtn{display:none}
             <option>Maintenance &mdash; Standard</option>
           </select>
           <!-- Austin had no default template set in staging, which turned a
-               decision nobody needed to make into a required step. Say which
-               default applied, or say plainly that there isn't one. -->
-          <div class="po-m-note" id="npTplNote">Pick a job type and Kai will preselect this market&rsquo;s default template.</div>
+               decision nobody needed to make into a required step. Once a type
+               is picked, say which default applied — or say plainly that there
+               isn't one. Before that it says nothing. -->
+          <div class="po-m-note" id="npTplNote"></div>
         </div>
       </div>
     </div>
@@ -887,14 +995,10 @@ body.po-editing #poEditBtn{display:none}
         <div class="po-m-f wide">
           <label for="np-field">Field user</label>
           <select id="np-field">
-            <option value="">Inherit the property&rsquo;s team</option>
+            <option value="">Unassigned</option>
             <option>M. Alvarez</option><option>G. Han</option>
             <option>J. Duarte</option><option>S. Kwon</option>
           </select>
-          <!-- Aaron: assignment belongs at the property, so a job inherits it
-               and only overrides when someone means to. -->
-          <div class="po-m-note">Left alone, this job uses the property team &mdash;
-            <b>M. Alvarez</b> (maintenance) and <b>G. Han</b> (builder).</div>
         </div>
       </div>
     </div>
@@ -1005,18 +1109,22 @@ function poShortDate(iso){
 function poDays(a, b){
   return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
 }
+/* One job's money, split the way the trail already splits it: the budget is
+   where the job landed, the change orders carry 28% of it, and what is left is
+   the scope it started from. Table and trail therefore agree. */
+function poChange(j){
+  return j.cos ? Math.round((j.budget || 0) * 0.28) : 0;
+}
+function poScope(j){
+  return j.budget === null || j.budget === undefined ? null : j.budget - poChange(j);
+}
+function poFmtChange(n){
+  if(!n) return '<span class="dim">&mdash;</span>';
+  return '+$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
 function poFmtMoney(n){
   if(n === null || n === undefined) return '<span class="dim">$&ndash;&ndash;</span>';
   return '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
-}
-/* The job's most recent capture, as a thumbnail. The prototype ships no
-   photography, so the slot holds the tan and says what the latest capture is
-   of — or that there is not one yet. Swap the caption for an <img> when real
-   media is wired up. */
-function poJobShot(j){
-  var shots = PO_MEDIA.filter(function(m){ return m.job === j.name; })
-    .sort(function(a, b){ return b.date.localeCompare(a.date); });
-  return '<span class="c">' + poEsc(shots.length ? shots[0].room : 'No photo') + '</span>';
 }
 function poIsLate(j){ return j.status === 'active' && j.due < PO_TODAY; }
 
@@ -1024,72 +1132,10 @@ function poIsLate(j){ return j.status === 'active' && j.due < PO_TODAY; }
    1 · RIGHT NOW
    ════════════════════════════════════════════════════════════ */
 function poNow(){
-  var live = PO_JOBS.filter(function(j){ return !j.archived && j.status === 'active'; });
-  var host = document.getElementById('poNowJobs');
-
-  document.getElementById('poNowLbl').innerHTML = live.length
-    ? 'Jobs &middot; ' + live.length + ' active'
-    : 'Jobs';
-
-  if(!live.length){
-    host.innerHTML = '<div class="po-none"><span class="t">No job is open at this property. '
-      + 'The last one closed on ' + poFmtDate('2026-09-11') + '.</span>'
-      + '<button class="po-btn is-primary" type="button" onclick="poNew(true)">Start a job</button></div>';
-  } else {
-    /* Late first, then soonest due — the same rule the dashboard uses, so a
-       property and the list it came from agree about what is urgent. */
-    live.sort(function(a, b){
-      var la = poIsLate(a) ? 0 : 1, lb = poIsLate(b) ? 0 : 1;
-      return la !== lb ? la - lb : a.due.localeCompare(b.due);
-    });
-    /* One "Your turn" on the page, on the job that moved most recently. Four
-       cards all claiming to be your turn is four calls to action competing,
-       which is the same as none — the chip only means something if it points
-       at one thing. A job that is yours but is not the newest simply says
-       nothing here; it is still yours in the log. */
-    var newest = live.slice().sort(function(a, b){
-      return b.updated.localeCompare(a.updated);
-    })[0];
-    host.innerHTML = live.map(function(j){
-      var late = poIsLate(j);
-      var days = late ? poDays(j.due, PO_TODAY) : 0;
-      var mine = j.turn === ME && j === newest;
-      var turn = j.turn && (mine || j.turn !== ME);
-      return '<button class="po-job' + (late ? ' is-late' : '') + '" type="button" '
-        + 'onclick="poOpenJob(\'' + poEsc(j.name).replace(/'/g,"") + '\')">'
-        + '<span class="po-job-ph">' + poJobShot(j) + '</span>'
-        + '<span class="po-job-l">'
-          + '<span class="po-job-top">'
-            + '<span class="po-job-t">' + poEsc(j.type) + ' job'
-              + ' <span class="ph">&middot; ' + poEsc(j.phase) + '</span></span>'
-            + (turn ? '<span class="po-turn' + (mine ? ' is-mine' : '') + '">'
-                + (mine ? 'Your turn' : 'With ' + poEsc(j.turn)) + '</span>' : '')
-            + (late ? '<span class="po-late-chip">' + days + ' day' + (days === 1 ? '' : 's') + ' late</span>' : '')
-          + '</span>'
-          + '<span class="po-job-n">' + poEsc(PO_ADDR) + '</span>'
-        + '</span>'
-        + '<span class="po-job-r">'
-          + '<span class="po-job-f"><span class="k">Due</span><span class="v'
-            + (late ? ' is-late' : '') + '">' + poFmtDate(j.due) + '</span></span>'
-          + '<span class="po-job-f"><span class="k">Budget</span><span class="v">'
-            + (j.budget == null ? '&mdash;' : '$' + j.budget.toLocaleString('en-US')) + '</span></span>'
-          + '<span class="po-job-go"><svg viewBox="0 0 12 12"><path d="M2.5 6h7M6.5 3l3 3-3 3"/></svg></span>'
-        + '</span>'
-      + '</button>';
-    }).join('');
-  }
-
   /* The hero photo is whatever was captured most recently anywhere on the
      property, and it says which job produced it. */
   var latest = PO_MEDIA.slice().sort(function(a, b){ return b.date.localeCompare(a.date); })[0];
-  document.getElementById('poHeroSrc').textContent = 'Latest · ' + latest.job;
-  document.getElementById('poHeroCap').textContent = latest.room + ' · ' + poShortDate(latest.date);
-}
-
-function poDiscToggle(){
-  var d = document.getElementById('poDisc');
-  var open = d.classList.toggle('is-open');
-  d.querySelector('.po-disc-h').setAttribute('aria-expanded', open ? 'true' : 'false');
+  document.getElementById('poHeroCap').textContent = poShortDate(latest.date);
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -1105,25 +1151,28 @@ function poRender(){
   });
 
   document.getElementById('poRows').innerHTML = rows.length ? rows.map(function(j){
-    var co = j.cos
-      ? '<span class="po-co' + (j.cos >= 3 ? ' is-many' : '') + '">' + j.cos + '</span>'
-      : '<span class="dim">&mdash;</span>';
-    return '<tr onclick="poOpenJob(\'' + poEsc(j.name).replace(/'/g,"") + '\')">'
-      + '<td><span class="po-name">' + poEsc(j.name) + '</span>'
-        + '<span class="po-type">' + poEsc(j.type) + ' job</span>'
+    return '<tr>'
+      + '<td><span class="po-name">' + poEsc(PO_ADDR) + '</span>'
+        + '<span class="po-type">' + poEsc(j.type) + '</span>'
         + '</td>'
+      /* Held open for the description the product will carry. Empty on
+         purpose — a placeholder sentence would read as data. */
+      + '<td class="po-desc-c"></td>'
       + '<td><span class="po-st po-st-' + j.status + '">' + PO_STATUS[j.status] + '</span></td>'
+      + '<td class="num">' + poFmtMoney(poScope(j)) + '</td>'
+      + '<td class="num po-chg">' + poFmtChange(poChange(j)) + '</td>'
       + '<td class="num">' + poFmtMoney(j.budget) + '</td>'
-      + '<td>' + co + '</td>'
       + '<td class="dim">' + poFmtDate(j.created) + '</td>'
       + '<td class="dim">' + poFmtDate(j.updated) + '</td>'
       + '<td class="num"><button class="po-kebab" type="button" aria-label="More actions for ' + poEsc(j.name) + '">'
         + '<svg viewBox="0 0 14 14"><circle cx="7" cy="3" r="1.4"/><circle cx="7" cy="7" r="1.4"/><circle cx="7" cy="11" r="1.4"/></svg>'
         + '</button></td>'
       + '</tr>';
-  }).join('') : '<tr><td colspan="7" class="po-empty">No ' + poView + ' jobs on this property.</td></tr>';
+  }).join('') : '<tr><td colspan="9" class="po-empty">No ' + poView + ' jobs on this property.</td></tr>';
 
-  document.getElementById('poCount').innerHTML = 'Jobs &middot; ' + rows.length + ' ' + poView;
+
+  var life = PO_JOBS.reduce(function(sum, j){ return sum + (j.budget || 0); }, 0);
+  document.getElementById('poLifetime').innerHTML = poFmtMoney(life);
   var nLive = PO_JOBS.filter(function(x){ return !x.archived; }).length;
   document.getElementById('poSegActive').textContent = 'Active ' + nLive;
   document.getElementById('poSegArch').textContent  = 'Archived ' + (PO_JOBS.length - nLive);
@@ -1146,6 +1195,10 @@ function poSort(){
    mode the same captures are grouped by where they were taken instead of when —
    Christine's toggle, since a gallery and a timeline are the same pictures.
    ════════════════════════════════════════════════════════════ */
+/* The Progress section is parked. Flip this to true and remove the `hidden`
+   on #poProgress to put it back. */
+var PO_SHOW_PROGRESS = false;
+
 var poCmpBy = 'time';
 var poA = 0, poB = PO_MEDIA.length - 1;
 
@@ -1183,22 +1236,6 @@ function poDrawCmp(){
   document.getElementById('poBjob').textContent  = b.type + ' job · ' + b.job;
   poShot(a, document.getElementById('poAshot'));
   poShot(b, document.getElementById('poBshot'));
-
-  var days = Math.abs(poDays(a.date, b.date));
-  var yrs  = (days / 365).toFixed(1);
-  var lo = a.date < b.date ? a.date : b.date, hi = a.date < b.date ? b.date : a.date;
-  /* Jobs that saw activity between the two captures — the reason the picture
-     changed, which is what the comparison is really being asked. */
-  var between = PO_JOBS.filter(function(j){ return j.updated > lo && j.updated <= hi; });
-
-  document.getElementById('poDelta').innerHTML =
-    '<span class="k">Between A and B</span>'
-    + '<span>' + (days >= 365 ? yrs + ' years' : days + ' days')
-      + (between.length
-          ? ' and <b>' + between.length + ' job' + (between.length === 1 ? '' : 's') + '</b> — '
-            + between.map(function(j){ return poEsc(j.name); }).join(', ')
-          : ' and no job activity in between')
-      + '.</span>';
 
   document.getElementById('poCmpLbl').innerHTML = 'Comparing &middot; '
     + PO_MEDIA.length + ' captures across ' + new Set(PO_MEDIA.map(function(m){ return m.job; })).size + ' jobs';
@@ -1546,8 +1583,140 @@ function poOpenJob(name){
   var j = PO_JOBS.filter(function(x){ return x.name === name; })[0];
   if(!j) return;
   poJobSel = j;
+  document.getElementById('poTrail').hidden = false;
   poActDraw();
   document.getElementById('poCrumbs').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ════════════════════════════════════════════════════════════
+   PROPERTY ACTIVITY — the feed
+   ────────────────────────────────────────────────────────────
+   Every event at the address, newest first, whatever job produced it. Derived
+   from PO_JOBS, PO_ASSETS and the same money split the table and the trail
+   use, so the three cannot disagree. A row opens the job behind it.
+   ════════════════════════════════════════════════════════════ */
+var PO_EV_PAGE = 10;
+var poEvShown  = PO_EV_PAGE;
+
+/* Who did a thing. Deterministic from the job rather than random, so the same
+   event is attributed to the same person every draw. */
+function poEvWho(job, n){
+  var pool = [PO_ROSTER.approver, PO_ROSTER.builder, PO_ROSTER.field, 'T. Okafor'];
+  return pool[(PO_JOBS.indexOf(job) + n) % pool.length];
+}
+
+/* A document's date is the date of its last event — the trail hangs the dates
+   on the chain, not on the document. */
+function poEvDocDate(doc, fallback){
+  if(!doc || !doc.evs || !doc.evs.length) return fallback;
+  return doc.evs[doc.evs.length - 1].when || fallback;
+}
+
+function poEvents(){
+  var out = [];
+
+  PO_JOBS.forEach(function(j){
+    var docs  = poTrDocs(j);
+    var scope = poScope(j), change = poChange(j);
+
+    out.push({when:j.created, title:'Job created', total:null,
+              who:poEvWho(j, 0), job:j.name, type:j.type});
+
+    /* The scope lands a few days after the job opens — the same offset the
+       document trail uses, so a date here matches the date there. */
+    var sAt = poEvDocDate(docs[docs.length - 1], j.created);
+    out.push({when:sAt, title:'Scope of Work approved',
+              detail:j.tasks + ' task' + (j.tasks === 1 ? '' : 's'),
+              total:poFmtMoney(scope),
+              who:poEvWho(j, 1), job:j.name, type:j.type});
+
+    /* One line per change order, splitting the job's change total between
+       them so the feed adds up to the Changes column. */
+    for(var n = 1; n <= (j.cos || 0); n++){
+      var d = docs[Math.max(0, docs.length - 1 - n)];
+      out.push({when:poEvDocDate(d, j.updated), title:'Change Order ' + n + ' approved',
+                total:poFmtChange(change / j.cos),
+                who:poEvWho(j, 2), job:j.name, type:j.type});
+    }
+
+    if(j.status === 'completed'){
+      out.push({when:j.updated, title:'Job closed', total:poFmtMoney(j.budget),
+                who:poEvWho(j, 3), job:j.name, type:j.type});
+    }
+  });
+
+  /* Assets are the property's, not a job's, so they have no job to open and
+     no person to name — the record was created, not decided. */
+  PO_ASSETS.forEach(function(a){
+    if(!a.installed) return;
+    var iso = poEvAssetDate(a.installed);
+    if(!iso) return;
+    /* What the record says, in the order someone would ask for it: where it
+       lives, and what it is. An asset with no make yet says so rather than
+       trailing a separator with nothing after it. */
+    var made = [a.brand, a.model].filter(function(x){ return x; }).join(' ');
+    out.push({when:iso, title:poEsc(a.name) + ' installed',
+              detail:'Asset record created' + (made ? ' &middot; ' + poEsc(made) : ''),
+              /* An asset belongs to the property, so the Job column says what
+                 it belongs to instead — the room it is installed in. */
+              asset:poEsc(a.room), total:null,
+              who:'System', sys:true, job:null});
+  });
+
+  return out.sort(function(x, y){ return y.when.localeCompare(x.when); });
+}
+
+/* The assets carry human dates ("Mar 2026", "2009"). The feed sorts on ISO, so
+   they are read into one — the first of the month, which is as precise as the
+   record itself is. */
+var PO_EV_M = {jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',
+               jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
+function poEvAssetDate(txt){
+  var m = /^([A-Za-z]{3})[a-z]*\s+(\d{4})$/.exec(txt.trim());
+  if(m && PO_EV_M[m[1].toLowerCase()]) return m[2] + '-' + PO_EV_M[m[1].toLowerCase()] + '-01';
+  var y = /^(\d{4})$/.exec(txt.trim());
+  return y ? y[1] + '-01-01' : null;
+}
+
+function poEvFilterFill(){
+  var sel = document.getElementById('poEvFilter');
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">All jobs</option>'
+    + PO_JOBS.map(function(j){ return '<option>' + poEsc(j.name) + '</option>'; }).join('');
+  if(cur) sel.value = cur;
+}
+
+function poEvDraw(){
+  var pick = document.getElementById('poEvFilter').value;
+  var all  = poEvents().filter(function(e){ return !pick || e.job === pick; });
+  var show = all.slice(0, poEvShown);
+
+  document.getElementById('poEvents').innerHTML = show.length ? show.map(function(e){
+    var job = e.job
+      ? '<span class="po-ev-job">' + poEsc(e.job) + '</span>'
+        + '<span class="po-type">' + poEsc(e.type) + '</span>'
+      : '<span class="dim">' + (e.asset || '&mdash;') + '</span>';
+    return '<tr class="po-ev">'
+      + '<td><span class="po-ev-t">' + e.title + '</span>'
+        + (e.detail ? '<span class="po-ev-s">' + e.detail + '</span>' : '') + '</td>'
+      + '<td>' + job + '</td>'
+      + '<td class="num">' + (e.total || '<span class="dim">&mdash;</span>') + '</td>'
+      + '<td class="dim' + (e.sys ? ' is-sys' : '') + '">' + poEsc(e.who) + '</td>'
+      + '<td class="dim">' + poTrDate(e.when) + '</td>'
+      + '</tr>';
+  }).join('') : '<tr><td colspan="5" class="po-empty">Nothing has happened here yet.</td></tr>';
+
+  document.getElementById('poEvCount').textContent =
+    all.length + ' event' + (all.length === 1 ? '' : 's');
+  document.getElementById('poEvMore').innerHTML = all.length > show.length
+    ? '<button type="button" onclick="poEvMore()">Show ' + (all.length - show.length)
+      + ' earlier event' + (all.length - show.length === 1 ? '' : 's') + '</button>'
+    : '';
+}
+
+function poEvMore(){
+  poEvShown += PO_EV_PAGE;
+  poEvDraw();
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -1556,7 +1725,6 @@ function poOpenJob(name){
 function poEdit(on){
   document.body.classList.toggle('po-editing', !!on);
   if(on){
-    document.getElementById('poDisc').classList.add('is-open');
     var f = document.getElementById('i-beds'); if(f) f.focus();
   }
 }
@@ -1571,16 +1739,11 @@ function poSave(){
   s('v-garage', g('i-garage'));
   s('v-market', g('i-market'));
   s('v-testid', g('i-testid'));
-  /* The folded summary is what most people will ever see of these numbers, so it
-     has to follow the edit. */
-  document.getElementById('poDiscSum').innerHTML =
-    g('i-beds') + ' bed &middot; ' + g('i-full') + ' bath &middot; '
-    + Number(g('i-sqft')).toLocaleString('en-US') + ' sqft &middot; ' + g('i-acres') + ' acres';
   poEdit(false);
 }
 
 /* ════════════════════════════════════════════════════════════
-   START A JOB
+   NEW JOB
    ════════════════════════════════════════════════════════════ */
 var PO_MANAGERS = ['Aaron Mosny', 'T. Okafor', 'R. Ibarra', 'A. Novak'];
 var poPicked = ['Aaron Mosny'];
@@ -1617,7 +1780,7 @@ function poTypeChanged(){
   var note = document.getElementById('npTplNote');
   var sel  = document.getElementById('np-template');
   if(!type){
-    note.innerHTML = 'Pick a job type and Kai will preselect this market&rsquo;s default template.';
+    note.innerHTML = '';
     sel.value = '';
     return;
   }
@@ -1675,16 +1838,407 @@ function poCreate(){
   poActDraw();
 }
 
+/* ════════════════════════════════════════════════════════════
+   3 · ASSETS
+   Components with a service life. They outlive the job that installed them, so
+   they hang off the property rather than off a job. `life` is a forecast of
+   what is left, shown only when it is short enough to matter — the footnote
+   under the table says it is never money.
+   ════════════════════════════════════════════════════════════ */
+var PO_ASSETS = [
+  {name:'Water heater', room:'Garage', brand:'Rheem', model:'XE40M06ST45U1',
+   color:'White', serial:'RH26-4471903', installed:'Mar 2026', warranty:'Mar 2032',
+   life:null, plate:'Plate on the upper jacket, left of the gas valve.',
+   desc:'40 gal natural gas, replaced under the Unit 2 turn.'},
+
+  {name:'HVAC condenser', room:'Exterior', brand:'Goodman', model:'GSX140361',
+   color:'Beige', serial:'1906284517', installed:'Jun 2019', warranty:'Jun 2029',
+   life:null, plate:'Plate on the north face of the cabinet.',
+   desc:'3 ton, 14 SEER. Pad is level; disconnect is on the south wall.'},
+
+  {name:'Refrigerator', room:'Kitchen', brand:'Whirlpool', model:'WRS325SDHZ',
+   color:'Stainless', serial:'K21-8830012', installed:'Aug 2021', warranty:'Expired',
+   life:null, plate:'Plate inside the fresh-food door, lower left.',
+   desc:'Side-by-side, ice maker plumbed to the cold line under the sink.'},
+
+  {name:'Roof, architectural shingle', room:'Structure', brand:'', model:'',
+   color:'Weathered wood', serial:'', installed:'2009', warranty:'',
+   life:'3 yrs of service life', plate:'',
+   desc:'Original to the build. Granule loss on the south slope at the last walk.'}
+];
+
+/* Brand and model are two fields and one answer: the table joins them, and an
+   asset with neither says it was never recorded rather than showing a blank. */
+function poAssetMake(a){
+  var made = [a.brand, a.model].filter(function(x){ return x; }).join(' ');
+  return made || '<span class="dim">Not recorded</span>';
+}
+function poAssetExpired(a){ return /^expired$/i.test((a.warranty || '').trim()); }
+
+function poAssets(){
+  document.getElementById('poAssetRows').innerHTML = PO_ASSETS.map(function(a, i){
+    var warranty = poAssetExpired(a)
+      ? '<span class="po-warn">Expired</span>'
+      : (a.warranty ? poEsc(a.warranty) : '<span class="dim">&mdash;</span>');
+    return '<tr class="po-asset-row" onclick="poAssetOpen(' + i + ')">'
+      + '<td><span class="po-asset-n">' + poEsc(a.name) + '</span>'
+        + (a.life ? '<span class="po-life">' + poEsc(a.life) + '</span>' : '')
+        + '</td>'
+      + '<td>' + poEsc(a.room) + '</td>'
+      + '<td>' + poAssetMake(a) + '</td>'
+      + '<td>' + poEsc(a.installed) + '</td>'
+      + '<td>' + warranty + '</td>'
+      + '<td class="num"><button class="po-chev" type="button" aria-label="Open ' + poEsc(a.name) + '">'
+        + '<svg viewBox="0 0 12 12"><path d="M4.5 2.5l3.5 3.5-3.5 3.5"/></svg>'
+        + '</button></td>'
+      + '</tr>';
+  }).join('');
+
+  document.getElementById('poAssetCount').textContent = PO_ASSETS.length;
+}
+
+/* ── one asset, from the side ────────────────────────────────
+   The same drawer the market uses — same chrome, same field treatment, same
+   pinned actions — because they are the same gesture: open the thing, change
+   its fields, put it back. Only the fields differ. */
+var PO_ASSET_ROOMS   = ['Kitchen', 'Bath 1', 'Bath 2', 'Bath 3', 'Living', 'Garage',
+                        'Exterior', 'Structure', 'Utility'];
+
+var poAstEl = null, poAstScrim = null, poAstIdx = -1;
+/* An asset being created does not exist yet — it is held here until the save,
+   so a cancelled one leaves no row behind. */
+var poAstDraft = null;
+
+function poAstField(id, label, val, opt, ph){
+  return '<div class="mkt-f"><label for="ast-' + id + '">' + poEsc(label)
+    + (opt ? ' <span class="opt">optional</span>' : '') + '</label>'
+    + '<input id="ast-' + id + '" value="' + poEsc(val || '') + '"'
+    + (ph ? ' placeholder="' + poEsc(ph) + '"' : '') + '></div>';
+}
+function poAstSelect(id, label, val, list){
+  /* A new asset has no location yet. Defaulting the picker to whatever happens
+     to be first would file it in a room nobody chose, so it opens on a prompt
+     instead and the save refuses a blank. */
+  var blank = list.indexOf(val) < 0;
+  return '<div class="mkt-f"><label for="ast-' + id + '">' + poEsc(label) + '</label>'
+    + '<select id="ast-' + id + '">'
+    + (blank ? '<option value="">Choose a location&hellip;</option>' : '')
+    + list.map(function(o){
+        return '<option' + (o === val ? ' selected' : '') + '>' + poEsc(o) + '</option>';
+      }).join('')
+    + '</select></div>';
+}
+
+function poAstBody(a){
+  return '<div class="mkt-sec">'
+      + poAstField('name', 'Asset', a.name)
+      + poAstSelect('room', 'Location', a.room, PO_ASSET_ROOMS)
+      /* What the spec sheet does not say — the condition, the quirk, the thing
+         the last person on site would tell the next one. */
+      + '<div class="mkt-f"><label for="ast-desc">Description <span class="opt">optional</span></label>'
+        + '<textarea id="ast-desc" placeholder="What anyone opening this asset should know.">'
+        + poEsc(a.desc || '') + '</textarea></div>'
+    + '</div>'
+    + '<div class="mkt-sec">'
+      + '<div class="mkt-sec-h">Make</div>'
+      + '<div class="mkt-pair">'
+        + poAstField('brand', 'Brand', a.brand, true, 'Rheem')
+        + poAstField('model', 'Model', a.model, true, 'XE40M06ST45U1')
+      + '</div>'
+      + '<div class="mkt-pair">'
+        + poAstField('color', 'Color', a.color, true)
+        + poAstField('serial', 'Serial number', a.serial, true)
+      + '</div>'
+    + '</div>'
+    + '<div class="mkt-sec">'
+      + '<div class="mkt-sec-h">Dates</div>'
+      + '<div class="mkt-pair">'
+        + poAstField('installed', 'Installed', a.installed, false, 'Mar 2026')
+        + poAstField('warranty', 'Warranty until', a.warranty, true, 'Mar 2032')
+      + '</div>'
+      /* A forecast, so it is typed as a phrase rather than computed from a
+         date the prototype does not have. The table shows it beside the name
+         and the footnote there says it is never money. */
+      + poAstField('life', 'Service life remaining', a.life, true, '3 yrs of service life')
+      + '<div class="mkt-note">Type <b>Expired</b> in the warranty field to flag a lapsed warranty.</div>'
+    + '</div>'
+    + '<div class="mkt-sec">'
+      + '<div class="mkt-sec-h">Data plate</div>'
+      + '<div class="mkt-f"><label for="ast-plate">Where to find it <span class="opt">optional</span></label>'
+        + '<textarea id="ast-plate" placeholder="Plate on the upper jacket, left of the gas valve.">'
+        + poEsc(a.plate || '') + '</textarea></div>'
+    + '</div>';
+}
+
+function poAssetOpen(i){
+  var a = PO_ASSETS[i];
+  if(!a) return;
+  poAstIdx = i; poAstDraft = null;
+  poAstDraw(a, poEsc(a.name), 'Asset &middot; ' + poEsc(a.room), 'Update asset');
+}
+
+/* The same drawer, with nothing in it. */
+function poAssetNew(){
+  poAstIdx = -1;
+  poAstDraft = {name:'', room:'', desc:'', brand:'', model:'', color:'', serial:'',
+                installed:'', warranty:'', life:'', plate:''};
+  poAstDraw(poAstDraft, 'New asset', 'Asset', 'Add asset');
+}
+
+function poAstDraw(a, title, eyebrow, action){
+  if(!poAstEl){
+    poAstScrim = document.createElement('div');
+    poAstScrim.id = 'ast-scrim';
+    poAstScrim.onclick = poAssetClose;
+    poAstEl = document.createElement('aside');
+    poAstEl.id = 'ast-drawer';
+    poAstEl.setAttribute('role', 'dialog');
+    poAstEl.setAttribute('aria-modal', 'true');
+    poAstEl.setAttribute('aria-label', 'Asset');
+    document.body.appendChild(poAstScrim);
+    document.body.appendChild(poAstEl);
+  }
+  poAstEl.innerHTML = '<div class="dw-head"><div class="dw-top"><div>'
+      + '<div class="dw-task">' + eyebrow + '</div>'
+      + '<div class="dw-title" id="astTitle">' + title + '</div></div>'
+      + '<button class="dw-close" onclick="poAssetClose()" aria-label="Close">'
+      + '<svg viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-linecap="round"/></svg>'
+      + '</button></div></div>'
+    + '<div class="dw-body mkt-body">' + poAstBody(a) + '</div>'
+    + '<div class="mkt-acts">'
+      + '<button class="mkt-btn" type="button" onclick="poAssetClose()">Cancel</button>'
+      + '<button class="mkt-btn is-primary" type="button" onclick="poAssetSave()">' + action + '</button>'
+    + '</div>';
+  void poAstEl.offsetWidth;
+  poAstScrim.classList.add('open');
+  poAstEl.classList.add('open');
+  var n = document.getElementById('ast-name');
+  if(n) n.focus();
+}
+
+function poAssetClose(){
+  if(!poAstEl) return;
+  poAstEl.classList.remove('open');
+  poAstScrim.classList.remove('open');
+  poAstIdx = -1; poAstDraft = null;
+}
+
+function poAssetSave(){
+  var a = poAstDraft || PO_ASSETS[poAstIdx];
+  if(!a) return;
+  ['name','room','desc','brand','model','color','serial','installed','warranty','life','plate']
+    .forEach(function(k){
+      var el = document.getElementById('ast-' + k);
+      if(el) a[k] = el.value.trim();
+    });
+  /* An asset with no name is an asset nobody can find again, so a blank one
+     keeps what it had rather than becoming a row with nothing in it. */
+  if(!a.name) a.name = 'Untitled asset';
+  if(!a.room) a.room = 'Unassigned';
+  if(poAstDraft) PO_ASSETS.push(poAstDraft);
+  poAssets();
+  poAssetClose();
+}
+
+/* ════════════════════════════════════════════════════════════
+   THE MARKET, FROM THE SIDE
+   Ported from js/overview.js so the "View market" link on this page opens the
+   same drawer the panel's Overview tab opens. Same fields, same chrome, same
+   behaviour — only the seed is this property's market rather than Atlanta's,
+   and the names come from this page's own rosters so nobody appears here who
+   appears nowhere else.
+   ════════════════════════════════════════════════════════════ */
+var PO_MARKET = {
+  name:        'Austin',
+  zips:        ['78754', '78753'],
+  template:    'ATX Metro Turn Template 01:09:26',
+  managers:    ['T. Okafor'],
+  contractors: ['Stone Bros', 'Apex Carpentry'],
+  users:       ['M. Alvarez', 'S. Patel']
+};
+var PO_CONTRACTORS = ['Stone Bros', 'Apex Carpentry', 'Delgado Plumbing',
+                      'Hill Country Electric', 'Vega Roofing'];
+var PO_MKT_TEMPLATES = ['ATX Metro Turn Template 01:09:26',
+                        'ATX Acquisition Inspection 04:22:26',
+                        'Maintenance — Standard'];
+
+/* Rosters the pickers draw from, read off the data this page already uses. */
+function poMktRoster(key){
+  if(key === 'contractors') return PO_CONTRACTORS;
+  var people = PO_MANAGERS.concat([PO_ROSTER.field, PO_ROSTER.builder,
+                                   PO_ROSTER.approver, PO_ROSTER.tech, 'S. Patel']);
+  return people.filter(function(n, i){ return people.indexOf(n) === i; });
+}
+
+var PO_MKT_FIELDS = [
+  {key:'managers',    label:'Job managers', add:'Add a manager'},
+  {key:'contractors', label:'Contractors',  add:'Add a contractor'},
+  {key:'users',       label:'Users',        add:'Add a user'}
+];
+
+function poMktChips(key){
+  return (PO_MARKET[key] || []).map(function(v){
+    return '<span class="mkt-chip">' + poEsc(v)
+      + '<button type="button" onclick="poMarketDrop(\'' + poEsc(key) + '\',\''
+        + poEsc(v).replace(/'/g, "\\'") + '\')" aria-label="Remove ' + poEsc(v) + '">'
+      + '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6"/></svg>'
+      + '</button></span>';
+  }).join('');
+}
+
+function poMktPicker(f){
+  var taken = PO_MARKET[f.key] || [];
+  var opts = poMktRoster(f.key).filter(function(n){ return taken.indexOf(n) < 0; })
+    .map(function(n){ return '<option>' + poEsc(n) + '</option>'; }).join('');
+  return '<div class="mkt-f">'
+    + '<label for="mkt-' + f.key + '">' + poEsc(f.label) + ' <span class="opt">optional</span></label>'
+    + '<select id="mkt-' + f.key + '" onchange="poMarketAdd(\'' + f.key + '\', this)">'
+      + '<option value="">' + poEsc(f.add) + '&hellip;</option>' + opts
+    + '</select>'
+    + '<div class="mkt-chips" id="mktChips-' + f.key + '">' + poMktChips(f.key) + '</div>'
+    + '</div>';
+}
+
+function poMktBody(){
+  return '<div class="mkt-sec">'
+      + '<div class="mkt-f"><label for="mkt-name">Name</label>'
+        + '<input id="mkt-name" value="' + poEsc(PO_MARKET.name || '') + '"></div>'
+      + '<div class="mkt-f"><label for="mkt-zip">Zip codes</label>'
+        + '<input id="mkt-zip" inputmode="numeric" placeholder="Type a zip code, then Enter" '
+          + 'onkeydown="poMarketZip(event)">'
+        + '<div class="mkt-chips" id="mktChips-zips">' + poMktChips('zips') + '</div></div>'
+    + '</div>'
+    + '<div class="mkt-sec">'
+      + '<div class="mkt-sec-h">Defaults for new jobs</div>'
+      + '<div class="mkt-f">'
+        + '<label for="mkt-template">Job template <span class="opt">optional</span></label>'
+        + '<select id="mkt-template"><option value="">No template</option>'
+        + PO_MKT_TEMPLATES.map(function(t){
+            return '<option' + (t === PO_MARKET.template ? ' selected' : '') + '>'
+              + poEsc(t) + '</option>';
+          }).join('')
+        + '</select></div>'
+      + poMktPicker(PO_MKT_FIELDS[0])
+    + '</div>'
+    + '<div class="mkt-sec">'
+      + '<div class="mkt-sec-h">Who works here</div>'
+      + poMktPicker(PO_MKT_FIELDS[1])
+      + poMktPicker(PO_MKT_FIELDS[2])
+    + '</div>';
+}
+
+var poMktEl = null, poMktScrim = null;
+
+function poMarketOpen(){
+  if(!poMktEl){
+    poMktScrim = document.createElement('div');
+    poMktScrim.id = 'mkt-scrim';
+    poMktScrim.onclick = poMarketClose;
+    poMktEl = document.createElement('aside');
+    poMktEl.id = 'mkt-drawer';
+    poMktEl.setAttribute('role', 'dialog');
+    poMktEl.setAttribute('aria-modal', 'true');
+    poMktEl.setAttribute('aria-label', 'Market');
+    document.body.appendChild(poMktScrim);
+    document.body.appendChild(poMktEl);
+  }
+  poMktEl.innerHTML = '<div class="dw-head"><div class="dw-top"><div>'
+      + '<div class="dw-task">Market</div>'
+      + '<div class="dw-title" id="mktTitle">' + poEsc(PO_MARKET.name || '') + '</div></div>'
+      + '<button class="dw-close" onclick="poMarketClose()" aria-label="Close">'
+      + '<svg viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-linecap="round"/></svg>'
+      + '</button></div></div>'
+    + '<div class="dw-body mkt-body">' + poMktBody() + '</div>'
+    + '<div class="mkt-acts">'
+      + '<button class="mkt-btn" type="button" onclick="poMarketClose()">Cancel</button>'
+      + '<button class="mkt-btn is-primary" type="button" onclick="poMarketSave()">Update market</button>'
+    + '</div>';
+  /* Reflow, then open, both synchronously — deferring the class to a later
+     frame let the first click land before that frame ran and leave the drawer
+     closed with its content already in it. */
+  void poMktEl.offsetWidth;
+  poMktScrim.classList.add('open');
+  poMktEl.classList.add('open');
+  var n = document.getElementById('mkt-name');
+  if(n) n.focus();
+}
+
+function poMarketClose(){
+  if(!poMktEl) return;
+  poMktEl.classList.remove('open');
+  poMktScrim.classList.remove('open');
+}
+
+/* Only the field that changed is redrawn — rebuilding the whole body would
+   throw away whatever is half-typed in the name. */
+function poMktSync(key){
+  var box = document.getElementById('mktChips-' + key);
+  if(box) box.innerHTML = poMktChips(key);
+  var sel = document.getElementById('mkt-' + key);
+  var f = PO_MKT_FIELDS.filter(function(x){ return x.key === key; })[0];
+  if(sel && f){
+    var taken = PO_MARKET[key] || [];
+    sel.innerHTML = '<option value="">' + poEsc(f.add) + '&hellip;</option>'
+      + poMktRoster(key).filter(function(n){ return taken.indexOf(n) < 0; })
+          .map(function(n){ return '<option>' + poEsc(n) + '</option>'; }).join('');
+  }
+}
+
+function poMarketAdd(key, sel){
+  if(sel.value && (PO_MARKET[key] || []).indexOf(sel.value) < 0) PO_MARKET[key].push(sel.value);
+  poMktSync(key);
+}
+
+function poMarketDrop(key, v){
+  PO_MARKET[key] = (PO_MARKET[key] || []).filter(function(x){ return x !== v; });
+  poMktSync(key);
+}
+
+/* Zip codes have no roster, so they are typed. Enter commits, and so does a
+   comma — that is how anyone pastes a list of them. */
+function poMarketZip(e){
+  if(e.key !== 'Enter' && e.key !== ',') return;
+  e.preventDefault();
+  var v = e.target.value.trim().replace(/,$/, '');
+  if(/^\d{5}$/.test(v) && PO_MARKET.zips.indexOf(v) < 0) PO_MARKET.zips.push(v);
+  e.target.value = '';
+  poMktSync('zips');
+}
+
+function poMarketSave(){
+  var el = document.getElementById('mkt-name');
+  var name = (el && el.value.trim()) || PO_MARKET.name;
+  PO_MARKET.name = name;
+  var tpl = document.getElementById('mkt-template');
+  if(tpl) PO_MARKET.template = tpl.value;
+  /* The property's Market fact names this market, so a rename has to reach it
+     — otherwise the page shows the old name beside a drawer showing the new. */
+  var v = document.getElementById('v-market');
+  if(v) v.textContent = name;
+  var sel = document.getElementById('i-market');
+  if(sel){
+    var has = false;
+    for(var i = 0; i < sel.options.length; i++) if(sel.options[i].text === name) has = true;
+    if(!has) sel.add(new Option(name, name));
+    sel.value = name;
+  }
+  poMarketClose();
+}
+
 document.addEventListener('keydown', function(e){
   if(e.key !== 'Escape') return;
+  if(poAstEl && poAstEl.classList.contains('open')) return poAssetClose();
+  if(poMktEl && poMktEl.classList.contains('open')) return poMarketClose();
   if(document.getElementById('poModal').classList.contains('open')) return poNew(false);
   if(document.body.classList.contains('po-editing')) poEdit(false);
 });
 
 poNow();
 poRender();
-poDrawCmp();
-poDrawStrip();
+poAssets();
+poEvFilterFill();
+poEvDraw();
+if(PO_SHOW_PROGRESS){ poDrawCmp(); poDrawStrip(); }
 poActDraw();
 </script>
 </body>

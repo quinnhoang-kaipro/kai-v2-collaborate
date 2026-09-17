@@ -14,9 +14,18 @@ const KAI_PANEL_RAW = window.KAI_PANEL_SRC || '';
        fonts/ folder sits next to this HTML; without it the panel falls
        back to the Google Fonts stack it already declares. */
 function KAI_PANEL_DOC(qs){
+  /* __KAI_ACTIVITY_FULL rides along the same way __KAI_QS does. index.html
+     leaves it unset; index-activity.html sets it before this file loads, and
+     the panel's Overview reads it to bring back the change-order and capture
+     counts the tab dropped. A host-page flag rather than a query parameter
+     because the two pages differ in nothing else — there is no state here to
+     put in a URL. */
+  const full = (typeof window.__KAI_ACTIVITY_FULL !== 'undefined')
+    && !!window.__KAI_ACTIVITY_FULL;
   const boot =
     '<base href="' + location.href.split('#')[0] + '">' +
-    '<scr' + 'ipt>window.__KAI_QS=' + JSON.stringify(qs ? '?' + qs : '') + ';<\/script>';
+    '<scr' + 'ipt>window.__KAI_QS=' + JSON.stringify(qs ? '?' + qs : '')
+      + ';window.__KAI_ACTIVITY_FULL=' + (full ? 'true' : 'false') + ';<\/script>';
   return KAI_PANEL_RAW.replace(/<head([^>]*)>/i, '<head$1>' + boot);
 }
 
@@ -2860,7 +2869,8 @@ function syncSbOptSeg(){
    is told on every load, because a preset change blanks the src and remounts
    it with none of this remembered. Off by default — it is here to put the
    feed back for a look, not to leave it on. */
-let ovActivityOn = false;
+let ovActivityOn = (typeof window.__KAI_ACTIVITY_FULL !== 'undefined')
+  && !!window.__KAI_ACTIVITY_FULL;
 function setOvActivity(on){
   ovActivityOn = !!on;
   applyOvActivity();

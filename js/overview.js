@@ -510,11 +510,16 @@ function ovAccessToggle(btn){
     if(t) t.textContent = _ovAccessOpen ? 'Hide access info' : 'See access info';
   }
 }
-function ovToggleChanges(verId, btn){
+/* Called from the caret and from the row around it, so the caret is found
+   rather than passed: whichever of them was clicked, the one that carries the
+   state is the control pointing at this list. */
+function ovToggleChanges(verId){
   _ovOpenChanges[verId] = !_ovOpenChanges[verId];
+  const on = !!_ovOpenChanges[verId];
   const box = document.getElementById('ovCh-' + verId);
-  if(box) box.hidden = !_ovOpenChanges[verId];
-  if(btn) btn.setAttribute('aria-expanded', String(!!_ovOpenChanges[verId]));
+  if(box) box.hidden = !on;
+  const btn = document.querySelector(`[aria-controls="ovCh-${verId}"]`);
+  if(btn) btn.setAttribute('aria-expanded', String(on));
 }
 /* ── what happened on site between two documents ─────────────────────
    A document's chain says who held it. It says nothing about the weeks in
@@ -600,12 +605,26 @@ function _ovSiteRuns(older, newer){
   const rows = [];
 
   /* One task can be shot on two walks, so the set, not the sum of the
-     per-walk counts. The photo and note totals used to lead the run; they
-     are a measure of how much was recorded, not of what happened to the
-     work, and they pushed the two rows that say what happened down. */
+     per-walk counts. */
   const seen = new Map();
   walks.forEach(w => (w.hit || []).forEach(t => seen.set(t.id, t)));
   const touched = [...seen.values()];
+  /* What was captured. Off the feed by default — it measures how much was
+     recorded rather than what happened to the work, and it pushed the two
+     rows that do say what happened down the band. index-activity.html has
+     it back. */
+  if(OV_FULL){
+    const photos = walks.reduce((k, w) => k + w.photos, 0);
+    const notes  = walks.reduce((k, w) => k + w.notes, 0);
+    const rooms  = new Set(touched.map(t => t.room).filter(Boolean));
+    if(photos || notes) rows.push({
+      text: `${join([photos && n(photos, 'photo', 'photos'),
+                     notes  && n(notes,  'note',  'notes')])} added`,
+      side: join([rooms.size && n(rooms.size, 'group', 'groups'),
+                  touched.length && n(touched.length, 'task', 'tasks')]),
+      when: span
+    });
+  }
 
   /* Grouped by room so the list opens the way the change list does, and so
      a long one reads as a few places rather than twenty loose lines. */
@@ -643,17 +662,18 @@ function _ovWalksHtml(run, key){
   return `<div class="ov-walks">${rows.map((r, i) => {
     const id = `ovSite-${key}-${i}`;
     const open = !!_ovOpenChanges[id];
-    return `<div class="ov-walk">
+    return `<div class="ov-walk${r.detail ? ' is-tappable' : ''}"${
+      r.detail ? ` onclick="ovToggleChanges('${id}')"` : ''}>
       <span class="ov-walk-c">${r.detail
         ? `<button type="button" class="ov-tr-open ov-site-open"
              aria-expanded="${open}" aria-controls="ovCh-${id}"
-             onclick="ovToggleChanges('${id}', this)">${esc(r.text)}
+             onclick="event.stopPropagation();ovToggleChanges('${id}')">${esc(r.text)}
              <svg class="ov-tr-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
            </button>`
         : esc(r.text)}</span>
       <span class="ov-walk-s">${esc(r.side)}</span>
       <span class="ov-walk-d">${esc(r.when)}</span>
-      ${r.detail ? `<div class="ov-tr-detail ov-site-detail" id="ovCh-${id}"${open ? '' : ' hidden'}>
+      ${r.detail ? `<div class="ov-tr-detail ov-site-detail" id="ovCh-${id}"${open ? '' : ' hidden'} onclick="event.stopPropagation()">
         ${r.detail.map(g => `<div class="ov-ch-g">
           <button type="button" class="ov-ch-grp" data-hv-room="${esc(g.room)}" onclick="ovGoGroup('${esc(g.room).replace(/'/g, "\\'")}')">${esc(g.room)}</button>
           <div class="ov-ch-ts">${g.tasks.map(t => `
@@ -703,8 +723,11 @@ function _ovMoneyHtml(d){
    only that row carries the money: it is where the document currently
    stands, so it is the honest place for it. */
 function _ovDocRowHtml(d, e, lead){
+  /* The name goes to the document, the row opens the list — so the name has
+     to stop the click reaching the row, or following a link would expand
+     something on the way out. */
   const nm = `<button type="button" class="ov-tr-doc-n" data-hv-doc="${esc(d.name)}"
-      onclick="ovOpenDoc('${esc(d.name).replace(/'/g, "\\'")}')">${esc(d.name)}</button>`;
+      onclick="event.stopPropagation();ovOpenDoc('${esc(d.name).replace(/'/g, "\\'")}')">${esc(d.name)}</button>`;
   const sentence = e.verb
     ? `${e.who ? `<span class="ov-tr-who">${esc(e.who)}</span> ` : ''}${esc(e.verb)} ${nm}${
         e.to ? ` to <span class="ov-tr-who2">${esc(e.to)}</span>` : ''}`
@@ -716,19 +739,24 @@ function _ovDocRowHtml(d, e, lead){
     ? `<span class="ov-tr-act">${sentence}
          <button type="button" class="ov-tr-open" aria-label="Show the tasks that changed"
            aria-expanded="${!!_ovOpenChanges[e.ver]}" aria-controls="ovCh-${e.ver}"
-           onclick="ovToggleChanges('${e.ver}', this)"
+           onclick="event.stopPropagation();ovToggleChanges('${e.ver}')"
            ><svg class="ov-tr-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg></button>
        </span>`
     : `<span class="ov-tr-act">${sentence}</span>`;
-  return `<div class="ov-tr-r ov-tr-${e.kind}">
-      <span class="ov-tr-ev">
+  /* A row that opens is clickable across its whole width — a caret is a small
+     target for something the entire line is about. The row is display:contents
+     and has no box of its own to carry the handler, so each cell takes it. The
+     caret stays, for the keyboard and for saying the row does anything. */
+  const tap = e.detail ? ` onclick="ovToggleChanges('${e.ver}')"` : '';
+  return `<div class="ov-tr-r ov-tr-${e.kind}${e.detail ? ' is-tappable' : ''}">
+      <span class="ov-tr-ev"${tap}>
         <span class="ov-tr-mk">${e.kind === 'approved' ? _OV_TICK : ''}</span>
         ${body}
       </span>
-      <span class="ov-tr-sum">${lead ? _ovMoneyHtml(d) : ''}</span>
-      <span class="ov-tr-d">${esc(e.when || '')}</span>
+      <span class="ov-tr-sum"${tap}>${lead ? _ovMoneyHtml(d) : ''}</span>
+      <span class="ov-tr-d"${tap}>${esc(e.when || '')}</span>
     </div>
-    ${e.detail ? `<div class="ov-tr-detail" id="ovCh-${e.ver}"${_ovOpenChanges[e.ver] ? '' : ' hidden'}>
+    ${e.detail ? `<div class="ov-tr-detail" id="ovCh-${e.ver}"${_ovOpenChanges[e.ver] ? '' : ' hidden'} onclick="event.stopPropagation()">
       ${e.detail.map(g => `<div class="ov-ch-g">
         <button type="button" class="ov-ch-grp" data-hv-room="${esc(g.room)}" onclick="ovGoGroup('${esc(g.room).replace(/'/g, "\\'")}')">${esc(g.room)}</button>
         <div class="ov-ch-ts">${g.tasks.map(t => `
@@ -761,10 +789,11 @@ function ovOpenDoc(name){
    two of them overlap. */
 function _ovFeedEntries(docs){
   const out = [];
-  /* The change count is not rendered as a row any more — it said how much
-     moved without saying what, and the document's own preview lists the
-     tasks. It stays on the document so the hover card can still read it. */
-  docs.forEach(d => d.evs.filter(e => e.kind !== 'changed').forEach((e, j) => out.push({
+  /* The change count is not rendered as a row — it said how much moved
+     without saying what, and the document's own preview lists the tasks. It
+     stays on the document so the hover card can still read it, and
+     index-activity.html puts it back on the feed. */
+  docs.forEach(d => d.evs.filter(e => OV_FULL || e.kind !== 'changed').forEach((e, j) => out.push({
     kind:'doc', doc:d, ev:e, lead:j === 0,
     at: e.at || Date.parse(e.when) || 0
   })));
@@ -953,7 +982,14 @@ function _ovPropFields(){
    Whether the Overview carries a history at all is still being decided, so
    the shell's demo panel holds a toggle for it and this is the flag it sets.
    Default off: the tab reads as the job's facts without it. */
-let OV_ACTIVITY = false;
+/* index-activity.html sets this on the host page and the shell passes it into
+   the panel. It does two things: the feed is on to begin with, and it carries
+   the two kinds of row the tab dropped — the change-order counts and the
+   capture counts. Both are still built; they were taken out of the feed, not
+   out of the data, which is why restoring them is a flag rather than a
+   rewrite. */
+const OV_FULL = (typeof window !== 'undefined') && !!window.__KAI_ACTIVITY_FULL;
+let OV_ACTIVITY = OV_FULL;
 function ovSetActivity(on){
   const next = !!on;
   if(next === OV_ACTIVITY) return;
@@ -1118,8 +1154,11 @@ function _ovHoverData(el){
     const groups = changed ? changed.detail : [];
     return {kind:'doc', title:d.name, state:d.state, amount:d.amount, was:d.was,
             /* The names, not the tally — the same reason the feed stopped
-               carrying the count. */
-            meta: '',
+               carrying the count, and restored on the same flag. */
+            meta: (OV_FULL && groups.length)
+              ? `${groups.length} group${groups.length === 1 ? '' : 's'} \u00b7 `
+                + `${groups.reduce((k, g) => k + g.tasks.length, 0)} tasks changed`
+              : '',
             tasks: groups.flatMap(g => g.tasks.map(t => t.name)).slice(0, 4),
             /* People-events only: the change-count row is already summarised
                two lines above as "5 groups · 7 tasks changed", and with no

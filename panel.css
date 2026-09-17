@@ -4605,6 +4605,14 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tr-r > *{padding:7px 0;display:flex;align-items:center}
 .ov-tr-r > .ov-tr-sum,.ov-tr-r > .ov-tr-d{justify-content:flex-end}
 .ov-tr-r + .ov-tr-r > *{border-top:1px solid var(--hair,var(--stroke))}
+/* A row that opens says so across its whole width: the cursor on all of it,
+   and a wash on hover so the target is the line rather than the caret. */
+.ov-tr-r.is-tappable > *{cursor:pointer}
+.ov-tr-r.is-tappable:hover > *{background:var(--app-bg)}
+.ov-walk.is-tappable{cursor:pointer}
+.ov-walk.is-tappable:hover{background:var(--app-bg)}
+/* The list an open row reveals is not part of the row's target. */
+.ov-tr-detail{cursor:auto}
 .ov-tr-ev{gap:8px;min-width:0}
 /* The mark is a column of its own inside the event whether or not it is
    filled, so every sentence starts on the same line. */
