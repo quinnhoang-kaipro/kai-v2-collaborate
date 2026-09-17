@@ -649,6 +649,16 @@ if(IS_DRAFT_STAGE && !IS_EMPTY_SEED){
   // Approved-scope mode: any task without a contractor (nulls in the demo data) gets
   // assigned so the scope reads as a fully-baked approved plan. Unassigned rows only
   // appear during the draft/build phase (Step 1 · Empty draft / Populated draft).
+  /* ── except while the work is running ──
+     A job under way is not a finished plan: a couple of tasks are always
+     still waiting on a trade, and the Overview's unassigned strip and the
+     no_gc filter both exist for exactly that. Staffing every task the moment
+     the scope is approved left those two surfaces with nothing to show from
+     Step 5 onward.
+
+     Only in 'work'. At closeout every task is complete, and a task cannot be
+     finished by nobody. */
+  const _LATE = (PROJ_MODE === 'work') ? new Set(['MBA-4739', 'MBD-A7AE']) : new Set();
   const _fallbackGcByTrade = t => {
     const n = (t.name||'').toLowerCase();
     if(/cabinet|counter|backsplash|appliance|closet|shelving/.test(n)) return 'Apex Carpentry';
@@ -658,6 +668,11 @@ if(IS_DRAFT_STAGE && !IS_EMPTY_SEED){
     return 'Apex Carpentry';
   };
   TASKS.forEach(t => {
+    if(_LATE.has(t.code)){
+      // Left unstaffed on purpose — keep the flag so the sidebar marks it.
+      if(!(t.flags||[]).includes('unassigned')) t.flags = [...(t.flags||[]), 'unassigned'];
+      return;
+    }
     if(!t.gc){
       t.gc = _fallbackGcByTrade(t);
       t.flags = (t.flags||[]).filter(a => a !== 'unassigned');

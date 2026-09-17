@@ -141,7 +141,15 @@ html,body{width:100%;height:100%;font-family:var(--body);background:var(--app-bg
 .sb-tools-af.open .af-btn{border-color:var(--ink);color:var(--ink)}
 .sb-tools-af.active .af-btn{background:rgba(192,68,58,.08);border-color:var(--error);color:var(--error)}
 /* Count badge sits as a small red dot in the corner of the icon. */
-.sb-tools-af .af-count{position:absolute;top:-4px;right:-4px;min-width:14px;height:14px;padding:0 3px;background:var(--error);color:var(--white);font-family:var(--mono);font-size:9px;font-weight:700;line-height:14px;text-align:center;border-radius:7px;border:1.5px solid var(--white);letter-spacing:0}
+/* A dot, not a count. On the toolbar button the number was answering a
+   question nobody had — how many tasks match is in the sidebar the moment you
+   look at it, and the dot's whole job is to say a filter is on. The text stays
+   in the element for screen readers and is sized out of the drawing; :empty
+   below still removes the dot when nothing is filtered. */
+.sb-tools-af .af-count{position:absolute;top:-3px;right:-3px;width:8px;height:8px;
+  min-width:0;padding:0;background:var(--error);border-radius:50%;
+  border:1.5px solid var(--white);
+  font-size:0;line-height:0;color:transparent;overflow:hidden}
 .sb-tools-af .af-count:empty{display:none}
 /* Menu drops below the button via JS-computed fixed coords so it escapes
    the sidebar's overflow:hidden. Explicitly resets `right` and `top` from
@@ -4923,11 +4931,18 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 /* Money and count land in the same two right-hand columns as the rows
    above, so the strip reads across with the list rather than inventing its
    own order at the bottom of it. */
+/* A control, not a caption: the count of what the cascade cannot reach is
+   also the way to see it, so the whole strip is the target. */
 .ov-cw-none{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;
-  align-items:center;gap:0 14px;margin-top:14px;padding:10px 12px;
-  border:1px solid rgba(180,70,58,.55);background:rgba(180,70,58,.045)}
-.ov-cw-none svg{width:15px;height:15px;stroke:#B4463A;stroke-width:1.3;fill:none;
-  stroke-linecap:round}
+  align-items:center;gap:0 14px;width:100%;margin-top:14px;padding:10px 12px;
+  border:1px solid rgba(180,70,58,.55);background:rgba(180,70,58,.045);
+  font:inherit;text-align:left;cursor:pointer;transition:background .12s,border-color .12s}
+.ov-cw-none:hover{background:rgba(180,70,58,.09);border-color:#B4463A}
+.ov-cw-none:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+/* The same flag the sidebar draws on a flagged task — this strip counts the
+   tasks carrying it, so it should be wearing it. */
+.ov-cw-none svg{width:11px;height:13px;stroke:#B4463A;stroke-width:2.1;fill:none;
+  stroke-linejoin:round;stroke-linecap:square;overflow:visible}
 .ov-cw-nonek{font-size:13px;font-weight:700;color:var(--ink)}
 /* The Overview pane is narrow long before the window is, so the breakpoint
    is on the section's own width, not the viewport's. Squeezed, the row gives

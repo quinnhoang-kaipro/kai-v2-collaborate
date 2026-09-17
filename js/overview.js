@@ -66,7 +66,6 @@ const OVERVIEW_SEED = {
        would claim the work exists and costs nothing. */
     {trade:'Masonry',      who:'Old Town Masonry',      tasks:0},
   ],
-  unassigned: {amount:'$2,000', tasks:10},
   /* The market the property sits in, and the few defaults a market carries
      into every job on it. Held here rather than derived: nothing else in the
      prototype models a market, and the Market field needs somewhere to go. */
@@ -371,6 +370,22 @@ function ovCrewToggle(btn){
   if(box) box.hidden = !_ovCrewOpen;
   if(btn) btn.setAttribute('aria-expanded', String(_ovCrewOpen));
 }
+/* The strip is the count of what the cascade cannot reach, so it goes to
+   them: the same flag filter the toolbar carries, switched on, which narrows
+   the sidebar to the tasks with no contractor. The Editor is where one gets
+   assigned, so the scope has to be showing them before the number means
+   anything to act on.
+
+   'no_gc' is the filter key; tasks carry the flag as 'unassigned', and
+   taskKeys() maps one to the other. */
+function ovShowUnassigned(){
+  if(typeof activeFilters === 'undefined') return;
+  activeFilters.clear();
+  activeFilters.add('no_gc');
+  if(typeof _sbExpandForFilter === 'function') _sbExpandForFilter();
+  if(typeof renderAll === 'function') renderAll();
+  if(typeof toast === 'function') toast('Filtered to tasks with no contractor');
+}
 /* Assignments are changed on the work itself, not here — this is the
    readout. Grouping the sidebar by contractor is the surface where that is
    actually done, so Edit goes there rather than opening a second editor. */
@@ -431,7 +446,20 @@ function _ovCrewHtml(){
   const g = S.general || {};
   const n = k => `${k} ${k === 1 ? 'task' : 'tasks'}`;
   const inheriting = (S.trades || []).filter(t => !t.who).length;
-  const u = S.unassigned;
+  /* Counted off the scope, not seeded. The strip is a control now — it
+     filters the sidebar to these tasks — so a number that disagreed with what
+     the filter then showed was the strip lying about its own destination. At
+     the stages where every task has a contractor there is nothing to count,
+     and the strip does not appear. */
+  const _none = (typeof TASKS !== 'undefined') ? TASKS.filter(t => !t.gc) : [];
+  const _worth = _none.reduce((k, t) => k + _ovMoney(t.cost), 0);
+  const u = _none.length
+    ? {tasks:_none.length,
+       /* A dash, not $0, when the tasks are not priced yet — the same rule the
+          idle trade row follows, and for the same reason: $0 claims the work
+          is free rather than unpriced. */
+       amount:_worth ? _fmtDollars(_worth) : ''}
+    : null;
   return `<section class="ov-mod ov-crew">
     <div class="ov-crew-hd">
       <h3 class="ov-crew-h">Contractor assignments</h3>
@@ -459,12 +487,13 @@ function _ovCrewHtml(){
         ${(S.trades || []).map(r => _ovCrewRowHtml(r, g.who)).join('')}
       </ul>
 
-      ${u ? `<div class="ov-cw-none">
-        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5" r="2.6"/><path d="M1.6 13.4c0-2.4 2-4 4.4-4s4.4 1.6 4.4 4"/><path d="M11.8 3.6l3 3M14.8 3.6l-3 3"/></svg>
+      ${u ? `<button type="button" class="ov-cw-none" onclick="ovShowUnassigned()"
+        title="Filter the scope to tasks with no contractor">
+        ${typeof _flagIconSvg === 'function' ? _flagIconSvg() : ''}
         <span class="ov-cw-nonek">Unassigned contractors</span>
-        <span class="ov-cw-amt">${esc(u.amount || '')}</span>
+        <span class="ov-cw-amt">${u.amount ? esc(u.amount) : '&mdash;'}</span>
         <span class="ov-cw-n">${esc(n(u.tasks))}</span>
-      </div>` : ''}
+      </button>` : ''}
     </div>
   </section>`;
 }
@@ -920,6 +949,18 @@ function _ovPropFields(){
         >${esc(MARKET.name || r.v)}</a>`});
 }
 
+/* ── the activity feed, on a switch ──────────────────────────────────
+   Whether the Overview carries a history at all is still being decided, so
+   the shell's demo panel holds a toggle for it and this is the flag it sets.
+   Default off: the tab reads as the job's facts without it. */
+let OV_ACTIVITY = false;
+function ovSetActivity(on){
+  const next = !!on;
+  if(next === OV_ACTIVITY) return;
+  OV_ACTIVITY = next;
+  if(typeof workMode !== 'undefined' && workMode === 'overview'
+     && typeof renderOverview === 'function') renderOverview();
+}
 function renderOverview(){
   const body = document.getElementById('workBody');
   if(!body) return;
@@ -1004,7 +1045,11 @@ function renderOverview(){
   const propSec = _ovSec('Property info',
     _ovFieldsHtml(_ovPropFields()) + accessDetail, 'ov-job ov-prop', _editBtn('Property'));
 
-  const trailSec = _ovSec('Activity', _ovTrailHtml(), 'ov-trail-sec');
+  /* Off unless the shell's demo panel has switched it on — see ovSetActivity
+     below. Skipped rather than hidden: the feed walks every document and
+     every walk to build itself, and none of that is work worth doing for
+     something nobody is looking at. */
+  const trailSec = OV_ACTIVITY ? _ovSec('Activity', _ovTrailHtml(), 'ov-trail-sec') : '';
 
   /* The title and the figures are one module, split by a rule: the eyebrow
      names the project, the title names the property, and the standing sits on
