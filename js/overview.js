@@ -37,6 +37,36 @@ const OVERVIEW_SEED = {
      other trades — this is the default, not a claim about who holds the work. */
   gc:       'Stone Bros',
   access:   [{k:'Gate code', v:'4321'}, {k:'Door code', v:'1234'}],
+  /* ── Who does the work ──
+     Three tiers, strongest last: the General Contractor covers everything,
+     a trade's own contractor covers that trade, and a task can override both.
+     `who` absent on a trade means nobody is set for it — it inherits, which
+     is the case the whole model exists for and the one the UI has to show
+     rather than leave the reader to infer from a name repeated in two rows.
+     `over` is the per-task exception, nested under the trade it departs from
+     so precedence reads as depth. */
+  general: {who:'General Contractor Company', amount:'$5,000', tasks:50},
+  /* Every trade carries what its work is worth. A row with tasks and no
+     figure read as unpriced rather than unlisted, and the column it left
+     blank is the one the money is scanned down. */
+  trades: [
+    {trade:'Electrical',   who:"It's Electric!",         tasks:9,  amount:'$3,200'},
+    {trade:'HVAC',         who:'Breeze Bros',            tasks:4,  amount:'$1,800',
+      over:[{who:'Apex Heating & Air', tasks:1, amount:'$640'}]},
+    {trade:'Plumbing',     who:'Doctor Drain',           tasks:12, amount:'$2,000'},
+    {trade:'Flooring',     who:'HomeStride',             tasks:12, amount:'$2,000'},
+    {trade:'Paint',        who:'Roll With It Painting',  tasks:12, amount:'$1,600'},
+    {trade:'Landscaping',  who:'Grass Gurus',            tasks:35, amount:'$2,000'},
+    {trade:'Appliances',   who:'American Appliance Co.', tasks:5,  amount:'$2,400'},
+    {trade:'Drywall',      tasks:6,  amount:'$900'},
+    {trade:'Roofing',      tasks:2,  amount:'$1,400'},
+    /* Staffed but unscoped: the contractor is set and no work has landed on
+       the trade. It belongs in the list — the assignment is real — but with
+       nothing to price, so the money reads as a dash rather than $0, which
+       would claim the work exists and costs nothing. */
+    {trade:'Masonry',      who:'Old Town Masonry',      tasks:0},
+  ],
+  unassigned: {amount:'$2,000', tasks:10},
   property: [
     {k:'KT ID',       v:'1234'},   {k:'Square feet', v:'1,590'},
     {k:'Beds',        v:'3'},      {k:'Acreage',     v:'0.11'},
@@ -143,7 +173,11 @@ function _ovTrail(){
     const amount = m.budget != null ? _fmtDollars(m.budget) : null;
     const was = (prev && prev.budget != null && prev.budget !== m.budget)
       ? _fmtDollars(prev.budget) : null;
-    const evs = [{...author, act:'started it',
+    /* A verb and, where there is one, who it went to — the sentence is
+       composed at render time so it can name the document inside itself.
+       "started it" only worked while a header above the row said what "it"
+       was, and that header is what made the rows under it look owned. */
+    const evs = [{...author, verb:'started',
                   when: m.opened || (prev && prev.date) || m.date, kind:'start'}];
     /* Each signature is the point the document had reached that person, so
        the hand-off is from whoever held it before them. */
@@ -159,14 +193,18 @@ function _ovTrail(){
          covers, not the last day of it. */
       const _edFrom = m.opened || (prev && prev.date) || m.date;
       const _edTo   = (signs[0] && signs[0].date) || m.date;
+      /* `when` is a span, which no date parser can read, so the row carries
+         its own anchor for the feed's ordering — the day the editing stopped,
+         the same convention the site runs use. */
       evs.push({who:'', role:'', kind:'changed', ver:id, detail:counts.detail,
                 act:`${counts.groups} group${counts.groups === 1 ? '' : 's'} \u00b7 `
                   + `${counts.tasks} task${counts.tasks === 1 ? '' : 's'} changed`,
-                when: _ovDateRange(_edFrom, _edTo)});
+                when: _ovDateRange(_edFrom, _edTo),
+                at: Date.parse(_edTo) || Date.parse(_edFrom) || 0});
     }
     let from = author;
     signs.forEach(sig => {
-      evs.push({who:from.who, role:from.role, act:'handed off to ' + sig.who,
+      evs.push({who:from.who, role:from.role, verb:'handed off', to:sig.who,
                 when:sig.date, kind:'handoff'});
       from = sig;
     });
@@ -174,7 +212,7 @@ function _ovTrail(){
        it for approval" restated the hand-off directly above it and the
        In review chip beside the title — three ways of saying one thing. */
     if(id !== pending){
-      evs.push({who:people.manager, role:'Project manager', act:'approved it',
+      evs.push({who:people.manager, role:'Project manager', verb:'approved',
                 when:m.date, kind:'approved'});
     }
     /* Newest first, like the documents themselves. The chain is built in the
@@ -192,10 +230,10 @@ function _ovTrail(){
     const C = OVERVIEW_SEED.closeout;
     const done = st === 'closeout-approved';
     out.push({name:'Closeout', state: done ? 'Approved' : 'In review', evs:[
-      {...author, act:'started it', when:C.opened, kind:'start'},
-      {...author, act:'handed off to ' + people.manager, when:C.handed, kind:'handoff'},
+      {...author, verb:'started', when:C.opened, kind:'start'},
+      {...author, verb:'handed off', to:people.manager, when:C.handed, kind:'handoff'},
       ...(done
-        ? [{who:people.manager, role:'Project manager', act:'approved it',
+        ? [{who:people.manager, role:'Project manager', verb:'approved',
             when:C.approved, kind:'approved'}]
         : []),
     ].reverse()});
@@ -210,34 +248,41 @@ function _ovTrail(){
 /* What actually happened to one task in one version, in a line. The change
    records hold rows of {field, from, to} — or an `add` / `remove` sentence for
    a line that appeared or went — and the Artifact 2 tab renders all of them in
-   full. Here it is a summary, so each row comes down to its shortest true form
-   and the amount rows are dropped: the money is on the document's own title
-   line, and repeating it per task would be the same figure many times over. */
+   full.
+
+   Only three kinds of row survive the trip here: money, contractor, and
+   modifiers. The rest were prose — "Added · Add shelving to master closet",
+   "Removed · resident handling separately" — a scope note restated beside a
+   task whose name already says what it is, and long enough to push the rows
+   that carry a figure out of view. A line that appeared still says so, with
+   what it was worth; what it was for is in the task, one click away. */
 function _ovTaskChangeSummary(task, verId){
-  /* A line added or removed is written as "Countertops \u2014 laminate is
-     delaminating at the sink": the half before the dash is the task's own name,
-     which is already the first thing on this row, so the half after it is the
-     part worth saying. */
-  const why = t => {
-    const bits = String(t).split(' \u2014 ');
-    return bits.length > 1 ? bits.slice(1).join(' \u2014 ') : bits[0];
-  };
+  /* Money is recognised by the figure, not by a list of field names: Amount,
+     Labor and Cost all read as money and a new field that does will too,
+     while Product and Qty — the value changes that carry no figure — fall out
+     on the same test. */
+  const isMoney = v => /\$/.test(String(v == null ? '' : v));
+  const keep = r => /contractor/i.test(r.field) || /modifier/i.test(r.field)
+    || isMoney(r.from) || isMoney(r.to) || isMoney(r.wasAmount);
+  /* "$0" is what a line removed from an unpriced task is worth. Saying it
+     adds a figure to read and no fact. */
+  const worth = v => (isMoney(v) && !/^\$0(\.00)?$/.test(String(v))) ? ' · ' + v : '';
   const parts = [];
   (task.changes || []).filter(ch => ch.ver === verId).forEach(ch => {
-    (ch.rows || []).forEach(r => {
-      if(r.field === 'Line added')     { parts.push('Added \u00b7 ' + why(r.add)); return; }
-      if(r.field === 'Line removed')   { parts.push('Removed \u00b7 ' + why(r.remove)); return; }
-      if(r.field === 'Modifier added') { parts.push('Modifier \u00b7 ' + r.add); return; }
-      if(r.add)          { parts.push(r.field + ' \u00b7 ' + why(r.add)); return; }
-      if(r.from && r.to) { parts.push(`${r.field} ${r.from} \u2192 ${r.to}`); return; }
-      if(r.to)           { parts.push(`${r.field} \u2192 ${r.to}`); }
+    (ch.rows || []).filter(keep).forEach(r => {
+      if(r.field === 'Line added')     { parts.push('Added' + worth(r.wasAmount)); return; }
+      if(r.field === 'Line removed')   { parts.push('Removed' + worth(r.wasAmount)); return; }
+      if(r.field === 'Modifier added') { parts.push('Modifier · ' + r.add); return; }
+      if(r.add)          { parts.push(r.field + ' · ' + r.add); return; }
+      if(r.from && r.to) { parts.push(`${r.field} ${r.from} → ${r.to}`); return; }
+      if(r.to)           { parts.push(`${r.field} → ${r.to}`); }
     });
   });
   if(!parts.length) return '';
   /* Two is as much as fits beside the name without the line becoming the
      paragraph this summary exists instead of. */
-  const shown = parts.slice(0, 2).join('  \u00b7  ');
-  return parts.length > 2 ? `${shown}  \u00b7  +${parts.length - 2} more` : shown;
+  const shown = parts.slice(0, 2).join('  ·  ');
+  return parts.length > 2 ? `${shown}  ·  +${parts.length - 2} more` : shown;
 }
 
 function _ovChangeCounts(verId){
@@ -286,6 +331,145 @@ function ovGoTask(code, room, name){
   if(typeof setWorkMode === 'function') setWorkMode('shop');
 }
 let _ovOpenChanges = {};   // which documents have their change list open
+/* Shut by default, and it stays however the reader left it for the session:
+   someone on their way to the property opens it once and wants it open while
+   they are still standing outside. */
+let _ovAccessOpen = false;
+
+/* ── Contractor assignments ──────────────────────────────────────────
+   The rule this section has to teach: a task takes its trade's contractor;
+   a trade with nobody set takes the General Contractor; a single task can
+   override either. It is a cascade, and a flat two-column list of names —
+   which is what this was — states none of it. Every row shows the same
+   thing, so nothing says that Hammer Time is the floor under the others
+   rather than one more trade beside them.
+
+   So the section is drawn as what it is: the General Contractor at the
+   root, the trades hanging off a rail beneath it, and a task override
+   nested one step further under the trade it departs from. Depth is
+   precedence — the further in, the more specific, the more it wins.
+
+   A trade with no contractor of its own is the case the model exists for,
+   so it is not left blank: it shows the name it inherits, greyed and
+   marked FROM GENERAL, so the reader sees the fallback happening rather
+   than being told about it. */
+let _ovCrewOpen = true;
+function ovCrewToggle(btn){
+  _ovCrewOpen = !_ovCrewOpen;
+  const box = document.getElementById('ovCrewBody');
+  if(box) box.hidden = !_ovCrewOpen;
+  if(btn) btn.setAttribute('aria-expanded', String(_ovCrewOpen));
+}
+/* Assignments are changed on the work itself, not here — this is the
+   readout. Grouping the sidebar by contractor is the surface where that is
+   actually done, so Edit goes there rather than opening a second editor. */
+function ovCrewEdit(){
+  if(typeof setGroupBy === 'function') setGroupBy('contractor');
+  if(typeof toast === 'function') toast('Scope grouped by contractor — assign from any task row');
+}
+/* Which trades have their exceptions showing. Shut by default: an override
+   is the rare case, and leaving it open put a second contractor under a
+   trade on every read of the list — the trade row says one is there and
+   how many, which is enough until someone asks. */
+let _ovCrewOverOpen = {};
+function ovCrewOverToggle(trade, btn){
+  _ovCrewOverOpen[trade] = !_ovCrewOverOpen[trade];
+  const on = !!_ovCrewOverOpen[trade];
+  const list = btn && btn.closest('.ov-cw-list');
+  if(list) list.querySelectorAll(`[data-over="${CSS.escape(trade)}"]`)
+    .forEach(el => { el.hidden = !on; });
+  if(btn) btn.setAttribute('aria-expanded', String(on));
+}
+function _ovCrewRowHtml(r, gc){
+  const n = k => `${k} ${k === 1 ? 'task' : 'tasks'}`;
+  const inherits = !r.who;
+  const idle = !r.tasks;
+  const src = inherits
+    ? `<span class="ov-cw-src is-inherit">From general</span>`
+    : `<span class="ov-cw-src">Trade default</span>`;
+  const who = inherits
+    ? `<span class="ov-cw-who is-inherit">${esc(gc)}</span>`
+    : `<span class="ov-cw-who">${esc(r.who)}</span>`;
+  const overs = r.over || [];
+  const open = !!_ovCrewOverOpen[r.trade];
+  /* The count is the control: "1 override" says what is hidden and opens it,
+     where a bare caret would only say that something is. */
+  const overBtn = overs.length
+    ? `<button type="button" class="ov-cw-more" aria-expanded="${open}"
+         onclick="ovCrewOverToggle('${esc(r.trade).replace(/'/g, "\\'")}', this)"
+         >${overs.length} override${overs.length === 1 ? '' : 's'}
+         <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg></button>`
+    : '';
+  const over = overs.map(o => `
+    <li class="ov-cw-row is-over" data-over="${esc(r.trade)}"${open ? '' : ' hidden'}>
+      <span class="ov-cw-trade">${esc(r.trade)}</span>
+      <span class="ov-cw-by"><span class="ov-cw-src is-over">Task override</span>
+        <span class="ov-cw-who">${esc(o.who)}</span></span>
+      <span class="ov-cw-amt">${esc(o.amount || '')}</span>
+      <span class="ov-cw-n">${esc(n(o.tasks))}</span>
+    </li>`).join('');
+  return `<li class="ov-cw-row${inherits ? ' is-inherit' : ''}${idle ? ' is-idle' : ''}">
+      <span class="ov-cw-trade">${esc(r.trade)}</span>
+      <span class="ov-cw-by">${src}${who}${overBtn}</span>
+      <span class="ov-cw-amt">${r.amount ? esc(r.amount) : '&mdash;'}</span>
+      <span class="ov-cw-n">${esc(n(r.tasks))}</span>
+    </li>${over}`;
+}
+function _ovCrewHtml(){
+  const S = OVERVIEW_SEED;
+  const g = S.general || {};
+  const n = k => `${k} ${k === 1 ? 'task' : 'tasks'}`;
+  const inheriting = (S.trades || []).filter(t => !t.who).length;
+  const u = S.unassigned;
+  return `<section class="ov-mod ov-crew">
+    <div class="ov-crew-hd">
+      <h3 class="ov-crew-h">Contractor assignments</h3>
+      <button type="button" class="ov-crew-edit" onclick="ovCrewEdit()">Edit</button>
+      <button type="button" class="ov-crew-fold" aria-expanded="${_ovCrewOpen}"
+              aria-controls="ovCrewBody" aria-label="Show or hide contractor assignments"
+              onclick="ovCrewToggle(this)">
+        <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
+      </button>
+    </div>
+    <div class="ov-crew-body" id="ovCrewBody"${_ovCrewOpen ? '' : ' hidden'}>
+      <div class="ov-cw-root">
+        <div class="ov-cw-rootbar">
+          <span class="ov-cw-rootk">General contractor</span>
+          <span class="ov-cw-rootv">${esc(g.who || 'Unassigned')}</span>
+          <span class="ov-cw-amt">${esc(g.amount || '')}</span>
+          <span class="ov-cw-n">${esc(n(g.tasks || 0))}</span>
+        </div>
+        <p class="ov-cw-rootnote">${inheriting
+          ? `Fallback for <b>${inheriting} ${inheriting === 1 ? 'trade' : 'trades'}</b> with no assigned trade contractor`
+          : 'Fallback for any trade with no assigned trade contractor'}</p>
+      </div>
+
+      <ul class="ov-cw-list">
+        ${(S.trades || []).map(r => _ovCrewRowHtml(r, g.who)).join('')}
+      </ul>
+
+      ${u ? `<div class="ov-cw-none">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5" r="2.6"/><path d="M1.6 13.4c0-2.4 2-4 4.4-4s4.4 1.6 4.4 4"/><path d="M11.8 3.6l3 3M14.8 3.6l-3 3"/></svg>
+        <span class="ov-cw-nonek">Unassigned contractors</span>
+        <span class="ov-cw-amt">${esc(u.amount || '')}</span>
+        <span class="ov-cw-n">${esc(n(u.tasks))}</span>
+      </div>` : ''}
+    </div>
+  </section>`;
+}
+function ovAccessToggle(btn){
+  _ovAccessOpen = !_ovAccessOpen;
+  const box = document.getElementById('ovAccessBody');
+  if(box) box.hidden = !_ovAccessOpen;
+  if(btn){
+    btn.setAttribute('aria-expanded', String(_ovAccessOpen));
+    /* The label names what the click does, so it has to turn over with the
+       state — a caret alone left "See access details" sitting above the
+       details it had already shown. */
+    const t = btn.querySelector('.ov-access-cta-t');
+    if(t) t.textContent = _ovAccessOpen ? 'Hide access details' : 'See access details';
+  }
+}
 function ovToggleChanges(verId, btn){
   _ovOpenChanges[verId] = !_ovOpenChanges[verId];
   const box = document.getElementById('ovCh-' + verId);
@@ -365,27 +549,23 @@ function _ovDateRange(a, b){
 function _ovSiteRuns(older, newer){
   const walks = _ovWalksBetween(older, newer);
   if(!walks.length) return null;
+  /* The run's own place in time. It covers a span, so it is filed under the
+     last day anything happened in it — the feed is newest-first and that is
+     the day it stops being news. */
+  const at = Math.max(...walks.map(w => Date.parse(w.date) || 0));
   const n = (k, one, many) => `${k} ${k === 1 ? one : many}`;
   const join = xs => xs.filter(Boolean).join(' \u00b7 ');
   const dates = walks.map(w => w.date);
   const span = _ovDateRange(dates[dates.length - 1], dates[0]);
   const rows = [];
 
-  const photos = walks.reduce((k, w) => k + w.photos, 0);
-  const notes  = walks.reduce((k, w) => k + w.notes, 0);
-  /* One task can be shot on two walks, so the totals are over the set, not
-     the sum of the per-walk counts. */
+  /* One task can be shot on two walks, so the set, not the sum of the
+     per-walk counts. The photo and note totals used to lead the run; they
+     are a measure of how much was recorded, not of what happened to the
+     work, and they pushed the two rows that say what happened down. */
   const seen = new Map();
   walks.forEach(w => (w.hit || []).forEach(t => seen.set(t.id, t)));
   const touched = [...seen.values()];
-  const rooms = new Set(touched.map(t => t.room).filter(Boolean));
-  rows.push({
-    text: `${join([photos && n(photos, 'photo', 'photos'),
-                   notes && n(notes, 'note', 'notes')])} added`,
-    side: join([rooms.size && n(rooms.size, 'group', 'groups'),
-                touched.length && n(touched.length, 'task', 'tasks')]),
-    when: span
-  });
 
   /* Grouped by room so the list opens the way the change list does, and so
      a long one reads as a few places rather than twenty loose lines. */
@@ -411,13 +591,15 @@ function _ovSiteRuns(older, newer){
   };
   mark('complete', 'complete');
   mark('in_progress', 'in progress');
-  return rows;
+  /* Nothing moved on site in this window — no band rather than an empty one. */
+  if(!rows.length) return null;
+  return {rows, at, span};
 }
 /* `key` disambiguates the expand targets: every gap in the trail renders the
    same row kinds, so the ids have to carry which gap they belong to. */
-function _ovWalksHtml(older, newer, key){
-  const rows = _ovSiteRuns(older, newer);
-  if(!rows) return '';
+function _ovWalksHtml(run, key){
+  const rows = run && run.rows;
+  if(!rows || !rows.length) return '';
   return `<div class="ov-walks">${rows.map((r, i) => {
     const id = `ovSite-${key}-${i}`;
     const open = !!_ovOpenChanges[id];
@@ -433,9 +615,10 @@ function _ovWalksHtml(older, newer, key){
       <span class="ov-walk-d">${esc(r.when)}</span>
       ${r.detail ? `<div class="ov-tr-detail ov-site-detail" id="ovCh-${id}"${open ? '' : ' hidden'}>
         ${r.detail.map(g => `<div class="ov-ch-g">
-          <button type="button" class="ov-ch-grp" onclick="ovGoGroup('${esc(g.room).replace(/'/g, "\\'")}')">${esc(g.room)}</button>
+          <button type="button" class="ov-ch-grp" data-hv-room="${esc(g.room)}" onclick="ovGoGroup('${esc(g.room).replace(/'/g, "\\'")}')">${esc(g.room)}</button>
           <div class="ov-ch-ts">${g.tasks.map(t => `
             <button type="button" class="ov-ch-task"
+              data-hv-code="${esc(t.code)}" data-hv-room="${esc(g.room)}" data-hv-name="${esc(t.name)}"
               onclick="ovGoTask('${esc(t.code)}', '${esc(g.room).replace(/'/g, "\\'")}', '${esc(t.name).replace(/'/g, "\\'")}')">
               <span class="ov-ch-code">${esc(t.code)}</span>
               <span class="ov-ch-name">${esc(t.name)}</span></button>`).join('')}</div>
@@ -452,75 +635,193 @@ const _OV_TICK = `<svg class="ov-tr-ck" viewBox="0 0 12 12" fill="none" stroke="
    happened, what it is worth, what that moved by, and when. The roles are
    gone from the event — the names are the roster's, and a title beside each
    one was three words of the same answer on every line. */
-function _ovTrailDocHtml(d){
+/* ── one feed, no containers ──────────────────────────────────────────
+   The trail used to be a stack of document blocks: a big bold title, then
+   the events under it. Two things went wrong with that. The site activity
+   between two documents sat directly under a title it had nothing to do
+   with, so weeks of photos read as part of Change Order 1. And inside a
+   block the rows said "approved it" — "it" being whatever the header said,
+   which is exactly the dependency that made everything below the header
+   look owned by it.
+
+   So there are no headers. Every row is a sentence that names its own
+   subject: "T. Okafor approved Change Order 1". Nothing can be mistaken for
+   belonging to the row above it, because nothing contains anything.
+
+   Bold now means one thing and means it everywhere: a document is involved.
+   A site row has no bold text in it at all, which is the signal that it is
+   not about a document — it is what happened on the property in between. */
+function _ovMoneyHtml(d){
+  if(!d.amount) return '';
   /* What it was, struck, then what it is. A signed delta said the same thing
      in a number you had to do arithmetic on to place: +$4,100 against a total
-     leaves the reader to work out what it rose from. The pair states both
-     ends, and the strike is the direction. */
-  const money = d.amount
-    ? `<span class="ov-tr-money">${d.was ? `<s class="ov-tr-was">${esc(d.was)}</s>` : ''
-       }<span class="ov-tr-now">${esc(d.amount)}</span></span>`
-    : '';
-  return `<div class="ov-tr-doc">
-      <div class="ov-tr-h">
-        <span class="ov-tr-n">${esc(d.name)}</span>
-        <span class="ov-tr-st${d.state === 'Approved' ? ' is-done' : ''}">${esc(d.state)}</span>
-        ${money}
-      </div>
-      <div class="ov-tr-rows">
-      ${d.evs.map(e => `
-        <div class="ov-tr-r ov-tr-${e.kind}">
-          <span class="ov-tr-ev">
-            <span class="ov-tr-mk">${e.kind === 'approved' ? _OV_TICK : ''}</span>
-            ${e.who ? `<span class="ov-tr-who">${esc(e.who)}</span>` : ''}
-            ${e.detail
-              ? `<button type="button" class="ov-tr-act ov-tr-open"
-                   aria-expanded="${!!_ovOpenChanges[e.ver]}" aria-controls="ovCh-${e.ver}"
-                   onclick="ovToggleChanges('${e.ver}', this)">${esc(e.act)}
-                   <svg class="ov-tr-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
-                 </button>`
-              : `<span class="ov-tr-act">${esc(e.act)}</span>`}
-          </span>
-          <span class="ov-tr-d">${esc(e.when || '')}</span>
-        </div>
-        ${e.detail ? `<div class="ov-tr-detail" id="ovCh-${e.ver}"${_ovOpenChanges[e.ver] ? '' : ' hidden'}>
-          ${e.detail.map(g => `<div class="ov-ch-g">
-            <button type="button" class="ov-ch-grp" onclick="ovGoGroup('${esc(g.room).replace(/'/g, "\\'")}')">${esc(g.room)}</button>
-            <div class="ov-ch-ts">${g.tasks.map(t => `
-              <button type="button" class="ov-ch-task"
-                onclick="ovGoTask('${esc(t.code)}', '${esc(g.room).replace(/'/g, "\\'")}', '${esc(t.name).replace(/'/g, "\\'")}')">
-                <span class="ov-ch-code">${esc(t.code)}</span>
-                <span class="ov-ch-name">${esc(t.name)}</span>
-                ${t.what ? `<span class="ov-ch-what">${esc(t.what)}</span>` : ''}</button>`).join('')}</div>
-          </div>`).join('')}
-        </div>` : ''}`).join('')}
-      </div>
-    </div>`;
+     leaves the reader to work out what it rose from. */
+  return `<span class="ov-tr-money">${d.was ? `<s class="ov-tr-was">${esc(d.was)}</s>` : ''
+    }<span class="ov-tr-now">${esc(d.amount)}</span></span>`;
+}
+/* One row of a document's chain. `lead` is the document's newest event, and
+   only that row carries the money: it is where the document currently
+   stands, so it is the honest place for it. */
+function _ovDocRowHtml(d, e, lead){
+  const nm = `<button type="button" class="ov-tr-doc-n" data-hv-doc="${esc(d.name)}"
+      onclick="ovOpenDoc('${esc(d.name).replace(/'/g, "\\'")}')">${esc(d.name)}</button>`;
+  const sentence = e.verb
+    ? `${e.who ? `<span class="ov-tr-who">${esc(e.who)}</span> ` : ''}${esc(e.verb)} ${nm}${
+        e.to ? ` to <span class="ov-tr-who2">${esc(e.to)}</span>` : ''}`
+    : `${esc(e.act)} in ${nm}`;
+  /* The count opens its own list, so that row is a button — but the document
+     name inside it is a link of its own, which a button cannot contain. The
+     caret is the control instead, sitting after the sentence. */
+  const body = e.detail
+    ? `<span class="ov-tr-act">${sentence}
+         <button type="button" class="ov-tr-open" aria-label="Show the tasks that changed"
+           aria-expanded="${!!_ovOpenChanges[e.ver]}" aria-controls="ovCh-${e.ver}"
+           onclick="ovToggleChanges('${e.ver}', this)"
+           ><svg class="ov-tr-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg></button>
+       </span>`
+    : `<span class="ov-tr-act">${sentence}</span>`;
+  return `<div class="ov-tr-r ov-tr-${e.kind}">
+      <span class="ov-tr-ev">
+        <span class="ov-tr-mk">${e.kind === 'approved' ? _OV_TICK : ''}</span>
+        ${body}
+      </span>
+      <span class="ov-tr-sum">${lead ? _ovMoneyHtml(d) : ''}</span>
+      <span class="ov-tr-d">${esc(e.when || '')}</span>
+    </div>
+    ${e.detail ? `<div class="ov-tr-detail" id="ovCh-${e.ver}"${_ovOpenChanges[e.ver] ? '' : ' hidden'}>
+      ${e.detail.map(g => `<div class="ov-ch-g">
+        <button type="button" class="ov-ch-grp" data-hv-room="${esc(g.room)}" onclick="ovGoGroup('${esc(g.room).replace(/'/g, "\\'")}')">${esc(g.room)}</button>
+        <div class="ov-ch-ts">${g.tasks.map(t => `
+          <button type="button" class="ov-ch-task"
+            data-hv-code="${esc(t.code)}" data-hv-room="${esc(g.room)}" data-hv-name="${esc(t.name)}"
+          onclick="ovGoTask('${esc(t.code)}', '${esc(g.room).replace(/'/g, "\\'")}', '${esc(t.name).replace(/'/g, "\\'")}')">
+            <span class="ov-ch-code">${esc(t.code)}</span>
+            <span class="ov-ch-name">${esc(t.name)}</span>
+            ${t.what ? `<span class="ov-ch-what">${esc(t.what)}</span>` : ''}</button>`).join('')}</div>
+      </div>`).join('')}
+    </div>` : ''}`;
+}
+/* A document's name is the way to the document. Artifact 2 is where the
+   change history lives, so that is where it goes. */
+function ovOpenDoc(name){
+  if(typeof setWorkMode === 'function') setWorkMode('artifact2');
+  if(typeof toast === 'function') toast(`${name} \u00b7 change history`);
 }
 
-/* The current document is the one anyone came here to check; the ones before
-   it are the audit trail, which is a different errand. So only the latest is
-   open, and the rest are one click away with their number said up front —
-   collapsed without saying how much is behind it would be a mystery box. */
+/* ── the feed, in the order things happened ──────────────────────────
+   Site work is not something that happens *between* documents. A change
+   order is opened, passed around and approved over a couple of weeks, and
+   the property is being worked on the whole time — tasks were being marked
+   complete while Change Order 2 was still being handed around. Filing the
+   site activity after a document's block said the opposite.
+
+   So the feed is one list in true date order, documents and site runs
+   interleaved wherever they actually fall, and the blocks are months rather
+   than documents. A month is a real boundary; a document is not, because
+   two of them overlap. */
+function _ovFeedEntries(docs){
+  const out = [];
+  /* The change count is not rendered as a row any more — it said how much
+     moved without saying what, and the document's own preview lists the
+     tasks. It stays on the document so the hover card can still read it. */
+  docs.forEach(d => d.evs.filter(e => e.kind !== 'changed').forEach((e, j) => out.push({
+    kind:'doc', doc:d, ev:e, lead:j === 0,
+    at: e.at || Date.parse(e.when) || 0
+  })));
+  /* A run belongs to the pair of documents it sits between in the data, but
+     once it has a date it no longer needs them: it sorts into place like
+     anything else. */
+  docs.forEach((d, i) => {
+    if(i + 1 >= docs.length) return;
+    const run = _ovSiteRuns(docs[i + 1], d);
+    if(run) out.push({kind:'site', run, key:i, at:run.at});
+  });
+  /* Newest first. Two things can land on one day, so the tie-break is the
+     order they must have happened in: a document is approved, and only then
+     is the next one started. Site runs come last — a run is filed under the
+     last day of its span, and a document event that day is the sharper fact.
+
+     (This also fixes a comparator that returned -1 for every doc-vs-doc
+     comparison, which is not an ordering and left same-day rows wherever the
+     sort happened to drop them.) */
+  const rank = en => en.kind === 'site' ? 9
+    : ({approved:0, handoff:1, changed:2, start:3})[en.ev.kind] ?? 4;
+  return out.sort((a, b) => (b.at - a.at) || (rank(a) - rank(b)));
+}
+function _ovMonthLabel(ts){
+  const d = new Date(ts);
+  if(isNaN(d.getTime())) return '';
+  const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${M[d.getMonth()].toUpperCase()} ${d.getFullYear()}`;
+}
+/* Consecutive document rows share one grid so their columns line up; a site
+   run or a month rule closes the grid and the next run of rows opens a new
+   one. The column tracks are fixed, so blocks still align with each other. */
+function _ovFeedHtml(entries, monthState){
+  let html = '', open = false;
+  const close = () => { if(open){ html += '</div>'; open = false; } };
+  entries.forEach(en => {
+    const m = _ovMonthLabel(en.at);
+    if(m && m !== monthState.m){
+      monthState.m = m;
+      close();
+      html += `<div class="ov-tr-month"><span>${esc(m)}</span></div>`;
+    }
+    if(en.kind === 'site'){
+      close();
+      html += _ovWalksHtml(en.run, en.key);
+    } else {
+      if(!open){ html += '<div class="ov-tr-rows">'; open = true; }
+      html += _ovDocRowHtml(en.doc, en.ev, en.lead);
+    }
+  });
+  close();
+  return html;
+}
+/* Who is holding the newest document, said once at the top. It used to be an
+   event row — "S. Patel has it for approval" — which restated the hand-off
+   directly above it. As a standing it is not a restatement: the row says a
+   hand-off happened, this says nothing has happened since, which is why it
+   reads as work in progress rather than as a queue. */
+function _ovStandingLineHtml(docs){
+  const d = docs[0];
+  if(!d || d.state === 'Approved') return '';
+  const ev = d.evs[0] || {};
+  const who = ev.to || ev.who;
+  if(!who) return '';
+  return `<div class="ov-tr-now-line">
+    <span class="ov-tr-now-v"><b>${esc(who)}</b> is working on <b>${esc(d.name)}</b></span>
+    <span class="ov-tr-now-d">since ${esc(ev.when || '')}</span>
+  </div>`;
+}
+
+/* The current document's run is what anyone came here to check; everything
+   older is the audit trail, which is a different errand. So the feed is cut
+   at the day the newest document was opened — everything from there on is
+   open, the rest is one click away with its size said up front. */
 function _ovTrailHtml(){
   const docs = _ovTrail();
   if(!docs.length) return `<p class="ov-empty">No documents yet.</p>`;
-  const [current, ...earlier] = docs;
-  if(!earlier.length) return `<div class="ov-trail">${_ovTrailDocHtml(current)}</div>`;
-  /* Each earlier document is preceded by whatever happened on site between it
-     and the one after it — the boundary belongs with the pair it separates. */
+  const entries = _ovFeedEntries(docs);
+  const current = docs[0];
+  const startedAt = Math.min(...current.evs.map(e => Date.parse(e.when) || Infinity));
+  let cut = entries.findIndex(en => en.at < startedAt);
+  if(cut < 0) cut = entries.length;
+  const monthState = {m:''};
+  const head = _ovFeedHtml(entries.slice(0, cut), monthState);
+  const standing = _ovStandingLineHtml(docs);
+  if(cut >= entries.length) return `<div class="ov-trail">${standing}${head}</div>`;
+  const rest = _ovFeedHtml(entries.slice(cut), monthState);
+  const n = entries.length - cut;
+  const lbl = `View all history (${n} earlier ${n === 1 ? 'entry' : 'entries'})`;
   return `<div class="ov-trail">
-    ${_ovTrailDocHtml(current)}
-    <div class="ov-trail-rest" id="ovTrailRest" hidden>
-      ${earlier.map((d, i) => _ovWalksHtml(d, docs[i], i) + _ovTrailDocHtml(d)).join('')}
-    </div>
+    ${standing}${head}
+    <div class="ov-trail-rest" id="ovTrailRest" hidden>${rest}</div>
     <button type="button" class="ov-more" id="ovTrailMore"
             aria-expanded="false" aria-controls="ovTrailRest"
             onclick="ovTrailToggle()"
-            data-open="Hide earlier documents"
-            data-shut="View all history (${earlier.length} earlier ${
-              earlier.length === 1 ? 'document' : 'documents'})">View all history (${
-              earlier.length} earlier ${earlier.length === 1 ? 'document' : 'documents'})</button>
+            data-open="Hide earlier activity"
+            data-shut="${lbl}">${lbl}</button>
   </div>`;
 }
 /* A class toggle rather than a re-render: renderOverview would rebuild the
@@ -542,15 +843,40 @@ function ovTrailToggle(){
 /* A section is one of the Editor's modules: white, bordered once, sitting on
    the app's tan with the ground showing between them. Same shape the property
    overview uses, so the two pages are read the same way. */
-function _ovSec(label, body, cls){
+/* `action` is the control in the section's top-right corner — Edit, on the
+   blocks that have something to edit. It shares the heading's line rather
+   than sitting above or below it, the same arrangement Contractor
+   assignments uses, so every section header in the tab reads alike. */
+function _ovSec(label, body, cls, action){
+  const head = (label || action)
+    ? `<div class="ov-sec-hd-row">
+        ${label ? `<h3 class="ov-sec-h">${esc(label)}</h3>` : '<span></span>'}
+        ${action || ''}
+      </div>`
+    : '';
   return `<section class="ov-mod${cls ? ' ' + cls : ''}">
-    ${label ? `<h3 class="ov-sec-h">${esc(label)}</h3>` : ''}
+    ${head}
     ${body}
   </section>`;
 }
+/* A row's value is escaped text unless it carries `html`, which is markup the
+   caller built — the template field is a link, and a link cannot survive
+   being escaped. */
 function _ovFieldsHtml(rows){
   return `<dl class="ov-fields">${rows.filter(Boolean).map(r => `
-    <div class="ov-field"><dt>${esc(r.k)}</dt><dd>${esc(r.v)}</dd></div>`).join('')}</dl>`;
+    <div class="ov-field${r.cls ? ' ' + r.cls : ''}"><dt>${esc(r.k)}</dt><dd>${r.html || esc(r.v)}</dd></div>`).join('')}</dl>`;
+}
+/* The corner control. Nothing in the prototype edits these fields, so it says
+   where the change would be made rather than pretending to open a form. */
+function ovInfoEdit(which){
+  if(typeof toast === 'function')
+    toast(`${which} details are edited in the property record`);
+}
+/* Templates are their own thing elsewhere in the product — the name is the
+   way to it, so it is a link rather than a line of text that happens to name
+   one. No destination in the prototype. */
+function ovOpenTemplate(name){
+  if(typeof toast === 'function') toast(`Opening ${name}`);
 }
 /* A figure with its label under it, optionally a button. The counts are the
    way into the notes and photo drawers, so they are the control themselves
@@ -578,6 +904,9 @@ function _ovPropFields(){
 function renderOverview(){
   const body = document.getElementById('workBody');
   if(!body) return;
+  // Idempotent — binds once, on the first render that puts links on screen.
+  if(typeof _ovHoverBind === 'function') _ovHoverBind();
+  if(typeof _ovHoverHide === 'function') _ovHoverHide();
   const S = OVERVIEW_SEED;
   const people = _ovPeople();
   const notes = (typeof scopeNotesPool === 'function') ? scopeNotesPool() : [];
@@ -595,36 +924,66 @@ function renderOverview(){
     ${_ovStat('Photos', String(photoCount), "openScopeDrawer('photos')")}
   </div>`;
 
-  /* The job, the people on it, and the property itself — one list of
-     label-over-value fields, in as many columns as the width allows. */
-  /* No heading: it is the block directly under the title, and "The job" only
-     ever restated where you already were. */
-  const jobSec = _ovSec('', _ovFieldsHtml([
+  /* Getting in, folded into the property module rather than standing beside
+     it. It is the same errand as the fields above — what this place is and
+     how you get into it — and as its own module it was a framed box holding
+     one line, drawing more attention than a set of codes read once a project
+     deserves.
+
+     Shut it is the title and nothing else. The codes were on the bar until
+     now; they are behind the click with the note, because two people in ten
+     open this at all and the row above it is the property, not the visit. */
+  const accessDetail = `
+    <div class="ov-access">
+      <button type="button" class="ov-access-bar" aria-expanded="${_ovAccessOpen}"
+              aria-controls="ovAccessBody" onclick="ovAccessToggle(this)">
+        <span class="ov-sec-h">Getting in</span>
+        <span class="ov-access-cta">
+          <span class="ov-access-cta-t">${_ovAccessOpen ? 'Hide access details' : 'See access details'}</span>
+          <svg class="ov-access-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
+        </span>
+      </button>
+      <div class="ov-access-body" id="ovAccessBody"${_ovAccessOpen ? '' : ' hidden'}>
+        <div class="ov-access-codes">
+          ${S.access.map(a => `<span class="ov-acc-pair"><span class="ov-acc-k">${esc(a.k)}</span
+            ><span class="ov-acc-v">${esc(a.v)}</span></span>`).join('')}
+        </div>
+        <div class="ov-access-note">
+          <span class="ov-code-k">On arrival</span>
+          ${S.dispatch ? `<p class="ov-dispatch">${esc(S.dispatch)}</p>`
+                       : `<p class="ov-empty">Nothing for the crew yet.</p>`}
+        </div>
+      </div>
+    </div>`;
+
+  /* Two blocks, because they answer two questions that happen to sit next to
+     each other: who is running this job, and what the building is. They were
+     one grid, so "Field agent" and "Year built" shared a row and the eye had
+     to sort them by meaning — the section headings do that work now.
+
+     Getting in belongs to the property, not the project, so it folds into the
+     second block rather than the first. */
+  const _editBtn = which =>
+    `<button type="button" class="ov-sec-edit" onclick="ovInfoEdit('${which}')">Edit</button>`;
+  const _tplName = S.template.name;
+  const jobSec = _ovSec('Project info', _ovFieldsHtml([
+    /* The two long values share the first column, one under the other, and
+       that column is given the extra width — an address and a template name
+       both wrap at the measure the short fields are sized for, and wrapping
+       them in a narrow track pushed the rows below out of line. */
+    {k:'Project name',    v:S.address, cls:'is-wide'},
     {k:'Project ID',      v:S.projectId},
     {k:'Project type',    v:S.type},
     {k:'Project manager', v:people.manager},
     {k:'Field agent',     v:people.agent},
     {k:'General contractor', v:S.gc},
-    {k:'Template',        v:S.template.name},
+    {k:'Template',        cls:'is-wide2', html:`<a class="ov-field-link" href="#"
+        onclick="event.preventDefault();ovOpenTemplate('${esc(_tplName).replace(/'/g, "\\'")}')"
+        >${esc(_tplName)}</a>`},
     {k:'Last updated',    v:S.updated},
-  ].concat(_ovPropFields())), 'ov-job');
-
-  /* Getting in and what to know once you are there are the same errand, so
-     the codes and the dispatch note share a section. */
-  /* The codes and the note on one row. The note under them made the module
-     twice as tall for a sentence, and the width was there. */
-  const accessSec = _ovSec('Getting in', `
-    <div class="ov-codes">
-      ${S.access.map(a => `
-      <div class="ov-code"><span class="ov-code-k">${esc(a.k)}</span>
-        <span class="ov-code-v">${esc(a.v)}</span></div>`).join('')}
-      <div class="ov-code ov-code-note">
-        <span class="ov-code-k">On arrival</span>
-        ${S.dispatch ? `<p class="ov-dispatch">${esc(S.dispatch)}</p>`
-                     : `<p class="ov-empty">Nothing for the crew yet.</p>`}
-      </div>
-    </div>`, 'ov-access');
-
+  ]), 'ov-job', _editBtn('Project'));
+  const propSec = _ovSec('Property info',
+    _ovFieldsHtml(_ovPropFields()) + accessDetail, 'ov-job ov-prop', _editBtn('Property'));
 
   const trailSec = _ovSec('Activity', _ovTrailHtml(), 'ov-trail-sec');
 
@@ -642,7 +1001,8 @@ function renderOverview(){
       <div class="ov-head-r">
       <header class="ov-head">
         <div class="ov-head-l">
-          <div class="ov-eyebrow">${esc(S.projectId)}<span class="sep">&middot;</span>${esc(S.type)}</div>
+          <!-- No eyebrow: the id and the project type are both fields in the
+               block directly below, and the title's job is the address. -->
           <h2>${esc(S.address)}</h2>
           <div class="ov-head-sub">${esc(S.city)}</div>
         </div>
@@ -651,6 +1011,195 @@ function renderOverview(){
       ${stats}
       </div>
     </section>
-    ${jobSec}${accessSec}${trailSec}
+    ${jobSec}${propSec}${_ovCrewHtml()}${trailSec}
   </div>`;
+}
+
+/* ── hover preview for the task and group links ──────────────────────
+   The activity list names work by code and label — "KIT-79B1 Cabinets" —
+   which is enough to find it again and not enough to recognise it. Opening
+   the task to remember what it is costs the place you were reading. So the
+   name carries a preview: the last photo of it, what the scope says it is,
+   and what was specified. A peek, not a destination — the click still goes
+   to the Editor.
+
+   One card, built once and moved, rather than one per link: there are
+   thirty-odd links in an expanded trail and only ever one pointed at. */
+let _ovHoverEl = null, _ovHoverTimer = null, _ovHoverFor = null;
+
+/* Latest first, by the date of the walk the shot belongs to. An uploaded
+   photo has no walk, so it sorts last rather than throwing the order off. */
+function _ovLatestPhoto(match){
+  if(typeof seedPhotos === 'function' && (typeof PHOTOS === 'undefined' || !PHOTOS.length)) seedPhotos();
+  const all = (typeof PHOTOS !== 'undefined') ? PHOTOS : [];
+  const when = p => {
+    const w = (p.walk && typeof walkFor === 'function') ? walkFor(p.walk) : null;
+    return w ? (Date.parse(w.date) || 0) : 0;
+  };
+  return all.filter(match).sort((a, b) => when(b) - when(a))[0] || null;
+}
+/* What the card says about one link. Tasks and groups are different things,
+   so they answer different questions — a group has no description or
+   product, and saying so with two empty rows would be worse than not
+   asking. */
+function _ovHoverData(el){
+  /* A document's preview answers a different question than a task's: not
+     "which one is this" but "what did it do" — what it is worth, what it
+     moved, and where it got to. */
+  const doc = el.getAttribute('data-hv-doc') || '';
+  if(doc){
+    const d = (_ovTrail() || []).find(x => x.name === doc);
+    if(!d) return null;
+    const changed = d.evs.find(e => e.detail);
+    const groups = changed ? changed.detail : [];
+    return {kind:'doc', title:d.name, state:d.state, amount:d.amount, was:d.was,
+            /* The names, not the tally — the same reason the feed stopped
+               carrying the count. */
+            meta: '',
+            tasks: groups.flatMap(g => g.tasks.map(t => t.name)).slice(0, 4),
+            /* People-events only: the change-count row is already summarised
+               two lines above as "5 groups · 7 tasks changed", and with no
+               name on it the mini list rendered a blank where a person goes. */
+            evs: d.evs.filter(e => e.who).slice(0, 3).map(e => ({
+              who: e.who || '',
+              what: e.verb ? `${e.verb}${e.to ? ' to ' + e.to : ''}` : e.act,
+              when: e.when
+            }))};
+  }
+  const code = el.getAttribute('data-hv-code') || '';
+  const room = el.getAttribute('data-hv-room') || '';
+  const name = el.getAttribute('data-hv-name') || '';
+  const all  = (typeof TASKS !== 'undefined') ? TASKS : [];
+  if(code || name){
+    const t = all.find(x => x.code === code)
+           || all.find(x => name && String(x.name).toLowerCase() === String(name).toLowerCase());
+    if(t){
+      /* A task with no photo of its own falls back to its room's — the group
+         shot is still a picture of where the work is. */
+      const photo = _ovLatestPhoto(p => p.kind === 'task' && p.task === t.code)
+                 || _ovLatestPhoto(p => p.room === t.room && p.kind === 'group');
+      return {kind:'task', photo, code:t.code, title:t.name, room:t.room,
+              desc:t.desc || '', product:t.product || '', spec:t.opt || '',
+              cost:t.cost || ''};
+    }
+  }
+  if(room){
+    const items = all.filter(x => x.room === room);
+    const photo = _ovLatestPhoto(p => p.room === room && p.kind === 'group')
+               || _ovLatestPhoto(p => p.room === room);
+    const total = items.reduce((n, x) => n + (_ovMoney(x.cost) || 0), 0);
+    return {kind:'group', photo, title:room,
+            meta:[`${items.length} task${items.length === 1 ? '' : 's'}`,
+                  total ? _fmtDollars(total) : ''].filter(Boolean).join('  ·  '),
+            tasks:items.slice(0, 4).map(x => x.name)};
+  }
+  return null;
+}
+/* "$10,078" → 10078. The scope keeps money as formatted strings. */
+function _ovMoney(s){
+  const n = parseFloat(String(s == null ? '' : s).replace(/[^0-9.\-]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+function _ovHoverHtml(d){
+  /* The fill is assigned as a property after the card is in the DOM, not
+     written into a style attribute: _photoBg returns url("…") with double
+     quotes, which closes the attribute early and drops the image. */
+  const shot = d.photo
+    ? `<div class="ov-hv-img"></div>`
+    : `<div class="ov-hv-img is-none">No photo yet</div>`;
+  if(d.kind === 'doc'){
+    const money = d.amount
+      ? `<span class="ov-hv-money">${d.was ? `<s>${esc(d.was)}</s>` : ''}<b>${esc(d.amount)}</b></span>`
+      : '';
+    return `<div class="ov-hv-body">
+        <div class="ov-hv-kind">Document${d.state ? ` \u00b7 ${esc(d.state)}` : ''}</div>
+        <div class="ov-hv-title">${esc(d.title)}</div>
+        ${money}
+        ${d.meta ? `<div class="ov-hv-meta">${esc(d.meta)}</div>` : ''}
+        ${d.tasks.length ? `<div class="ov-hv-list">${d.tasks.map(n => esc(n)).join(' \u00b7 ')}</div>` : ''}
+        ${d.evs.length ? `<ul class="ov-hv-evs">${d.evs.map(e => `<li><b>${esc(e.who)}</b> ${esc(e.what)}
+          <span>${esc(e.when)}</span></li>`).join('')}</ul>` : ''}
+      </div>`;
+  }
+  if(d.kind === 'group'){
+    return `${shot}
+      <div class="ov-hv-body">
+        <div class="ov-hv-kind">Group</div>
+        <div class="ov-hv-title">${esc(d.title)}</div>
+        <div class="ov-hv-meta">${esc(d.meta)}</div>
+        ${d.tasks.length ? `<div class="ov-hv-list">${d.tasks.map(n => esc(n)).join(' · ')}</div>` : ''}
+      </div>`;
+  }
+  const row = (lbl, val) => val
+    ? `<div class="ov-hv-row"><span class="ov-hv-lbl">${lbl}</span><span class="ov-hv-val">${esc(val)}</span></div>`
+    : '';
+  return `${shot}
+    <div class="ov-hv-body">
+      <div class="ov-hv-kind">${esc(d.code)}${d.room ? ` · ${esc(d.room)}` : ''}</div>
+      <div class="ov-hv-title">${esc(d.title)}</div>
+      ${d.desc ? `<p class="ov-hv-desc">${esc(d.desc)}</p>` : ''}
+      ${row('Product', d.product)}
+      ${row('Scope', d.spec)}
+    </div>`;
+}
+/* Fixed to the viewport, beside the link and flipped to whichever side has
+   room. The trail scrolls inside a pane, so anything anchored to the page
+   would drift away from the thing it describes. */
+function _ovHoverPlace(el){
+  const card = _ovHoverEl, r = el.getBoundingClientRect();
+  const w = card.offsetWidth, h = card.offsetHeight, pad = 10;
+  let top = r.bottom + 8;
+  if(top + h > window.innerHeight - pad) top = Math.max(pad, r.top - h - 8);
+  let left = r.left;
+  if(left + w > window.innerWidth - pad) left = Math.max(pad, window.innerWidth - w - pad);
+  card.style.top = top + 'px';
+  card.style.left = left + 'px';
+}
+function _ovHoverShow(el){
+  const d = _ovHoverData(el);
+  if(!d) return;
+  if(!_ovHoverEl){
+    _ovHoverEl = document.createElement('div');
+    _ovHoverEl.className = 'ov-hv';
+    _ovHoverEl.setAttribute('role', 'tooltip');
+    document.body.appendChild(_ovHoverEl);
+  }
+  _ovHoverFor = el;
+  _ovHoverEl.innerHTML = _ovHoverHtml(d);
+  const img = d.photo ? _ovHoverEl.querySelector('.ov-hv-img') : null;
+  if(img) img.style.background = _photoBg(d.photo, d.photo.seed || 0);
+  _ovHoverEl.classList.add('is-on');
+  _ovHoverPlace(el);
+}
+function _ovHoverHide(){
+  clearTimeout(_ovHoverTimer);
+  _ovHoverFor = null;
+  if(_ovHoverEl) _ovHoverEl.classList.remove('is-on');
+}
+/* Delegated, because renderOverview replaces the whole tab on every state
+   change and per-element listeners would go with it. */
+function _ovHoverBind(){
+  if(document.body.dataset.ovHoverBound) return;
+  document.body.dataset.ovHoverBound = '1';
+  const hit = e => e.target && e.target.closest
+    ? e.target.closest('.ov-ch-task, .ov-ch-grp, .ov-tr-doc-n') : null;
+  document.addEventListener('mouseover', e => {
+    const el = hit(e);
+    if(!el || el === _ovHoverFor) return;
+    clearTimeout(_ovHoverTimer);
+    _ovHoverTimer = setTimeout(() => _ovHoverShow(el), 140);
+  });
+  document.addEventListener('mouseout', e => {
+    const el = hit(e);
+    if(el && el === _ovHoverFor) _ovHoverHide();
+    else if(el) clearTimeout(_ovHoverTimer);
+  });
+  // Keyboard reaches these links too, so the preview has to follow focus.
+  document.addEventListener('focusin', e => { const el = hit(e); if(el) _ovHoverShow(el); });
+  document.addEventListener('focusout', e => { if(hit(e)) _ovHoverHide(); });
+  // Anything that moves the link out from under the card retires it.
+  document.addEventListener('scroll', _ovHoverHide, true);
+  document.addEventListener('click', _ovHoverHide, true);
+  window.addEventListener('resize', _ovHoverHide);
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') _ovHoverHide(); });
 }
