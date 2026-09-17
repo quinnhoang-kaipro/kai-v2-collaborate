@@ -112,7 +112,7 @@ function a2XOptionsHtml(t){
         // to show, so it stays inert rather than offering a dead target.
         const canOpen = !!p.sku && typeof openFly === 'function';
         const opener = canOpen
-          ? ` onclick="event.stopPropagation();openFly(${t.id},'${a2Esc(p.sku)}',event)" title="View product details"`
+          ? ` onclick="event.stopPropagation();openFly(${t.id},'${a2Esc(p.sku)}',event)" title="View product info"`
           : '';
         return `<div class="a2-xp${canOpen ? ' is-catalog' : ''}"${opener}>
           <span class="a2-xp-name">${p.brand ? `<span class="a2-xp-brand">${a2Esc(p.brand)}</span>` : ''}${a2Esc(p.product || 'Untitled product')}</span>

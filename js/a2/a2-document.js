@@ -36,7 +36,7 @@ function shellHtml(){
                   ? `${a2Esc(VER[VER_ORDER[0]].label)} → ${a2Esc(VER[VER_ORDER[VER_ORDER.length-1]].label)}`
                   : `${a2Esc(VER[VER_ORDER[0]].label)} &middot; no changes yet`}</div></div>
                 <div><div class="a2-meta-k">Prepared by</div><div class="a2-meta-v">Kaiizen Engineering</div></div>
-                <div><div class="a2-meta-k">Project</div><div class="a2-meta-v">KAI-2241</div></div>
+                <div><div class="a2-meta-k">Job</div><div class="a2-meta-v">KAI-2241</div></div>
               </div>
             </div>
             <table class="a2-table">

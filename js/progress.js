@@ -122,7 +122,7 @@ function renderProgress(){
       ${actCtrlBarHtml(rows.length)}
       ${scopeHdr}
       <div class="pgd-details-sec">
-        <div class="pgd-details-title">Project activity</div>
+        <div class="pgd-details-title">Job activity</div>
         ${_projComposerHtml()}
         <div class="tlx">${userUpdatesHtml}${timelineHtml || (userUpdatesHtml ? '' : `<div class="pgd-muted" style="padding:16px 0">No activity matches the current filter.</div>`)}</div>
       </div>

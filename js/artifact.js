@@ -66,7 +66,7 @@ function _renderHistoricalSection(){
     <header class="art-sec-hdr">
       <div class="art-sec-hdr-l">
         <h2 class="art-sec-title">Historical artifacts</h2>
-        <p class="art-sec-desc">Review the original scope and each change-order version for this project.</p>
+        <p class="art-sec-desc">Review the original scope and each change-order version for this job.</p>
       </div>
     </header>
     <div class="hist-grid">${cards}</div>

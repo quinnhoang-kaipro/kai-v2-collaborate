@@ -57,7 +57,7 @@ function renderShop(){
           <svg viewBox="0 0 24 24"><path d="M4 5.5h13l-1 4H5z"/><path d="M4 12h13v6H4z"/><path d="M8 8v4"/></svg>
         </span>
         <span class="shop-empty-title">Pick a task to edit</span>
-        <span class="shop-empty-desc">Click any task in the sidebar to see its details here — edit the contractor, cost, quantity, or pick a product from the suggested list.</span>
+        <span class="shop-empty-desc">Click any task in the sidebar to see its info here — edit the contractor, cost, quantity, or pick a product from the suggested list.</span>
         ${needsWorkHtml}
       </div>`;
     return;
@@ -126,7 +126,7 @@ function _shopTaskHeaderHtml(t){
       <button class="sec-taskdesc-hd" type="button" aria-expanded="${isExpanded}"
         onclick="event.stopPropagation();toggleDescExpanded(${t.id})"
         title="${isExpanded ? 'Hide the description' : 'Read the description'}">
-        <span class="sec-taskcard-lbl sec-taskdesc-title">Task details</span>
+        <span class="sec-taskcard-lbl sec-taskdesc-title">Task info</span>
         <svg class="sec-taskdesc-caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
       </button>
       ${isExpanded ? `<div class="sec-taskdesc-body">
@@ -423,7 +423,7 @@ function _shopPhotoSectionHtml(t){
   // label names the photo's own context: the room for a group shot,
   // the task for a task shot.
   const photoStrip = stripPhotos.length
-    ? `<div class="pgd-photos">${stripPhotos.map((p,i) => _pgdPhotoFigHtml(p, i, p.kind === 'group' ? (t.room || 'Project') : t.name, t.name)).join('')}</div>`
+    ? `<div class="pgd-photos">${stripPhotos.map((p,i) => _pgdPhotoFigHtml(p, i, p.kind === 'group' ? (t.room || 'Job') : t.name, t.name)).join('')}</div>`
     : `<div class="pgd-photos-empty">No photos yet for this task</div>`;
   return `<div class="pgd-details-sec">
     <div class="pgd-sec-hd">
@@ -562,7 +562,7 @@ function _shopEditCardHtml(t){
           // amended afterwards, and an amendment is exactly what the change-
           // order banner at the top of the task is warning about.
           const optAdded = optionIsAdded(o);
-          const optToggle = `<button class="opt-card-toggle${optAdded ? ' is-on' : ''}" onclick="event.stopPropagation();toggleOptionAdded(${t.id},'${o.id}')" title="${optAdded ? 'Remove this option from the project' : 'Add this option to the project'}">${optAdded ? 'Remove' : '+ Add'}</button>`;
+          const optToggle = `<button class="opt-card-toggle${optAdded ? ' is-on' : ''}" onclick="event.stopPropagation();toggleOptionAdded(${t.id},'${o.id}')" title="${optAdded ? 'Remove this option from the job' : 'Add this option to the job'}">${optAdded ? 'Remove' : '+ Add'}</button>`;
           return `<div class="opt-card${changedCls}${isPrimary?'':' is-extra'}${optAdded ? '' : ' is-unadded'}">
             <div class="opt-card-body">
               <div class="opt-card-name-row">
@@ -643,7 +643,7 @@ function productDetail(p, t){
     toilet:`${p.brand} ${p.name} is a comfort-height elongated toilet with a 1.28 GPF flush. Includes tank, bowl, hardware, and wax ring. Seat sold separately.`,
     mech:`${p.brand} ${p.name} is a smart, app-enabled garage door opener with battery backup and motion-activated lighting. Compatible with standard 7' single and double doors.`,
     storage:`${p.brand} ${p.name} is a wire shelving kit that adjusts to most reach-in closets. Includes tracks, brackets, shelves, and a hanging rod.`,
-    generic:`${p.brand} ${p.name} is the supplier's standard SKU for this scope item. Detail copy loads from the catalog feed when wired.`,
+    generic:`${p.brand} ${p.name} is the supplier's standard SKU for this scope item. Info copy loads from the catalog feed when wired.`,
   };
   const highlightsBy={
     cabinet:[
@@ -732,12 +732,12 @@ function productDetail(p, t){
   const includesBy={
     cabinet:'(1) cabinet box per LF, (2) doors per LF (where applicable), soft-close hardware, toe-kick strip, mounting screws',
     counter:'Templated and fabricated quartz slab(s), one undermount sink cutout, standard 1.25" edge, install hardware',
-    tile:'Tile boxes sized to project SF (10% waste factored), separately sold grout and edge trim',
+    tile:'Tile boxes sized to job SF (10% waste factored), separately sold grout and edge trim',
     appliance:'(1) Range, (1) Over-the-range microwave, (1) Dishwasher, (1) Counter-depth refrigerator',
-    floor:'Planks sized to project SF, attached underlayment, transition strips ordered separately',
+    floor:'Planks sized to job SF, attached underlayment, transition strips ordered separately',
     paint:'(1) Gallon per ' + p.unit + ', tinted to color, two-coat coverage',
     vanity:'(1) Vanity cabinet, (1) Pre-cut top with backsplash, hardware, mounting brackets',
-    shower:'Tile sized to project SF (10% waste factored), no trim or membrane',
+    shower:'Tile sized to job SF (10% waste factored), no trim or membrane',
     toilet:'(1) Tank, (1) Bowl, (1) Wax ring, (1) Set of hardware. Seat sold separately',
     mech:'(1) Motor, (1) Rail kit, (1) Remote, (1) Keypad, (1) Wall control, (1) Smart hub',
     storage:'(1) Track set, brackets, wire shelves, closet rod, mounting hardware',

@@ -103,7 +103,7 @@ const PROGRESS_PEOPLE = [
   {who:'R. Garcia',  role:'Contractor'},
   {who:'M. Alvarez', role:'Field agent'},
   {who:'Eric L.',    role:'Field agent'},
-  {who:'T. Okafor',  role:'Project manager'},
+  {who:'T. Okafor',  role:'Job manager'},
 ];
 // User-posted updates land at the top of the appropriate feed. Empty by
 // default — the Progress tab's activitiesFor / activitiesForGroup guard on
@@ -196,7 +196,7 @@ function postProjectUpdate(){
     photoCount,
     status: 'in_progress',
   };
-  let targetLabel = 'the project';
+  let targetLabel = 'the job';
   if(target === 'scope'){
     // Scope-level → stack at the top of the Project activity timeline
     PROJECT_UPDATES.unshift({
@@ -268,7 +268,7 @@ function _projUpdateRowHtml(u){
     <div class="tlx-card">
       <div class="tlx-hd">
         <div class="tlx-hd-l">
-          <span class="tlx-task">Project</span>
+          <span class="tlx-task">Job</span>
           <span class="tlx-who"><b>${esc(u.who)}</b><span class="tlx-verb">posted an update</span></span>
         </div>
         <div class="tlx-hd-r">
@@ -694,12 +694,12 @@ document.addEventListener('click', () => {
    who : the person who triggered it (lifecycle events are user-driven;
          completion thresholds are system-detected — see _sys) */
 const SCOPE_MILESTONES = [
-  {daysAgo:186, ms:'created',    label:'Project created',        who:'Or Ben-David', role:'Admin',
+  {daysAgo:186, ms:'created',    label:'Job created',        who:'Or Ben-David', role:'Admin',
    sub:'Single-family renovation · 3484 South Main Street. Origination from Invitation Homes.'},
   {daysAgo:180, ms:'scope',      label:'Scope created',          who:'Sarah M.', role:'Field agent',
    sub:'Initial walk completed. 14 tasks captured across 6 groups.'},
   {daysAgo:171, ms:'pending',    label:'Scope pending review',   who:'Sarah M.', role:'Field agent',
-   sub:'Submitted to the project manager for pricing and approval.'},
+   sub:'Submitted to the job manager for pricing and approval.'},
   {daysAgo:164, ms:'approved',   label:'Scope approved',         who:'Or Ben-David', role:'Admin',
    sub:'v1 approved at $24,180. Distributed to 4 contractors.'},
   {daysAgo:146, ms:'co',         label:'Change order created',   who:'Diana R.', role:'Field agent',
@@ -711,17 +711,17 @@ const SCOPE_MILESTONES = [
   {daysAgo:112, ms:'started',    label:'Construction started',   who:'Kai', role:'System', _sys:true,
    sub:'First task moved to In progress. 4 contractors mobilized on site.'},
   {daysAgo:64,  ms:'half',       label:'Halfway — 50% of tasks complete', who:'Kai', role:'System', _sys:true,
-   sub:'8 of 16 tasks marked complete. Project tracking on schedule.'},
+   sub:'8 of 16 tasks marked complete. Job tracking on schedule.'},
   {daysAgo:22,  ms:'walk',       label:'Closeout walk completed', who:'Sarah M.', role:'Field agent',
    sub:'All groups walked. Punch list captured for the remaining items.'},
   {daysAgo:9,   ms:'close',      label:'Closeout created',       who:'Sarah M.', role:'Field agent',
    sub:'Closeout walk completed. Punch list captured for remaining items.'},
   {daysAgo:4,   ms:'close_pending', label:'Closeout pending review', who:'Sarah M.', role:'Field agent',
-   sub:'Submitted to the project manager for final sign-off.'},
+   sub:'Submitted to the job manager for final sign-off.'},
 ];
 // Milestone tag copy per kind.
 const MS_TAG = {
-  created:'Project', scope:'Scope', pending:'Review', approved:'Approved',
+  created:'Job', scope:'Scope', pending:'Review', approved:'Approved',
   co:'Change order', co_pending:'Review', co_approved:'Approved',
   close:'Closeout', close_pending:'Review', close_approved:'Approved',
   started:'Construction', half:'Progress', walk:'Walkthrough',
@@ -1407,7 +1407,7 @@ function pmApplySelectionTo(target){
   if(!chosen.length) return;
   const stamp = p => {
     p.kind = target.kind;
-    p.room = target.kind === 'unsorted' ? 'Project' : target.room;
+    p.room = target.kind === 'unsorted' ? 'Job' : target.room;
     p.task = target.kind === 'task' ? target.task : null;
   };
   if(pmMoveMode === 'copy'){
@@ -1998,7 +1998,7 @@ function _pgdPhotoFigHtml(p, i, labelName, hideTag){
   const clip = (str) => String(str).length > 18 ? String(str).slice(0, 17) + '…' : String(str);
   const tag = p.kind === 'group' ? (p.room || 'Group')
             : p.kind === 'task'  ? clip(taskName || 'Task')
-            : 'Project';
+            : 'Job';
   const tagChip = (hideTag && (tag === hideTag || taskName === hideTag))
     ? ''
     : `<span class="pgd-photo-groupbadge">${esc(tag)}</span>`;
@@ -2228,7 +2228,7 @@ function _renderScopePageHtml(opts){
     ...(PHOTOS || []).filter(p => p.kind === 'unsorted'),
   ];
   const photoStripHtml = scopePhotos.length
-    ? `<div class="pgd-photos">${scopePhotos.map((p,i) => _pgdPhotoFigHtml(p, i, p.room || 'Project')).join('')}</div>`
+    ? `<div class="pgd-photos">${scopePhotos.map((p,i) => _pgdPhotoFigHtml(p, i, p.room || 'Job')).join('')}</div>`
     : `<div class="pgd-photos-empty">No photos yet in this scope</div>`;
 
   const sections = groups.map(g => {

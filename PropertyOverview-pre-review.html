@@ -98,6 +98,11 @@ body{background:var(--app-bg)}
 .po-f-link{font-size:13px;color:var(--ink);text-decoration:underline;text-underline-offset:2px;
   text-decoration-color:var(--stroke);background:none;border:0;padding:0;cursor:pointer;font:inherit}
 .po-f-link:hover{text-decoration-color:var(--ink)}
+/* On a label the link keeps the label's type — mono, caps, quiet — and only
+   the underline says it goes somewhere. A label set in body copy because it
+   happens to be clickable would break the row it sits in. */
+.po-f dt .po-f-link{font:inherit;color:inherit;text-underline-offset:3px}
+.po-f dt .po-f-link:hover{color:var(--ink)}
 
 /* Edit mode: the panel's own field, in the cell the value was in, so the block
    does not reflow under the cursor when you press Edit. */
@@ -149,6 +154,7 @@ body.po-editing #poEditBtn{display:none}
 .po-tbl tbody tr:hover{background:var(--sunken)}
 .po-tbl td{padding:12px 18px;font-size:14px;color:var(--ink);vertical-align:middle}
 .po-tbl td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.po-desc-c{min-width:90px}
 .po-tbl td.dim{color:var(--t3);font-size:12.5px;font-variant-numeric:tabular-nums}
 /* The name is what people scan for, so it carries the weight and the type is
    the one thing beside it — as a quiet tag rather than its own column of
@@ -157,13 +163,10 @@ body.po-editing #poEditBtn{display:none}
    people recognise before they read anything — so the row leads with it, at the
    size a row can carry. The prototype ships no photography, so the slot holds
    the tan and says so rather than showing a grey box that could be loading. */
-.po-tbl td.shot{padding-right:0;width:76px}
-.po-row-ph{display:block;width:58px;height:44px;position:relative;overflow:hidden;
+.po-tbl td.shot{padding-right:0;width:124px}
+.po-row-ph{display:block;width:104px;height:78px;position:relative;overflow:hidden;
   background:var(--sunken);border:1px solid var(--stroke)}
 .po-row-ph img{width:100%;height:100%;object-fit:cover;display:block}
-.po-row-ph .c{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-size:7px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
-  color:var(--t3);text-align:center;padding:0 3px;line-height:1.2}
 /* The column has a name for a screen reader; sighted readers have the pictures. */
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 /* Every row says the same address, so the type beside it is what tells two
@@ -281,6 +284,41 @@ body.po-editing #poEditBtn{display:none}
   border-top:1px solid var(--stroke);flex-shrink:0}
 .po-m-acts .po-btn:first-of-type{margin-left:auto}
 .po-m-req{font-size:12px;color:var(--t3)}
+
+/* ── market drawer ──
+   A market is context for the property, not a task to complete, so it arrives
+   from the side and leaves the page where it was rather than taking the
+   middle of the screen the way the create-job modal does. Everything inside
+   is the modal's own vocabulary — the same head, sections, labels, fields and
+   chips — because it is the same kind of surface at a different scale, and a
+   second set of form styles for one panel is how a product stops matching
+   itself.
+
+   Right edge in ink rather than the usual hairline: the drawer sits over the
+   page, and a 1px tan line against a white table did not read as an edge. */
+.po-drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);
+  background:var(--white);border-left:1px solid var(--ink);
+  box-shadow:-16px 0 44px rgba(26,26,26,.18);
+  display:flex;flex-direction:column;z-index:61;
+  transform:translateX(100%);visibility:hidden;
+  transition:transform .24s cubic-bezier(.22,.61,.36,1),visibility .24s}
+.po-drawer.open{transform:none;visibility:visible}
+/* Slightly tighter than the modal's 30px — the drawer is half its width, and
+   the modal's gutters would have left a column of field inside a frame. */
+.po-drawer .po-m-head{padding:20px 22px 16px}
+.po-drawer .po-m-body{padding:0 22px 6px}
+.po-drawer .po-m-acts{padding:14px 22px}
+.po-drawer .po-m-sec{padding:16px 0}
+.po-drawer .po-m-sec:first-child{padding-top:18px}
+/* One column: two fields side by side at 440px is two half-fields. */
+.po-drawer .po-m-grid{grid-template-columns:1fr}
+/* The typed-entry field and its chips read as one control, so the hint sits
+   under the input rather than beside the label. */
+.po-mk-hint{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--t3);margin-top:5px}
+@media (prefers-reduced-motion:reduce){
+  .po-drawer{transition:visibility .24s}
+}
 @media (max-width:620px){ .po-m-grid{grid-template-columns:1fr} }
 
 </style>
@@ -348,18 +386,17 @@ body.po-editing #poEditBtn{display:none}
               <div class="po-hdr-l">
                 <div class="po-eyebrow">Austin<span class="sep">&middot;</span>Test ID 9876</div>
                 <h1>2525 McDonald Way</h1>
-                <div class="po-hdr-sub">Austin, TX 78754 &nbsp;&middot;&nbsp;
-                  <button class="po-f-link" type="button">View market</button></div>
+                <div class="po-hdr-sub">Austin, TX 78754</div>
               </div>
             </div>
 
             <div class="po-facts">
               <div class="po-facts-h">
-                <span class="po-lbl">Property details</span>
+                <span class="po-lbl">Property info</span>
                 <button class="po-btn" id="poEditBtn" type="button" onclick="poEdit(true)">Edit</button>
                 <span class="po-edit-acts">
                   <button class="po-btn" type="button" onclick="poEdit(false)">Cancel</button>
-                  <button class="po-btn is-primary" type="button" onclick="poSave()">Save details</button>
+                  <button class="po-btn is-primary" type="button" onclick="poSave()">Save info</button>
                 </span>
               </div>
               <dl class="po-grid" id="poGrid">
@@ -370,7 +407,7 @@ body.po-editing #poEditBtn{display:none}
                 <div class="po-f"><dt>Acres</dt><dd id="v-acres">0.101<span class="u">acres</span></dd><input id="i-acres" type="number" step="0.001" value="0.101" aria-label="Acres"></div>
                 <div class="po-f"><dt>Garage</dt><dd id="v-garage">Yes</dd>
                   <select id="i-garage" aria-label="Garage"><option>Yes</option><option>No</option></select></div>
-                <div class="po-f"><dt>Market</dt><dd id="v-market">Austin</dd>
+                <div class="po-f"><dt><a class="po-f-link" href="#" onclick="event.preventDefault();mkOpen()">Market</a></dt><dd id="v-market"><a class="po-f-link" href="#" onclick="event.preventDefault();mkOpen()">Austin</a></dd>
                   <select id="i-market" aria-label="Market"><option>Austin</option><option>Atlanta</option><option>Dallas</option><option>Phoenix</option></select></div>
                 <div class="po-f"><dt>Test ID</dt><dd id="v-testid">9876</dd><input id="i-testid" value="9876" aria-label="Test ID"></div>
               </dl>
@@ -383,22 +420,23 @@ body.po-editing #poEditBtn{display:none}
     <!-- ── the reason for the page ── -->
     <section class="po-mod">
       <div class="po-proj-h">
-        <span class="po-lbl" id="poCount">Projects &middot; 6 active</span>
+        <span class="po-lbl" id="poCount">Jobs &middot; 6 active</span>
         <div class="po-seg" id="poSeg">
           <button type="button" class="on" onclick="poFilter('active')" id="poSegActive">Active</button>
           <button type="button" onclick="poFilter('archived')" id="poSegArch">Archived</button>
         </div>
-        <button class="po-btn is-primary" type="button" onclick="poNew(true)">New project</button>
+        <button class="po-btn is-primary" type="button" onclick="poNew(true)">New job</button>
       </div>
 
       <table class="po-tbl">
         <thead>
           <tr>
-            <th style="width:76px"><span class="vh">Photo</span></th>
-            <th style="width:30%">Project</th>
-            <th style="width:15%">Status</th>
-            <th class="num" style="width:13%">Budget</th>
-            <th style="width:13%">Created</th>
+            <th style="width:124px"><span class="vh">Photo</span></th>
+            <th style="width:24%">Job</th>
+            <th style="width:16%">Description</th>
+            <th style="width:13%">Status</th>
+            <th class="num" style="width:12%">Budget</th>
+            <th style="width:12%">Created</th>
             <th style="width:15%">
               <button type="button" onclick="poSort()">Updated
                 <svg id="poSortIco" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2v8M3 7l3 3 3-3"/></svg>
@@ -421,11 +459,91 @@ body.po-editing #poEditBtn{display:none}
      The form the New project button opens. Its fields are the product's; the
      grouping into three named sections is this page's, so a twelve-field
      column reads as three short ones. -->
-<div class="po-scrim" id="poScrim" onclick="poNew(false)"></div>
+<div class="po-scrim" id="poScrim" onclick="poDismiss()"></div>
+<!-- ── the market, from the side ──────────────────────────────────
+     Opened from the Market field's own value. It is reference plus a few
+     defaults a market carries into every job on it, so it is a panel beside
+     the page rather than a modal in front of it. -->
+<aside class="po-drawer" id="mkDrawer" role="dialog" aria-modal="true" aria-labelledby="mkTitle">
+  <div class="po-m-head">
+    <div class="po-m-head-l">
+      <span class="po-lbl">Market</span>
+      <h2 id="mkTitle">Austin</h2>
+    </div>
+    <button class="po-m-x" type="button" onclick="mkOpen(false)" aria-label="Close">
+      <svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+    </button>
+  </div>
+  <div class="po-m-body">
+
+    <div class="po-m-sec">
+      <div class="po-m-grid">
+        <div class="po-m-f wide">
+          <label for="mk-name">Name</label>
+          <input id="mk-name" value="Austin">
+        </div>
+        <div class="po-m-f wide">
+          <label for="mk-zip">Zip codes</label>
+          <input id="mk-zip" placeholder="Type a zip code, then Enter"
+                 inputmode="numeric" onkeydown="mkZipKey(event)">
+          <div class="po-chips" id="mkZips"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="po-m-sec">
+      <span class="po-lbl">Defaults for new jobs</span>
+      <div class="po-m-grid">
+        <div class="po-m-f wide">
+          <label for="mk-template">Job template <span class="opt">optional</span></label>
+          <select id="mk-template">
+            <option value="">No template</option>
+            <option selected>ATX Metro Turn Template 01:09:26</option>
+            <option>ATX Acquisition Inspection 04:22:26</option>
+            <option>Maintenance &mdash; Standard</option>
+          </select>
+        </div>
+        <div class="po-m-f wide">
+          <label for="mk-mgr">Job managers <span class="opt">optional</span></label>
+          <select id="mk-mgr" onchange="mkAdd('managers', this)">
+            <option value="">Add a manager&hellip;</option>
+          </select>
+          <div class="po-chips" id="mkManagers"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="po-m-sec">
+      <span class="po-lbl">Who works here</span>
+      <div class="po-m-grid">
+        <div class="po-m-f wide">
+          <label for="mk-con">Contractors <span class="opt">optional</span></label>
+          <select id="mk-con" onchange="mkAdd('contractors', this)">
+            <option value="">Add a contractor&hellip;</option>
+          </select>
+          <div class="po-chips" id="mkContractors"></div>
+        </div>
+        <div class="po-m-f wide">
+          <label for="mk-user">Users <span class="opt">optional</span></label>
+          <select id="mk-user" onchange="mkAdd('users', this)">
+            <option value="">Add a user&hellip;</option>
+          </select>
+          <div class="po-chips" id="mkUsers"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="po-m-acts">
+    <button class="po-btn" type="button" onclick="mkOpen(false)">Cancel</button>
+    <button class="po-btn is-primary" type="button" onclick="mkSave()">Update market</button>
+  </div>
+</aside>
+
 <div class="po-modal" id="poModal" role="dialog" aria-modal="true" aria-labelledby="poModalTitle">
   <div class="po-m-head">
     <div class="po-m-head-l">
-      <h2 id="poModalTitle">Create new project</h2>
+      <h2 id="poModalTitle">Create new job</h2>
       <!-- Which property, and nothing else. The sentence that was here spent a
            paragraph saying what the fields already say. -->
       <div class="po-m-head-sub">2525 McDonald Way, Austin, TX 78754</div>
@@ -437,10 +555,10 @@ body.po-editing #poEditBtn{display:none}
 
   <div class="po-m-body">
     <div class="po-m-sec">
-      <span class="po-lbl">The project</span>
+      <span class="po-lbl">The job</span>
       <div class="po-m-grid">
         <div class="po-m-f">
-          <label for="np-type">Project type</label>
+          <label for="np-type">Job type</label>
           <select id="np-type">
             <option value="">Select a type&hellip;</option>
             <option>Acquisition</option><option>Turn</option>
@@ -448,23 +566,23 @@ body.po-editing #poEditBtn{display:none}
           </select>
         </div>
         <div class="po-m-f">
-          <label for="np-budget">Project budget <span class="opt">optional</span></label>
+          <label for="np-budget">Job budget <span class="opt">optional</span></label>
           <div class="po-m-money"><span>$</span><input id="np-budget" type="number" min="0" step="100" placeholder="0.00"></div>
         </div>
         <div class="po-m-f wide">
-          <label for="np-name">Project name <span class="opt">optional</span></label>
-          <input id="np-name" placeholder="Defaults to the project type and today&rsquo;s date">
+          <label for="np-name">Job name <span class="opt">optional</span></label>
+          <input id="np-name" placeholder="Defaults to the job type and today&rsquo;s date">
         </div>
         <div class="po-m-f">
           <label for="np-due">Scope due date</label>
           <input id="np-due" type="date" value="2026-09-11">
         </div>
         <div class="po-m-f">
-          <label for="np-end">Project end date</label>
+          <label for="np-end">Job end date</label>
           <input id="np-end" type="date" value="2026-09-11">
         </div>
         <div class="po-m-f wide">
-          <label for="np-template">Project template</label>
+          <label for="np-template">Job template</label>
           <select id="np-template">
             <option value="">No template</option>
             <option>ATX Metro Turn Template 01:09:26</option>
@@ -518,9 +636,9 @@ body.po-editing #poEditBtn{display:none}
   </div>
 
   <div class="po-m-acts">
-    <span class="po-m-req" id="npHint">Project type is required.</span>
+    <span class="po-m-req" id="npHint">Job type is required.</span>
     <button class="po-btn" type="button" onclick="poNew(false)">Cancel</button>
-    <button class="po-btn is-primary" type="button" onclick="poCreate()">Create project</button>
+    <button class="po-btn is-primary" type="button" onclick="poCreate()">Create job</button>
   </div>
 </div>
 
@@ -571,10 +689,13 @@ function poRender(){
   var host = document.getElementById('poRows');
   host.innerHTML = rows.length ? rows.map(function(p){
     return '<tr>'
-      + '<td class="shot"><span class="po-row-ph"><span class="c">No photo</span></span></td>'
+      + '<td class="shot"><span class="po-row-ph"></span></td>'
       + '<td><span class="po-name">' + PO_ADDR + '</span>'
         + '<span class="po-type">' + p.type + '</span>'
         + '</td>'
+      /* Held open for the description the product will carry. Empty on
+         purpose — a placeholder sentence would read as data. */
+      + '<td class="po-desc-c"></td>'
       + '<td><span class="po-st po-st-' + p.status + '">' + PO_STATUS[p.status] + '</span></td>'
       + '<td class="num">' + poFmtMoney(p.budget) + '</td>'
       + '<td class="dim">' + poFmtDate(p.created) + '</td>'
@@ -583,8 +704,8 @@ function poRender(){
         + '<svg viewBox="0 0 14 14"><circle cx="7" cy="3" r="1.4"/><circle cx="7" cy="7" r="1.4"/><circle cx="7" cy="11" r="1.4"/></svg>'
         + '</button></td>'
       + '</tr>';
-  }).join('') : '<tr><td colspan="7" class="po-empty">No ' + poView + ' projects on this property.</td></tr>';
-  document.getElementById('poCount').innerHTML = 'Projects &middot; ' + rows.length + ' ' + poView;
+  }).join('') : '<tr><td colspan="8" class="po-empty">No ' + poView + ' jobs on this property.</td></tr>';
+  document.getElementById('poCount').innerHTML = 'Jobs &middot; ' + rows.length + ' ' + poView;
   var nLive = PO_PROJECTS.filter(function(x){ return !x.archived; }).length;
   document.getElementById('poSegActive').textContent = 'Active ' + nLive;
   document.getElementById('poSegArch').textContent = 'Archived ' + (PO_PROJECTS.length - nLive);
@@ -616,7 +737,9 @@ function poSave(){
   s('v-sqft',   Number(g('i-sqft')).toLocaleString('en-US') + '<span class="u">sqft</span>');
   s('v-acres',  g('i-acres') + '<span class="u">acres</span>');
   s('v-garage', g('i-garage'));
-  s('v-market', g('i-market'));
+  /* The market name is a link, and save writes innerHTML — so it has to be
+     rebuilt as one, or editing the property turns it back into plain text. */
+  s('v-market', '<a class="po-f-link" href="#" onclick="event.preventDefault();mkOpen()">' + g('i-market') + '</a>');
   s('v-testid', g('i-testid'));
   document.querySelector('.po-chip').textContent = g('i-market');
   poEdit(false);
@@ -675,12 +798,12 @@ function poReset(){
   document.getElementById('np-end').value = '2026-09-11';
   poPicked = ['Aaron Mosny'];
   poChips(); poCount();
-  document.getElementById('npHint').textContent = 'Project type is required.';
+  document.getElementById('npHint').textContent = 'Job type is required.';
 }
 function poCreate(){
   var type = document.getElementById('np-type').value;
   if(!type){
-    document.getElementById('npHint').textContent = 'Pick a project type first.';
+    document.getElementById('npHint').textContent = 'Pick a job type first.';
     document.getElementById('np-type').focus();
     return;
   }
@@ -700,8 +823,95 @@ function poCreate(){
   poFilter('active');
 }
 document.addEventListener('keydown', function(e){
-  if(e.key === 'Escape' && document.getElementById('poModal').classList.contains('open')) poNew(false);
+  if(e.key !== 'Escape') return;
+  if(document.getElementById('mkDrawer').classList.contains('open')) mkOpen(false);
+  else if(document.getElementById('poModal').classList.contains('open')) poNew(false);
 });
+
+/* ── the market drawer ───────────────────────────────────────
+   One scrim serves both surfaces, so dismissing it has to know which one is
+   up rather than assuming the modal. */
+function poDismiss(){
+  if(document.getElementById('mkDrawer').classList.contains('open')) mkOpen(false);
+  else poNew(false);
+}
+var PO_CONTRACTORS = ['Stone Bros', 'Apex Carpentry', 'FloorWorks', 'BrightElectric', 'ProPlumb'];
+var PO_USERS       = ['Christine Martin', 'M. Alvarez', 'G. Han', 'J. Duarte', 'S. Kwon'];
+/* What the market is, as the drawer holds it while open. Seeded to the market
+   the property is in; Cancel drops the edits by reseeding from here. */
+var MK = {
+  zips:        ['78754', '78753'],
+  managers:    ['Aaron Mosny'],
+  contractors: ['Stone Bros', 'BrightElectric'],
+  users:       ['Christine Martin']
+};
+var MK_SOURCE = {
+  managers:    function(){ return PO_MANAGERS; },
+  contractors: function(){ return PO_CONTRACTORS; },
+  users:       function(){ return PO_USERS; }
+};
+var MK_UI = {
+  zips:        {box:'mkZips'},
+  managers:    {box:'mkManagers', sel:'mk-mgr',  add:'Add a manager'},
+  contractors: {box:'mkContractors', sel:'mk-con',  add:'Add a contractor'},
+  users:       {box:'mkUsers', sel:'mk-user', add:'Add a user'}
+};
+function mkEsc(v){ return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/'/g,'&#39;'); }
+/* Chips are the modal's own (.po-chip-p), minus the role caption — every chip
+   in a field here is the same kind of thing, so a word repeating the label on
+   each one is noise. */
+function mkChips(key){
+  var ui = MK_UI[key];
+  document.getElementById(ui.box).innerHTML = MK[key].map(function(v){
+    return '<span class="po-chip-p">' + mkEsc(v)
+      + '<button type="button" onclick="mkDrop(\'' + key + '\',\'' + mkEsc(v) + '\')"'
+      + ' aria-label="Remove ' + mkEsc(v) + '">'
+      + '<svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6"/></svg></button></span>';
+  }).join('');
+  /* A picker only ever offers what is not already on. */
+  if(ui.sel){
+    document.getElementById(ui.sel).innerHTML = '<option value="">' + ui.add + '&hellip;</option>'
+      + MK_SOURCE[key]().filter(function(n){ return MK[key].indexOf(n) < 0; })
+          .map(function(n){ return '<option>' + mkEsc(n) + '</option>'; }).join('');
+  }
+}
+function mkAdd(key, sel){
+  if(sel.value && MK[key].indexOf(sel.value) < 0) MK[key].push(sel.value);
+  mkChips(key);
+}
+function mkDrop(key, v){
+  MK[key] = MK[key].filter(function(x){ return x !== v; });
+  mkChips(key);
+}
+/* Zip codes have no roster to pick from, so they are typed. Enter commits —
+   and so does a comma, because that is how anyone pastes a list of them. */
+function mkZipKey(e){
+  if(e.key !== 'Enter' && e.key !== ',') return;
+  e.preventDefault();
+  var v = e.target.value.trim().replace(/,$/, '');
+  if(/^\d{5}$/.test(v) && MK.zips.indexOf(v) < 0) MK.zips.push(v);
+  e.target.value = '';
+  mkChips('zips');
+}
+function mkOpen(on){
+  on = (on !== false);
+  document.getElementById('poScrim').classList.toggle('open', on);
+  document.getElementById('mkDrawer').classList.toggle('open', on);
+  if(on){
+    ['zips','managers','contractors','users'].forEach(mkChips);
+    document.getElementById('mk-name').focus();
+  }
+}
+function mkSave(){
+  var name = document.getElementById('mk-name').value.trim() || 'Austin';
+  document.getElementById('v-market').innerHTML =
+    '<a class="po-f-link" href="#" onclick="event.preventDefault();mkOpen()">' + mkEsc(name) + '</a>';
+  document.getElementById('i-market').value = name;
+  document.getElementById('mkTitle').textContent = name;
+  var chip = document.querySelector('.po-chip');
+  if(chip) chip.textContent = name;
+  mkOpen(false);
+}
 
 poRender();
 </script>

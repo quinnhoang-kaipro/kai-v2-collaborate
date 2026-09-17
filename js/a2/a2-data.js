@@ -68,18 +68,18 @@ const VER_ORDER = ['orig','co1','co2'];
    yet — which is the half the hand-off modal needs in order to say who is
    still outstanding. */
 const REVIEWERS = [
-  {who:'T. Okafor',  role:'Project manager'},
+  {who:'T. Okafor',  role:'Job manager'},
   {who:'S. Patel',   role:'Ops'},
   {who:'D. Reyes',   role:'Designer'},
   {who:'M. Alvarez', role:'Field Agent'},
 ];
 const REVIEWS = [
   {ver:'orig', who:'S. Patel',  role:'Ops',      date:'Apr 10, 2026'},
-  {ver:'orig', who:'T. Okafor', role:'Project manager',  date:'Apr 11, 2026'},
+  {ver:'orig', who:'T. Okafor', role:'Job manager',  date:'Apr 11, 2026'},
   {ver:'co1',  who:'D. Reyes',  role:'Designer', date:'Apr 20, 2026'},
-  {ver:'co1',  who:'T. Okafor', role:'Project manager',  date:'Apr 21, 2026'},
+  {ver:'co1',  who:'T. Okafor', role:'Job manager',  date:'Apr 21, 2026'},
   {ver:'co2',  who:'S. Patel',  role:'Ops',      date:'Apr 28, 2026'},
-  {ver:'co2',  who:'T. Okafor', role:'Project manager',  date:'Apr 29, 2026'},
+  {ver:'co2',  who:'T. Okafor', role:'Job manager',  date:'Apr 29, 2026'},
 ];
 // `budget` is stamped onto each version by stampVersionBudgets() — it is the
 // sum of the lines that exist at that point, not a figure kept by hand.
@@ -115,7 +115,7 @@ const SCOPE = [
      changes:[
        {ct:'product', ver:'orig', who:'D. Reyes', role:'Designer',
         rows:[{field:'Product', from:'(not selected)', to:'Diamond NOW Arcadia White Shaker'}]},
-       {ct:'value', ver:'co2', who:'T. Okafor', role:'Project manager',
+       {ct:'value', ver:'co2', who:'T. Okafor', role:'Job manager',
         rows:[{field:'Labor', from:'$3,000', to:'$3,180'},{field:'Amount', from:'$4,580', to:'$4,820', delta:'+$240'}]},
      ]},
     {code:'KIT-F362', name:'Countertops', opt:'Replace : quartz', gc:'Stone Bros',
@@ -127,7 +127,7 @@ const SCOPE = [
         rows:[{field:'Line added', add:'Countertops — laminate is delaminating at the sink', wasAmount:'$4,400'}]},
        {ct:'contractor', ver:'orig', who:'S. Patel', role:'Ops',
         rows:[{field:'Contractor', from:'Unassigned', to:'Apex Carpentry'}]},
-       {ct:'contractor', ver:'co2', who:'T. Okafor', role:'Project manager',
+       {ct:'contractor', ver:'co2', who:'T. Okafor', role:'Job manager',
         rows:[{field:'Contractor', from:'Apex Carpentry', to:'Stone Bros'}]},
      ]},
     {code:'KIT-E6C4', name:'Appliances', opt:'Replace : full suite', gc:'Apex Carpentry',
@@ -137,7 +137,7 @@ const SCOPE = [
      changes:[
        {ct:'added', ver:'orig', who:'M. Alvarez', role:'Field Agent',
         rows:[{field:'Line added', add:'Appliances — range and fridge are original to the build', wasAmount:'$3,410'}]},
-       {ct:'value', ver:'co2', who:'T. Okafor', role:'Project manager',
+       {ct:'value', ver:'co2', who:'T. Okafor', role:'Job manager',
         rows:[{field:'Amount', from:'$3,410', to:'$3,950', delta:'+$540'}]},
      ]},
     {code:'KIT-B914', name:'Backsplash', opt:'Add : subway tile', gc:'Apex Carpentry',
@@ -177,7 +177,7 @@ const SCOPE = [
         rows:[{field:'Line added', add:'Ceiling fan — resident asked for one during the walk', wasAmount:'$0'}]},
        {ct:'modifier', ver:'orig', who:'S. Patel', role:'Ops',
         rows:[{field:'Modifier added', add:'Resident pays'}]},
-       {ct:'removed', ver:'co2', who:'T. Okafor', role:'Project manager',
+       {ct:'removed', ver:'co2', who:'T. Okafor', role:'Job manager',
         rows:[{field:'Line removed', remove:'Ceiling fan — resident handling separately', wasAmount:'$0'}]},
      ]},
   ]},
@@ -215,7 +215,7 @@ const SCOPE = [
      desc:'Demo tub surround to the studs. New cement board, waterproofing, and tile to the ceiling. Contractor not yet assigned.',
      mods:['Required'], added:true,
      changes:[
-       {ct:'added', ver:'co2', who:'T. Okafor', role:'Project manager',
+       {ct:'added', ver:'co2', who:'T. Okafor', role:'Job manager',
         rows:[{field:'Line added', add:'Shower surround — failed moisture check behind the tub', wasAmount:'$2,860'}]},
      ]},
   ]},

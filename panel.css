@@ -4730,8 +4730,12 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    as more rows: on the tan, ruled top and bottom, inset from the left. No
    bold text anywhere in it — in this feed bold means a document is involved,
    and nothing here is. */
+/* No fill. One thing on this page is highlighted — the standing line, because
+   it is what is happening now — and a second tinted block competing with it
+   read as two current things. The band keeps its rules and its indent, which
+   is enough to group the rows without claiming any urgency. */
 .ov-walks{display:flex;flex-direction:column;gap:1px;margin:10px 0;
-  padding:10px 0 10px 16px;background:var(--sunken);
+  padding:9px 0 9px 16px;
   border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke);
   position:relative}
 /* No caption: the band's own surface says it is a different kind of thing,
@@ -4951,3 +4955,59 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
   .ov-cw-row > .ov-cw-n{grid-column:3;grid-row:1}
   .ov-cw-row > .ov-cw-by{grid-column:1 / -1;grid-row:2}
 }
+
+/* ── market drawer ───────────────────────────────────────────────────
+   The same panel the property page opens off its Market field, in the
+   Overview tab. Its shell borrows #drawer's numbers so the two drawers in
+   this product arrive the same way; only the fields inside are new, and they
+   are the panel's own field treatment rather than a second one.
+
+   Its own element rather than #drawer, which openDrawer() owns — sharing it
+   would mean one of them clearing the other's state on open. */
+#mkt-scrim{position:fixed;inset:0;background:rgba(26,26,26,.32);opacity:0;pointer-events:none;
+  transition:opacity .2s;z-index:300}
+#mkt-scrim.open{opacity:1;pointer-events:auto}
+#mkt-drawer{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:90vw;
+  background:var(--white);border-left:1px solid var(--stroke);
+  transform:translateX(100%);transition:transform .24s cubic-bezier(.4,0,.2,1);
+  z-index:301;display:flex;flex-direction:column;box-shadow:-8px 0 28px rgba(26,26,26,.12)}
+#mkt-drawer.open{transform:translateX(0)}
+@media (prefers-reduced-motion:reduce){ #mkt-drawer{transition:none} }
+.mkt-body{display:flex;flex-direction:column;gap:0}
+/* Sections divided by a rule rather than boxed — the drawer is already a box,
+   and a card inside a card is two edges saying one thing. */
+.mkt-sec{padding:16px 0;border-bottom:1px solid var(--stroke);
+  display:flex;flex-direction:column;gap:14px}
+.mkt-sec:first-child{padding-top:0}
+.mkt-sec:last-child{border-bottom:0}
+.mkt-sec-h{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--t3);margin-bottom:-4px}
+.mkt-f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.mkt-f label{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3)}
+.mkt-f label .opt{color:var(--midtone);font-weight:400;letter-spacing:.04em}
+.mkt-f input,.mkt-f select{width:100%;box-sizing:border-box;font-family:var(--body);
+  font-size:14px;color:var(--ink);background:var(--white);border:1px solid var(--stroke);
+  padding:9px 11px;outline:none;line-height:1.4;transition:border-color .12s,box-shadow .12s}
+.mkt-f input:hover,.mkt-f select:hover{border-color:var(--midtone)}
+.mkt-f input:focus,.mkt-f select:focus{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.mkt-f input::placeholder{color:var(--t3)}
+/* Chips sit under the control that adds them, so the pair reads as one field. */
+.mkt-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:3px}
+.mkt-chips:empty{display:none}
+.mkt-chip{display:inline-flex;align-items:center;gap:7px;padding:5px 8px 5px 10px;
+  background:var(--sunken);border:1px solid var(--stroke);font-size:12.5px;color:var(--ink)}
+.mkt-chip button{border:0;background:none;padding:0;cursor:pointer;color:var(--t3);
+  display:inline-flex;transition:color .12s}
+.mkt-chip button:hover{color:var(--error)}
+.mkt-chip svg{width:10px;height:10px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round}
+/* Actions pinned to the foot, so a long roster scrolls behind them. */
+.mkt-acts{flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;gap:10px;
+  padding:14px 18px;border-top:1px solid var(--stroke);background:var(--white)}
+.mkt-btn{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink);background:var(--white);
+  border:1px solid var(--stroke);padding:9px 14px;cursor:pointer;transition:all .12s}
+.mkt-btn:hover{border-color:var(--ink)}
+.mkt-btn.is-primary{background:var(--accent);border-color:var(--accent-deep,var(--ink))}
+.mkt-btn.is-primary:hover{background:var(--accent-deep,var(--accent));border-color:var(--ink)}
+.mkt-btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}

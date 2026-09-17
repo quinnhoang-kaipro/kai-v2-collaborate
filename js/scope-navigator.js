@@ -1324,7 +1324,7 @@ function deleteTask(id){
   const t=TASKS.find(x=>x.id===id); if(!t) return;
   // Change-order mode: stage a removal request instead of deleting the task.
   if(IS_CHANGE_ORDER){
-    if(!confirm(`Propose removing "${t.name}"? This is staged as a change order — the project manager has to approve before the task actually goes away.`)) return;
+    if(!confirm(`Propose removing "${t.name}"? This is staged as a change order — the job manager has to approve before the task actually goes away.`)) return;
     coAddChange({
       type: 'delete',
       taskId: t.id,
@@ -2227,8 +2227,8 @@ function openModAdd(id,btn){
   pop.innerHTML=`<div class="mod-pop-head">Add modifier</div>`+
     (avail.length?avail.map(m=>`<button class="mod-pop-opt" onclick="addMod(${id},'${m.id}')">
         ${m.label}<span class="mk">${m.kind==='financial'?'Financial':'Display'}</span></button>`).join('')
-      :`<div class="mod-pop-empty">All project modifiers applied</div>`)+
-    `<div class="mod-pop-foot">${(PROJECT_MODS.length)}/5 project modifiers</div>`;
+      :`<div class="mod-pop-empty">All job modifiers applied</div>`)+
+    `<div class="mod-pop-foot">${(PROJECT_MODS.length)}/5 job modifiers</div>`;
   document.body.appendChild(pop);
   const r=btn.getBoundingClientRect();
   pop.style.top=(r.bottom+6)+'px';
@@ -2428,7 +2428,7 @@ function dwPhotos(){
   // hideTag drops the chip that would only repeat the drawer's own title.
   const hideTag = t ? t.name : dwCtx.room;
   const cells = photos.map((p, i) => {
-    const label = (p.kind === 'group') ? (p.room || 'Project')
+    const label = (p.kind === 'group') ? (p.room || 'Job')
                 : (t ? t.name : ((TASKS.find(x => x.code === p.task) || {}).name || p.room));
     return _pgdPhotoFigHtml(p, i, label, hideTag);
   }).join('');
@@ -2622,7 +2622,7 @@ function dwNoteSetHidden(v){
   });
   const hint = document.getElementById('dwNoteHint');
   if(hint) hint.textContent = dwNoteHidden
-    ? 'Internal — visible to the project team only.'
+    ? 'Internal — visible to the job team only.'
     : 'External — the assigned contractor can see this note.';
 }
 
@@ -2678,7 +2678,7 @@ function dwNotes(notes, opts){
     const isMine = i < mineCount;
     const isSelf = IS_CONTRACTOR && n.who === MY_CONTRACTOR;
     const badge = IS_CONTRACTOR && !isSelf
-      ? `<span class="dw-note-ext" title="Sent to you by the project team">External · Request</span>`
+      ? `<span class="dw-note-ext" title="Sent to you by the job team">External · Request</span>`
       : '';
     const role = n.role ? `<span class="dw-note-role">${n.role}</span>` : '';
     // Level and visibility only exist on notes written through this
@@ -2775,7 +2775,7 @@ function dwNotes(notes, opts){
       </div>
     </div>
     <div class="dw-note-hint" id="dwNoteHint">${dwNoteHidden
-      ? 'Internal — visible to the project team only.'
+      ? 'Internal — visible to the job team only.'
       : 'External — the assigned contractor can see this note.'}</div>
     <textarea class="dw-note-input" placeholder="Add a note about this task…" oninput="dwNoteSetDraft(this.value)">${esc(dwNoteDraft||'')}</textarea>
     <div class="dw-note-composer-actions">
@@ -2790,7 +2790,7 @@ function taskNotes(t){
   const pool=[
     {who:'Greg Han', role:'Field agent', when:'Apr 18 · 9:42a', body:'Captured during initial scan. Existing condition worse than listing photos suggested — see the wide shot for context. Please confirm you can work around the plumbing stub on the east wall.'},
     {who:'Ada Novak', role:'Manager', when:'Apr 21 · 2:15p', body:'Flagged this line for you to confirm before we lock scope. Send back any concerns or a revised estimate and we\'ll adjust before publish.'},
-    {who:'Or Weiss', role:'Project manager', when:'Apr 22 · 8:30a', body:'Homeowner has approved the allowance shown. You\'re clear to proceed once the product SKU is picked. Ping me if the pricing runs long.'},
+    {who:'Or Weiss', role:'Job manager', when:'Apr 22 · 8:30a', body:'Homeowner has approved the allowance shown. You\'re clear to proceed once the product SKU is picked. Ping me if the pricing runs long.'},
     {who:'Apex Carpentry', role:'Contractor · you', when:'Apr 24 · 1:12p', body:'Measured on site. Will need an extra day for the return panel.'},
   ];
   return pool.slice(0, t.notes||0);

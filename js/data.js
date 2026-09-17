@@ -27,7 +27,7 @@ const STATUS = {
   in_review:   {label:'In review',      cls:'s-inreview'},
   complete:    {label:'Completed',      cls:'s-complete'},
   needs_rework:{label:'Rework',         cls:'s-rework'},
-  missing:     {label:'Missing details',cls:'s-missing'},
+  missing:     {label:'Missing info',cls:'s-missing'},
   approved:    {label:'Approved',       cls:'s-complete'},   // relabelled per stage — see approveDoneLabel
   edit_req:    {label:'Edit Requested', cls:'s-inreview'},
 };
@@ -101,7 +101,7 @@ const ROOMS = ['Kitchen','Living Room','Master Bath','Bathroom','Master Bed','Be
 const PHOTO_PEOPLE = [
   {who:'J. Chen',    role:'Field Agent'},
   {who:'M. Alvarez', role:'Field Agent'},
-  {who:'T. Okafor',  role:'Project manager'},
+  {who:'T. Okafor',  role:'Job manager'},
   {who:'S. Patel',   role:'Ops'},
   {who:'R. Brooks',  role:'Field Agent'},
 ];
@@ -240,7 +240,7 @@ function seedPhotos(){
       }
     });
   });
-  for(let i=0;i<9;i++) PHOTOS.push({id:_pid++, seed:900+i, room:'Project', kind:'unsorted', task:null, walk:pickWalk()});
+  for(let i=0;i<9;i++) PHOTOS.push({id:_pid++, seed:900+i, room:'Job', kind:'unsorted', task:null, walk:pickWalk()});
   // One pass at the end rather than threading it through each push.
   PHOTOS.forEach((ph, n) => Object.assign(ph, _seedPhotoProvenance(ph.walk, n)));
   _seedCurbsidePhotos();

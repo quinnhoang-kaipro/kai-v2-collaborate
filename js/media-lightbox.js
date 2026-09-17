@@ -87,7 +87,7 @@ function renderGallery(){
     html+=`<div class="ds-titleblock">
       <div class="ds-tb-row">
         <div class="ds-tb-project">
-          <span class="ds-tb-label">Project</span>
+          <span class="ds-tb-label">Job</span>
           <span class="ds-tb-name">3484 South Main St</span>
         </div>
         <div class="ds-tb-cell"><span class="ds-tb-label">Group / Task</span><span class="ds-tb-val">${groupCount} / ${taskCount}</span></div>

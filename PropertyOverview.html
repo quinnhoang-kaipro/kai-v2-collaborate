@@ -644,7 +644,7 @@ body.po-editing #poEditBtn{display:none}
 
             <div class="po-now">
               <div class="po-now-h">
-                <span class="po-lbl" id="poNowLbl">Projects</span>
+                <span class="po-lbl" id="poNowLbl">Jobs</span>
                 <button class="po-btn is-primary" type="button" onclick="poNew(true)">+ Start a job</button>
               </div>
               <div class="po-jobs" id="poNowJobs"></div>
@@ -673,7 +673,7 @@ body.po-editing #poEditBtn{display:none}
       <div class="po-band po-disc" id="poDisc">
         <button class="po-disc-h" type="button" onclick="poDiscToggle()" aria-expanded="false" aria-controls="poDiscBody">
           <span class="cv"><svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3"/></svg></span>
-          <span class="po-lbl">Property details</span>
+          <span class="po-lbl">Property info</span>
           <span class="sum" id="poDiscSum">3 bed &middot; 3 bath &middot; 1,422 sqft &middot; 0.101 acres</span>
         </button>
         <div class="po-disc-body" id="poDiscBody">
@@ -682,7 +682,7 @@ body.po-editing #poEditBtn{display:none}
             <button class="po-btn" id="poEditBtn" type="button" onclick="poEdit(true)">Edit</button>
             <span class="po-edit-acts">
               <button class="po-btn" type="button" onclick="poEdit(false)">Cancel</button>
-              <button class="po-btn is-primary" type="button" onclick="poSave()">Save details</button>
+              <button class="po-btn is-primary" type="button" onclick="poSave()">Save info</button>
             </span>
           </div>
           <dl class="po-grid" id="poGrid">
@@ -1028,8 +1028,8 @@ function poNow(){
   var host = document.getElementById('poNowJobs');
 
   document.getElementById('poNowLbl').innerHTML = live.length
-    ? 'Projects &middot; ' + live.length + ' active'
-    : 'Projects';
+    ? 'Jobs &middot; ' + live.length + ' active'
+    : 'Jobs';
 
   if(!live.length){
     host.innerHTML = '<div class="po-none"><span class="t">No job is open at this property. '

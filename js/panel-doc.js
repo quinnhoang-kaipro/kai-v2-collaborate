@@ -113,7 +113,7 @@ window.KAI_PANEL_SRC = `<!DOCTYPE html>
           <div class="sb-edit-banner" id="sbEditBanner">
             <div class="sb-edit-banner-l">
               <span class="sb-edit-banner-tag">Editing scope</span>
-              <span class="sb-edit-banner-body">Hand off for review when you're done and we'll notify the project manager.</span>
+              <span class="sb-edit-banner-body">Hand off for review when you're done and we'll notify the job manager.</span>
             </div>
           </div>
           <!-- Change-order banner removed — the approved-scope confirmation
@@ -197,7 +197,7 @@ window.KAI_PANEL_SRC = `<!DOCTYPE html>
   <div class="se-modal-cap">Scope is locked</div>
   <div class="se-modal-title">Approved scope — create a draft to edit</div>
   <div class="se-modal-body">
-    This scope has been approved and is currently in Construction. To make changes, we'll create a draft copy that you can submit for review. The current live scope stays untouched until the project manager approves the draft.
+    This scope has been approved and is currently in Construction. To make changes, we'll create a draft copy that you can submit for review. The current live scope stays untouched until the job manager approves the draft.
   </div>
   <div class="se-modal-actions">
     <button class="se-btn se-btn-secondary" onclick="closeEditConfirm()">Cancel</button>

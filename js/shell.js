@@ -25,7 +25,7 @@ function KAI_PANEL_DOC(qs){
 /* ── roles ───────────────────────────────────────────────────────────
    NOTE ON THE ID. There is one review role now — the Project manager — and
    its id is 'manager', which was never renamed when the role was. Read every
-   `role === 'manager'` as "is the project manager".
+   `role === 'manager'` as "is the job manager".
 
    The Manager role (id 'admin') is gone. Everything it did — reviewing the
    scope, approving a change order, signing the closeout off — belongs to the
@@ -37,7 +37,7 @@ function KAI_PANEL_DOC(qs){
    one who does not. Holding it is what makes a hand-off theirs to make. */
 const ROLES = [
   {id:'field_agent', name:'Field agent',    desc:'Holds the baton. Walks the property, builds the scope, and hands it off.'},
-  {id:'manager',     name:'Project manager',desc:'Edits, hands off and approves at any time.'},
+  {id:'manager',     name:'Job manager',desc:'Edits, hands off and approves at any time.'},
   /* The field agent without the baton. They can see the scope and weigh in —
      edit it while it is unlocked, mark it as done — but they own no stage, so
      they never hold the move and cannot hand it off. */
@@ -52,8 +52,8 @@ const rn = id => String(roleName(id) || id).toLowerCase();
 
 /* ── change-order hand-off ───────────────────────────────────────────
    A field agent looking at a change order under review holds no decision —
-   approving it is the project manager's. But they are not stuck: they can pass
-   the document on, to the project manager or to whoever should weigh in, with a
+   approving it is the job manager's. But they are not stuck: they can pass
+   the document on, to the job manager or to whoever should weigh in, with a
    note saying why. So their CTA is "Hand off" rather than a dead "Waiting on"
    gate.
 
@@ -63,7 +63,7 @@ const rn = id => String(roleName(id) || id).toLowerCase();
 
    The internal team only. Handing a change order to the renter or the
    contractor isn't a review, it's a disclosure. */
-/* Ordered by how far up the chain the person sits: the project manager, then
+/* Ordered by how far up the chain the person sits: the job manager, then
    the field agents. A hand-off is usually upward — you pass it to someone who
    can approve or unblock it — so the likeliest recipient is the one you do not
    have to scroll for. (Id note: 'manager' is the Project manager. See ROLES.) */
@@ -150,10 +150,10 @@ function coHandoffRowsHtml(){
   const q = coHandoffQuery.trim().toLowerCase();
   const team = coHandoffTeam().filter(p =>
     !q || p.name.toLowerCase().includes(q) || p.role.toLowerCase().includes(q));
-  if(!team.length) return `<div class="co-ho-none">No one by that name on this project.</div>`;
+  if(!team.length) return `<div class="co-ho-none">No one by that name on this job.</div>`;
   return team.map(p => {
     const on = coHandoffTo === p.id;
-    /* Only the project manager gets a second line, and it is always there rather
+    /* Only the job manager gets a second line, and it is always there rather
        than appearing on selection. What it says is the reason you might pick this
        row at all — that the hand-off could end in an approval rather than more
        work — and a reader cannot act on that if it only shows up after the
@@ -271,7 +271,7 @@ function handoffRosterHtml(){
   // The link ends the sentence rather than being pushed to the far edge.
   return `<div class="co-ho-rv-line"><span class="co-ho-rv-txt">${doneByLine(signed)}</span>${
       signed.length ? `<button type="button" class="co-ho-rv-more" onclick="toggleHandoffRoster()"
-        aria-expanded="${handoffRosterOpen}">${handoffRosterOpen ? 'Hide details' : 'See details'}</button>` : ''
+        aria-expanded="${handoffRosterOpen}">${handoffRosterOpen ? 'Hide info' : 'See info'}</button>` : ''
     }</div>
     ${handoffRosterOpen && signed.length ? `<div class="rv-list co-ho-rv-open">${reviewRowsHtml(st)}</div>` : ''}`;
 }
@@ -505,7 +505,7 @@ function renderScopeEditRequest(){
    regardless. */
 function canEditHere(){
   const r = state.role;
-  // Any time: the project manager, and the field agent holding the baton. The
+  // Any time: the job manager, and the field agent holding the baton. The
   // map puts the "if the artifact is not locked" caveat on the no-baton row only
   // — putting it there would be pointless if it applied to both — and the baton
   // holder's Submit scope CTA already assumes they can edit a scope that is out
@@ -579,7 +579,7 @@ function submitScopeAgain(){
   });
 }
 /* Tracking a live job is the field agent's move, but calling it finished is not
-   only theirs: the project manager watching the same board can close it out
+   only theirs: the job manager watching the same board can close it out
    without waiting to be handed it back. Not the change order — that one is an
    approval, and the CTA there is already the approval. */
 function canSubmitCloseoutHere(){
@@ -630,7 +630,7 @@ function turnMineFor(stage, twoStep, track){
     case 'awaiting-pub': return 'Approve and publish the scope to release it to the field.';
     case 'published':    return track === 'change_order'
                                 ? 'Review the change order and approve it, or request an edit if something is wrong.'
-                                : 'Add task progress to keep the project updated. Submit closeout once every task is complete.';
+                                : 'Add task progress to keep the job updated. Submit closeout once every task is complete.';
     case 'closeout':     return 'Compare before and after, then approve the closeout.';
     default:             return '';
   }
@@ -643,7 +643,7 @@ function turnYoursFor(stage, role, twoStep, track){
   const live = (stage === 'published' || stage === 'closeout' || stage === 'closeout-approved');
   const co   = (stage === 'published' && track === 'change_order');
   /* One review role now, so there is one answer per stage. The change order and
-     the closeout are the project manager's own move, which turnMineFor answers —
+     the closeout are the job manager's own move, which turnMineFor answers —
      what is left here is the two stages that belong to the field agent. */
   switch(role){
     case 'manager':
@@ -699,7 +699,7 @@ function turnNextFor(stage, twoStep, track){
     case 'published':    return track === 'change_order'
                                 ? 'The approved lines are released and the work carries on.'
                                 : `It goes to the ${rn('manager')} to review the closeout.`;
-    case 'closeout':     return 'The project is complete.';
+    case 'closeout':     return 'The job is complete.';
     default:             return '';
   }
 }
@@ -1040,14 +1040,14 @@ function turnRoleFor(stage, twoStep){
   switch(stage){
     /* The scope is built on site, so handing it off is the field agent's call.
        Everyone with edit access can still write to a draft — that is what draft
-       means — but the submission is theirs. Once submitted the project manager
+       means — but the submission is theirs. Once submitted the job manager
        owns it. */
     case 'edit':          return 'field_agent';
     case 'submitted':     return 'manager';
     case 'reviewing':     return 'manager';
     case 'review-done':   return 'manager';
     /* 2-step used to split these between two people. With one review role it
-       only adds a step, and both halves are the project manager's. */
+       only adds a step, and both halves are the job manager's. */
     case 'awaiting-pub':  return 'manager';
     /* A live job belongs to the field agent: they are the ones on site, so
        tracking the work and calling it finished is theirs. A change order is the
@@ -1090,7 +1090,7 @@ const STAGES = [
   // will act as the closeout review surface until a dedicated Compare tab is
   // wired in. Compare tool still exists in ProjectReview_Compare.html for reuse.
   {id:'closeout',      name:'Closeout',       sub:'Compare before/after',  iframe:'ProjectReview_ScopePanel_ShopEdit.html'},
-  {id:'closeout-approved', name:'Closeout approved', sub:'Project complete', iframe:'ProjectReview_ScopePanel_ShopEdit.html'},
+  {id:'closeout-approved', name:'Closeout approved', sub:'Job complete', iframe:'ProjectReview_ScopePanel_ShopEdit.html'},
 ];
 
 // 5-step user-facing model — Edit · Review · Publish · Work (Labor + Materials) · Close out.
@@ -1143,7 +1143,7 @@ const ROLE_ACCESS = {
   // view to hand it on. Without this, switching to field agent at a live stage
   // bounced them back to 'submitted'.
   field_agent: ['edit','submitted','published'],
-  // 'edit' because the project manager edits at any time. It was the Manager's
+  // 'edit' because the job manager edits at any time. It was the Manager's
   // row that carried the draft stage; with that role gone, this one needs it or
   // render() bounces them off every draft preset.
   manager:     ['edit','submitted','reviewing','review-done','awaiting-pub','published','closeout','closeout-approved'],
@@ -1177,11 +1177,11 @@ function homeStage(role, projectStage){
    should be. Deriving it keeps the sequence contiguous in both modes and
    removes the second source of truth. */
 const PRESETS = [
-  {id:'empty-draft',        name:'Empty draft',                desc:'Fresh project, no tasks. Start building the scope from scratch.',
+  {id:'empty-draft',        name:'Empty draft',                desc:'Fresh job, no tasks. Start building the scope from scratch.',
     state:{role:'manager', projectStage:'edit', viewStage:'edit', scopeSeed:'empty'}},
   {id:'populated-draft',    name:'Populated draft',            desc:'Scope pre-built with tasks across all rooms. Ready to hand off for review.',
     state:{role:'manager', projectStage:'edit', viewStage:'edit', scopeSeed:'full'}},
-  {id:'mid-review',         name:'Handed off, in review', desc:'Scope has been handed off and the project manager is actively reviewing tasks.',
+  {id:'mid-review',         name:'Handed off, in review', desc:'Scope has been handed off and the job manager is actively reviewing tasks.',
     state:{role:'manager', projectStage:'reviewing', viewStage:'reviewing', scopeSeed:'full'}},
   // Only relevant when the 2-step approval flow is on — filtered out by renderPresets otherwise.
   {id:'awaiting-publish',   name:'Review complete, awaiting publish', desc:'Admin approved the review. Manager needs to approve and publish (2-step).', twoStepOnly:true,
@@ -1194,7 +1194,7 @@ const PRESETS = [
     state:{role:'manager', projectStage:'published', viewStage:'published', scopeSeed:'full', workTrack:'change_order'}},
   {id:'closeout',           name:'Close out review',           desc:'Work is done. Admin comparing before/after photos to sign off.',
     state:{role:'manager', projectStage:'closeout', viewStage:'closeout', scopeSeed:'full'}},
-  {id:'closeout-approved',  name:'Closeout approved',          desc:'Admin has signed off. Project is complete — read-only view.',
+  {id:'closeout-approved',  name:'Closeout approved',          desc:'Admin has signed off. Job is complete — read-only view.',
     state:{role:'manager', projectStage:'closeout-approved', viewStage:'closeout-approved', scopeSeed:'full'}},
 ];
 function presetLabel(p, n){ return n == null ? p.name : `Step ${n} · ${p.name}`; }
@@ -1236,7 +1236,7 @@ function loadState(){
 }
 /* A state saved before the Manager role was removed still says role:'admin',
    which is in no ROLES entry and no ROLE_ACCESS row — render() would find no
-   accessible stage at all. Everything that role did is the project manager's
+   accessible stage at all. Everything that role did is the job manager's
    now, so that is where it lands. */
 function _withKnownRole(st){
   if(!ROLES.some(r => r.id === st.role)) st.role = DEFAULTS.role;
@@ -1534,7 +1534,7 @@ function renderDispatch(){
       <div class="dsp-title">Dispatch scope</div>
       <div class="dsp-meta">
         <div class="dsp-addr">${DISPATCH_PROJECT.address}</div>
-        <div class="dsp-ref">Project #${DISPATCH_PROJECT.ref}</div>
+        <div class="dsp-ref">Job #${DISPATCH_PROJECT.ref}</div>
       </div>
       ${body}
       <div class="dsp-acts">
@@ -2047,7 +2047,7 @@ function renderStages(){
       </svg>
       <span class="stages-completed-t">Closeout approved</span>
       <span class="stages-completed-sep">·</span>
-      <span class="stages-completed-sub">Project is completed</span>
+      <span class="stages-completed-sub">Job is completed</span>
     </div>`;
     return;
   }
@@ -2076,7 +2076,7 @@ function renderStages(){
   const turnChip = _turn.role
     ? `<button class="stage-turn${_turn.mine ? ' is-mine' : ''}" type="button" aria-haspopup="dialog"
          onclick="event.stopPropagation();toggleStatePop('.stage.active .stage-turn')"
-         title="${_turn.mine ? 'Your move' : 'With ' + _turn.who + ' (' + turnRoleName + ')'} — opens the detail"
+         title="${_turn.mine ? 'Your move' : 'With ' + _turn.who + ' (' + turnRoleName + ')'} — opens the info"
          ><span class="stage-turn-lbl">${_turn.mine ? 'Your move' : 'With ' + _turn.who}</span>
          <span class="stage-turn-car"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg></span></button>`
     : '';
@@ -2122,7 +2122,7 @@ function renderStages(){
     const isScope = (i === 0);
     return `<div class="stage ${cls}${isScope ? ' is-scope-info' : ''}"
       ${isScope ? `role="button" tabindex="0" aria-haspopup="dialog"
-        title="${(DOC_STATE[docState] || {}).label || ''} — press for detail"
+        title="${(DOC_STATE[docState] || {}).label || ''} — press for info"
         onclick="event.stopPropagation();toggleStatePop('.stage.is-scope-info')"
         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleStatePop('.stage.is-scope-info');}"` : ''}>
       <span class="stage-num">${i+1}</span>
@@ -2207,7 +2207,7 @@ const STATUS_META={
   'awaiting-pub':{cls:'review-done',label:'Awaiting publish'},
   published:   {cls:'published',   label:'Published · live'},
   closeout:    {cls:'review',      label:'Closeout review'},
-  'closeout-approved':{cls:'published',label:'Project complete'},
+  'closeout-approved':{cls:'published',label:'Job complete'},
 };
 function renderActBar(){
   // Caption text is placed under the active stepper node by renderStages().
@@ -2249,7 +2249,7 @@ function messageFor(role, stage){
   if(stage==='published'){
     if(role==='contractor') return `Track labor progress and shop materials with Kai.`;
     if(role==='renter') return `Read-only view. Pricing and admin tools are hidden.`;
-    return `Track task progress here. Once all tasks are marked as complete, the project moves into Closeout.`;
+    return `Track task progress here. Once all tasks are marked as complete, the job moves into Closeout.`;
   }
   if(stage==='closeout') return `Compare initial vs final photos to sign off.`;
   return '';
@@ -2738,7 +2738,7 @@ function confirmPublish(){
   openModal({
     icon:'send',
     title:'Publish scope?',
-    body:`Publishing makes this scope shareable with external parties (contractor, renter). It also triggers any pending purchase orders.<ul><li>Contractor can begin shopping materials</li><li>Renter gets a read-only view (no pricing)</li><li>Scope becomes the source of truth for closeout comparison</li></ul>This action can be reversed by the project manager.`,
+    body:`Publishing makes this scope shareable with external parties (contractor, renter). It also triggers any pending purchase orders.<ul><li>Contractor can begin shopping materials</li><li>Renter gets a read-only view (no pricing)</li><li>Scope becomes the source of truth for closeout comparison</li></ul>This action can be reversed by the job manager.`,
     confirm:'Publish',
     confirmKind:'primary',
     onConfirm:()=>{
@@ -2751,7 +2751,7 @@ function approveCloseout(){
   openModal({
     icon:'check',
     title:'Approve closeout?',
-    body:`This will sign off on the closeout as reviewed and mark the project as complete. This action cannot be undone from the demo.`,
+    body:`This will sign off on the closeout as reviewed and mark the job as complete. This action cannot be undone from the demo.`,
     confirm:'Approve closeout',
     onConfirm:()=>{
       // Advance to the terminal "closeout-approved" substage — stepper
@@ -2760,7 +2760,7 @@ function approveCloseout(){
       viewStage = 'closeout-approved';
       saveState();
       render();
-      toast('Closeout approved · project complete');
+      toast('Closeout approved · job complete');
     }
   });
 }

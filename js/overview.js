@@ -67,6 +67,17 @@ const OVERVIEW_SEED = {
     {trade:'Masonry',      who:'Old Town Masonry',      tasks:0},
   ],
   unassigned: {amount:'$2,000', tasks:10},
+  /* The market the property sits in, and the few defaults a market carries
+     into every job on it. Held here rather than derived: nothing else in the
+     prototype models a market, and the Market field needs somewhere to go. */
+  market: {
+    name:        'Atlanta',
+    zips:        ['30315', '30316'],
+    template:    'ATL Metro Turn Template 01:09:26',
+    managers:    ['T. Okafor'],
+    contractors: ['Stone Bros', 'Apex Carpentry'],
+    users:       ['M. Alvarez', 'S. Patel']
+  },
   property: [
     {k:'KT ID',       v:'1234'},   {k:'Square feet', v:'1,590'},
     {k:'Beds',        v:'3'},      {k:'Acreage',     v:'0.11'},
@@ -86,7 +97,7 @@ function _ovPeople(){
   const roster = (typeof REVIEWERS !== 'undefined') ? REVIEWERS : [];
   const find = role => (roster.find(p => p.role.toLowerCase() === role) || {}).who;
   return {
-    manager: find('project manager') || 'T. Okafor',
+    manager: find('job manager') || 'T. Okafor',
     agent:   find('field agent')     || 'M. Alvarez',
   };
 }
@@ -128,7 +139,7 @@ function _ovStanding(){
   ];
 }
 function _ovStandingHtml(){
-  return `<div class="ov-standing" role="group" aria-label="Project status">${
+  return `<div class="ov-standing" role="group" aria-label="Job status">${
     _ovStanding().map(seg =>
       `<span class="ov-stand ov-stand-${seg.k}">${esc(seg.v)}</span>`).join('')}</div>`;
 }
@@ -212,7 +223,7 @@ function _ovTrail(){
        it for approval" restated the hand-off directly above it and the
        In review chip beside the title — three ways of saying one thing. */
     if(id !== pending){
-      evs.push({who:people.manager, role:'Project manager', verb:'approved',
+      evs.push({who:people.manager, role:'Job manager', verb:'approved',
                 when:m.date, kind:'approved'});
     }
     /* Newest first, like the documents themselves. The chain is built in the
@@ -233,7 +244,7 @@ function _ovTrail(){
       {...author, verb:'started', when:C.opened, kind:'start'},
       {...author, verb:'handed off', to:people.manager, when:C.handed, kind:'handoff'},
       ...(done
-        ? [{who:people.manager, role:'Project manager', verb:'approved',
+        ? [{who:people.manager, role:'Job manager', verb:'approved',
             when:C.approved, kind:'approved'}]
         : []),
     ].reverse()});
@@ -467,7 +478,7 @@ function ovAccessToggle(btn){
        state — a caret alone left "See access details" sitting above the
        details it had already shown. */
     const t = btn.querySelector('.ov-access-cta-t');
-    if(t) t.textContent = _ovAccessOpen ? 'Hide access details' : 'See access details';
+    if(t) t.textContent = _ovAccessOpen ? 'Hide access info' : 'See access info';
   }
 }
 function ovToggleChanges(verId, btn){
@@ -500,7 +511,7 @@ function _ovWalksBetween(older, newer){
     return !isNaN(d) && d >= from && d <= to;
   }).map(w => {
     const shots = photos.filter(ph => ph.walk === w.id);
-    const rooms = new Set(shots.map(ph => ph.room).filter(r => r && r !== 'Project'));
+    const rooms = new Set(shots.map(ph => ph.room).filter(r => r && r !== 'Job'));
     const codes = new Set(shots.map(ph => ph.task).filter(Boolean));
     const hit   = all.filter(t => codes.has(t.code));
     const notes = hit.reduce((n, t) => n + (t.notes || 0), 0);
@@ -572,7 +583,7 @@ function _ovSiteRuns(older, newer){
   const byRoom = ts => {
     const m = new Map();
     ts.forEach(t => {
-      const r = t.room || 'Project';
+      const r = t.room || 'Job';
       if(!m.has(r)) m.set(r, []);
       m.get(r).push({code:t.code, name:t.name});
     });
@@ -864,13 +875,15 @@ function _ovSec(label, body, cls, action){
    being escaped. */
 function _ovFieldsHtml(rows){
   return `<dl class="ov-fields">${rows.filter(Boolean).map(r => `
-    <div class="ov-field${r.cls ? ' ' + r.cls : ''}"><dt>${esc(r.k)}</dt><dd>${r.html || esc(r.v)}</dd></div>`).join('')}</dl>`;
+    <div class="ov-field${r.cls ? ' ' + r.cls : ''}"><dt>${r.klink
+      ? `<a class="ov-field-link" href="#" onclick="event.preventDefault();ovMarketOpen()">${esc(r.k)}</a>`
+      : esc(r.k)}</dt><dd>${r.html || esc(r.v)}</dd></div>`).join('')}</dl>`;
 }
 /* The corner control. Nothing in the prototype edits these fields, so it says
    where the change would be made rather than pretending to open a form. */
 function ovInfoEdit(which){
   if(typeof toast === 'function')
-    toast(`${which} details are edited in the property record`);
+    toast(`${which} info is edited in the property record`);
 }
 /* Templates are their own thing elsewhere in the product — the name is the
    way to it, so it is a link rather than a line of text that happens to name
@@ -898,7 +911,13 @@ function _ovPropFields(){
   const g = k => (OVERVIEW_SEED.property.find(r => r.k === k) || {}).v || '';
   return ['Square feet', 'Beds', 'Baths', 'Year built', 'Acreage', 'Garage', 'Market', 'KT ID']
     .map(k => ({k:k, v:g(k)}))
-    .filter(r => r.v);
+    .filter(r => r.v)
+    /* Market is the one property fact that is a thing of its own rather than a
+       measurement, so both halves of the row go to it — the label and the
+       name, the way the property page does it. */
+    .map(r => r.k !== 'Market' ? r : {k:r.k, v:r.v, klink:true, html:
+      `<a class="ov-field-link" href="#" onclick="event.preventDefault();ovMarketOpen()"
+        >${esc(MARKET.name || r.v)}</a>`});
 }
 
 function renderOverview(){
@@ -919,7 +938,7 @@ function renderOverview(){
   const stats = `<div class="ov-stats">
     ${_ovStat('Budget', _ovBudget())}
     ${_ovStat('Scope due', S.scopeDue)}
-    ${_ovStat('Project end', S.endDate)}
+    ${_ovStat('Job end', S.endDate)}
     ${_ovStat('Notes', String(notes.length), "openScopeDrawer('notes')")}
     ${_ovStat('Photos', String(photoCount), "openScopeDrawer('photos')")}
   </div>`;
@@ -939,7 +958,7 @@ function renderOverview(){
               aria-controls="ovAccessBody" onclick="ovAccessToggle(this)">
         <span class="ov-sec-h">Getting in</span>
         <span class="ov-access-cta">
-          <span class="ov-access-cta-t">${_ovAccessOpen ? 'Hide access details' : 'See access details'}</span>
+          <span class="ov-access-cta-t">${_ovAccessOpen ? 'Hide access info' : 'See access info'}</span>
           <svg class="ov-access-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
         </span>
       </button>
@@ -966,22 +985,22 @@ function renderOverview(){
   const _editBtn = which =>
     `<button type="button" class="ov-sec-edit" onclick="ovInfoEdit('${which}')">Edit</button>`;
   const _tplName = S.template.name;
-  const jobSec = _ovSec('Project info', _ovFieldsHtml([
+  const jobSec = _ovSec('Job info', _ovFieldsHtml([
     /* The two long values share the first column, one under the other, and
        that column is given the extra width — an address and a template name
        both wrap at the measure the short fields are sized for, and wrapping
        them in a narrow track pushed the rows below out of line. */
-    {k:'Project name',    v:S.address, cls:'is-wide'},
-    {k:'Project ID',      v:S.projectId},
-    {k:'Project type',    v:S.type},
-    {k:'Project manager', v:people.manager},
+    {k:'Job name',    v:S.address, cls:'is-wide'},
+    {k:'Job ID',      v:S.projectId},
+    {k:'Job type',    v:S.type},
+    {k:'Job manager', v:people.manager},
     {k:'Field agent',     v:people.agent},
     {k:'General contractor', v:S.gc},
     {k:'Template',        cls:'is-wide2', html:`<a class="ov-field-link" href="#"
         onclick="event.preventDefault();ovOpenTemplate('${esc(_tplName).replace(/'/g, "\\'")}')"
         >${esc(_tplName)}</a>`},
     {k:'Last updated',    v:S.updated},
-  ]), 'ov-job', _editBtn('Project'));
+  ]), 'ov-job', _editBtn('Job'));
   const propSec = _ovSec('Property info',
     _ovFieldsHtml(_ovPropFields()) + accessDetail, 'ov-job ov-prop', _editBtn('Property'));
 
@@ -1202,4 +1221,169 @@ function _ovHoverBind(){
   document.addEventListener('click', _ovHoverHide, true);
   window.addEventListener('resize', _ovHoverHide);
   document.addEventListener('keydown', e => { if(e.key === 'Escape') _ovHoverHide(); });
+}
+
+/* ── the market, from the side ───────────────────────────────────────
+   The property page has this drawer; the Overview tab's Market field goes to
+   the same place, so it has the same one. Built here rather than in the
+   panel's markup because it is the only thing that opens it, and a second
+   permanent drawer in panel-doc.js would sit in every page that loads the
+   panel whether or not it has a market to show.
+
+   It reuses the panel's own drawer chrome — #drawer's shell, head and close —
+   rather than inventing a second one; only the fields inside are new. The
+   task drawer keeps its element, since openDrawer() owns that one's state. */
+const MARKET = (typeof OVERVIEW_SEED !== 'undefined' && OVERVIEW_SEED.market) || {};
+/* Rosters the pickers draw from. Read off the data the rest of the prototype
+   already uses, so the names in here are names that appear elsewhere. */
+function _mktRoster(key){
+  if(key === 'contractors') return (typeof CONTRACTORS !== 'undefined') ? CONTRACTORS : [];
+  const people = (typeof REVIEWERS !== 'undefined') ? REVIEWERS.map(r => r.who) : [];
+  const agents = (typeof PHOTO_PEOPLE !== 'undefined') ? PHOTO_PEOPLE.map(p => p.who) : [];
+  const all = [...new Set([...people, ...agents])];
+  return key === 'managers'
+    ? all.filter(n => (REVIEWERS || []).some(r => r.who === n && /manager/i.test(r.role)))
+        .concat(all).filter((n, i, a) => a.indexOf(n) === i)
+    : all;
+}
+const _MKT_FIELDS = [
+  {key:'managers',    label:'Job managers',  add:'Add a manager'},
+  {key:'contractors', label:'Contractors',   add:'Add a contractor'},
+  {key:'users',       label:'Users',         add:'Add a user'}
+];
+function _mktChipsHtml(key){
+  return (MARKET[key] || []).map(v => `<span class="mkt-chip">${esc(v)}
+    <button type="button" onclick="ovMarketDrop('${esc(key)}','${esc(v).replace(/'/g, "\\'")}')"
+      aria-label="Remove ${esc(v)}"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6"/></svg></button>
+  </span>`).join('');
+}
+function _mktPickerHtml(f){
+  const taken = MARKET[f.key] || [];
+  const opts = _mktRoster(f.key).filter(n => taken.indexOf(n) < 0)
+    .map(n => `<option>${esc(n)}</option>`).join('');
+  return `<div class="mkt-f">
+    <label for="mkt-${f.key}">${esc(f.label)} <span class="opt">optional</span></label>
+    <select id="mkt-${f.key}" onchange="ovMarketAdd('${f.key}', this)">
+      <option value="">${esc(f.add)}&hellip;</option>${opts}
+    </select>
+    <div class="mkt-chips" id="mktChips-${f.key}">${_mktChipsHtml(f.key)}</div>
+  </div>`;
+}
+function _mktBodyHtml(){
+  const tpl = ['ATL Metro Turn Template 01:09:26', 'ATL Acquisition Inspection 04:22:26',
+               'Maintenance — Standard'];
+  return `<div class="mkt-sec">
+      <div class="mkt-f">
+        <label for="mkt-name">Name</label>
+        <input id="mkt-name" value="${esc(MARKET.name || '')}">
+      </div>
+      <div class="mkt-f">
+        <label for="mkt-zip">Zip codes</label>
+        <input id="mkt-zip" inputmode="numeric" placeholder="Type a zip code, then Enter"
+               onkeydown="ovMarketZip(event)">
+        <div class="mkt-chips" id="mktChips-zips">${_mktChipsHtml('zips')}</div>
+      </div>
+    </div>
+    <div class="mkt-sec">
+      <div class="mkt-sec-h">Defaults for new jobs</div>
+      <div class="mkt-f">
+        <label for="mkt-template">Job template <span class="opt">optional</span></label>
+        <select id="mkt-template">
+          <option value="">No template</option>
+          ${tpl.map(t => `<option${t === MARKET.template ? ' selected' : ''}>${esc(t)}</option>`).join('')}
+        </select>
+      </div>
+      ${_mktPickerHtml(_MKT_FIELDS[0])}
+    </div>
+    <div class="mkt-sec">
+      <div class="mkt-sec-h">Who works here</div>
+      ${_mktPickerHtml(_MKT_FIELDS[1])}
+      ${_mktPickerHtml(_MKT_FIELDS[2])}
+    </div>`;
+}
+let _mktEl = null, _mktScrim = null;
+function ovMarketOpen(){
+  if(!_mktEl){
+    _mktScrim = document.createElement('div');
+    _mktScrim.id = 'mkt-scrim';
+    _mktScrim.onclick = ovMarketClose;
+    _mktEl = document.createElement('aside');
+    _mktEl.id = 'mkt-drawer';
+    _mktEl.setAttribute('role', 'dialog');
+    _mktEl.setAttribute('aria-modal', 'true');
+    _mktEl.setAttribute('aria-label', 'Market');
+    document.body.appendChild(_mktScrim);
+    document.body.appendChild(_mktEl);
+    document.addEventListener('keydown', e => {
+      if(e.key === 'Escape' && _mktEl && _mktEl.classList.contains('open')) ovMarketClose();
+    });
+  }
+  _mktEl.innerHTML = `<div class="dw-head"><div class="dw-top">
+      <div>
+        <div class="dw-task">Market</div>
+        <div class="dw-title" id="mktTitle">${esc(MARKET.name || '')}</div>
+      </div>
+      <button class="dw-close" onclick="ovMarketClose()" aria-label="Close"><svg viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-linecap="round"/></svg></button>
+    </div></div>
+    <div class="dw-body mkt-body">${_mktBodyHtml()}</div>
+    <div class="mkt-acts">
+      <button class="mkt-btn" type="button" onclick="ovMarketClose()">Cancel</button>
+      <button class="mkt-btn is-primary" type="button" onclick="ovMarketSave()">Update market</button>
+    </div>`;
+  requestAnimationFrame(() => {
+    _mktScrim.classList.add('open');
+    _mktEl.classList.add('open');
+    const n = document.getElementById('mkt-name');
+    if(n) n.focus();
+  });
+}
+function ovMarketClose(){
+  if(!_mktEl) return;
+  _mktEl.classList.remove('open');
+  _mktScrim.classList.remove('open');
+}
+/* Only the field that changed is redrawn — rebuilding the whole body would
+   throw away whatever is half-typed in the name. */
+function _mktSync(key){
+  const box = document.getElementById('mktChips-' + key);
+  if(box) box.innerHTML = _mktChipsHtml(key);
+  const sel = document.getElementById('mkt-' + key);
+  const f = _MKT_FIELDS.find(x => x.key === key);
+  if(sel && f){
+    const taken = MARKET[key] || [];
+    sel.innerHTML = `<option value="">${esc(f.add)}&hellip;</option>`
+      + _mktRoster(key).filter(n => taken.indexOf(n) < 0)
+          .map(n => `<option>${esc(n)}</option>`).join('');
+  }
+}
+function ovMarketAdd(key, sel){
+  if(sel.value && (MARKET[key] || []).indexOf(sel.value) < 0) MARKET[key].push(sel.value);
+  _mktSync(key);
+}
+function ovMarketDrop(key, v){
+  MARKET[key] = (MARKET[key] || []).filter(x => x !== v);
+  _mktSync(key);
+}
+/* Zip codes have no roster, so they are typed. Enter commits, and so does a
+   comma — that is how anyone pastes a list of them. */
+function ovMarketZip(e){
+  if(e.key !== 'Enter' && e.key !== ',') return;
+  e.preventDefault();
+  const v = e.target.value.trim().replace(/,$/, '');
+  if(/^\d{5}$/.test(v) && MARKET.zips.indexOf(v) < 0) MARKET.zips.push(v);
+  e.target.value = '';
+  _mktSync('zips');
+}
+function ovMarketSave(){
+  const el = document.getElementById('mkt-name');
+  const name = (el && el.value.trim()) || MARKET.name;
+  MARKET.name = name;
+  const tpl = document.getElementById('mkt-template');
+  if(tpl) MARKET.template = tpl.value;
+  /* The Market field reads MARKET.name, so the tab has to repaint for the
+     rename to show. */
+  if(typeof renderOverview === 'function' && typeof workMode !== 'undefined'
+     && workMode === 'overview') renderOverview();
+  if(typeof toast === 'function') toast(`${name} updated`);
+  ovMarketClose();
 }
