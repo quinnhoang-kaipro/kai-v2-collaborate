@@ -1330,12 +1330,17 @@ function ovMarketOpen(){
       <button class="mkt-btn" type="button" onclick="ovMarketClose()">Cancel</button>
       <button class="mkt-btn is-primary" type="button" onclick="ovMarketSave()">Update market</button>
     </div>`;
-  requestAnimationFrame(() => {
-    _mktScrim.classList.add('open');
-    _mktEl.classList.add('open');
-    const n = document.getElementById('mkt-name');
-    if(n) n.focus();
-  });
+  /* Reflow, then open, both synchronously. Deferring the class to a frame
+     later meant the first click after the drawer is built could land before
+     that frame ran and leave it closed with its content already in it — the
+     second click worked, which is the worst kind of bug to meet first.
+     Reading offsetWidth gives the transition a start it can animate from,
+     which is the only thing the frame was there for. */
+  void _mktEl.offsetWidth;
+  _mktScrim.classList.add('open');
+  _mktEl.classList.add('open');
+  const n = document.getElementById('mkt-name');
+  if(n) n.focus();
 }
 function ovMarketClose(){
   if(!_mktEl) return;
