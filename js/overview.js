@@ -1642,7 +1642,7 @@ function _ovHoverBind(){
   if(document.body.dataset.ovHoverBound) return;
   document.body.dataset.ovHoverBound = '1';
   const hit = e => e.target && e.target.closest
-    ? e.target.closest('.ov-ch-task, .ov-ch-grp, .ov-tr-doc-n, [data-hv-product]') : null;
+    ? e.target.closest('.ov-ch-task, .ov-ch-grp, .ov-tr-doc-n, [data-hv-product], .reg-task-name') : null;
   document.addEventListener('mouseover', e => {
     const el = hit(e);
     if(!el || el === _ovHoverFor) return;
