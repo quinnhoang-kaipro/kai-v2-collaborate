@@ -2848,7 +2848,7 @@ const _WORK_MODES_ALL = [
   {id:'shop',     label:'Editor'},
   {id:'floorplan',label:'Measurements'},   // id stays: it's the URL param and dispatch key
   {id:'pano',     label:'Progress'},
-  {id:'artifact', label:'Record'},
+  {id:'artifact', label:'Register'},
   {id:'artifact2',label:'Artifact 2'},   // scope change history — js/a2/*.js
 ];
 const _projModeParam = new URLSearchParams(window.__KAI_QS || window.location.search).get('projMode');
@@ -2933,10 +2933,10 @@ let openHistoricalId = null;
 /* Opening a document is arriving somewhere new, so it starts at the top.
    #workBody keeps its scroll position across an innerHTML swap, which landed
    you partway down a scope you had never seen — at whatever depth you had
-   scrolled the Record to.
+   scrolled the Register to.
 
    The reset lives here rather than in renderArtifact: that runs again on every
-   re-render, including expanding a row in the Record's ledger, and resetting
+   re-render, including expanding a row in the Register's ledger, and resetting
    there would yank you to the top mid-read. Only navigation resets. rAF so it
    lands after the new content has been laid out. */
 function _artToTop(){

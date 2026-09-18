@@ -309,7 +309,7 @@ function _renderRegisterSection(){
   return `<section class="art-sec art-reg">
     <header class="art-sec-hdr">
       <div class="art-sec-hdr-l">
-        <h2 class="art-sec-title">Record</h2>
+        <h2 class="art-sec-title">Register</h2>
         <p class="art-sec-desc">Every event that changed the job total, and how it is classified today.</p>
       </div>
     </header>
@@ -545,7 +545,7 @@ function _renderHistoricalDoc(v){
   const eyebrow = isOriginal ? 'Original scope' : `Change order ${v.num - 1}`;
   return `<div class="copy-doc-wrap hist-doc-wrap">
     <div class="copy-crumb hist-crumb">
-      <button class="copy-crumb-back" onclick="closeHistorical()" title="Back to the Record">
+      <button class="copy-crumb-back" onclick="closeHistorical()" title="Back to the Register">
         <span aria-hidden="true">‹</span> Back
       </button>
       <span class="copy-crumb-div"></span>

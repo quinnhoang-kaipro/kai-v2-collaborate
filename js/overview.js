@@ -270,7 +270,7 @@ function _ovTrail(){
        document began — and starting from the previous budget would leave the
        chain short by exactly those. So the opening balance is the document's
        own worth less everything the chain accounts for, which makes the last
-       tenure land on the figure the Record also reports. */
+       tenure land on the figure the Register also reports. */
     const edits = chain.map(h => _ovEditsBy(id, h.who));
     const attributed = edits.reduce((sum, e) => sum + (e ? e.money : 0), 0);
     let running = (m.budget != null ? m.budget : attributed) - attributed;
@@ -390,7 +390,7 @@ function _ovTaskChangeSummary(task, verId){
 
 /* What a version changed in total, pooled across everyone who touched it.
    The Activity does not ask this any more — it reports per person, holder by
-   holder — but the Record's ledger does: a change order's own row is about
+   holder — but the Register's ledger does: a change order's own row is about
    the document, not about who was carrying it. */
 function _ovChangeCounts(verId){
   if(typeof SCOPE === 'undefined') return null;
@@ -733,7 +733,7 @@ function _ovMoneyHtml(d){
     ><span class="ov-tr-delta ${dl.cls}">${esc(dl.text)}</span
     ><span class="ov-tr-arrow" aria-hidden="true">\u2192</span>${now}</span>`;
 }
-/* A document's name is the way to the document: the Record, opened on that
+/* A document's name is the way to the document: the Register, opened on that
    document, which is exactly where its card in Historical artifacts leads.
    It used to go to Artifact 2 — the tab about change history in general —
    which answered a question the reader had not asked. */
@@ -744,7 +744,7 @@ function ovOpenDoc(name){
     if(typeof toast === 'function') toast(`${name} isn't in this job's documents`);
     return;
   }
-  /* Mode first, then the drill-in: setWorkMode renders the Record's index,
+  /* Mode first, then the drill-in: setWorkMode renders the Register's index,
      and openHistorical re-renders it on the document — the other order paints
      the document and then throws it away. */
   if(typeof setWorkMode === 'function') setWorkMode('artifact');
