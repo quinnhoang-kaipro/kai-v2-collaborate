@@ -4684,7 +4684,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    are the grid's own items, which is what keeps six columns true across
    week rules and across the collapsed earlier block. Eight tracks — the
    dated rail and the marker, then the six the header names. */
-.ov-tl-scroll{overflow-x:auto}
+.ov-tl-scroll{overflow-x:auto;margin-top:20px}
 .ov-tl{
   display:grid;min-width:748px;
   grid-template-columns:88px 18px minmax(58px,.6fr) minmax(118px,1.5fr) minmax(96px,1.15fr) minmax(150px,2fr) auto auto;
@@ -4695,17 +4695,21 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tl-hd,.ov-tl-r{display:contents}
 .ov-tl-h{
   font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.13em;
-  text-transform:uppercase;color:var(--t3);padding:0 10px 9px;align-self:end;
-  border-bottom:1px solid var(--stroke);cursor:help;
+  text-transform:uppercase;color:var(--t3);padding:9px 10px 8px;align-self:stretch;
+  display:flex;align-items:flex-end;background:var(--sunken);cursor:help;
 }
 .ov-tl-h.is-num{text-align:right}
 .ov-tl-h:last-child{text-align:right;padding-right:0;padding-left:6px}
-.ov-tl-hd .ov-tl-when,.ov-tl-hd .ov-tl-rail{border-bottom:1px solid var(--stroke)}
+/* The rail and date cells carry the fill too, or the band starts a third of
+   the way across. The rail's connector is suppressed here — there is no event
+   on this row for it to run between. */
+.ov-tl-hd .ov-tl-when,.ov-tl-hd .ov-tl-rail{background:var(--sunken)}
+.ov-tl-hd .ov-tl-rail::before{display:none}
 
 /* The week rule. Spans every track so it reads as a break in the whole
    timeline rather than a label in one column. */
 .ov-tl-wk{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:24px 0 6px}
-.ov-tl-wk:first-of-type{margin-top:12px}
+.ov-tl-hd + .ov-tl-wk{margin-top:10px}
 .ov-tl-wk span{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.13em;
   text-transform:uppercase;color:var(--t2);white-space:nowrap}
 /* No trailing rule: the label is already set apart by its case, its tracking
@@ -4853,11 +4857,11 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 /* ── who has it now ──
    A standing, not an event: the feed says a hand-off happened, this says
    nothing has happened since. */
-.ov-tr-now-line{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;
-  margin-bottom:14px;padding:9px 12px;background:var(--sunken)}
+.ov-tr-now-line{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 6px;
+  margin-bottom:0;padding:9px 12px;background:var(--sunken)}
 .ov-tr-now-v{font-size:13px;color:var(--t2)}
 .ov-tr-now-v b{color:var(--ink);font-weight:700}
-.ov-tr-now-d{margin-left:auto;font-size:11px;color:var(--t3);white-space:nowrap}
+.ov-tr-now-d{font-size:13px;color:var(--t2);white-space:nowrap}
 /* The document's name is the way to the document, so it is a control — the
    only bold text in the feed, and now the only underlined one too. */
 .ov-tr-doc-n{padding:0;background:none;border:0;cursor:pointer;font:inherit;
