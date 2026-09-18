@@ -876,8 +876,8 @@ const OV_SHOW_DURATION = false;
 const _OV_COLS = [
   ...(OV_SHOW_DURATION ? [['Duration', 'How long this person had the job before they acted on it']] : []),
   ['Who',        'The person who acted'],
-  ['Artifact',   'The document the action happened in'],
   ['What',       'What they did — a count opens the list it counts'],
+  ['Artifact',   'The document the action happened in'],
   ['Note',       'Anything recorded alongside the action'],
   ['Difference', 'What the action did to the job total'],
 ];
@@ -924,8 +924,8 @@ function _ovTlRow(o){
     <span class="ov-tl-rail${L}"${tap}><span class="ov-tl-mk"></span></span>
     ${OV_SHOW_DURATION ? `<span class="ov-tl-dur${L}"${tap}>${o.dur ? esc(o.dur) : _OV_DASH}</span>` : ''}
     <span class="ov-tl-who${L}"${tap}>${o.who ? esc(o.who) : _OV_DASH}</span>
-    <span class="ov-tl-where${L}"${tap}>${o.where || ''}</span>
     <span class="ov-tl-what${L}"${tap}>${caret}<span class="ov-tl-what-t">${o.what || ''}</span></span>
+    <span class="ov-tl-where${L}"${tap}>${o.where || ''}</span>
     <span class="ov-tl-note${L}"${tap}>${o.note ? esc(o.note) : _OV_DASH}</span>
     <span class="ov-tl-diff${L}"${tap}>${o.diff || ''}</span>
   </div>${o.detailId ? `<div class="ov-tl-detail${L}" id="ovCh-${o.detailId}"${
