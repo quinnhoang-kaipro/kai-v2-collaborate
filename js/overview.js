@@ -363,6 +363,15 @@ let _ovAccessOpen = false;
    so it is not left blank: it shows the name it inherits, greyed and
    marked FROM GENERAL, so the reader sees the fallback happening rather
    than being told about it. */
+/* The whole header bar opens the list — a caret is a small target for
+   something the entire line is about. Edit opts out, and the caret keeps its
+   own handler so it stays the real focusable control: a div carrying
+   role="button" around two nested buttons is invalid nesting, and the bar is
+   a convenience target rather than the accessible one. */
+function ovCrewHdClick(e){
+  if(e.target.closest('.ov-crew-edit')) return;
+  ovCrewToggle(document.querySelector('.ov-crew-fold'));
+}
 /* Collapsed by default. Eleven trades is a page of rows that mostly say the
    same thing — a trade, its default contractor, a figure — and the two facts
    worth the space are the ones the list is an exception to: who the general
@@ -498,12 +507,12 @@ function _ovCrewHtml(){
        amount:_worth ? _fmtDollars(_worth) : ''}
     : null;
   return `<section class="ov-mod ov-crew">
-    <div class="ov-crew-hd">
+    <div class="ov-crew-hd" onclick="ovCrewHdClick(event)">
       <h3 class="ov-crew-h">Contractor assignments</h3>
-      <button type="button" class="ov-crew-edit" onclick="ovCrewEdit()">Edit</button>
+      <button type="button" class="ov-crew-edit" onclick="event.stopPropagation();ovCrewEdit()">Edit</button>
       <button type="button" class="ov-crew-fold" aria-expanded="${_ovCrewOpen}"
               aria-controls="ovCrewList" aria-label="Show or hide the trade list"
-              onclick="ovCrewToggle(this)">
+              onclick="event.stopPropagation();ovCrewToggle(this)">
         <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
       </button>
     </div>
@@ -804,10 +813,22 @@ function _ovYearLabel(ts){
   const d = new Date(ts);
   return isNaN(d.getTime()) ? '' : String(d.getFullYear());
 }
-function _ovHumanSpan(ms){
-  if(!(ms > 0)) return 'Same day';
+/* Hours for anything inside a day. The records are dated to the day and carry
+   no clock, so the figure is derived from the event rather than measured —
+   stable across renders (a hash, not a random), plausible for a working day,
+   and the first thing to replace when the events start carrying timestamps. */
+function _ovHoursFor(seed){
+  const s = String(seed || '');
+  let h = 0;
+  for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return 2 + (h % 8);          // 2–9 hours
+}
+function _ovHumanSpan(ms, seed){
   const days = Math.round(ms / 864e5);
-  if(days < 1)  return 'Same day';
+  if(!(ms > 0) || days < 1){
+    const h = _ovHoursFor(seed);
+    return `${h} hour${h === 1 ? '' : 's'}`;
+  }
   if(days === 1) return '1 day';
   if(days < 30) return `${days} days`;
   const mo = Math.round(days / 30);
@@ -827,7 +848,7 @@ function _ovDurations(d){
   chrono.forEach((e, i) => {
     if(!i) return;
     const a = at(chrono[i - 1]), b = at(e);
-    if(a && b) out.set(e, _ovHumanSpan(b - a));
+    if(a && b) out.set(e, _ovHumanSpan(b - a, `${d.name}|${e.who}|${e.when}|${e.kind}`));
   });
   _ovDurCache.set(d, out);
   return out;

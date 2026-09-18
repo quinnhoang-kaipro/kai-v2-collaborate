@@ -5043,6 +5043,11 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 /* ── Collapsed trade list ──
    One line standing in for the folded rows, on the same four tracks so the
    money and the task count do not jump sideways when the list opens. */
+/* The header bar is a click target for the fold, so it says so. */
+.ov-crew-hd{cursor:pointer}
+.ov-crew-hd:hover{background:var(--sunken)}
+.ov-crew-hd .ov-crew-edit{cursor:pointer}
+
 .ov-cw-sum{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) auto auto;
   align-items:baseline;gap:0 16px;width:100%;padding:11px 0;border:0;border-top:1px solid var(--stroke);
   background:transparent;cursor:pointer;text-align:left;font-family:var(--body)}
