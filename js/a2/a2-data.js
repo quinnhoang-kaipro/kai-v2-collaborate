@@ -68,10 +68,10 @@ const VER_ORDER = ['orig','co1','co2'];
    yet — which is the half the hand-off modal needs in order to say who is
    still outstanding. */
 const REVIEWERS = [
-  {who:'T. Okafor',  role:'Job manager'},
-  {who:'S. Patel',   role:'Ops'},
-  {who:'D. Reyes',   role:'Designer'},
-  {who:'M. Alvarez', role:'Field Agent'},
+  {who:'T. Okafor',  first:'Tara',   role:'Job manager'},
+  {who:'S. Patel',   first:'Sana',   role:'Ops'},
+  {who:'D. Reyes',   first:'Diego',  role:'Designer'},
+  {who:'M. Alvarez', first:'Marisol',role:'Field Agent'},
 ];
 /* Times are part of the record: a scope changes hands more than once a day,
    and without them the Activity could not say in what order — or how long

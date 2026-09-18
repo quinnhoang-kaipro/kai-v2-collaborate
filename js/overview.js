@@ -1034,6 +1034,21 @@ function _ovTlDetail(groups){
   </div>`).join('');
 }
 const _OV_DASH = '<span class="ov-tl-dash">\u2014</span>';
+/* "Tara O." rather than "T. Okafor". The Activity names the same four people
+   on every row, so a surname is doing no work — the first name is how anyone
+   on the job actually refers to them, and the last initial is there for the
+   day two Taras are on it. Falls back to the stored name for anyone off the
+   roster, which is the honest failure: a name we cannot shorten is still a
+   name. */
+function _ovWhoShort(who){
+  const n = String(who || '').trim();
+  if(!n) return '';
+  const roster = (typeof REVIEWERS !== 'undefined') ? REVIEWERS : [];
+  const p = roster.find(r => r.who === n);
+  if(!p || !p.first) return n;
+  const last = n.split(/\s+/).pop() || '';
+  return last ? `${p.first} ${last[0]}.` : p.first;
+}
 /* Placeholder copy for Note. The events carry no note of their own yet — the
    hand-off dialogue collects one but does not keep it on the event — so this
    stands in to show the column at its real width. Picked by hash, not at
@@ -1117,7 +1132,7 @@ function _ovTimelineFeedHtml(entries, weekState, later){
     }
     const d = en.doc, e = en.ev;
     const what = e.verb === 'handed off'
-        ? `Handed off to <b>${esc(e.to || '')}</b>`
+        ? `Handed off to <b>${esc(_ovWhoShort(e.to) || '')}</b>`
       : e.verb === 'approved' ? 'Approved'
       : e.verb === 'started'  ? 'Opened'
       : esc(e.act || '');
@@ -1126,7 +1141,7 @@ function _ovTimelineFeedHtml(entries, weekState, later){
         >${esc(d.name)}</button><span class="ov-tl-state">${esc(d.state || '')}</span>`;
     html += _ovTlRow({
       kind:e.kind, day:_ovDayLabel(en.at), sub:e.time || _ovYearLabel(en.at),
-      who:e.who, dur:_ovDurations(d).get(e), where, what,
+      who:_ovWhoShort(e.who), dur:_ovDurations(d).get(e), where, what,
       note:_ovLorem(`${d.name}|${e.kind}|${e.when}|${e.who}`),
       diff: en.lead ? _ovDiffHtml(d) : '',
       total: en.lead ? _ovTotalHtml(d) : '',
@@ -1147,7 +1162,7 @@ function _ovStandingLineHtml(docs){
   const who = ev.to || ev.who;
   if(!who) return '';
   return `<div class="ov-tr-now-line">
-    <span class="ov-tr-now-v"><b>${esc(who)}</b> is working on <b>${esc(d.name)}</b></span>
+    <span class="ov-tr-now-v"><b>${esc(OV_SENTENCES ? who : _ovWhoShort(who))}</b> is working on <b>${esc(d.name)}</b></span>
     <span class="ov-tr-now-d">since ${esc(ev.when || '')}</span>
   </div>`;
 }
