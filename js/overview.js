@@ -728,6 +728,18 @@ const _OV_TICK = `<svg class="ov-tr-ck" viewBox="0 0 12 12" fill="none" stroke="
    Bold now means one thing and means it everywhere: a document is involved.
    A site row has no bold text in it at all, which is the signal that it is
    not about a document — it is what happened on the property in between. */
+/* What a document moved by, and where that left it — the one derivation the
+   feed row, the hover card and the timeline's Difference/Total columns all
+   read from. Returns null when there is nothing to compare against, which is
+   the original scope: it has an amount but no movement. */
+function _ovDelta(d){
+  if(!d || !d.amount || !d.was) return null;
+  const n = dollars(d.amount) - dollars(d.was);
+  return {n, cls: n > 0 ? 'is-up' : n < 0 ? 'is-dn' : '',
+          text: (n > 0 ? '+' : n < 0 ? '\u2212' : '')
+              + '$' + Math.abs(n).toLocaleString('en-US'),
+          title: `${d.was} \u2192 ${d.amount}`};
+}
 /* What it moved by, then where that left it. This used to strike the old
    figure and print the new one, which made the reader subtract to find the one
    fact the row is actually reporting — a change order's whole point is its
@@ -736,12 +748,10 @@ const _OV_TICK = `<svg class="ov-tr-ck" viewBox="0 0 12 12" fill="none" stroke="
 function _ovMoneyHtml(d){
   if(!d.amount) return '';
   const now = `<span class="ov-tr-now">${esc(d.amount)}</span>`;
-  if(!d.was) return `<span class="ov-tr-money">${now}</span>`;
-  const delta = dollars(d.amount) - dollars(d.was);
-  const cls = delta > 0 ? ' is-up' : delta < 0 ? ' is-dn' : '';
-  const sign = delta > 0 ? '+' : delta < 0 ? '\u2212' : '';
-  return `<span class="ov-tr-money" title="${esc(d.was)} \u2192 ${esc(d.amount)}"
-    ><span class="ov-tr-delta${cls}">${sign}$${Math.abs(delta).toLocaleString('en-US')}</span>${now}</span>`;
+  const dl = _ovDelta(d);
+  if(!dl) return `<span class="ov-tr-money">${now}</span>`;
+  return `<span class="ov-tr-money" title="${esc(dl.title)}"
+    ><span class="ov-tr-delta ${dl.cls}">${esc(dl.text)}</span>${now}</span>`;
 }
 /* A document's name is the way to the document. Artifact 2 is where the
    change history lives, so that is where it goes. */
@@ -994,12 +1004,9 @@ function _ovTotalHtml(d){
 }
 function _ovDiffHtml(d){
   if(!d.amount) return '';
-  if(!d.was) return `<span class="ov-tl-delta">${esc(d.amount)}</span>`;
-  const delta = dollars(d.amount) - dollars(d.was);
-  const cls = delta > 0 ? ' is-up' : delta < 0 ? ' is-dn' : '';
-  const sign = delta > 0 ? '+' : delta < 0 ? '\u2212' : '';
-  return `<span class="ov-tl-delta${cls}" title="${esc(d.was)} \u2192 ${esc(d.amount)}"
-    >${sign}$${Math.abs(delta).toLocaleString('en-US')}</span>`;
+  const dl = _ovDelta(d);
+  if(!dl) return `<span class="ov-tl-delta">${esc(d.amount)}</span>`;
+  return `<span class="ov-tl-delta ${dl.cls}" title="${esc(dl.title)}">${esc(dl.text)}</span>`;
 }
 
 /* Duration is parked, not removed: the hours inside a day are derived rather
@@ -1536,8 +1543,11 @@ function _ovHoverHtml(d){
     ? `<div class="ov-hv-img"></div>`
     : `<div class="ov-hv-img is-none">No photo yet</div>`;
   if(d.kind === 'doc'){
+    const _dl = _ovDelta(d);
     const money = d.amount
-      ? `<span class="ov-hv-money">${d.was ? `<s>${esc(d.was)}</s>` : ''}<b>${esc(d.amount)}</b></span>`
+      ? `<span class="ov-hv-money"${_dl ? ` title="${esc(_dl.title)}"` : ''}>${
+          _dl ? `<i class="ov-hv-delta ${_dl.cls}">${esc(_dl.text)}</i>` : ''
+        }<b>${esc(d.amount)}</b></span>`
       : '';
     return `<div class="ov-hv-body">
         <div class="ov-hv-kind">Document${d.state ? ` \u00b7 ${esc(d.state)}` : ''}</div>

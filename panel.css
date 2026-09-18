@@ -4693,19 +4693,22 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tl-hd,.ov-tl-r{display:contents}
 .ov-tl-h{
   font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.13em;
-  text-transform:uppercase;color:var(--t3);padding:0 10px 8px;align-self:end;
-  border-bottom:1.5px solid var(--ink);cursor:help;
+  text-transform:uppercase;color:var(--t3);padding:0 10px 9px;align-self:end;
+  border-bottom:1px solid var(--stroke);cursor:help;
 }
 .ov-tl-h.is-num{text-align:right}
 .ov-tl-h:last-child{text-align:right;padding-right:0;padding-left:16px}
-.ov-tl-hd .ov-tl-when,.ov-tl-hd .ov-tl-rail{border-bottom:1.5px solid var(--ink)}
+.ov-tl-hd .ov-tl-when,.ov-tl-hd .ov-tl-rail{border-bottom:1px solid var(--stroke)}
 
 /* The week rule. Spans every track so it reads as a break in the whole
    timeline rather than a label in one column. */
-.ov-tl-wk{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:18px 0 4px}
+.ov-tl-wk{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:30px 0 6px}
+.ov-tl-wk:first-of-type{margin-top:14px}
 .ov-tl-wk span{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.13em;
   text-transform:uppercase;color:var(--t2);white-space:nowrap}
-.ov-tl-wk::after{content:"";flex:1;height:1px;background:var(--ink)}
+/* No trailing rule: the label is already set apart by its case, its tracking
+   and the space around it, and a full-width line for every week turned the
+   feed into a stack of boxes. */
 
 /* Cells. Padding lives here rather than on a row box, because there isn't one. */
 .ov-tl-r > *{padding:11px 10px;font-family:var(--body);font-size:12.5px;color:var(--ink);
@@ -4775,10 +4778,11 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tr-rows{display:grid;grid-template-columns:104px minmax(0,1fr) 150px;
   align-items:stretch}
 .ov-tr-r{display:contents}
-.ov-tr-r > *{padding:7px 0;display:flex;align-items:center}
+.ov-tr-r > *{padding:9px 0;display:flex;align-items:center}
 .ov-tr-r > .ov-tr-d{justify-content:flex-start;text-align:left;padding-right:16px}
 .ov-tr-r > .ov-tr-sum{justify-content:flex-end}
-.ov-tr-r + .ov-tr-r > *{border-top:1px solid var(--hair,var(--stroke))}
+/* No row-to-row rule. Rows are one or two lines with a date starting each
+   one; the eye tracks them on that column, not on a hairline. */
 /* A row that opens says so across its whole width: the cursor on all of it,
    and a wash on hover so the target is the line rather than the caret. */
 .ov-tr-r.is-tappable > *{cursor:pointer}
@@ -4827,11 +4831,11 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    Documents overlap each other — a change order is passed around for a
    fortnight while the property is worked on — so they cannot be the grouping
    without lying about when things happened. A month can be. */
-.ov-tr-rule{display:flex;align-items:center;gap:12px;margin:16px 0 6px}
-.ov-tr-rule:first-child{margin-top:0}
+.ov-tr-rule{display:flex;align-items:center;gap:12px;margin:28px 0 8px}
+.ov-tr-rule:first-child{margin-top:4px}
 .ov-tr-rule span{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.12em;
   text-transform:uppercase;color:var(--ink);flex-shrink:0}
-.ov-tr-rule::after{content:'';flex:1;height:1px;background:var(--ink)}
+/* Same as the timeline's: the label alone. */
 /* ── who has it now ──
    A standing, not an event: the feed says a hand-off happened, this says
    nothing has happened since. */
@@ -4859,8 +4863,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
   .ov-tr-r > .ov-tr-sum{grid-column:1;grid-row:2;justify-content:flex-start;padding:1px 0 7px}
   .ov-tr-r > .ov-tr-d{grid-column:2;grid-row:2;justify-content:flex-end;text-align:right;padding:1px 0 7px}
   .ov-tr-detail{padding-left:24px}
-  .ov-tr-r + .ov-tr-r > *{border-top:0}
-  .ov-tr-r + .ov-tr-r > .ov-tr-ev{border-top:1px solid var(--hair,var(--stroke))}
+  .ov-tr-r + .ov-tr-r > .ov-tr-ev{padding-top:14px}
   .ov-walk{grid-template-columns:minmax(0,1fr) auto}
   .ov-walk > .ov-walk-c{grid-column:1 / -1;grid-row:1}
   .ov-walk > .ov-walk-s{grid-column:1;grid-row:2;text-align:left}
@@ -4882,8 +4885,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tr-open[aria-expanded="true"] .ov-tr-car{transform:rotate(180deg)}
 /* The names, indented under the count. Spans the row grid, since it belongs to
    the line above rather than to any one column. */
-.ov-tr-detail{grid-column:1 / -1;padding:4px 0 10px 128px;
-  border-top:1px solid var(--hair,var(--stroke))}
+.ov-tr-detail{grid-column:1 / -1;padding:2px 0 12px 128px}
 .ov-tr-detail[hidden]{display:none}
 .ov-ch-g{padding:7px 0}
 .ov-ch-g + .ov-ch-g{border-top:1px solid var(--hair,var(--stroke))}
@@ -4926,9 +4928,8 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    it is what is happening now — and a second tinted block competing with it
    read as two current things. The band keeps its rules and its indent, which
    is enough to group the rows without claiming any urgency. */
-.ov-walks{display:flex;flex-direction:column;gap:1px;margin:10px 0;
-  padding:9px 0;
-  border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke);
+.ov-walks{display:flex;flex-direction:column;gap:1px;margin:4px 0;
+  padding:0;
   position:relative}
 /* No caption: the band's own surface says it is a different kind of thing,
    and a word in the gutter was a label on something already labelled by the
@@ -4996,8 +4997,9 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    group can be a sentence long on its own. */
 .ov-hv-money{display:block;margin-top:5px;font-family:var(--mono);
   font-variant-numeric:tabular-nums}
-.ov-hv-money s{margin-right:7px;font-size:11px;color:var(--t3);
-  text-decoration-thickness:1px}
+.ov-hv-delta{font-style:normal;margin-right:8px;font-size:12px;font-weight:700}
+.ov-hv-delta.is-up{color:var(--error)}
+.ov-hv-delta.is-dn{color:var(--success)}
 .ov-hv-money b{font-size:14px;color:var(--ink)}
 /* The last few events, smallest type on the card — context, not the point. */
 .ov-hv-evs{list-style:none;margin:8px 0 0;padding:8px 0 0;
