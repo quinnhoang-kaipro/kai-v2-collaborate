@@ -158,6 +158,41 @@ function _ovStandingHtml(){
    The feed's one piece of extra information was the money, so the money moved
    onto the rows that carry it: what a document was worth when it was sent, and
    what it was worth when it was settled. */
+/* What one person changed in one version. SCOPE's change records carry both
+   `ver` and `who`, so the edits can be attributed rather than pooled — which
+   is the whole difference between "7 tasks changed in Change Order 2" and
+   "Diego R. edited 3 tasks". Grouped by room so the list opens the way every
+   other change list in the tab does. */
+function _ovEditsBy(verId, who){
+  if(typeof SCOPE === 'undefined') return null;
+  const groups = [];
+  let tasks = 0;
+  SCOPE.forEach(g => {
+    const hit = g.tasks.filter(t =>
+      (t.changes || []).some(ch => ch.ver === verId && ch.who === who));
+    if(!hit.length) return;
+    groups.push({room:g.room, tasks:hit.map(t => ({
+      code:t.code, name:t.name, what:_ovTaskChangeSummary(t, verId)}))});
+    tasks += hit.length;
+  });
+  return tasks ? {tasks, groups:groups.length, detail:groups} : null;
+}
+/* How a tenure reads. The timeline wants a phrase for its What column; the
+   sentence feed wants a verb it can put a document name after, and sometimes
+   a tail to follow it. Both come from the same three facts — did they edit,
+   did they approve, are they still holding it. */
+function _ovTenureWords(ed, approved, opened, holding){
+  const n = ed ? `${ed.tasks} task${ed.tasks === 1 ? '' : 's'}` : '';
+  if(holding) return ed
+    ? {what:`${n} edited so far`, verb:'has', tail:'open', act:`editing ${n} in`}
+    : {what:'Holding', verb:'has', tail:'open', act:'holding'};
+  if(ed && approved) return {what:`${n} edited · approved`, verb:`edited ${n} in`,
+                             tail:'and approved it', act:`edited ${n} in`};
+  if(ed)             return {what:`${n} edited`, verb:`edited ${n} in`, act:`edited ${n} in`};
+  if(approved)       return {what:'Approved', verb:'approved', act:'approved'};
+  if(opened)         return {what:'Opened', verb:'opened', act:'opened'};
+  return {what:'Reviewed', verb:'reviewed', act:'reviewed'};
+}
 function _ovTrail(){
   if(typeof VER_ORDER === 'undefined' || typeof VER === 'undefined') return [];
   if(typeof buildOrdered === 'function') buildOrdered();
@@ -187,50 +222,58 @@ function _ovTrail(){
        composed at render time so it can name the document inside itself.
        "started it" only worked while a header above the row said what "it"
        was, and that header is what made the rows under it look owned. */
-    const evs = [{...author, verb:'started',
-                  when: m.opened || (prev && prev.date) || m.date,
-                  time: m.openedTime || (prev && prev.time) || m.time, kind:'start'}];
-    /* Each signature is the point the document had reached that person, so
-       the hand-off is from whoever held it before them. */
-    /* What the editing came to, as its own event: it is the answer to "what
-       does this change order actually change", and it belongs in the run of
-       events rather than in a note about them. Only where there is a previous
-       version to have changed from — the first scope is not a revision. */
-    const counts = prev ? _ovChangeCounts(id) : null;
-    if(counts){
-      /* The edits are not a moment either — they run from the day the
-         document was opened to the day it left the author's hands. Same
-         reasoning as the site rows below: an aggregate gets the window it
-         covers, not the last day of it. */
-      const _edFrom = m.opened || (prev && prev.date) || m.date;
-      const _edTo   = (signs[0] && signs[0].date) || m.date;
-      /* `when` is a span, which no date parser can read, so the row carries
-         its own anchor for the feed's ordering — the day the editing stopped,
-         the same convention the site runs use. */
-      evs.push({who:'', role:'', kind:'changed', ver:id, detail:counts.detail,
-                act:`${counts.groups} group${counts.groups === 1 ? '' : 's'} \u00b7 `
-                  + `${counts.tasks} task${counts.tasks === 1 ? '' : 's'} changed`,
-                when: _ovDateRange(_edFrom, _edTo),
-                at: Date.parse(_edTo) || Date.parse(_edFrom) || 0});
-    }
-    let from = author;
-    signs.forEach(sig => {
-      evs.push({who:from.who, role:from.role, verb:'handed off', to:sig.who,
-                when:sig.date, time:sig.time, kind:'handoff'});
-      from = sig;
+    /* One row per person who held the document, not one per event. A
+       hand-off is not news on its own — what matters is what the person did
+       with it while they had it, and the hand-off is just where one row ends
+       and the next begins. Each holder's window runs from the moment it
+       reached them to the moment they passed it on.
+
+       The chain: the field agent opens it, then each reviewer in signing
+       order, and the last of them is the one who approves. */
+    const opened = m.opened || (prev && prev.date) || m.date;
+    const openedT = m.openedTime || (prev && prev.time) || m.time;
+    const chain = [{who:author.who, role:author.role, from:opened, fromTime:openedT}];
+    signs.forEach((sig, k) => {
+      chain[k].to = sig.date; chain[k].toTime = sig.time;
+      chain.push({who:sig.who, role:sig.role, from:sig.date, fromTime:sig.time});
     });
-    /* Nothing is added for a document still out for approval. "S. Patel has
-       it for approval" restated the hand-off directly above it and the
-       In review chip beside the title — three ways of saying one thing. */
-    if(id !== pending){
-      evs.push({who:people.manager, role:'Job manager', verb:'approved',
-                when:m.date, time:m.time, kind:'approved'});
-    }
+    const last = chain[chain.length - 1];
+    const isPending = id === pending;
+    /* A pending document's last holder still has it: no end, and no approval
+       under them yet. */
+    if(!isPending){ last.to = m.date; last.toTime = m.time; last.approved = true; }
+
+    const evs = chain.map((h, k) => {
+      const ed = _ovEditsBy(id, h.who);
+      const holding = !h.to;
+      const w = _ovTenureWords(ed, !!h.approved, k === 0, holding);
+      return {
+        who:h.who, role:h.role, kind: h.approved ? 'approved' : (k === 0 ? 'start' : 'handoff'),
+        verb:w.verb, tail:w.tail, act:w.act, what:w.what,
+        /* A tenure covers days, so it is dated by the day it ended — the day
+           it stopped being that person's problem. One still open is dated by
+           the day it started, which is the only date it has. */
+        when: h.to ? _ovDateRange(h.from, h.to) : h.from,
+        time: h.to ? h.toTime : h.fromTime,
+        at: Date.parse(h.to || h.from) || 0,
+        /* The rail shows the span where there is one, and the clock only
+           where the row is a single moment — a time against a range would be
+           claiming a precision the row does not have. */
+        railDay: (h.to && _ovRailRange(h.from, h.to)) || null,
+        /* Unique per tenure: several of them share a version, and the expand
+           targets are keyed by this. */
+        ver: `${id}~${k}`,
+        detail: ed ? ed.detail : null,
+        /* The document's worth belongs on the row that settled it. Where
+           nothing has settled it yet, the newest tenure carries it. */
+        settles: h.approved || (isPending && k === chain.length - 1),
+      };
+    });
     /* Newest first, like the documents themselves. The chain is built in the
        order it happened, so reversing it is exact — including the two events
        that share a date, where sorting on the date alone would have put them
        in whichever order the comparison happened to settle on. */
-    out.push({name:m.label || id, state: id === pending ? 'Draft' : 'Approved',
+    out.push({name:m.label || id, state: isPending ? 'Draft' : 'Approved',
               amount:amount, was:was, evs:evs.reverse()});
   });
 
@@ -296,6 +339,10 @@ function _ovTaskChangeSummary(task, verId){
   return parts.length > 2 ? `${shown}  ·  +${parts.length - 2} more` : shown;
 }
 
+/* What a version changed in total, pooled across everyone who touched it.
+   The Activity does not ask this any more — it reports per person, holder by
+   holder — but the Register's ledger does: a change order's own row is about
+   the document, not about who was carrying it. */
 function _ovChangeCounts(verId){
   if(typeof SCOPE === 'undefined') return null;
   /* The groups it touched, each with the tasks inside it that moved — the
@@ -569,46 +616,9 @@ function ovToggleChanges(verId){
   const btn = document.querySelector(`[aria-controls="ovCh-${verId}"]`);
   if(btn) btn.setAttribute('aria-expanded', String(on));
 }
-/* ── what happened on site between two documents ─────────────────────
-   A document's chain says who held it. It says nothing about the weeks in
-   between, where the job is actually being done — and those weeks are most of
-   the calendar. Every visit to the property is a walk, every photo is attached
-   to one, and the tasks those photos are on carry the notes. So a walk is the
-   event, and its counts are read off the same records the Progress tab draws.
-
-   The window is the boundary as it reads on screen: everything from the older
-   document's last event up to the newer one's. A change order is opened the
-   day the one before it is approved, so a strictly-between window would be
-   empty every time and these weeks would go unsaid. */
-function _ovWalksBetween(older, newer){
-  if(typeof WALKS === 'undefined') return [];
-  if(typeof seedPhotos === 'function' && (typeof PHOTOS === 'undefined' || !PHOTOS.length)) seedPhotos();
-  const photos = (typeof PHOTOS !== 'undefined') ? PHOTOS : [];
-  const all    = (typeof TASKS !== 'undefined') ? TASKS : [];
-  const from = Date.parse(older.evs[0] && older.evs[0].when);
-  const to   = Date.parse(newer.evs[0] && newer.evs[0].when);
-  if(isNaN(from) || isNaN(to)) return [];
-  return WALKS.filter(w => {
-    const d = Date.parse(w.date);
-    return !isNaN(d) && d >= from && d <= to;
-  }).map(w => {
-    const shots = photos.filter(ph => ph.walk === w.id);
-    const rooms = new Set(shots.map(ph => ph.room).filter(r => r && r !== 'Job'));
-    const codes = new Set(shots.map(ph => ph.task).filter(Boolean));
-    const hit   = all.filter(t => codes.has(t.code));
-    const notes = hit.reduce((n, t) => n + (t.notes || 0), 0);
-    return {label:w.label, date:w.date, photos:shots.length, notes:notes,
-            groups:rooms.size, tasks:codes.size, hit:hit};
-  }).filter(w => w.photos)
-    .sort((a, b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0));
-}
-
-/* ── the span an aggregate covers ────────────────────────────────────
-   These rows are not moments: "18 photos added" happened over the weeks
-   between two documents, and stamping them with one day says a visit took
-   place that day and nothing else did. So the stamp is the window — closed
-   up where the two ends share a month or a year, because "Apr 14 – Apr 27,
-   2026" says April twice to say one thing. */
+/* A tenure covers a span of days, so it is labelled with one. Lives here
+   now that the site rows it was written for are gone — the tenures use it for
+   the same reason those did. */
 function _ovDateRange(a, b){
   const da = Date.parse(a), db = Date.parse(b);
   if(isNaN(da) && isNaN(db)) return '';
@@ -625,69 +635,6 @@ function _ovDateRange(a, b){
   return `${day(lo)} \u2013 ${hi.getDate()}, ${hi.getFullYear()}`;
 }
 
-/* ── what happened on site, as three kinds of event ──────────────────
-   The walks are how the records are filed, not what a reader came for. A
-   walk's name — "Change order walk", "Progress walk 1" — is the visit's
-   label, and the visit is the one thing on the line nobody is asking about:
-   what they want is what came back from site. So the walks in a window are
-   rolled into what they produced, and the name goes.
-
-   Three rows, each one a thing that happened to the scope: what was
-   captured, what finished, and what started. The status rows read off the
-   tasks the walks actually touched — the demo has no event log, so the
-   status a photographed task is sitting at is the closest true statement
-   about what those weeks did to it. Both open onto the tasks themselves,
-   the same way a change order's count does; a number you cannot follow is
-   where the question stops. */
-function _ovSiteRuns(older, newer){
-  const walks = _ovWalksBetween(older, newer);
-  if(!walks.length) return null;
-  /* The run's own place in time. It covers a span, so it is filed under the
-     last day anything happened in it — the feed is newest-first and that is
-     the day it stops being news. */
-  const at = Math.max(...walks.map(w => Date.parse(w.date) || 0));
-  const n = (k, one, many) => `${k} ${k === 1 ? one : many}`;
-  const join = xs => xs.filter(Boolean).join(' \u00b7 ');
-  const dates = walks.map(w => w.date);
-  const span = _ovDateRange(dates[dates.length - 1], dates[0]);
-  const rows = [];
-
-  /* One task can be shot on two walks, so the set, not the sum of the
-     per-walk counts. */
-  const seen = new Map();
-  walks.forEach(w => (w.hit || []).forEach(t => seen.set(t.id, t)));
-  const touched = [...seen.values()];
-  /* Grouped by room so the list opens the way the change list does, and so
-     a long one reads as a few places rather than twenty loose lines. */
-  const byRoom = ts => {
-    const m = new Map();
-    ts.forEach(t => {
-      const r = t.room || 'Job';
-      if(!m.has(r)) m.set(r, []);
-      m.get(r).push({code:t.code, name:t.name});
-    });
-    return [...m.entries()].map(([room, tasks]) => ({room, tasks}));
-  };
-  const mark = (status, label) => {
-    const ts = touched.filter(t => t.status === status);
-    if(!ts.length) return;
-    const gs = new Set(ts.map(t => t.room).filter(Boolean)).size;
-    rows.push({
-      text: `${n(ts.length, 'task', 'tasks')} marked ${label}`,
-      side: gs ? n(gs, 'group', 'groups') : '',
-      count: n(ts.length, 'task', 'tasks'),
-      scopeN: gs ? n(gs, 'group', 'groups') : '',
-      verb: `marked ${label}`,
-      when: span,
-      detail: byRoom(ts)
-    });
-  };
-  mark('complete', 'complete');
-  mark('in_progress', 'in progress');
-  /* Nothing moved on site in this window — no band rather than an empty one. */
-  if(!rows.length) return null;
-  return {rows, at, span};
-}
 const _OV_TICK = `<svg class="ov-tr-ck" viewBox="0 0 12 12" fill="none" stroke="currentColor"
   stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg>`;
 
@@ -772,18 +719,10 @@ function _ovFeedEntries(docs){
      without saying what, and the document's own preview lists the tasks. It
      stays on the document so the hover card can still read it, and
      index-activity.html puts it back on the feed. */
-  docs.forEach(d => d.evs.filter(e => OV_FULL || e.kind !== 'changed').forEach((e, j) => out.push({
-    kind:'doc', doc:d, ev:e, lead:j === 0,
+  docs.forEach(d => d.evs.forEach(e => out.push({
+    kind:'doc', doc:d, ev:e, lead: !!e.settles,
     at: e.at || Date.parse(e.when) || 0
   })));
-  /* A run belongs to the pair of documents it sits between in the data, but
-     once it has a date it no longer needs them: it sorts into place like
-     anything else. */
-  docs.forEach((d, i) => {
-    if(i + 1 >= docs.length) return;
-    const run = _ovSiteRuns(docs[i + 1], d);
-    if(run) out.push({kind:'site', run, key:i, at:run.at});
-  });
   /* Newest first. Two things can land on one day, so the tie-break is the
      order they must have happened in: a document is approved, and only then
      is the next one started. Site runs come last — a run is filed under the
@@ -792,45 +731,9 @@ function _ovFeedEntries(docs){
      (This also fixes a comparator that returned -1 for every doc-vs-doc
      comparison, which is not an ordering and left same-day rows wherever the
      sort happened to drop them.) */
-  const rank = en => en.kind === 'site' ? 9
-    : ({approved:0, handoff:1, changed:2, start:3})[en.ev.kind] ?? 4;
+  const rank = en => ({approved:0, handoff:1, start:3})[en.ev.kind] ?? 4;
   return out.sort((a, b) => (b.at - a.at) || (rank(a) - rank(b)));
 }
-/* `key` disambiguates the expand targets: every gap in the trail renders the
-   same row kinds, so the ids have to carry which gap they belong to. */
-function _ovWalksHtml(run, key){
-  const rows = run && run.rows;
-  if(!rows || !rows.length) return '';
-  return `<div class="ov-walks">${rows.map((r, i) => {
-    const id = `ovSite-${key}-${i}`;
-    const open = !!_ovOpenChanges[id];
-    return `<div class="ov-walk${r.detail ? ' is-tappable' : ''}"${
-      r.detail ? ` onclick="ovToggleChanges('${id}')"` : ''}>
-      <span class="ov-walk-d">${esc(r.when)}</span>
-      <span class="ov-walk-c">${r.detail
-        ? `<button type="button" class="ov-tr-open ov-site-open"
-             aria-expanded="${open}" aria-controls="ovCh-${id}"
-             onclick="event.stopPropagation();ovToggleChanges('${id}')">${esc(r.text)}
-             <svg class="ov-tr-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
-           </button>`
-        : esc(r.text)}</span>
-      <span class="ov-walk-s">${esc(r.side)}</span>
-      ${r.detail ? `<div class="ov-tr-detail ov-site-detail" id="ovCh-${id}"${open ? '' : ' hidden'} onclick="event.stopPropagation()">
-        ${r.detail.map(g => `<div class="ov-ch-g">
-          <button type="button" class="ov-ch-grp" data-hv-room="${esc(g.room)}" onclick="ovGoGroup('${esc(g.room).replace(/'/g, "\\'")}')">${esc(g.room)}</button>
-          <div class="ov-ch-ts">${g.tasks.map(t => `
-            <button type="button" class="ov-ch-task"
-              data-hv-code="${esc(t.code)}" data-hv-room="${esc(g.room)}" data-hv-name="${esc(t.name)}"
-              onclick="ovGoTask('${esc(t.code)}', '${esc(g.room).replace(/'/g, "\\'")}', '${esc(t.name).replace(/'/g, "\\'")}')">
-              <span class="ov-ch-code">${esc(t.code)}</span>
-              <span class="ov-ch-name">${esc(t.name)}</span></button>`).join('')}</div>
-        </div>`).join('')}
-      </div>` : ''}
-    </div>`;
-  }).join('')}</div>`;
-}
-
-
 /* One row of a document's chain. `lead` is the document's newest event, and
    only that row carries the money: it is where the document currently
    stands, so it is the honest place for it. */
@@ -840,9 +743,12 @@ function _ovDocRowHtml(d, e, lead){
      something on the way out. */
   const nm = `<button type="button" class="ov-tr-doc-n" data-hv-doc="${esc(d.name)}"
       onclick="event.stopPropagation();ovOpenDoc('${esc(d.name).replace(/'/g, "\\'")}')">${esc(d.name)}</button>`;
+  /* "Diego R. edited 3 tasks in Change Order 1 and approved it" — the tail is
+     what follows the document's name, which a verb alone cannot reach. */
   const sentence = e.verb
     ? `${e.who ? `<span class="ov-tr-who">${esc(e.who)}</span> ` : ''}${esc(e.verb)} ${nm}${
-        e.to ? ` to <span class="ov-tr-who2">${esc(e.to)}</span>` : ''}`
+        e.to ? ` to <span class="ov-tr-who2">${esc(e.to)}</span>` : ''}${
+        e.tail ? ` ${esc(e.tail)}` : ''}`
     : `${esc(e.act)} in ${nm}`;
   /* The count opens its own list, so that row is a button — but the document
      name inside it is a link of its own, which a button cannot contain. The
@@ -895,13 +801,8 @@ function _ovSentenceFeedHtml(entries, state){
       close();
       html += `<div class="ov-tr-rule"><span>${esc(wk)}</span></div>`;
     }
-    if(en.kind === 'site'){
-      close();
-      html += _ovWalksHtml(en.run, en.key);
-    } else {
-      if(!open){ html += '<div class="ov-tr-rows">'; open = true; }
-      html += _ovDocRowHtml(en.doc, en.ev, en.lead);
-    }
+    if(!open){ html += '<div class="ov-tr-rows">'; open = true; }
+    html += _ovDocRowHtml(en.doc, en.ev, en.lead);
   });
   close();
   return html;
@@ -928,6 +829,16 @@ function _ovWeekLabel(ts){
 function _ovOrd(n){
   const s = ['th','st','nd','rd'], v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+/* "Apr 22 – 28" for a tenure that spans days. The rail is 88px, so the month
+   is said once when both ends share it. */
+function _ovRailRange(a, b){
+  const d1 = new Date(a), d2 = new Date(b);
+  if(isNaN(d1.getTime()) || isNaN(d2.getTime())) return '';
+  if(d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate()) return '';
+  return d1.getMonth() === d2.getMonth()
+    ? `${_OV_MON[d1.getMonth()]} ${d1.getDate()} – ${d2.getDate()}`
+    : `${_OV_MON[d1.getMonth()]} ${d1.getDate()} – ${_OV_MON[d2.getMonth()]} ${d2.getDate()}`;
 }
 function _ovDayLabel(ts){
   const d = new Date(ts);
@@ -1000,9 +911,8 @@ function _ovTotalHtml(d){
   return `${from}<span class="ov-tl-tot">${esc(d.amount)}</span>`;
 }
 function _ovDiffHtml(d){
-  if(!d.amount) return '';
   const dl = _ovDelta(d);
-  if(!dl) return `<span class="ov-tl-delta">${esc(d.amount)}</span>`;
+  if(!dl) return '';
   return `<span class="ov-tl-delta ${dl.cls}" title="${esc(dl.title)}">${esc(dl.text)}</span>`;
 }
 
@@ -1136,35 +1046,15 @@ function _ovTimelineFeedHtml(entries, weekState, later){
       weekState.w = wk; wkFirst = true; band = 0;
       html += `<div class="ov-tl-wk${L}"><span>${esc(wk)}</span></div>`;
     }
-    if(en.kind === 'site'){
-      /* Site work has no document and no one holding it — it is what happened
-         on the property while the documents were going round. The dashes in
-         Who and Duration are the point rather than missing data. */
-      en.run.rows.forEach((r, i) => {
-        html += _ovTlRow({
-          kind:'site', day:_ovDayLabel(en.at), sub:_ovYearLabel(en.at),
-          who:'', dur:'', where:'',
-          what: esc(r.verb
-            ? [r.count, r.scopeN].filter(Boolean).join(' \u00b7 ') + ' ' + r.verb
-            : [r.side, r.text].filter(Boolean).join(' \u00b7 ')),
-          note:_ovLorem(`${en.key}|${i}|${r.text}`), diff:'', total:'',
-          detailId: r.detail ? `ovSite-${en.key}-${i}` : null, detail:r.detail,
-          wkFirst: wkFirst && !i, later, alt: (band++ % 2) === 1,
-        });
-      });
-      return;
-    }
     const d = en.doc, e = en.ev;
-    const what = e.verb === 'handed off'
-        ? `Handed off to <b>${esc(_ovWhoShort(e.to) || '')}</b>`
-      : e.verb === 'approved' ? 'Approved'
-      : e.verb === 'started'  ? 'Opened'
-      : esc(e.act || '');
+    const what = esc(e.what || '');
     const where = `<button type="button" class="ov-tl-doc" data-hv-doc="${esc(d.name)}"
         onclick="event.stopPropagation();ovOpenDoc('${esc(d.name).replace(/'/g, "\\'")}')"
         >${esc(d.name)}</button><span class="ov-tl-state">${esc(d.state || '')}</span>`;
     html += _ovTlRow({
-      kind:e.kind, day:_ovDayLabel(en.at), sub:e.time || _ovYearLabel(en.at),
+      kind:e.kind,
+      day: e.railDay || _ovDayLabel(en.at),
+      sub: e.railDay ? _ovYearLabel(en.at) : (e.time || _ovYearLabel(en.at)),
       who:_ovWhoShort(e.who), dur:_ovDurations(d).get(e), where, what,
       note:_ovLorem(`${d.name}|${e.kind}|${e.when}|${e.who}`),
       diff: en.lead ? _ovDiffHtml(d) : '',
