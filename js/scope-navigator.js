@@ -2468,6 +2468,13 @@ function dwNoteLevelLabel(){
   return (DW_NOTE_LEVELS.find(l => l.id === dwNoteLevel) || DW_NOTE_LEVELS[2]).label;
 }
 
+/* Notes name people the way the Activity does — "Marisol A.", not "M. Alvarez".
+   The roster is the same one the trail reads, so the two surfaces agree; a name
+   the roster does not carry (a contractor, a resident) is left as written. */
+function dwWhoShort(who){
+  return (typeof _ovWhoShort === 'function') ? (_ovWhoShort(who) || who) : who;
+}
+
 /* ── Note edit / delete ──────────────────────────────────────────────
    Scoped to USER_NOTES — the notes written in this session. Seeded notes
    are attributed to other people, so they carry no controls; editing
@@ -2702,7 +2709,7 @@ function dwNotes(notes, opts){
     if(isMine && dwNoteEditIdx === i){
       return `<div class="dw-note is-editing${n.hidden?' is-internal':''}${isApproval?' is-approval':''}">
         <div class="dw-note-meta">
-          ${apTick}<span class="dw-note-who">${n.who}</span>${role}${lvl}
+          ${apTick}<span class="dw-note-who">${dwWhoShort(n.who)}</span>${role}${lvl}
           <span class="dw-note-when">${n.when}</span>${edited}
         </div>
         <textarea class="dw-note-edit-input" oninput="dwNoteEditSetDraft(this.value)"
@@ -2739,7 +2746,7 @@ function dwNotes(notes, opts){
     </div>` : '';
     return `<div class="dw-note${IS_CONTRACTOR && !isSelf?' external':''}${n.hidden?' is-internal':''}${isApproval?' is-approval':''}${isMine?' has-menu':''}">
       <div class="dw-note-meta">
-        ${apTick}<span class="dw-note-who">${n.who}</span>${role}${lvl}${intBadge}
+        ${apTick}<span class="dw-note-who">${dwWhoShort(n.who)}</span>${role}${lvl}${intBadge}
         <span class="dw-note-when">${n.when}</span>${edited}
         ${badge}
       </div>
