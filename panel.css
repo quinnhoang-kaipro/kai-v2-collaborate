@@ -4750,7 +4750,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    are the grid's own items, which is what keeps six columns true across
    week rules and across the collapsed earlier block. Eight tracks — the
    dated rail and the marker, then the six the header names. */
-.ov-tl-scroll{overflow-x:auto;margin-top:20px}
+.ov-tl-scroll{overflow-x:auto;margin-top:8px}
 .ov-tl{
   display:grid;min-width:748px;
   grid-template-columns:88px 18px minmax(58px,.6fr) minmax(118px,1.5fr) minmax(96px,1.15fr) minmax(150px,2fr) auto auto;
