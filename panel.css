@@ -2663,8 +2663,7 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 /* Expanded detail. Indented to the document name's column so it reads as
    belonging to the row above rather than as a new section. */
 .reg-sub td{background:var(--wash);padding:2px 16px 14px 40px;border-bottom:1px solid var(--stroke)}
-.reg-sub-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
-.reg-sub-chips .reg-chip{margin-left:0}
+.reg-sub-chips{margin:0 0 8px;font-family:var(--body);font-size:11.5px;color:var(--t3)}
 /* No box. The groups are rules on the wash, the way the ledger's own rows
    are rules on the page — a bordered card here read as a table inside a table. */
 .reg-sub-list{display:flex;flex-direction:column;border-top:1px solid var(--stroke)}

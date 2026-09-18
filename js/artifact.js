@@ -239,10 +239,12 @@ function _renderRegisterSection(){
     </tr>`;
     if(!open || !canOpen) return head;
     const ar = _regAddedRevised(v);
-    const chips = ar ? `<div class="reg-sub-chips">
-      ${ar.added?`<span class="reg-chip is-quiet">${ar.added} added</span>`:''}
-      ${ar.revised?`<span class="reg-chip is-quiet">${ar.revised} revised</span>`:''}
-    </div>` : '';
+    /* A sentence, not two pills: the counts say what happened to the scope,
+       and "2 added / 5 revised" made the reader supply the nouns. */
+    const chips = ar ? `<div class="reg-sub-chips">${[
+      ar.added ? `${ar.added} new task${ar.added === 1 ? '' : 's'} added` : '',
+      ar.revised ? `${ar.revised} task${ar.revised === 1 ? '' : 's'} edited` : ''
+    ].filter(Boolean).join(', ')}</div>` : '';
     const verKey = _regVerKey(v);
     const groups = counts.detail.map(g => {
       const gk = `${v.id}|${g.room}`;
