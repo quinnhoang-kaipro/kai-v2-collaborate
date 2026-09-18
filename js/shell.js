@@ -1011,6 +1011,17 @@ function inChangeOrder(){
    here: it owns the ladder, and its budgets are stamped from the lines that
    actually exist at each version. Falls back to the shell's own list when the
    panel is not reachable yet. */
+/* The person holding the live document, asked of the panel that tracks it.
+   Null when it cannot answer — the caller falls back to the role's person. */
+function currentHolder(){
+  try{
+    const ifr = document.getElementById('iframe') || document.querySelector('iframe');
+    if(ifr && ifr.contentWindow && typeof ifr.contentWindow.a2CurrentHolder === 'function'){
+      return ifr.contentWindow.a2CurrentHolder();
+    }
+  }catch(e){ /* cross-origin or not loaded */ }
+  return null;
+}
 function changeOrderInfo(){
   try{
     const ifr = document.getElementById('iframe') || document.querySelector('iframe');
@@ -2087,11 +2098,20 @@ function renderStages(){
      down because the card opens downwards: a right chevron reads as "go
      somewhere", a down one as "this opens". */
   const turnRoleName = _turn.role ? roleName(_turn.role) : '';
+  /* The name, not the second person. "Your move" answered "do I owe something"
+     when the chip sits under a line that names a document — and the Activity
+     already names the person holding it. The holder comes from there when the
+     panel can answer, so the two surfaces say one name. */
+  /* Only while a change order is live: the panel's roster always has one to
+     name, and at the scope stage there is no such document for it to be about. */
+  const _holder = inChangeOrder() ? currentHolder() : null;
+  const turnLbl = _holder ? _holder.short : (_turn.mine ? 'Your move' : 'With ' + _turn.who);
   const turnChip = _turn.role
     ? `<button class="stage-turn${_turn.mine ? ' is-mine' : ''}" type="button" aria-haspopup="dialog"
          onclick="event.stopPropagation();toggleStatePop('.stage.active .stage-turn')"
-         title="${_turn.mine ? 'Your move' : 'With ' + _turn.who + ' (' + turnRoleName + ')'} — opens the info"
-         ><span class="stage-turn-lbl">${_turn.mine ? 'Your move' : 'With ' + _turn.who}</span>
+         title="With ${_holder ? _holder.name + ' · ' + _holder.doc
+           : (_turn.mine ? _turn.who + ' (you)' : _turn.who + ' (' + turnRoleName + ')')} — opens the info"
+         ><span class="stage-turn-lbl">${turnLbl}</span>
          <span class="stage-turn-car"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg></span></button>`
     : '';
   if(capsWrap) capsWrap.innerHTML = visibleStages.map(sg => {
@@ -2873,5 +2893,8 @@ document.addEventListener('DOMContentLoaded', () => {
   syncSbOptSeg();
   const ifr = document.getElementById('iframe');
   // Re-apply after every load: a preset change blanks the src and remounts.
-  if(ifr) ifr.addEventListener('load', () => { applySbOpt(); });
+  /* The stepper is drawn before the panel has booted, so the turn chip's
+     first paint cannot ask it who is holding the document. Draw it again once
+     the panel is up rather than leaving the fallback label standing. */
+  if(ifr) ifr.addEventListener('load', () => { applySbOpt(); setTimeout(render, 60); });
 });

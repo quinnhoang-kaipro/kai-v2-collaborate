@@ -52,7 +52,7 @@ const VER = {
   // the scope was approved. Only the first version needs it.
   orig:{label:'Scope',          date:'Apr 12, 2026', time:'2:10pm',  rank:0, opened:'Apr 2, 2026', openedTime:'8:20am', sow:'SOW-00000E7B', tag:'Original', tagCls:'archived', stateCls:''},
   co1: {label:'Change Order 1', date:'Apr 22, 2026', time:'11:40am', rank:1, opened:'Apr 12, 2026', openedTime:'3:35pm', sow:'SOW-00000E7C', tag:'Outdated', tagCls:'outdated', stateCls:' is-outdated'},
-  co2: {label:'Change Order 2', date:'Apr 30, 2026', time:'4:20pm',  rank:2, opened:'Apr 22, 2026', openedTime:'1:05pm', sow:'SOW-00000E7D', tag:'Current',  tagCls:'',         stateCls:' is-current'},
+  co2: {label:'Change Order 2', date:'Apr 30, 2026', time:'4:20pm',  rank:2, opened:'Apr 27, 2026', openedTime:'1:05pm', sow:'SOW-00000E7D', tag:'Current',  tagCls:'',         stateCls:' is-current'},
 };
 const VER_ORDER = ['orig','co1','co2'];
 

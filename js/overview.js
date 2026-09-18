@@ -1164,6 +1164,23 @@ function _ovStandingLineHtml(docs){
   </div>`;
 }
 
+/* Who is holding the newest document, for the shell. The toolbar's turn chip
+   used to name the role that owes the move — "Your move", or the role person
+   behind it — while the Activity two panes down named the person actually
+   holding the document. Same question, two answers. The Activity's answer is
+   the one built from the document's own hand-offs, so it is the one that
+   travels: the shell reads this and says the same name. */
+window.a2CurrentHolder = function(){
+  try{
+    const docs = _ovTrail();
+    const d = docs && docs[0];
+    if(!d || d.state === 'Approved') return null;
+    const ev = d.evs[0] || {};
+    const who = ev.to || ev.who;
+    return who ? {name: who, short: _ovWhoShort(who), doc: d.name} : null;
+  }catch(e){ return null; }
+};
+
 /* The current document's run is what anyone came here to check; everything
    older is the audit trail, which is a different errand. So the feed is cut
    at the day the newest document was opened — everything from there on is
