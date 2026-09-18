@@ -2691,7 +2691,15 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 .reg-task-new{display:inline-block;margin-left:6px;font-family:var(--mono);font-size:8px;
   font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--t2);
   background:var(--sunken);border:1px solid var(--stroke);padding:1px 4px;vertical-align:1px}
+/* The row is the way to the task; the product inside it is the way to a look
+   at the product, so it carries its own cursor. */
+.reg-task.is-go{cursor:pointer}
+.reg-task.is-go:hover{background:var(--wash)}
+.reg-task.is-go:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
 .reg-task-prod{color:var(--t2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reg-task-prod[data-hv-product]{cursor:help;text-decoration:underline;
+  text-decoration-style:dotted;text-underline-offset:3px;text-decoration-color:var(--stroke)}
+.reg-task-prod[data-hv-product]:hover{color:var(--ink);text-decoration-color:var(--t3)}
 .reg-task-none{color:var(--t3);font-style:italic}
 .reg-task-qty{color:var(--t2);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .reg-task-amt{color:var(--ink);font-weight:600;text-align:right;white-space:nowrap;
@@ -5079,6 +5087,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    only thing in it allowed to be large. */
 .ov-hv-img{height:132px;background-size:cover;background-position:center;
   border-bottom:1px solid var(--stroke)}
+.ov-hv-img.is-prod{background:var(--stroke)}
 .ov-hv-img.is-none{display:flex;align-items:center;justify-content:center;
   background:var(--sunken);font-family:var(--mono);font-size:9px;font-weight:700;
   letter-spacing:.09em;text-transform:uppercase;color:var(--t3)}

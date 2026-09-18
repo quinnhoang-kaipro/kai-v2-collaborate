@@ -248,11 +248,15 @@ function _renderRegisterSection(){
       const gk = `${v.id}|${g.room}`;
       const open = !!_regOpenGroups[gk];
       const rows = open ? _regGroupTasks(verKey, g.room).map(t => `
-        <div class="reg-task">
+        <div class="reg-task is-go" role="button" tabindex="0"
+          title="Open ${esc(t.name)} in the Editor"
+          onclick="event.stopPropagation();ovGoTask('${esc(t.code)}','${esc(g.room).replace(/'/g, "\\'")}','${esc(t.name).replace(/'/g, "\\'")}')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();ovGoTask('${esc(t.code)}','${esc(g.room).replace(/'/g, "\\'")}','${esc(t.name).replace(/'/g, "\\'")}');}">
           <span class="reg-task-code">${esc(t.code)}</span>
           <span class="reg-task-name">${esc(t.name)}${t.added
             ? `<span class="reg-task-new">New</span>` : ''}</span>
-          <span class="reg-task-prod">${t.product
+          <span class="reg-task-prod"${t.product ? ` data-hv-product="${esc(t.product)}"
+            data-hv-code="${esc(t.code)}" data-hv-room="${esc(g.room)}"` : ''}>${t.product
             ? esc(t.product) : '<span class="reg-task-none">No product selected</span>'}</span>
           <span class="reg-task-qty">${esc(t.qty)}</span>
           <span class="reg-task-amt">${esc(t.amount)}</span>

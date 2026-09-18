@@ -1462,6 +1462,22 @@ function _ovLatestPhoto(match){
    product, and saying so with two empty rows would be worse than not
    asking. */
 function _ovHoverData(el){
+  const prod = el.getAttribute('data-hv-product') || '';
+  if(prod){
+    const code = el.getAttribute('data-hv-code') || '';
+    const room = el.getAttribute('data-hv-room') || '';
+    let t = null;
+    if(typeof SCOPE !== 'undefined'){
+      SCOPE.forEach(g => g.tasks.forEach(x => { if(x.code === code) t = x; }));
+    }
+    return {kind:'product', title:prod, code, room,
+            /* The scope note is what the job says about this product — there
+               is no catalogue copy behind these, and inventing some would be
+               describing a thing rather than reporting it. */
+            desc: t ? (t.desc || '') : '',
+            qty: t ? (t.qty || '') : '', amount: t ? (t.amount || '') : '',
+            gc: t ? (t.gc || '') : ''};
+  }
   /* A document's preview answers a different question than a task's: not
      "which one is this" but "what did it do" — what it is worth, what it
      moved, and where it got to. */
@@ -1526,6 +1542,10 @@ function _ovHoverHtml(d){
   /* The fill is assigned as a property after the card is in the DOM, not
      written into a style attribute: _photoBg returns url("…") with double
      quotes, which closes the attribute early and drops the image. */
+  const row = (lbl, val, cls) => val
+    ? `<div class="ov-hv-row"><span class="ov-hv-lbl">${lbl}</span
+       ><span class="ov-hv-val${cls ? ' ' + cls : ''}">${esc(val)}</span></div>`
+    : '';
   const shot = d.photo
     ? `<div class="ov-hv-img"></div>`
     : `<div class="ov-hv-img is-none">No photo yet</div>`;
@@ -1546,6 +1566,18 @@ function _ovHoverHtml(d){
           <span>${esc(e.when)}</span></li>`).join('')}</ul>` : ''}
       </div>`;
   }
+  if(d.kind === 'product'){
+    return `<div class="ov-hv-img is-prod" aria-hidden="true"></div>
+      <div class="ov-hv-body">
+        <div class="ov-hv-kind">Product${d.room ? ` \u00b7 ${esc(d.room)}` : ''}</div>
+        <div class="ov-hv-title">${esc(d.title)}</div>
+        ${d.desc ? `<p class="ov-hv-desc">${esc(d.desc)}</p>` : ''}
+        ${row('Specified on', d.code)}
+        ${row('Quantity', d.qty)}
+        ${row('Contractor', d.gc)}
+        ${row('Amount', d.amount, 'is-amt')}
+      </div>`;
+  }
   if(d.kind === 'group'){
     return `${shot}
       <div class="ov-hv-body">
@@ -1555,10 +1587,6 @@ function _ovHoverHtml(d){
         ${d.tasks.length ? `<div class="ov-hv-list">${d.tasks.map(n => esc(n)).join(' · ')}</div>` : ''}
       </div>`;
   }
-  const row = (lbl, val, cls) => val
-    ? `<div class="ov-hv-row"><span class="ov-hv-lbl">${lbl}</span
-       ><span class="ov-hv-val${cls ? ' ' + cls : ''}">${esc(val)}</span></div>`
-    : '';
   return `${shot}
     <div class="ov-hv-body">
       <div class="ov-hv-kind">${esc(d.code)}${d.room ? ` · ${esc(d.room)}` : ''}</div>
@@ -1592,7 +1620,7 @@ function _ovHoverShow(el){
   }
   _ovHoverFor = el;
   _ovHoverEl.innerHTML = _ovHoverHtml(d);
-  const img = d.photo ? _ovHoverEl.querySelector('.ov-hv-img') : null;
+  const img = (d.photo && d.kind !== 'product') ? _ovHoverEl.querySelector('.ov-hv-img') : null;
   /* A real photograph when there is one; otherwise a flat neutral rather than
      _progPhotoBg's drawn interior. Those blocks read as a picture of the room
      at a glance — a wall, a floor, a cabinet edge — which is a claim about
@@ -1615,7 +1643,7 @@ function _ovHoverBind(){
   if(document.body.dataset.ovHoverBound) return;
   document.body.dataset.ovHoverBound = '1';
   const hit = e => e.target && e.target.closest
-    ? e.target.closest('.ov-ch-task, .ov-ch-grp, .ov-tr-doc-n') : null;
+    ? e.target.closest('.ov-ch-task, .ov-ch-grp, .ov-tr-doc-n, [data-hv-product]') : null;
   document.addEventListener('mouseover', e => {
     const el = hit(e);
     if(!el || el === _ovHoverFor) return;
