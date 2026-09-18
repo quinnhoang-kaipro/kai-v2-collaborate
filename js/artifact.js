@@ -251,15 +251,19 @@ function _renderRegisterSection(){
         <div class="reg-task is-go" role="button" tabindex="0"
           onclick="event.stopPropagation();ovGoTask('${esc(t.code)}','${esc(g.room).replace(/'/g, "\\'")}','${esc(t.name).replace(/'/g, "\\'")}')"
           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();ovGoTask('${esc(t.code)}','${esc(g.room).replace(/'/g, "\\'")}','${esc(t.name).replace(/'/g, "\\'")}');}">
-          <span class="reg-task-code">${esc(t.code)}</span>
-          <span class="reg-task-name" data-hv-code="${esc(t.code)}"
-            data-hv-name="${esc(t.name)}" data-hv-room="${esc(g.room)}">${esc(t.name)}${t.added
-            ? `<span class="reg-task-new">New</span>` : ''}</span>
-          <span class="reg-task-prod"${t.product ? ` data-hv-product="${esc(t.product)}"
-            data-hv-code="${esc(t.code)}" data-hv-room="${esc(g.room)}"` : ''}>${t.product
-            ? esc(t.product) : '<span class="reg-task-none">No product selected</span>'}</span>
-          <span class="reg-task-qty">${esc(t.qty)}</span>
-          <span class="reg-task-amt">${esc(t.amount)}</span>
+          <span class="reg-task-l">
+            <span class="reg-task-name" data-hv-code="${esc(t.code)}"
+              data-hv-name="${esc(t.name)}" data-hv-room="${esc(g.room)}">${esc(t.name)}</span>${t.added
+              ? `<span class="reg-task-new">New</span>` : ''}
+            <span class="reg-task-sub"><span class="reg-task-code">${esc(t.code)}</span>${t.product
+              ? ` \u00b7 <span class="reg-task-prod" data-hv-product="${esc(t.product)}"
+                  data-hv-code="${esc(t.code)}" data-hv-room="${esc(g.room)}">${esc(t.product)}</span>`
+              : ' \u00b7 <span class="reg-task-none">No product selected</span>'}</span>
+          </span>
+          <span class="reg-task-r">
+            <span class="reg-task-qty">${esc(t.qty)}</span>
+            <span class="reg-task-amt">${esc(t.amount)}</span>
+          </span>
         </div>`).join('') : '';
       return `<div class="reg-sub-g${open ? ' is-open' : ''}">
         <button class="reg-sub-row" aria-expanded="${open}"
@@ -269,14 +273,7 @@ function _renderRegisterSection(){
           <span class="reg-sub-n">${g.tasks.length} ${g.tasks.length === 1 ? 'task' : 'tasks'}</span>
           <span class="reg-sub-go" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </button>
-        ${open ? `<div class="reg-tasks">
-          <div class="reg-task reg-task-hd">
-            <span class="reg-task-code">ID</span>
-            <span class="reg-task-name">Task</span>
-            <span class="reg-task-prod">Product</span>
-            <span class="reg-task-qty">Qty</span>
-            <span class="reg-task-amt">Amount</span>
-          </div>${rows}</div>` : ''}
+        ${open ? `<div class="reg-tasks">${rows}</div>` : ''}
       </div>`;
     }).join('');
     return head + `<tr class="reg-sub"><td colspan="5">

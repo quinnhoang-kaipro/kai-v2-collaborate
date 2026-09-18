@@ -2665,28 +2665,32 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 .reg-sub td{background:var(--wash);padding:2px 16px 14px 40px;border-bottom:1px solid var(--stroke)}
 .reg-sub-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
 .reg-sub-chips .reg-chip{margin-left:0}
-.reg-sub-list{display:flex;flex-direction:column;border:1px solid var(--stroke);background:var(--white)}
-.reg-sub-row{display:flex;align-items:center;gap:12px;width:100%;padding:9px 12px;border:0;border-bottom:1px solid var(--stroke);background:transparent;cursor:pointer;text-align:left;font-family:var(--body);font-size:12.5px;color:var(--ink)}
+/* No box. The groups are rules on the wash, the way the ledger's own rows
+   are rules on the page — a bordered card here read as a table inside a table. */
+.reg-sub-list{display:flex;flex-direction:column;border-top:1px solid var(--stroke)}
+.reg-sub-row{display:flex;align-items:center;gap:12px;width:100%;padding:9px 2px;border:0;border-bottom:1px solid var(--stroke);background:transparent;cursor:pointer;text-align:left;font-family:var(--body);font-size:12.5px;color:var(--ink)}
 .reg-sub-g:last-child > .reg-sub-row{border-bottom:0}
-.reg-sub-g.is-open > .reg-sub-row{background:var(--sunken)}
+.reg-sub-g.is-open > .reg-sub-row{font-weight:600}
 .reg-sub-g.is-open > .reg-sub-row .reg-sub-go{transform:rotate(90deg)}
 .reg-sub-row .reg-sub-go{transition:transform .12s}
 
-/* The lines themselves. Five columns because a line is five facts — its code,
-   what it is, what it carries, how much of it, and what that costs — and the
-   money is the column the eye runs down, so it is the one that is aligned. */
-.reg-tasks{border-top:1px solid var(--stroke);background:var(--white)}
-/* Named on the ledger's own footing, so the nested table reads like the one
-   it sits inside rather than like a different kind of thing. */
-.reg-task-hd{background:var(--sunken);border-bottom:1px solid var(--stroke);padding-top:7px;padding-bottom:7px}
-.reg-task-hd > *{font-family:var(--mono)!important;font-size:8.5px!important;font-weight:700!important;
-  letter-spacing:.12em;text-transform:uppercase;color:var(--t3)!important;font-style:normal!important}
-.reg-task{display:grid;grid-template-columns:76px minmax(96px,1.1fr) minmax(120px,1.8fr) 64px auto;
-  gap:0 12px;align-items:baseline;padding:8px 12px 8px 24px;
+/* The lines themselves, built like the group rows above them: what it is on
+   the left, what it costs on the right, a rule between. The code and the
+   product ride underneath the name rather than in columns of their own — five
+   aligned columns made a second table inside the ledger. */
+/* The block closes with the same rule the group rows carry, so the last line
+   does not run straight into the next group. */
+.reg-tasks{padding-left:14px;border-bottom:1px solid var(--stroke)}
+.reg-sub-g:last-child > .reg-tasks{border-bottom:0}
+.reg-task{display:flex;align-items:baseline;gap:12px;padding:8px 2px;
   border-bottom:1px solid var(--hair);font-family:var(--body);font-size:12px}
 .reg-tasks .reg-task:last-child{border-bottom:0}
-.reg-task-code{font-family:var(--mono);font-size:10.5px;color:var(--t3);white-space:nowrap}
-.reg-task-name{color:var(--ink);font-weight:500;min-width:0}
+.reg-task-l{flex:1;min-width:0}
+.reg-task-r{display:flex;align-items:baseline;gap:12px;white-space:nowrap}
+.reg-task-name{color:var(--ink);font-weight:500}
+.reg-task-sub{display:block;margin-top:2px;font-size:11px;color:var(--t3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reg-task-code{font-family:var(--mono);font-size:10px;color:var(--t3)}
 /* A line this version brought in, rather than one it repriced. */
 .reg-task-new{display:inline-block;margin-left:6px;font-family:var(--mono);font-size:8px;
   font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--t2);
@@ -2694,23 +2698,15 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 /* The row is the way to the task; the product inside it is the way to a look
    at the product, so it carries its own cursor. */
 .reg-task.is-go{cursor:pointer}
-.reg-task.is-go:hover{background:var(--wash)}
+.reg-task.is-go:hover{background:var(--white)}
 .reg-task.is-go:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
-.reg-task-prod{color:var(--t2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .reg-task-prod[data-hv-product]{cursor:help;text-decoration:underline;
-  text-decoration-style:dotted;text-underline-offset:3px;text-decoration-color:var(--stroke)}
-.reg-task-prod[data-hv-product]:hover{color:var(--ink);text-decoration-color:var(--t3)}
-.reg-task-none{color:var(--t3);font-style:italic}
-.reg-task-qty{color:var(--t2);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-.reg-task-amt{color:var(--ink);font-weight:600;text-align:right;white-space:nowrap;
+  text-decoration-style:dotted;text-underline-offset:2px;text-decoration-color:var(--stroke)}
+.reg-task-prod[data-hv-product]:hover{color:var(--t2);text-decoration-color:var(--t3)}
+.reg-task-none{font-style:italic}
+.reg-task-qty{color:var(--t3);font-variant-numeric:tabular-nums}
+.reg-task-amt{color:var(--ink);font-weight:600;text-align:right;
   font-variant-numeric:tabular-nums}
-@container (max-width:620px){
-  .reg-task{grid-template-columns:minmax(0,1fr) auto;row-gap:2px}
-  .reg-task-code{grid-column:1;grid-row:1}
-  .reg-task-name{grid-column:1;grid-row:2}
-  .reg-task-prod{grid-column:1;grid-row:3}
-  .reg-task-qty{grid-column:2;grid-row:1}
-  .reg-task-amt{grid-column:2;grid-row:2}
 }
 .reg-sub-row:hover{background:var(--sunken)}
 .reg-sub-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
