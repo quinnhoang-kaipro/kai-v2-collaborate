@@ -4947,7 +4947,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    it is what is happening now — and a second tinted block competing with it
    read as two current things. The band keeps its rules and its indent, which
    is enough to group the rows without claiming any urgency. */
-.ov-walks{display:flex;flex-direction:column;gap:1px;margin:4px 0;
+.ov-walks{display:flex;flex-direction:column;gap:0;margin:0;
   padding:0;
   position:relative}
 /* No caption: the band's own surface says it is a different kind of thing,
@@ -4961,7 +4961,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    dates form one column down the whole page. The band's 24px inset is taken
    off the flexible first column, not the fixed two. */
 .ov-walk{display:grid;grid-template-columns:104px minmax(0,1fr) 150px;gap:0;
-  align-items:baseline;padding:3px 0}
+  align-items:baseline;padding:7px 0}
 .ov-walk > .ov-walk-d{text-align:left;padding-right:16px}
 .ov-walk-c{font-size:12.5px;color:var(--t2);min-width:0;line-height:1.35;
   padding-left:calc(var(--ov-mark) + var(--ov-mark-gap))}
@@ -4976,7 +4976,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 
 /* The reveal for the earlier documents. Underlined because it is the one
    thing in this section that acts, and the section is otherwise all text. */
-.ov-trail-rest{display:flex;flex-direction:column;gap:20px}
+.ov-trail-rest{display:flex;flex-direction:column;gap:0}
 .ov-trail-rest[hidden]{display:none}
 .ov-more{align-self:flex-start;padding:0;border:0;background:none;cursor:pointer;
   font:inherit;font-size:12px;font-weight:600;color:var(--ink);

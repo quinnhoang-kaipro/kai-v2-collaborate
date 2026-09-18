@@ -657,23 +657,6 @@ function _ovSiteRuns(older, newer){
   const seen = new Map();
   walks.forEach(w => (w.hit || []).forEach(t => seen.set(t.id, t)));
   const touched = [...seen.values()];
-  /* What was captured. Off the feed by default — it measures how much was
-     recorded rather than what happened to the work, and it pushed the two
-     rows that do say what happened down the band. index-activity.html has
-     it back. */
-  if(OV_FULL){
-    const photos = walks.reduce((k, w) => k + w.photos, 0);
-    const notes  = walks.reduce((k, w) => k + w.notes, 0);
-    const rooms  = new Set(touched.map(t => t.room).filter(Boolean));
-    if(photos || notes) rows.push({
-      text: `${join([photos && n(photos, 'photo', 'photos'),
-                     notes  && n(notes,  'note',  'notes')])} added`,
-      side: join([rooms.size && n(rooms.size, 'group', 'groups'),
-                  touched.length && n(touched.length, 'task', 'tasks')]),
-      when: span
-    });
-  }
-
   /* Grouped by room so the list opens the way the change list does, and so
      a long one reads as a few places rather than twenty loose lines. */
   const byRoom = ts => {
@@ -1319,11 +1302,10 @@ function _ovPropFields(){
    the shell's demo panel holds a toggle for it and this is the flag it sets.
    Default off: the tab reads as the job's facts without it. */
 /* index-activity.html sets this on the host page and the shell passes it into
-   the panel. It does two things: the feed is on to begin with, and it carries
-   the two kinds of row the tab dropped — the change-order counts and the
-   capture counts. Both are still built; they were taken out of the feed, not
-   out of the data, which is why restoring them is a flag rather than a
-   rewrite. */
+   the panel. It restores one kind of row the tab dropped: the change-order
+   counts — "5 groups · 7 tasks changed in Change Order 2". The capture counts
+   it used to carry as well are gone outright; they measured how much was
+   recorded rather than what happened to the work. */
 const OV_FULL = (typeof window !== 'undefined') && !!window.__KAI_ACTIVITY_FULL;
 /* index-activity.html keeps the Activity as it read before the timeline: one
    sentence per row that names its own subject — "T. Okafor approved Change
