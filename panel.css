@@ -4693,10 +4693,11 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tl-hd,.ov-tl-r{display:contents}
 .ov-tl-h{
   font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.13em;
-  text-transform:uppercase;color:var(--t3);padding:0 10px 8px 0;align-self:end;
+  text-transform:uppercase;color:var(--t3);padding:0 10px 8px;align-self:end;
   border-bottom:1.5px solid var(--ink);cursor:help;
 }
-.ov-tl-h:last-child{text-align:right;padding-right:0}
+.ov-tl-h.is-num{text-align:right}
+.ov-tl-h:last-child{text-align:right;padding-right:0;padding-left:16px}
 .ov-tl-hd .ov-tl-when,.ov-tl-hd .ov-tl-rail{border-bottom:1.5px solid var(--ink)}
 
 /* The week rule. Spans every track so it reads as a break in the whole
@@ -4771,11 +4772,12 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 /* Shut, the earlier stretch is hidden cell by cell — its rows share the grid
    above so the columns cannot drift when it opens. */
 .ov-tl.is-shut .is-later{display:none}
-.ov-tr-rows{display:grid;grid-template-columns:minmax(0,1fr) 150px 108px;
+.ov-tr-rows{display:grid;grid-template-columns:104px minmax(0,1fr) 150px;
   align-items:stretch}
 .ov-tr-r{display:contents}
 .ov-tr-r > *{padding:7px 0;display:flex;align-items:center}
-.ov-tr-r > .ov-tr-sum,.ov-tr-r > .ov-tr-d{justify-content:flex-end}
+.ov-tr-r > .ov-tr-d{justify-content:flex-start;text-align:left;padding-right:16px}
+.ov-tr-r > .ov-tr-sum{justify-content:flex-end}
 .ov-tr-r + .ov-tr-r > *{border-top:1px solid var(--hair,var(--stroke))}
 /* A row that opens says so across its whole width: the cursor on all of it,
    and a wash on hover so the target is the line rather than the caret. */
@@ -4819,7 +4821,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
   text-decoration-thickness:1px}
 .ov-tr-now{font-size:12px;font-weight:700;color:var(--ink)}
 .ov-tr-d{font-size:11px;color:var(--t3);white-space:nowrap;font-variant-numeric:tabular-nums;
-  text-align:right}
+  text-align:left}
 /* ── months are the blocks ──
    Documents overlap each other — a change order is passed around for a
    fortnight while the property is worked on — so they cannot be the grouping
@@ -4852,15 +4854,16 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-trail{container-type:inline-size}
 @container (max-width:560px){
   .ov-tr-rows{grid-template-columns:minmax(0,1fr) auto}
-  .ov-tr-r > .ov-tr-ev{grid-column:1 / -1;padding:7px 0 0}
-  .ov-tr-r > .ov-tr-sum{grid-column:1;justify-content:flex-start;padding:1px 0 7px}
-  .ov-tr-r > .ov-tr-d{grid-column:2;padding:1px 0 7px}
+  .ov-tr-r > .ov-tr-ev{grid-column:1 / -1;grid-row:1;padding:7px 0 0}
+  .ov-tr-r > .ov-tr-sum{grid-column:1;grid-row:2;justify-content:flex-start;padding:1px 0 7px}
+  .ov-tr-r > .ov-tr-d{grid-column:2;grid-row:2;justify-content:flex-end;text-align:right;padding:1px 0 7px}
+  .ov-tr-detail{padding-left:24px}
   .ov-tr-r + .ov-tr-r > *{border-top:0}
   .ov-tr-r + .ov-tr-r > .ov-tr-ev{border-top:1px solid var(--hair,var(--stroke))}
   .ov-walk{grid-template-columns:minmax(0,1fr) auto}
-  .ov-walk-c{grid-column:1 / -1}
-  .ov-walk-s{grid-column:1;text-align:left}
-  .ov-walk-d{grid-column:2}
+  .ov-walk > .ov-walk-c{grid-column:1 / -1;grid-row:1}
+  .ov-walk > .ov-walk-s{grid-column:1;grid-row:2;text-align:left}
+  .ov-walk > .ov-walk-d{grid-column:2;grid-row:2;text-align:right;padding-right:0}
 }
 /* What the editing came to. It used to be set in the product's label voice —
    mono, uppercase — because it was a count rather than something a person
@@ -4878,7 +4881,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tr-open[aria-expanded="true"] .ov-tr-car{transform:rotate(180deg)}
 /* The names, indented under the count. Spans the row grid, since it belongs to
    the line above rather than to any one column. */
-.ov-tr-detail{grid-column:1 / -1;padding:4px 0 10px 24px;
+.ov-tr-detail{grid-column:1 / -1;padding:4px 0 10px 128px;
   border-top:1px solid var(--hair,var(--stroke))}
 .ov-tr-detail[hidden]{display:none}
 .ov-ch-g{padding:7px 0}
@@ -4923,7 +4926,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    read as two current things. The band keeps its rules and its indent, which
    is enough to group the rows without claiming any urgency. */
 .ov-walks{display:flex;flex-direction:column;gap:1px;margin:10px 0;
-  padding:9px 0 9px 16px;
+  padding:9px 0;
   border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke);
   position:relative}
 /* No caption: the band's own surface says it is a different kind of thing,
@@ -4936,8 +4939,9 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 /* The right-hand pair matches the feed's own tracks, so the counts and the
    dates form one column down the whole page. The band's 24px inset is taken
    off the flexible first column, not the fixed two. */
-.ov-walk{display:grid;grid-template-columns:minmax(0,1fr) 150px 108px;gap:0;
+.ov-walk{display:grid;grid-template-columns:104px minmax(0,1fr) 150px;gap:0;
   align-items:baseline;padding:3px 0}
+.ov-walk > .ov-walk-d{text-align:left;padding-right:16px}
 .ov-walk-c{font-size:12.5px;color:var(--t2);min-width:0;line-height:1.35}
 /* The rows that open match the document rows that open — same button, same
    caret — because they are the same promise: the count, then the tasks. */
@@ -4946,7 +4950,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-walk-s{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3);white-space:nowrap;text-align:right}
 .ov-walk-d{font-size:11px;color:var(--t3);white-space:nowrap;font-variant-numeric:tabular-nums;
-  text-align:right}
+  text-align:left}
 
 /* The reveal for the earlier documents. Underlined because it is the one
    thing in this section that acts, and the section is otherwise all text. */

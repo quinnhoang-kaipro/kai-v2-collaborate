@@ -794,6 +794,7 @@ function _ovWalksHtml(run, key){
     const open = !!_ovOpenChanges[id];
     return `<div class="ov-walk${r.detail ? ' is-tappable' : ''}"${
       r.detail ? ` onclick="ovToggleChanges('${id}')"` : ''}>
+      <span class="ov-walk-d">${esc(r.when)}</span>
       <span class="ov-walk-c">${r.detail
         ? `<button type="button" class="ov-tr-open ov-site-open"
              aria-expanded="${open}" aria-controls="ovCh-${id}"
@@ -802,7 +803,6 @@ function _ovWalksHtml(run, key){
            </button>`
         : esc(r.text)}</span>
       <span class="ov-walk-s">${esc(r.side)}</span>
-      <span class="ov-walk-d">${esc(r.when)}</span>
       ${r.detail ? `<div class="ov-tr-detail ov-site-detail" id="ovCh-${id}"${open ? '' : ' hidden'} onclick="event.stopPropagation()">
         ${r.detail.map(g => `<div class="ov-ch-g">
           <button type="button" class="ov-ch-grp" data-hv-room="${esc(g.room)}" onclick="ovGoGroup('${esc(g.room).replace(/'/g, "\\'")}')">${esc(g.room)}</button>
@@ -849,12 +849,12 @@ function _ovDocRowHtml(d, e, lead){
      caret stays, for the keyboard and for saying the row does anything. */
   const tap = e.detail ? ` onclick="ovToggleChanges('${e.ver}')"` : '';
   return `<div class="ov-tr-r ov-tr-${e.kind}${e.detail ? ' is-tappable' : ''}">
+      <span class="ov-tr-d"${tap}>${esc(e.when || '')}</span>
       <span class="ov-tr-ev"${tap}>
         <span class="ov-tr-mk">${e.kind === 'approved' ? _OV_TICK : ''}</span>
         ${body}
       </span>
       <span class="ov-tr-sum"${tap}>${lead ? _ovMoneyHtml(d) : ''}</span>
-      <span class="ov-tr-d"${tap}>${esc(e.when || '')}</span>
     </div>
     ${e.detail ? `<div class="ov-tr-detail" id="ovCh-${e.ver}"${_ovOpenChanges[e.ver] ? '' : ' hidden'} onclick="event.stopPropagation()">
       ${e.detail.map(g => `<div class="ov-ch-g">
@@ -1013,14 +1013,14 @@ const _OV_COLS = [
   ['What',       'What they did — a count opens the list it counts'],
   ['Artifact',   'The document the action happened in'],
   ['Note',       'Anything recorded alongside the action'],
-  ['Difference', 'What the action did to the job total'],
-  ['Total',      'What the job was worth once the action had landed'],
+  ['Difference', 'What the action did to the job total', 'num'],
+  ['Total',      'What the job was worth once the action had landed', 'num'],
 ];
 function _ovTlHead(){
   return `<div class="ov-tl-hd">
     <span class="ov-tl-when"></span><span class="ov-tl-rail"></span>
-    ${_OV_COLS.map(([l, t]) =>
-      `<span class="ov-tl-h" title="${esc(t)}">${esc(l)}</span>`).join('')}
+    ${_OV_COLS.map(([l, t, a]) =>
+      `<span class="ov-tl-h${a === 'num' ? ' is-num' : ''}" title="${esc(t)}">${esc(l)}</span>`).join('')}
   </div>`;
 }
 function _ovTlDetail(groups){
