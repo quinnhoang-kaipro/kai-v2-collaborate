@@ -4752,12 +4752,12 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    dated rail and the marker, then the six the header names. */
 .ov-tl-scroll{overflow-x:auto;margin-top:8px}
 .ov-tl{
-  display:grid;min-width:748px;
-  grid-template-columns:88px 18px minmax(58px,.6fr) minmax(118px,1.5fr) minmax(96px,1.15fr) minmax(150px,2fr) auto auto;
+  display:grid;min-width:776px;
+  grid-template-columns:88px 18px minmax(58px,.6fr) minmax(118px,1.85fr) minmax(124px,.8fr) minmax(150px,2fr) auto auto;
   align-items:stretch;
 }
-.ov-tl.has-dur{min-width:622px;
-  grid-template-columns:88px 18px minmax(58px,.7fr) minmax(58px,.6fr) minmax(118px,1.5fr) minmax(96px,1.15fr) minmax(150px,2fr) auto auto}
+.ov-tl.has-dur{min-width:650px;
+  grid-template-columns:88px 18px minmax(58px,.7fr) minmax(58px,.6fr) minmax(118px,1.85fr) minmax(124px,.8fr) minmax(150px,2fr) auto auto}
 .ov-tl-hd,.ov-tl-r{display:contents}
 .ov-tl-h{
   font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.13em;
@@ -4776,8 +4776,11 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    timeline rather than a label in one column. */
 .ov-tl-wk{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:24px 0 6px}
 .ov-tl-hd + .ov-tl-wk{margin-top:10px}
-.ov-tl-wk span{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.13em;
-  text-transform:uppercase;color:var(--t2);white-space:nowrap}
+/* The week is the one label that has to be seen from across the feed — it is
+   what tells you which rows belong together — so it is set darker and larger
+   than the column headers it sits under. */
+.ov-tl-wk span{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink);white-space:nowrap}
 /* No trailing rule: the label is already set apart by its case, its tracking
    and the space around it, and a full-width line for every week turned the
    feed into a stack of boxes. */
