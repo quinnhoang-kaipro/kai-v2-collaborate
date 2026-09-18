@@ -985,6 +985,9 @@ function _ovDurations(d){
    it is read from — what the document was worth before and after — stays in
    the tooltip, so the column can be one signed figure without hiding what it
    came from. */
+function _ovTotalHtml(d){
+  return d.amount ? `<span class="ov-tl-tot">${esc(d.amount)}</span>` : '';
+}
 function _ovDiffHtml(d){
   if(!d.amount) return '';
   if(!d.was) return `<span class="ov-tl-delta">${esc(d.amount)}</span>`;
@@ -1008,6 +1011,7 @@ const _OV_COLS = [
   ['Artifact',   'The document the action happened in'],
   ['Note',       'Anything recorded alongside the action'],
   ['Difference', 'What the action did to the job total'],
+  ['Total',      'What the job was worth once the action had landed'],
 ];
 function _ovTlHead(){
   return `<div class="ov-tl-hd">
@@ -1074,6 +1078,7 @@ function _ovTlRow(o){
     <span class="ov-tl-where${L}"${tap}>${o.where || ''}</span>
     <span class="ov-tl-note${L}"${tap}>${o.note ? esc(o.note) : _OV_DASH}</span>
     <span class="ov-tl-diff${L}"${tap}>${o.diff || ''}</span>
+    <span class="ov-tl-total${L}"${tap}>${o.total || ''}</span>
   </div>${o.detailId ? `<div class="ov-tl-detail${L}" id="ovCh-${o.detailId}"${
     _ovOpenChanges[o.detailId] ? '' : ' hidden'} onclick="event.stopPropagation()"
     >${_ovTlDetail(o.detail)}</div>` : ''}`;
@@ -1103,7 +1108,7 @@ function _ovTimelineFeedHtml(entries, weekState, later){
           kind:'site', day:_ovDayLabel(en.at), sub:_ovYearLabel(en.at),
           who:'', dur:'', where:'',
           what:esc([r.side, r.text].filter(Boolean).join(' \u00b7 ')),
-          note:_ovLorem(`${en.key}|${i}|${r.text}`), diff:'',
+          note:_ovLorem(`${en.key}|${i}|${r.text}`), diff:'', total:'',
           detailId: r.detail ? `ovSite-${en.key}-${i}` : null, detail:r.detail,
           wkFirst: wkFirst && !i, later,
         });
@@ -1124,6 +1129,7 @@ function _ovTimelineFeedHtml(entries, weekState, later){
       who:e.who, dur:_ovDurations(d).get(e), where, what,
       note:_ovLorem(`${d.name}|${e.kind}|${e.when}|${e.who}`),
       diff: en.lead ? _ovDiffHtml(d) : '',
+      total: en.lead ? _ovTotalHtml(d) : '',
       detailId: e.detail ? e.ver : null, detail:e.detail, wkFirst, later,
     });
   });

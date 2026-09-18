@@ -4684,12 +4684,12 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    dated rail and the marker, then the six the header names. */
 .ov-tl-scroll{overflow-x:auto}
 .ov-tl{
-  display:grid;min-width:660px;
-  grid-template-columns:88px 18px minmax(70px,.85fr) minmax(118px,1.5fr) minmax(96px,1.15fr) minmax(150px,2fr) auto;
+  display:grid;min-width:748px;
+  grid-template-columns:88px 18px minmax(70px,.85fr) minmax(118px,1.5fr) minmax(96px,1.15fr) minmax(150px,2fr) auto auto;
   align-items:stretch;
 }
 .ov-tl.has-dur{min-width:622px;
-  grid-template-columns:88px 18px minmax(58px,.7fr) minmax(70px,.85fr) minmax(118px,1.5fr) minmax(96px,1.15fr) minmax(150px,2fr) auto}
+  grid-template-columns:88px 18px minmax(58px,.7fr) minmax(70px,.85fr) minmax(118px,1.5fr) minmax(96px,1.15fr) minmax(150px,2fr) auto auto}
 .ov-tl-hd,.ov-tl-r{display:contents}
 .ov-tl-h{
   font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.13em;
@@ -4718,8 +4718,12 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tl-dur{color:var(--t2);font-size:12px}
 .ov-tl-note{color:var(--t2);font-size:12px;line-height:1.4;white-space:normal}
 .ov-tl-where{flex-direction:column;gap:2px;align-items:flex-start;min-width:0}
-.ov-tl-diff{justify-content:flex-end;text-align:right;white-space:nowrap;
+.ov-tl-diff,.ov-tl-total{justify-content:flex-end;text-align:right;white-space:nowrap;
   font-variant-numeric:tabular-nums}
+/* The difference is the event; the total is where it left things. The figure
+   that moved gets the weight, the standing figure stays quiet. */
+.ov-tl-total{padding-left:16px}
+.ov-tl-tot{font-weight:600;color:var(--ink)}
 .ov-tl-dash{color:var(--t3)}
 
 /* The rail. The connector runs the full height of each cell so consecutive
