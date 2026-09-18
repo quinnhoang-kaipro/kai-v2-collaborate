@@ -285,11 +285,16 @@ function _ovTrail(){
       const before = running;
       running += moved;
       const body = _ovLorem(`${id}|${h.who}|${k}`);
-      _OV_TENURE_NOTES.push({who:h.who, role:h.role, when:(h.to || h.from),
+      /* An id, because the body is not one: the placeholder pool is smaller
+         than the number of tenures, so two people's notes can read alike and
+         the drawer would scroll to whichever copy came first. */
+      const noteId = `${id}~${k}`;
+      _OV_TENURE_NOTES.push({nid:noteId, who:h.who, role:h.role, when:(h.to || h.from),
                              body, level:(m.label || id), hidden:true});
       const nextHolder = chain[k + 1] ? chain[k + 1].who : null;
       return {
         note: body,
+        noteId,
         handedTo: nextHolder,
         /* Their own movement and where it left the job. A tenure that changed
            no money carries neither — an unchanged total repeated down the
@@ -1004,22 +1009,20 @@ const _OV_DASH = '<span class="ov-tl-dash">\u2014</span>';
 /* Where the rest of a note lives. The events carry no note of their own yet
    (see _OV_LOREM), so this goes to the scope's notes — the drawer this column
    will read from once hand-off notes are stored on the event. */
-function ovOpenNote(body){
+function ovOpenNote(nid){
   if(typeof openScopeDrawer !== 'function'){
     if(typeof toast === 'function') toast('Notes drawer unavailable here');
     return;
   }
   openScopeDrawer('notes');
-  if(!body) return;
+  if(!nid) return;
   /* setTimeout rather than rAF: the drawer's panel does not always get frames
      (a backgrounded panel drops them), and a queued highlight that never runs
-     is worse than one a tick late. Matched on the opening of the body — the
-     drawer renders the same string, so a prefix is enough to find it and short
-     enough to survive any wrapping the card does. */
-  const key = String(body).slice(0, 40);
+     is worse than one a tick late. Matched on the note's id rather than its
+     text: the placeholder bodies repeat across tenures, so matching the words
+     landed on somebody else's note that happened to read the same. */
   setTimeout(() => {
-    const hit = [...document.querySelectorAll('.dw-note')]
-      .find(n => n.textContent.includes(key));
+    const hit = document.querySelector(`.dw-note[data-nid="${nid}"]`);
     if(!hit) return;
     document.querySelectorAll('.dw-note.is-hit').forEach(n => n.classList.remove('is-hit'));
     hit.classList.add('is-hit');
@@ -1097,7 +1100,7 @@ function _ovTlRow(o){
     <span class="ov-tl-where${L}"${tap}>${o.where || ''}</span>
     <span class="ov-tl-note${L}"${tap}>${o.note
       ? `<button type="button" class="ov-tl-note-t" title="Open this note in the notes drawer"
-           onclick="event.stopPropagation();ovOpenNote(this.textContent)">${esc(o.note)}</button>`
+           onclick="event.stopPropagation();ovOpenNote('${esc(o.noteId || '')}')">${esc(o.note)}</button>`
       : _OV_DASH}</span>
     <span class="ov-tl-diff${L}"${tap}>${o.diff || ''}</span>
     <span class="ov-tl-total${L}"${tap}>${o.total || ''}</span>
@@ -1138,7 +1141,7 @@ function _ovTimelineFeedHtml(entries, weekState, later){
       day: e.railDay || _ovDayLabel(en.at),
       sub: e.railDay ? _ovYearLabel(en.at) : (e.time || _ovYearLabel(en.at)),
       who:_ovWhoShort(e.who), dur:_ovDurations(d).get(e), where, what,
-      note:e.note || '',
+      note:e.note || '', noteId:e.noteId || '',
       diff: _ovDiffHtml(e),
       total: _ovTotalHtml(e),
       detailId: e.detail ? e.ver : null, detail:e.detail, wkFirst, later,

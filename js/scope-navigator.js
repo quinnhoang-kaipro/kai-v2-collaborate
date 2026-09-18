@@ -2744,7 +2744,8 @@ function dwNotes(notes, opts){
       <button type="button" class="dw-note-act is-confirm" onclick="event.stopPropagation();dwNoteDelete(${i})">Confirm delete</button>
       <button type="button" class="dw-note-act" onclick="event.stopPropagation();dwNoteDeleteCancel()">Keep</button>
     </div>` : '';
-    return `<div class="dw-note${IS_CONTRACTOR && !isSelf?' external':''}${n.hidden?' is-internal':''}${isApproval?' is-approval':''}${isMine?' has-menu':''}">
+    return `<div class="dw-note${IS_CONTRACTOR && !isSelf?' external':''}${n.hidden?' is-internal':''}${isApproval?' is-approval':''}${isMine?' has-menu':''}"${
+      n.nid ? ` data-nid="${esc(n.nid)}"` : ''}>
       <div class="dw-note-meta">
         ${apTick}<span class="dw-note-who">${dwWhoShort(n.who)}</span>${role}${lvl}${intBadge}
         <span class="dw-note-when">${n.when}</span>${edited}
