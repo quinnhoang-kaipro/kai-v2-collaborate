@@ -4571,7 +4571,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    property. The photo spans the title and the figures rather than sitting
    beside the title alone, which would have left a column of white under it. */
 .ov-mod-head{display:grid;grid-template-columns:196px minmax(0,1fr);
-  gap:0 18px;align-items:start}
+  gap:0 18px;align-items:stretch}
 /* The job's fields, folded under the figures they belong with. The rule is
    the same one that already sits between the title and the figures, so the
    module reads as three bands of one thing rather than two blocks joined. */
@@ -4581,14 +4581,20 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
   grid-template-columns:minmax(0,.8fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.8fr) minmax(0,1.1fr)}
 .ov-head-fields .ov-sec-edit{flex-shrink:0}
 .ov-head-r{min-width:0}
-.ov-photo{position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--sunken);
-  border:1px solid var(--stroke);margin:0 0 16px}
+/* The photo takes the height of the column beside it rather than a ratio of
+   its own: at 4/3 it ran 20px past the figures and left the module sitting on
+   a bottom edge that was 36px below the last thing said on the right, against
+   16px above the first. Both columns now end on the same line. */
+.ov-photo{position:relative;height:100%;min-height:120px;overflow:hidden;background:var(--sunken);
+  border:1px solid var(--stroke);margin:0}
 .ov-photo figcaption{position:absolute;left:0;bottom:0;padding:5px 9px;
   background:rgba(26,26,26,.72);color:var(--white);font-family:var(--mono);font-size:8px;
   font-weight:700;letter-spacing:.1em;text-transform:uppercase}
 @media (max-width:720px){
+  /* Stacked, there is no column to take the height from, so the ratio comes
+     back and the photo carries its own gap to the title below it. */
   .ov-mod-head{grid-template-columns:minmax(0,1fr)}
-  .ov-photo{max-width:260px}
+  .ov-photo{max-width:260px;aspect-ratio:4/3;height:auto;margin-bottom:16px}
 }
 
 /* ── title ── */
