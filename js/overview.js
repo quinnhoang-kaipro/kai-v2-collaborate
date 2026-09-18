@@ -163,29 +163,46 @@ function _ovStandingHtml(){
    is the whole difference between "7 tasks changed in Change Order 2" and
    "Diego R. edited 3 tasks". Grouped by room so the list opens the way every
    other change list in the tab does. */
+function _ovRowMoney(r){
+  if(r.field === 'Line added')   return  _ovMoney(r.wasAmount);
+  if(r.field === 'Line removed') return -_ovMoney(r.wasAmount);
+  if(r.delta) return _ovMoney(r.delta) * (/^\s*[-\u2212]/.test(r.delta) ? -1 : 1);
+  if(/^amount$/i.test(r.field) && r.from != null && r.to != null)
+    return _ovMoney(r.to) - _ovMoney(r.from);
+  return 0;
+}
 function _ovEditsBy(verId, who){
   if(typeof SCOPE === 'undefined') return null;
   const groups = [];
-  let tasks = 0;
+  let tasks = 0, money = 0;
   SCOPE.forEach(g => {
     const hit = g.tasks.filter(t =>
       (t.changes || []).some(ch => ch.ver === verId && ch.who === who));
     if(!hit.length) return;
+    hit.forEach(t => (t.changes || [])
+      .filter(ch => ch.ver === verId && ch.who === who)
+      .forEach(ch => (ch.rows || []).forEach(r => { money += _ovRowMoney(r); })));
     groups.push({room:g.room, tasks:hit.map(t => ({
       code:t.code, name:t.name, what:_ovTaskChangeSummary(t, verId)}))});
     tasks += hit.length;
   });
-  return tasks ? {tasks, groups:groups.length, detail:groups} : null;
+  return tasks ? {tasks, groups:groups.length, detail:groups, money} : null;
 }
 /* How a tenure reads. The timeline wants a phrase for its What column; the
    sentence feed wants a verb it can put a document name after, and sometimes
    a tail to follow it. Both come from the same three facts — did they edit,
    did they approve, are they still holding it. */
 function _ovTenureWords(ed, approved, opened, holding){
-  const n = ed ? `${ed.tasks} task${ed.tasks === 1 ? '' : 's'}` : '';
+  const n = ed
+    ? `${ed.tasks} task${ed.tasks === 1 ? '' : 's'}, ${ed.groups} group${ed.groups === 1 ? '' : 's'}`
+    : '';
   if(holding) return ed
     ? {what:`Edited ${n} so far`, verb:'has', tail:'open', act:`editing ${n} in`}
     : {what:'Holding', verb:'has', tail:'open', act:'holding'};
+  /* Creating the draft and editing it are one stretch of work, not two rows —
+     the person who opens a change order is usually the one who fills it in. */
+  if(ed && opened)   return {what:`Created draft and edited ${n}`,
+                             verb:'created', tail:`and edited ${n}`, act:'created'};
   if(ed && approved) return {what:`Edited ${n} · approved`, verb:`edited ${n} in`,
                              tail:'and approved it', act:`edited ${n} in`};
   if(ed)             return {what:`Edited ${n}`, verb:`edited ${n} in`, act:`edited ${n} in`};
@@ -244,18 +261,37 @@ function _ovTrail(){
        under them yet. */
     if(!isPending){ last.to = m.date; last.toTime = m.time; last.approved = true; }
 
+    /* Each tenure starts where the one before it finished, and the walk is
+       anchored so the last one lands on what the document is actually worth.
+       The anchor is not simply the previous version's budget: a scope contains
+       lines nobody is recorded as having added — they were there when the
+       document began — and starting from the previous budget would leave the
+       chain short by exactly those. So the opening balance is the document's
+       own worth less everything the chain accounts for, which makes the last
+       tenure land on the figure the Register also reports. */
+    const edits = chain.map(h => _ovEditsBy(id, h.who));
+    const attributed = edits.reduce((sum, e) => sum + (e ? e.money : 0), 0);
+    let running = (m.budget != null ? m.budget : attributed) - attributed;
     const evs = chain.map((h, k) => {
-      const ed = _ovEditsBy(id, h.who);
+      const ed = edits[k];
       const holding = !h.to;
       const w = _ovTenureWords(ed, !!h.approved, k === 0, holding);
       /* What they wrote while they had it. One note per tenure, so the column
          has something on nearly every row and each one is a distinct entry the
          drawer can be scrolled to. */
+      const moved = ed ? ed.money : 0;
+      const before = running;
+      running += moved;
       const body = _ovLorem(`${id}|${h.who}|${k}`);
       _OV_TENURE_NOTES.push({who:h.who, role:h.role, when:(h.to || h.from),
                              body, level:(m.label || id), hidden:true});
       return {
         note: body,
+        /* Their own movement and where it left the job. A tenure that changed
+           no money carries neither — an unchanged total repeated down the
+           column would read as three separate confirmations of one figure. */
+        amount: moved ? _fmtDollars(running) : null,
+        was:    moved ? _fmtDollars(before)  : null,
         who:h.who, role:h.role, kind: h.approved ? 'approved' : (k === 0 ? 'start' : 'handoff'),
         verb:w.verb, tail:w.tail, act:w.act, what:w.what,
         /* A tenure covers days, so it is dated by the day it ended — the day
@@ -333,8 +369,8 @@ function _ovTaskChangeSummary(task, verId){
   const parts = [];
   (task.changes || []).filter(ch => ch.ver === verId).forEach(ch => {
     (ch.rows || []).filter(keep).forEach(r => {
-      if(r.field === 'Line added')     { parts.push('Added' + worth(r.wasAmount)); return; }
-      if(r.field === 'Line removed')   { parts.push('Removed' + worth(r.wasAmount)); return; }
+      if(r.field === 'Line added')     { parts.push('Added task' + worth(r.wasAmount)); return; }
+      if(r.field === 'Line removed')   { parts.push('Removed task' + worth(r.wasAmount)); return; }
       if(r.field === 'Modifier added') { parts.push('Modifier · ' + r.add); return; }
       if(r.add)          { parts.push(r.field + ' · ' + r.add); return; }
       if(r.from && r.to) { parts.push(`${r.field} ${r.from} → ${r.to}`); return; }
@@ -781,7 +817,7 @@ function _ovDocRowHtml(d, e, lead){
         <span class="ov-tr-mk">${e.kind === 'approved' ? _OV_TICK : ''}</span>
         ${body}
       </span>
-      <span class="ov-tr-sum"${tap}>${lead ? _ovMoneyHtml(d) : ''}</span>
+      <span class="ov-tr-sum"${tap}>${_ovMoneyHtml(e)}</span>
     </div>
     ${e.detail ? `<div class="ov-tr-detail" id="ovCh-${e.ver}"${_ovOpenChanges[e.ver] ? '' : ' hidden'} onclick="event.stopPropagation()">
       ${e.detail.map(g => `<div class="ov-ch-g">
@@ -1094,8 +1130,8 @@ function _ovTimelineFeedHtml(entries, weekState, later){
       sub: e.railDay ? _ovYearLabel(en.at) : (e.time || _ovYearLabel(en.at)),
       who:_ovWhoShort(e.who), dur:_ovDurations(d).get(e), where, what,
       note:e.note || '',
-      diff: en.lead ? _ovDiffHtml(d) : '',
-      total: en.lead ? _ovTotalHtml(d) : '',
+      diff: _ovDiffHtml(e),
+      total: _ovTotalHtml(e),
       detailId: e.detail ? e.ver : null, detail:e.detail, wkFirst, later,
       alt: (band++ % 2) === 1, current: !!e.current,
     });

@@ -116,6 +116,8 @@ const SCOPE = [
      desc:'Demo existing uppers and base cabinets. Install new shaker fronts, soft-close hardware, and toe-kick. Verify wall is plumb before hanging.',
      mods:[],
      changes:[
+       {ct:'value', ver:'co1', who:'M. Alvarez', role:'Field Agent',
+        rows:[{field:'Amount', from:'$4,320', to:'$4,580', delta:'+$260'}]},
        {ct:'product', ver:'orig', who:'D. Reyes', role:'Designer',
         rows:[{field:'Product', from:'(not selected)', to:'Diamond NOW Arcadia White Shaker'}]},
        {ct:'value', ver:'co2', who:'T. Okafor', role:'Job manager',
@@ -126,6 +128,8 @@ const SCOPE = [
      desc:'Template and fabricate quartz tops. Remove old laminate. Confirm sink cutout and overhang before fab.',
      mods:[], added:true,
      changes:[
+       {ct:'product', ver:'co1', who:'M. Alvarez', role:'Field Agent',
+        rows:[{field:'Product', from:'MSI Carrara Marmi Quartz', to:'MSI Calacatta Laza Quartz'}]},
        {ct:'added', ver:'orig', who:'M. Alvarez', role:'Field Agent',
         rows:[{field:'Line added', add:'Countertops — laminate is delaminating at the sink', wasAmount:'$4,400'}]},
        {ct:'contractor', ver:'orig', who:'S. Patel', role:'Ops',
@@ -138,6 +142,8 @@ const SCOPE = [
      desc:'Remove and haul old appliances. Install full stainless suite. Confirm gas/electric rough-in matches range spec.',
      mods:[], added:true,
      changes:[
+       {ct:'contractor', ver:'co1', who:'M. Alvarez', role:'Field Agent',
+        rows:[{field:'Contractor', from:'Stone Bros', to:'American Appliance Co.'}]},
        {ct:'added', ver:'orig', who:'M. Alvarez', role:'Field Agent',
         rows:[{field:'Line added', add:'Appliances — range and fridge are original to the build', wasAmount:'$3,410'}]},
        {ct:'value', ver:'co2', who:'T. Okafor', role:'Job manager',
@@ -158,6 +164,8 @@ const SCOPE = [
      desc:'Pull existing flooring, prep subfloor, install LVP with underlayment across living area.',
      mods:[],
      changes:[
+       {ct:'product', ver:'co1', who:'M. Alvarez', role:'Field Agent',
+        rows:[{field:'Product', from:'Shaw Endura Plus', to:'Shaw Paragon Mix Plus'}]},
        {ct:'value', ver:'orig', who:'M. Alvarez', role:'Field Agent',
         rows:[{field:'Qty', from:'296 SF', to:'320 SF'},{field:'Amount', from:'$2,520', to:'$2,760', delta:'+$240'}]},
      ]},
@@ -166,6 +174,8 @@ const SCOPE = [
      desc:'Patch, prime, and repaint all walls and ceiling. Two coats.',
      mods:[], added:true,
      changes:[
+       {ct:'contractor', ver:'co1', who:'M. Alvarez', role:'Field Agent',
+        rows:[{field:'Contractor', from:'Unassigned', to:'Roll With It Painting'}]},
        {ct:'added', ver:'orig', who:'M. Alvarez', role:'Field Agent',
         rows:[{field:'Line added', add:'Paint — scuffing and nail pops throughout', wasAmount:'$980'}]},
        {ct:'modifier', ver:'co1', who:'S. Patel', role:'Ops',
@@ -176,6 +186,8 @@ const SCOPE = [
      desc:'Resident to supply and install ceiling fan. Confirm box is fan-rated.',
      mods:[], added:true, removed:true,
      changes:[
+       {ct:'value', ver:'co1', who:'M. Alvarez', role:'Field Agent',
+        rows:[{field:'Amount', from:'$0', to:'$180', delta:'+$180'}]},
        {ct:'added', ver:'orig', who:'M. Alvarez', role:'Field Agent',
         rows:[{field:'Line added', add:'Ceiling fan — resident asked for one during the walk', wasAmount:'$0'}]},
        {ct:'modifier', ver:'orig', who:'S. Patel', role:'Ops',
@@ -228,6 +240,8 @@ const SCOPE = [
      desc:'Replace garage door opener with smart unit. Reuse existing rail if compatible.',
      mods:[], added:true,
      changes:[
+       {ct:'value', ver:'co2', who:'S. Patel', role:'Ops',
+        rows:[{field:'Amount', from:'$520', to:'$700', delta:'+$180'}]},
        {ct:'added', ver:'co1', who:'M. Alvarez', role:'Field Agent',
         rows:[{field:'Line added', add:'Door opener — garage added to the walk', wasAmount:'$520'}]},
        {ct:'product', ver:'co2', who:'D. Reyes', role:'Designer',
