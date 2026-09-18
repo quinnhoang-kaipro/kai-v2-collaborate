@@ -737,11 +737,22 @@ function _ovMoneyHtml(d){
     ><span class="ov-tr-delta ${dl.cls}">${esc(dl.text)}</span
     ><span class="ov-tr-arrow" aria-hidden="true">\u2192</span>${now}</span>`;
 }
-/* A document's name is the way to the document. Artifact 2 is where the
-   change history lives, so that is where it goes. */
+/* A document's name is the way to the document: the Register, opened on that
+   document, which is exactly where its card in Historical artifacts leads.
+   It used to go to Artifact 2 — the tab about change history in general —
+   which answered a question the reader had not asked. */
 function ovOpenDoc(name){
-  if(typeof setWorkMode === 'function') setWorkMode('artifact2');
-  if(typeof toast === 'function') toast(`${name} \u00b7 change history`);
+  const v = (typeof VERSIONS !== 'undefined' && typeof versionLabel === 'function')
+    ? VERSIONS.find(x => versionLabel(x) === name) : null;
+  if(!v){
+    if(typeof toast === 'function') toast(`${name} isn't in this job's documents`);
+    return;
+  }
+  /* Mode first, then the drill-in: setWorkMode renders the Register's index,
+     and openHistorical re-renders it on the document — the other order paints
+     the document and then throws it away. */
+  if(typeof setWorkMode === 'function') setWorkMode('artifact');
+  if(typeof openHistorical === 'function') openHistorical(v.id);
 }
 
 /* ── the feed, in the order things happened ──────────────────────────

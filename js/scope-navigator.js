@@ -2856,11 +2856,18 @@ const _projModeParam = new URLSearchParams(window.__KAI_QS || window.location.se
    Artifact-Change-Order-View) keeps that tab and drops the rest, so the bar
    names where you are without offering seven places you did not come for. */
 const _onlyTab = new URLSearchParams(window.__KAI_QS || window.location.search).get('only');
+/* Artifact 2 is parked, not removed: the tab and everything behind it still
+   build, they are just not offered. Flip to true to put it back. ?tab= and
+   ?only= still reach it, so a link into it keeps working. */
+const SHOW_ARTIFACT2 = false;
+const _WORK_MODES_OFFERED = SHOW_ARTIFACT2
+  ? _WORK_MODES_ALL
+  : _WORK_MODES_ALL.filter(m => m.id !== 'artifact2');
 const WORK_MODES = _onlyTab
   ? _WORK_MODES_ALL.filter(m => m.id === _onlyTab)
   : (_projModeParam === 'closeout-approved'
-      ? _WORK_MODES_ALL.filter(m => m.id !== 'shop')
-      : _WORK_MODES_ALL);
+      ? _WORK_MODES_OFFERED.filter(m => m.id !== 'shop')
+      : _WORK_MODES_OFFERED);
 // If the URL asked for the shop tab but the mode strips it out, fall
 // back to Artifact (the natural "read the finished doc" surface).
 if(_projModeParam === 'closeout-approved' && workMode === 'shop') workMode = 'artifact';
