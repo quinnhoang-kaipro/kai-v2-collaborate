@@ -1086,7 +1086,7 @@ function _ovTlRow(o){
     <span class="ov-tl-rail${L}"${tap}><span class="ov-tl-mk"></span></span>
     ${OV_SHOW_DURATION ? `<span class="ov-tl-dur${L}"${tap}>${o.dur ? esc(o.dur) : _OV_DASH}</span>` : ''}
     <span class="ov-tl-who${L}"${tap}>${o.who ? esc(o.who) : _OV_DASH}</span>
-    <span class="ov-tl-what${L}"${tap}><span class="ov-tl-what-t">${o.what || ''}</span>${caret}</span>
+    <span class="ov-tl-what${L}"${tap}><span class="ov-tl-what-t">${o.what || ''}${caret}</span></span>
     <span class="ov-tl-where${L}"${tap}>${o.where || ''}</span>
     <span class="ov-tl-note${L}"${tap}>${o.note ? esc(o.note) : _OV_DASH}</span>
     <span class="ov-tl-diff${L}"${tap}>${o.diff || ''}</span>

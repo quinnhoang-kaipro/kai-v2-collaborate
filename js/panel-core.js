@@ -713,7 +713,7 @@ function renderStateBar(){
   const bar = document.getElementById('sbStateBar');
   if(!bar) return;
   const _afOpen = _afMenuWasOpen();   // see above
-  bar.className = 'sb-state-bar';
+  bar.className = 'sb-state-bar' + (IS_DRAFT_STAGE ? ' has-gear' : '');
   bar.hidden = false;
   // Group by toggle + Filter icon are always present — they're the scoping
   // controls for the sidebar and belong at the top of every state.
