@@ -2923,10 +2923,25 @@ let SCOPE_COPIES = PROJ_MODE === 'review' ? [] : [
 // Both null → the two-section index (historical artifacts + shareable copies).
 let openCopyId = null;
 let openHistoricalId = null;
-function openCopy(id){ openHistoricalId = null; openCopyId = id; renderArtifact(); }
-function closeCopy(){ openCopyId = null; renderArtifact(); }
-function openHistorical(id){ openCopyId = null; openHistoricalId = id; renderArtifact(); }
-function closeHistorical(){ openHistoricalId = null; renderArtifact(); }
+/* Opening a document is arriving somewhere new, so it starts at the top.
+   #workBody keeps its scroll position across an innerHTML swap, which landed
+   you partway down a scope you had never seen — at whatever depth you had
+   scrolled the Register to.
+
+   The reset lives here rather than in renderArtifact: that runs again on every
+   re-render, including expanding a row in the Register's ledger, and resetting
+   there would yank you to the top mid-read. Only navigation resets. rAF so it
+   lands after the new content has been laid out. */
+function _artToTop(){
+  const wb = document.getElementById('workBody');
+  if(!wb) return;
+  wb.scrollTop = 0;
+  requestAnimationFrame(() => { wb.scrollTop = 0; });
+}
+function openCopy(id){ openHistoricalId = null; openCopyId = id; renderArtifact(); _artToTop(); }
+function closeCopy(){ openCopyId = null; renderArtifact(); _artToTop(); }
+function openHistorical(id){ openCopyId = null; openHistoricalId = id; renderArtifact(); _artToTop(); }
+function closeHistorical(){ openHistoricalId = null; renderArtifact(); _artToTop(); }
 function copyById(id){ return SCOPE_COPIES.find(c => c.id === id); }
 function copyIsExpired(c){
   if(!c || !c.expiresAt) return false;

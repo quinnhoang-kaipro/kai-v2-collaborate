@@ -692,6 +692,9 @@ function _ovSiteRuns(older, newer){
     rows.push({
       text: `${n(ts.length, 'task', 'tasks')} marked ${label}`,
       side: gs ? n(gs, 'group', 'groups') : '',
+      count: n(ts.length, 'task', 'tasks'),
+      scopeN: gs ? n(gs, 'group', 'groups') : '',
+      verb: `marked ${label}`,
       when: span,
       detail: byRoom(ts)
     });
@@ -1122,7 +1125,9 @@ function _ovTimelineFeedHtml(entries, weekState, later){
         html += _ovTlRow({
           kind:'site', day:_ovDayLabel(en.at), sub:_ovYearLabel(en.at),
           who:'', dur:'', where:'',
-          what:esc([r.side, r.text].filter(Boolean).join(' \u00b7 ')),
+          what: esc(r.verb
+            ? [r.count, r.scopeN].filter(Boolean).join(' \u00b7 ') + ' ' + r.verb
+            : [r.side, r.text].filter(Boolean).join(' \u00b7 ')),
           note:_ovLorem(`${en.key}|${i}|${r.text}`), diff:'', total:'',
           detailId: r.detail ? `ovSite-${en.key}-${i}` : null, detail:r.detail,
           wkFirst: wkFirst && !i, later,
