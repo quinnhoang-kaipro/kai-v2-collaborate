@@ -728,13 +728,20 @@ const _OV_TICK = `<svg class="ov-tr-ck" viewBox="0 0 12 12" fill="none" stroke="
    Bold now means one thing and means it everywhere: a document is involved.
    A site row has no bold text in it at all, which is the signal that it is
    not about a document — it is what happened on the property in between. */
+/* What it moved by, then where that left it. This used to strike the old
+   figure and print the new one, which made the reader subtract to find the one
+   fact the row is actually reporting — a change order's whole point is its
+   amount. The struck figure has not gone far: it is the title, for anyone
+   checking what the difference is a difference from. */
 function _ovMoneyHtml(d){
   if(!d.amount) return '';
-  /* What it was, struck, then what it is. A signed delta said the same thing
-     in a number you had to do arithmetic on to place: +$4,100 against a total
-     leaves the reader to work out what it rose from. */
-  return `<span class="ov-tr-money">${d.was ? `<s class="ov-tr-was">${esc(d.was)}</s>` : ''
-    }<span class="ov-tr-now">${esc(d.amount)}</span></span>`;
+  const now = `<span class="ov-tr-now">${esc(d.amount)}</span>`;
+  if(!d.was) return `<span class="ov-tr-money">${now}</span>`;
+  const delta = dollars(d.amount) - dollars(d.was);
+  const cls = delta > 0 ? ' is-up' : delta < 0 ? ' is-dn' : '';
+  const sign = delta > 0 ? '+' : delta < 0 ? '\u2212' : '';
+  return `<span class="ov-tr-money" title="${esc(d.was)} \u2192 ${esc(d.amount)}"
+    ><span class="ov-tr-delta${cls}">${sign}$${Math.abs(delta).toLocaleString('en-US')}</span>${now}</span>`;
 }
 /* A document's name is the way to the document. Artifact 2 is where the
    change history lives, so that is where it goes. */
@@ -870,24 +877,18 @@ function _ovDocRowHtml(d, e, lead){
     </div>` : ''}`;
 }
 
-function _ovMonthLabel(ts){
-  const d = new Date(ts);
-  if(isNaN(d.getTime())) return '';
-  const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${M[d.getMonth()].toUpperCase()} ${d.getFullYear()}`;
-}
 /* Consecutive document rows share one grid so their columns line up; a site
    run or a month rule closes the grid and the next run of rows opens a new
    one. The column tracks are fixed, so blocks still align with each other. */
-function _ovSentenceFeedHtml(entries, monthState){
+function _ovSentenceFeedHtml(entries, state){
   let html = '', open = false;
   const close = () => { if(open){ html += '</div>'; open = false; } };
   entries.forEach(en => {
-    const m = _ovMonthLabel(en.at);
-    if(m && m !== monthState.m){
-      monthState.m = m;
+    const wk = _ovWeekLabel(en.at);
+    if(wk && wk !== state.w){
+      state.w = wk;
       close();
-      html += `<div class="ov-tr-month"><span>${esc(m)}</span></div>`;
+      html += `<div class="ov-tr-rule"><span>${esc(wk)}</span></div>`;
     }
     if(en.kind === 'site'){
       close();

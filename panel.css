@@ -4816,9 +4816,10 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tr-st.is-done{color:var(--success)}
 .ov-tr-sum{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--ink);
   font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
-.ov-tr-money{display:inline-flex;align-items:baseline;gap:7px}
-.ov-tr-was{font-size:10.5px;font-weight:700;color:var(--t3);text-decoration:line-through;
-  text-decoration-thickness:1px}
+.ov-tr-money{display:inline-flex;align-items:baseline;gap:9px}
+.ov-tr-delta{font-weight:700}
+.ov-tr-delta.is-up{color:var(--error)}
+.ov-tr-delta.is-dn{color:var(--success)}
 .ov-tr-now{font-size:12px;font-weight:700;color:var(--ink)}
 .ov-tr-d{font-size:11px;color:var(--t3);white-space:nowrap;font-variant-numeric:tabular-nums;
   text-align:left}
@@ -4826,11 +4827,11 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    Documents overlap each other — a change order is passed around for a
    fortnight while the property is worked on — so they cannot be the grouping
    without lying about when things happened. A month can be. */
-.ov-tr-month{display:flex;align-items:center;gap:12px;margin:16px 0 6px}
-.ov-tr-month:first-child{margin-top:0}
-.ov-tr-month span{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.12em;
+.ov-tr-rule{display:flex;align-items:center;gap:12px;margin:16px 0 6px}
+.ov-tr-rule:first-child{margin-top:0}
+.ov-tr-rule span{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.12em;
   text-transform:uppercase;color:var(--ink);flex-shrink:0}
-.ov-tr-month::after{content:'';flex:1;height:1px;background:var(--ink)}
+.ov-tr-rule::after{content:'';flex:1;height:1px;background:var(--ink)}
 /* ── who has it now ──
    A standing, not an event: the feed says a hand-off happened, this says
    nothing has happened since. */
