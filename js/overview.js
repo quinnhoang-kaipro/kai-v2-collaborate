@@ -1572,7 +1572,6 @@ function _ovHoverHtml(d){
         <div class="ov-hv-kind">Product${d.room ? ` \u00b7 ${esc(d.room)}` : ''}</div>
         <div class="ov-hv-title">${esc(d.title)}</div>
         ${d.desc ? `<p class="ov-hv-desc">${esc(d.desc)}</p>` : ''}
-        ${row('Specified on', d.code)}
         ${row('Quantity', d.qty)}
         ${row('Contractor', d.gc)}
         ${row('Amount', d.amount, 'is-amt')}
