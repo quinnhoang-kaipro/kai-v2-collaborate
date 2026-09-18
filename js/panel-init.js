@@ -50,6 +50,9 @@ function toast(msg){
     p=Math.min(MAX,Math.max(MIN,p));
     lastOpen=p;
     sidebar.style.flexBasis=p+'%';
+    // Writing flex-basis fires no resize event, and the tools bar has to
+    // re-decide whether its labels still fit on one row.
+    if(typeof _sbFitTools === 'function') _sbFitTools();
   }
   function onMove(e){ if(!dragging)return; const r=body.getBoundingClientRect(); const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; setPct((x/r.width)*100); }
   function stop(){ if(!dragging)return; dragging=false; handle.classList.remove('dragging'); document.body.classList.remove('col-resizing'); }

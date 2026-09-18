@@ -761,6 +761,7 @@ function renderStateBar(){
   // Gear sits at the far right, aligned with the per-group duplicate icon
   // column it toggles (those sit flush with the sidebar's right edge too).
   bar.innerHTML = `${groupBySeg}${filterIcon}${searchBtn}<span class="sb-state-bar-sp"></span>${settingsIcon}${actions}${hideScope}`;
+  _sbFitTools();
   // Remember for renderFilter, which fills the menu; reopening here
   // would show it before it has any options in it.
   _afReopenPending = _afOpen;
@@ -769,6 +770,56 @@ function renderStateBar(){
   // call renderStateBar without a renderFilter after it.
   if(typeof renderFilter === 'function') renderFilter();
 }
+/* ── Do the tools still fit on one row? ─────────────────────────────────
+   Asked of the layout rather than answered with a number. Every threshold
+   guessed in advance was wrong: the bar's width is not the window's, the
+   gear comes and goes with the stage, a container query measures the content
+   box while the wrap point was measured on the border box, and the labels
+   are set in whatever font actually loaded. So the labels go on, the row is
+   measured, and they come off only if it broke — which is the rule as it was
+   asked for, with nothing to keep in sync.
+
+   Reading layout then writing one class, once per render: no loop, because
+   the class changes the bar's height and the observer below watches the
+   sidebar's width. */
+function _sbFitTools(){
+  const bar = document.getElementById('sbStateBar');
+  if(!bar) return;
+  bar.classList.remove('is-tight');
+  const kids = [...bar.children].filter(e => {
+    const r = e.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  });
+  if(kids.length < 2) return;
+  const top = Math.min(...kids.map(e => e.getBoundingClientRect().top));
+  const wrapped = kids.some(e => e.getBoundingClientRect().top > top + 2);
+  if(wrapped) bar.classList.add('is-tight');
+}
+/* The sidebar is dragged, not just laid out once, so the question has to be
+   re-asked as it changes width — from more than one direction, because none
+   of them alone is dependable. A ResizeObserver is delivered with the
+   rendering steps, so a panel that is not being painted never hears from it;
+   window resize catches the collapse and the window itself; and the drag
+   writes flex-basis straight onto the sidebar, which fires neither, so it
+   calls in from panel-init. */
+let _sbFitRO = null;
+function _sbWatchToolsFit(){
+  if(_sbFitRO) return;
+  const sb = document.querySelector('.sidebar');
+  if(!sb) return;
+  window.addEventListener('resize', _sbFitTools);
+  if(typeof ResizeObserver !== 'undefined'){
+    _sbFitRO = new ResizeObserver(() => _sbFitTools());
+    _sbFitRO.observe(sb);
+  } else {
+    _sbFitRO = true;
+  }
+  _sbFitTools();
+}
+document.addEventListener('DOMContentLoaded', _sbWatchToolsFit);
+/* Scripts load after the markup, so DOMContentLoaded may already be spent. */
+if(document.readyState !== 'loading') _sbWatchToolsFit();
+
 // State-bar button handlers.
 function stateBarSubmitForReview(){
   // In change-order editing, submitting also ends the edit session — the

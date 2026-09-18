@@ -313,7 +313,7 @@ body.scope-edit-mode .sb-edit-toggle:hover{background:#000}
    so all "which mode / what's next" copy lives right by the sidebar it scopes.
    The version identifier is redundant here — the version chip in the header
    already shows v3 · CURRENT — so we omit it and just show the mode. */
-.sb-state-bar{container-type:inline-size;padding:10px 16px;background:var(--sunken,#F4F0E6);border-bottom:1px solid var(--stroke);display:flex;align-items:center;gap:8px;row-gap:10px;font-family:var(--body);font-size:12.5px;line-height:1.4;color:var(--t2);flex-shrink:0;flex-wrap:wrap}
+.sb-state-bar{padding:10px 16px;background:var(--sunken,#F4F0E6);border-bottom:1px solid var(--stroke);display:flex;align-items:center;gap:8px;row-gap:10px;font-family:var(--body);font-size:12.5px;line-height:1.4;color:var(--t2);flex-shrink:0;flex-wrap:wrap}
 /* Scope-organizing controls (Room/Contractor + Filter) cluster in the
    middle; the spacer between them and the action buttons does the pushing. */
 .sb-state-bar .sb-tools-af{margin-left:0}
@@ -333,39 +333,22 @@ body.scope-edit-mode .sb-edit-toggle:hover{background:#000}
 .sb-state-bar-btn.sb-state-bar-btn-ghost:hover{background:var(--sunken);color:var(--ink);border-color:var(--ink)}
 
 /* ── The tools keep their words until the row runs out ──────────────────
-   Filters, Search and Hide scope go to their icons only at the width the bar
-   would otherwise wrap at — not a round number chosen in advance. Measured:
-   with the labels on, the row breaks below 483px of bar, and below 521px in
-   draft, where the gear is also on it.
+   `is-tight` is set by _sbFitTools, which puts the labels on, measures
+   whether the row broke, and takes them off only if it did. No width in
+   here: every number tried in advance was wrong for one stage, one font or
+   one box model, and the question the design asks is about the layout, not
+   about a width.
 
-   The numbers below are 32px smaller than those, because a container query
-   measures the container's CONTENT box and this bar carries 16px of padding
-   each side. Comparing against the border-box figures dropped the labels a
-   full padding-width early, which is the whole bug this is fixing.
-
-   Group / Contractor keeps its words at every width: they are the two things
+   Group / Contractor keeps its words at every size: they are the two things
    it switches between, and no icon says "contractor". Nothing is lost to a
    pointer or a screen reader either way — all three carry a title and an
-   aria-label naming them.
-
-   Measured on the bar, not the window: this panel is narrow long before the
-   window is, and the sidebar is user-resizable. */
-@container (max-width:455px){
-  .sb-state-bar .sb-tools-af .af-btn-lbl,
-  .sb-state-bar .sb-tools-search span,
-  .sb-state-bar .sb-hide-scope span{display:none}
-  .sb-state-bar .sb-tools-af .af-btn,
-  .sb-state-bar .sb-tools-search,
-  .sb-state-bar .sb-hide-scope{width:30px;padding:0;gap:0;justify-content:center}
-}
-@container (max-width:493px){
-  .sb-state-bar.has-gear .sb-tools-af .af-btn-lbl,
-  .sb-state-bar.has-gear .sb-tools-search span,
-  .sb-state-bar.has-gear .sb-hide-scope span{display:none}
-  .sb-state-bar.has-gear .sb-tools-af .af-btn,
-  .sb-state-bar.has-gear .sb-tools-search,
-  .sb-state-bar.has-gear .sb-hide-scope{width:30px;padding:0;gap:0;justify-content:center}
-}
+   aria-label naming them. */
+.sb-state-bar.is-tight .sb-tools-af .af-btn-lbl,
+.sb-state-bar.is-tight .sb-tools-search span,
+.sb-state-bar.is-tight .sb-hide-scope span{display:none}
+.sb-state-bar.is-tight .sb-tools-af .af-btn,
+.sb-state-bar.is-tight .sb-tools-search,
+.sb-state-bar.is-tight .sb-hide-scope{width:30px;padding:0;gap:0;justify-content:center}
 
 /* ── SCOPE SEARCH ────────────────────────────────────────────────────
    Trigger in the tools bar. Matches the Filters button next to it — the two
