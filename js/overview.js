@@ -190,10 +190,11 @@ function _ovTenureWords(ed, approved, opened, holding){
                              tail:'and approved it', act:`edited ${n} in`};
   if(ed)             return {what:`${n} edited`, verb:`edited ${n} in`, act:`edited ${n} in`};
   if(approved)       return {what:'Approved', verb:'approved', act:'approved'};
-  if(opened)         return {what:'Opened', verb:'opened', act:'opened'};
+  if(opened)         return {what:'Created draft', verb:'created', act:'created'};
   return {what:'Reviewed', verb:'reviewed', act:'reviewed'};
 }
 function _ovTrail(){
+  _OV_TENURE_NOTES = [];
   if(typeof VER_ORDER === 'undefined' || typeof VER === 'undefined') return [];
   if(typeof buildOrdered === 'function') buildOrdered();
   const pending = (typeof A2_PENDING_VER !== 'undefined') ? A2_PENDING_VER : null;
@@ -247,7 +248,14 @@ function _ovTrail(){
       const ed = _ovEditsBy(id, h.who);
       const holding = !h.to;
       const w = _ovTenureWords(ed, !!h.approved, k === 0, holding);
+      /* What they wrote while they had it. One note per tenure, so the column
+         has something on nearly every row and each one is a distinct entry the
+         drawer can be scrolled to. */
+      const body = _ovLorem(`${id}|${h.who}|${k}`);
+      _OV_TENURE_NOTES.push({who:h.who, role:h.role, when:(h.to || h.from),
+                             body, level:(m.label || id), hidden:true});
       return {
+        note: body,
         who:h.who, role:h.role, kind: h.approved ? 'approved' : (k === 0 ? 'start' : 'handoff'),
         verb:w.verb, tail:w.tail, act:w.act, what:w.what,
         /* A tenure covers days, so it is dated by the day it ended — the day
@@ -267,6 +275,7 @@ function _ovTrail(){
         /* The document's worth belongs on the row that settled it. Where
            nothing has settled it yet, the newest tenure carries it. */
         settles: h.approved || (isPending && k === chain.length - 1),
+        current: holding,
       };
     });
     /* Newest first, like the documents themselves. The chain is built in the
@@ -955,9 +964,30 @@ const _OV_DASH = '<span class="ov-tl-dash">\u2014</span>';
 /* Where the rest of a note lives. The events carry no note of their own yet
    (see _OV_LOREM), so this goes to the scope's notes — the drawer this column
    will read from once hand-off notes are stored on the event. */
-function ovOpenNote(){
-  if(typeof openScopeDrawer === 'function') openScopeDrawer('notes');
-  else if(typeof toast === 'function') toast('Notes drawer unavailable here');
+function ovOpenNote(body){
+  if(typeof openScopeDrawer !== 'function'){
+    if(typeof toast === 'function') toast('Notes drawer unavailable here');
+    return;
+  }
+  openScopeDrawer('notes');
+  if(!body) return;
+  /* setTimeout rather than rAF: the drawer's panel does not always get frames
+     (a backgrounded panel drops them), and a queued highlight that never runs
+     is worse than one a tick late. Matched on the opening of the body — the
+     drawer renders the same string, so a prefix is enough to find it and short
+     enough to survive any wrapping the card does. */
+  const key = String(body).slice(0, 40);
+  setTimeout(() => {
+    const hit = [...document.querySelectorAll('.dw-note')]
+      .find(n => n.textContent.includes(key));
+    if(!hit) return;
+    document.querySelectorAll('.dw-note.is-hit').forEach(n => n.classList.remove('is-hit'));
+    hit.classList.add('is-hit');
+    hit.scrollIntoView({block:'center'});
+    /* The highlight is a pointer, not a state: it says "this one" and then
+       gets out of the way. */
+    setTimeout(() => hit.classList.remove('is-hit'), 2400);
+  }, 60);
 }
 /* "Tara O." rather than "T. Okafor". The Activity names the same four people
    on every row, so a surname is doing no work — the first name is how anyone
@@ -989,6 +1019,12 @@ const _OV_LOREM = [
   'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.',
   'Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia.',
 ];
+/* The notes the Activity shows are real entries, not decoration: they are
+   collected here as the trail is built and handed to the notes drawer through
+   scopeNotesPool, so clicking one in the feed can land on the same note in the
+   drawer. Rebuilt whenever the trail is. */
+let _OV_TENURE_NOTES = [];
+function ovTenureNotes(){ return _OV_TENURE_NOTES; }
 function _ovLorem(seed){
   const t = String(seed || '');
   let h = 0;
@@ -1012,7 +1048,7 @@ function _ovTlRow(o){
          onclick="event.stopPropagation();ovToggleChanges('${o.detailId}')"
          ><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1.2 3.4h7.6L5 8.2z"/></svg></button>`
     : '';
-  return `<div class="ov-tl-r ov-tl-${o.kind}${o.detailId ? ' is-tappable' : ''}${o.wkFirst ? ' is-wkfirst' : ''}${o.alt ? ' is-alt' : ''}">
+  return `<div class="ov-tl-r ov-tl-${o.kind}${o.detailId ? ' is-tappable' : ''}${o.wkFirst ? ' is-wkfirst' : ''}${o.alt ? ' is-alt' : ''}${o.current ? ' is-current' : ''}">
     <span class="ov-tl-when${L}"${tap}><b>${esc(o.day)}</b><i>${esc(o.sub || '')}</i></span>
     <span class="ov-tl-rail${L}"${tap}><span class="ov-tl-mk"></span></span>
     ${OV_SHOW_DURATION ? `<span class="ov-tl-dur${L}"${tap}>${o.dur ? esc(o.dur) : _OV_DASH}</span>` : ''}
@@ -1020,8 +1056,8 @@ function _ovTlRow(o){
     <span class="ov-tl-what${L}"${tap}><span class="ov-tl-what-t">${o.what || ''}${caret}</span></span>
     <span class="ov-tl-where${L}"${tap}>${o.where || ''}</span>
     <span class="ov-tl-note${L}"${tap}>${o.note
-      ? `<button type="button" class="ov-tl-note-t" title="Open the note"
-           onclick="event.stopPropagation();ovOpenNote()">${esc(o.note)}</button>`
+      ? `<button type="button" class="ov-tl-note-t" title="Open this note in the notes drawer"
+           onclick="event.stopPropagation();ovOpenNote(this.textContent)">${esc(o.note)}</button>`
       : _OV_DASH}</span>
     <span class="ov-tl-diff${L}"${tap}>${o.diff || ''}</span>
     <span class="ov-tl-total${L}"${tap}>${o.total || ''}</span>
@@ -1056,11 +1092,11 @@ function _ovTimelineFeedHtml(entries, weekState, later){
       day: e.railDay || _ovDayLabel(en.at),
       sub: e.railDay ? _ovYearLabel(en.at) : (e.time || _ovYearLabel(en.at)),
       who:_ovWhoShort(e.who), dur:_ovDurations(d).get(e), where, what,
-      note:_ovLorem(`${d.name}|${e.kind}|${e.when}|${e.who}`),
+      note:e.note || '',
       diff: en.lead ? _ovDiffHtml(d) : '',
       total: en.lead ? _ovTotalHtml(d) : '',
       detailId: e.detail ? e.ver : null, detail:e.detail, wkFirst, later,
-      alt: (band++ % 2) === 1,
+      alt: (band++ % 2) === 1, current: !!e.current,
     });
   });
   return html;
@@ -1096,7 +1132,10 @@ function _ovTrailHtml(){
   if(cut < 0) cut = entries.length;
   const state = {w:'', m:''};   // week for the timeline, month for the sentences
   const head = _ovFeedHtml(entries.slice(0, cut), state);
-  const standing = _ovStandingLineHtml(docs);
+  /* No standing line. "Sana P. is working on Change Order 2 since Apr 28" was
+     a sentence restating the top row of the table under it — the row already
+     names the person, the document and the date. It is marked instead. */
+  const standing = '';
   /* The earlier block is a second grid rather than a hidden part of the first:
      a display:contents row cannot be hidden (the [hidden] rule has nothing to
      hide, the cells are still grid items of the parent). Two grids inside one
@@ -1342,8 +1381,8 @@ function renderOverview(){
         ${_ovStandingHtml()}
       </header>
       ${stats}
-      ${jobFields}
       </div>
+      ${jobFields}
     </section>
     ${propSec}${_ovCrewHtml()}${trailSec}
   </div>`;

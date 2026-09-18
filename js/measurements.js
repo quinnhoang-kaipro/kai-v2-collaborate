@@ -2067,6 +2067,10 @@ function scopeNotesPool(){
      which is the level this drawer is opened at, and the newest of them is the
      most recent note in the project. */
   if(typeof _histSubmissionNotes === 'function') out.push(..._histSubmissionNotes());
+  /* The Activity's notes are entries in their own right — one per person who
+     held a document — so the drawer lists them and a click in the feed has
+     somewhere to land. */
+  if(typeof ovTenureNotes === 'function') out.push(...ovTenureNotes());
   const rooms = [...new Set((typeof TASKS !== 'undefined' ? TASKS : []).map(t => t.room))];
   rooms.forEach(r => {
     if(typeof roomNotes === 'function') out.push(...(roomNotes(r) || []));
