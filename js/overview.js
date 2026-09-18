@@ -1030,6 +1030,24 @@ function _ovTlDetail(groups){
   </div>`).join('');
 }
 const _OV_DASH = '<span class="ov-tl-dash">\u2014</span>';
+/* Placeholder copy for Note. The events carry no note of their own yet — the
+   hand-off dialogue collects one but does not keep it on the event — so this
+   stands in to show the column at its real width. Picked by hash, not at
+   random, so a row keeps the same note between renders. Replace the whole
+   thing the moment hand-off notes are stored. */
+const _OV_LOREM = [
+  'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+  'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+  'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.',
+  'Duis aute irure dolor in reprehenderit in voluptate velit esse.',
+  'Excepteur sint occaecat cupidatat non proident, sunt in culpa.',
+];
+function _ovLorem(seed){
+  const t = String(seed || '');
+  let h = 0;
+  for(let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
+  return _OV_LOREM[h % _OV_LOREM.length];
+}
 /* Rows are display:contents so every cell is a grid item of the one timeline
    grid — that is what keeps the columns true across weeks and across the
    collapsed block below. Which also means the row has no box to hang a click
@@ -1084,7 +1102,8 @@ function _ovTimelineFeedHtml(entries, weekState, later){
         html += _ovTlRow({
           kind:'site', day:_ovDayLabel(en.at), sub:_ovYearLabel(en.at),
           who:'', dur:'', where:'',
-          what:esc(r.text), note:r.side || '', diff:'',
+          what:esc([r.side, r.text].filter(Boolean).join(' \u00b7 ')),
+          note:_ovLorem(`${en.key}|${i}|${r.text}`), diff:'',
           detailId: r.detail ? `ovSite-${en.key}-${i}` : null, detail:r.detail,
           wkFirst: wkFirst && !i, later,
         });
@@ -1103,7 +1122,8 @@ function _ovTimelineFeedHtml(entries, weekState, later){
     html += _ovTlRow({
       kind:e.kind, day:_ovDayLabel(en.at), sub:e.time || _ovYearLabel(en.at),
       who:e.who, dur:_ovDurations(d).get(e), where, what,
-      note:'', diff: en.lead ? _ovDiffHtml(d) : '',
+      note:_ovLorem(`${d.name}|${e.kind}|${e.when}|${e.who}`),
+      diff: en.lead ? _ovDiffHtml(d) : '',
       detailId: e.detail ? e.ver : null, detail:e.detail, wkFirst, later,
     });
   });
@@ -1548,7 +1568,14 @@ function _ovHoverShow(el){
   _ovHoverFor = el;
   _ovHoverEl.innerHTML = _ovHoverHtml(d);
   const img = d.photo ? _ovHoverEl.querySelector('.ov-hv-img') : null;
-  if(img) img.style.background = _photoBg(d.photo, d.photo.seed || 0);
+  /* A real photograph when there is one; otherwise a flat neutral rather than
+     _progPhotoBg's drawn interior. Those blocks read as a picture of the room
+     at a glance — a wall, a floor, a cabinet edge — which is a claim about
+     what the task looks like that the prototype has no basis for. A plain
+     field says "image goes here" and says nothing else. */
+  if(img) img.style.background = d.photo.src
+    ? `url('${d.photo.src}') center/cover no-repeat`
+    : 'var(--stroke)';
   _ovHoverEl.classList.add('is-on');
   _ovHoverPlace(el);
 }
