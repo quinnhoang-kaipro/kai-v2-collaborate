@@ -194,7 +194,9 @@ function _ovEditsBy(verId, who){
    did they approve, are they still holding it. */
 function _ovTenureWords(ed, approved, opened, holding){
   const n = ed
-    ? `${ed.tasks} task${ed.tasks === 1 ? '' : 's'}, ${ed.groups} group${ed.groups === 1 ? '' : 's'}`
+    ? (ed.tasks === 1
+        ? '1 task'
+        : `${ed.tasks} tasks, ${ed.groups} group${ed.groups === 1 ? '' : 's'}`)
     : '';
   if(holding) return ed
     ? {what:`Edited ${n} so far`, verb:'has', tail:'open', act:`editing ${n} in`}
@@ -285,8 +287,10 @@ function _ovTrail(){
       const body = _ovLorem(`${id}|${h.who}|${k}`);
       _OV_TENURE_NOTES.push({who:h.who, role:h.role, when:(h.to || h.from),
                              body, level:(m.label || id), hidden:true});
+      const nextHolder = chain[k + 1] ? chain[k + 1].who : null;
       return {
         note: body,
+        handedTo: nextHolder,
         /* Their own movement and where it left the job. A tenure that changed
            no money carries neither — an unchanged total repeated down the
            column would read as three separate confirmations of one figure. */
@@ -1089,7 +1093,7 @@ function _ovTlRow(o){
     <span class="ov-tl-rail${L}"${tap}><span class="ov-tl-mk"></span></span>
     ${OV_SHOW_DURATION ? `<span class="ov-tl-dur${L}"${tap}>${o.dur ? esc(o.dur) : _OV_DASH}</span>` : ''}
     <span class="ov-tl-who${L}"${tap}>${o.who ? esc(o.who) : _OV_DASH}</span>
-    <span class="ov-tl-what${L}"${tap}><span class="ov-tl-what-t">${o.what || ''}${caret}</span></span>
+    <span class="ov-tl-what${L}"${tap}><span class="ov-tl-what-t">${o.what || ''}${caret}</span>${o.handoff || ''}</span>
     <span class="ov-tl-where${L}"${tap}>${o.where || ''}</span>
     <span class="ov-tl-note${L}"${tap}>${o.note
       ? `<button type="button" class="ov-tl-note-t" title="Open this note in the notes drawer"
@@ -1120,12 +1124,17 @@ function _ovTimelineFeedHtml(entries, weekState, later){
     }
     const d = en.doc, e = en.ev;
     const what = esc(e.what || '');
+    /* Under the action, not beside it: the What cell already wraps, and a
+       hand-off tacked onto the end of a wrapping phrase reads as part of it. */
+    const handoff = e.handedTo
+      ? `<span class="ov-tl-handoff">Handed off to <b>${esc(_ovWhoShort(e.handedTo))}</b></span>`
+      : '';
     const where = `<button type="button" class="ov-tl-doc" data-hv-doc="${esc(d.name)}"
         onclick="event.stopPropagation();ovOpenDoc('${esc(d.name).replace(/'/g, "\\'")}')"
         ><span class="ov-tl-doc-n">${esc(d.name)}</span></button
       ><span class="ov-tl-state">${esc(d.state || '')}</span>`;
     html += _ovTlRow({
-      kind:e.kind,
+      kind:e.kind, handoff,
       day: e.railDay || _ovDayLabel(en.at),
       sub: e.railDay ? _ovYearLabel(en.at) : (e.time || _ovYearLabel(en.at)),
       who:_ovWhoShort(e.who), dur:_ovDurations(d).get(e), where, what,

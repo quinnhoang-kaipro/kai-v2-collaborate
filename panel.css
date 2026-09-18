@@ -4801,7 +4801,11 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tl-state{font-family:var(--mono);font-size:8.5px;font-weight:700;
   letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
 .ov-tl-what-t b{font-weight:600}
-.ov-tl-what{gap:7px}
+.ov-tl-what{flex-direction:column;align-items:flex-start;gap:3px}
+/* Quieter than the action above it: what they did is the row's news, where it
+   went next is how the row ends. */
+.ov-tl-handoff{font-size:11.5px;color:var(--t3);line-height:1.35}
+.ov-tl-handoff b{font-weight:600;color:var(--t2)}
 .ov-tl-car{border:0;background:transparent;padding:0;margin-left:7px;color:var(--t3);
   cursor:pointer;display:inline-flex;vertical-align:baseline;flex-shrink:0;
   transition:transform .12s}

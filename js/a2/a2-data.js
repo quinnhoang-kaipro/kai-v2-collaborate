@@ -212,7 +212,7 @@ const SCOPE = [
      desc:'Add wire shelving system to master closet. Contractor not yet assigned.',
      mods:['Required'], added:true,
      changes:[
-       {ct:'added', ver:'co2', who:'D. Reyes', role:'Designer',
+       {ct:'added', ver:'co2', who:'M. Alvarez', role:'Field Agent',
         rows:[{field:'Line added', add:'Add shelving to master closet', wasAmount:'$460'}]},
      ]},
   ]},
