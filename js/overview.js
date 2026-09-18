@@ -184,11 +184,11 @@ function _ovEditsBy(verId, who){
 function _ovTenureWords(ed, approved, opened, holding){
   const n = ed ? `${ed.tasks} task${ed.tasks === 1 ? '' : 's'}` : '';
   if(holding) return ed
-    ? {what:`${n} edited so far`, verb:'has', tail:'open', act:`editing ${n} in`}
+    ? {what:`Edited ${n} so far`, verb:'has', tail:'open', act:`editing ${n} in`}
     : {what:'Holding', verb:'has', tail:'open', act:'holding'};
-  if(ed && approved) return {what:`${n} edited · approved`, verb:`edited ${n} in`,
+  if(ed && approved) return {what:`Edited ${n} · approved`, verb:`edited ${n} in`,
                              tail:'and approved it', act:`edited ${n} in`};
-  if(ed)             return {what:`${n} edited`, verb:`edited ${n} in`, act:`edited ${n} in`};
+  if(ed)             return {what:`Edited ${n}`, verb:`edited ${n} in`, act:`edited ${n} in`};
   if(approved)       return {what:'Approved', verb:'approved', act:'approved'};
   if(opened)         return {what:'Created draft', verb:'created', act:'created'};
   return {what:'Reviewed', verb:'reviewed', act:'reviewed'};
