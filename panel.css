@@ -311,7 +311,7 @@ body.scope-edit-mode .sb-edit-toggle:hover{background:#000}
    so all "which mode / what's next" copy lives right by the sidebar it scopes.
    The version identifier is redundant here — the version chip in the header
    already shows v3 · CURRENT — so we omit it and just show the mode. */
-.sb-state-bar{padding:10px 16px;background:var(--sunken,#F4F0E6);border-bottom:1px solid var(--stroke);display:flex;align-items:center;gap:8px;row-gap:10px;font-family:var(--body);font-size:12.5px;line-height:1.4;color:var(--t2);flex-shrink:0;flex-wrap:wrap}
+.sb-state-bar{container-type:inline-size;padding:10px 16px;background:var(--sunken,#F4F0E6);border-bottom:1px solid var(--stroke);display:flex;align-items:center;gap:8px;row-gap:10px;font-family:var(--body);font-size:12.5px;line-height:1.4;color:var(--t2);flex-shrink:0;flex-wrap:wrap}
 /* Scope-organizing controls (Room/Contractor + Filter) cluster in the
    middle; the spacer between them and the action buttons does the pushing. */
 .sb-state-bar .sb-tools-af{margin-left:0}
@@ -329,6 +329,25 @@ body.scope-edit-mode .sb-edit-toggle:hover{background:#000}
    Submit for review in change-order editing mode. */
 .sb-state-bar-btn.sb-state-bar-btn-ghost{background:var(--white);border-color:var(--stroke);color:var(--ink)}
 .sb-state-bar-btn.sb-state-bar-btn-ghost:hover{background:var(--sunken);color:var(--ink);border-color:var(--ink)}
+
+/* ── Narrow sidebar: the named controls become their icons ──────────────
+   Group / Contractor keeps its words — they are the two things it switches
+   between, and no icon says "contractor" — but Filters, Search and Hide
+   scope each have a symbol that carries them, and at this width the bar
+   wrapping onto two rows costs more than the labels are worth. The title
+   and aria-label already name every one of them, so nothing is lost to a
+   pointer or a screen reader.
+
+   Measured on the bar rather than the window: this panel is narrow long
+   before the window is, and the sidebar is user-resizable. */
+@container (max-width:580px){
+  .sb-state-bar .sb-tools-af .af-btn-lbl,
+  .sb-state-bar .sb-tools-search span,
+  .sb-state-bar .sb-hide-scope span{display:none}
+  .sb-state-bar .sb-tools-af .af-btn,
+  .sb-state-bar .sb-tools-search,
+  .sb-state-bar .sb-hide-scope{width:30px;padding:0;gap:0;justify-content:center}
+}
 
 /* ── SCOPE SEARCH ────────────────────────────────────────────────────
    Trigger in the tools bar. Matches the Filters button next to it — the two

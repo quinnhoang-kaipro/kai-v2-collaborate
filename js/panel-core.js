@@ -756,7 +756,7 @@ function renderStateBar(){
   // brings it back. Defined in panel-init.js's resize block.
   const hideScope = `<button class="sb-hide-scope" onclick="collapseSidebar()" title="Hide the scope list" aria-label="Hide scope">
     <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 2.5 4 6l3.5 3.5"/></svg>
-    Hide scope
+    <span>Hide scope</span>
   </button>`;
   // Gear sits at the far right, aligned with the per-group duplicate icon
   // column it toggles (those sit flush with the sidebar's right edge too).
