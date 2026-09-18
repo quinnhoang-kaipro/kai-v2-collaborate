@@ -176,7 +176,7 @@ function _renderRegisterSection(){
   const clsRows = [
     {name:'Ready to order',    chip:'',                      note:'In purchase orders',                  val:cls.ready,    n:cls.readyN},
     {name:'Tenant responsible',chip:'Tracked cost',          note:'In purchase orders — reported separately', val:cls.tenant, n:cls.tenantN, chipCls:'is-quiet'},
-    {name:'Deferred',          chip:'Procure on change order', note:'Held until a change order is approved', val:cls.deferred, n:cls.deferredN, chipCls:'is-accent'},
+    {name:'Deferred',          chip:'Procure on change order', note:'Held until a change order is approved', val:cls.deferred, n:cls.deferredN, chipCls:'is-quiet'},
   ].filter(r => r.n > 0).map(r => `<tr>
       <th>${esc(r.name)}${r.chip?`<span class="reg-chip ${r.chipCls||''}">${esc(r.chip)}</span>`:''}</th>
       <td class="reg-cls-note">${esc(r.note)}</td>
@@ -254,7 +254,7 @@ function _renderRegisterSection(){
     <header class="art-sec-hdr">
       <div class="art-sec-hdr-l">
         <h2 class="art-sec-title">Register</h2>
-        <p class="art-sec-desc">Every event that changed the job total, and how that total is classified today.</p>
+        <p class="art-sec-desc">Every event that changed the job total, and how it is classified today.</p>
       </div>
     </header>
     ${cards}
@@ -489,7 +489,7 @@ function _renderHistoricalDoc(v){
   const eyebrow = isOriginal ? 'Original scope' : `Change order ${v.num - 1}`;
   return `<div class="copy-doc-wrap hist-doc-wrap">
     <div class="copy-crumb hist-crumb">
-      <button class="copy-crumb-back" onclick="closeHistorical()" title="Back to artifacts">
+      <button class="copy-crumb-back" onclick="closeHistorical()" title="Back to the Register">
         <span aria-hidden="true">‹</span> Back
       </button>
       <span class="copy-crumb-div"></span>

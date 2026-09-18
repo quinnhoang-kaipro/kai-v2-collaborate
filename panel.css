@@ -2592,6 +2592,10 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    are: tabular numerals throughout, one right-aligned money column, and
    weight used only to mark the lines that are totals. */
 .art-reg{gap:18px}
+/* Full column: the shared 60ch measure broke this one line in two while
+   there was still space beside it. Still wraps rather than overflows when
+   the panel is genuinely narrow. */
+.art-reg .art-sec-desc{max-width:none}
 .reg-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
 .reg-card{border:1px solid var(--stroke);background:var(--white);padding:14px 16px 15px;display:flex;flex-direction:column;gap:5px;min-width:0}
 /* The figure the rest of the app quotes gets the heavier edge — the other
@@ -2612,7 +2616,6 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 
 .reg-chip{display:inline-block;margin-left:8px;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:2px 6px;vertical-align:1px;white-space:nowrap}
 .reg-chip.is-quiet{background:var(--sunken);color:var(--t2);border:1px solid var(--stroke)}
-.reg-chip.is-accent{background:var(--accent);color:var(--ink)}
 
 .reg-table-scroll{overflow-x:auto}
 .reg-table{width:100%;border-collapse:collapse;border:1px solid var(--stroke);background:var(--white)}
