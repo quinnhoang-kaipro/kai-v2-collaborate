@@ -4680,10 +4680,12 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    dated rail and the marker, then the six the header names. */
 .ov-tl-scroll{overflow-x:auto}
 .ov-tl{
-  display:grid;min-width:622px;
-  grid-template-columns:88px 18px minmax(58px,.7fr) minmax(70px,.9fr) minmax(100px,1.3fr) minmax(118px,1.7fr) minmax(62px,.9fr) auto;
+  display:grid;min-width:564px;
+  grid-template-columns:88px 18px minmax(70px,.9fr) minmax(100px,1.3fr) minmax(118px,1.7fr) minmax(62px,.9fr) auto;
   align-items:stretch;
 }
+.ov-tl.has-dur{min-width:622px;
+  grid-template-columns:88px 18px minmax(58px,.7fr) minmax(70px,.9fr) minmax(100px,1.3fr) minmax(118px,1.7fr) minmax(62px,.9fr) auto}
 .ov-tl-hd,.ov-tl-r{display:contents}
 .ov-tl-h{
   font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.13em;

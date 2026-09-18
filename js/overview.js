@@ -867,8 +867,14 @@ function _ovDiffHtml(d){
     >${sign}$${Math.abs(delta).toLocaleString('en-US')}</span>`;
 }
 
+/* Duration is parked, not removed: the hours inside a day are derived rather
+   than measured (see _ovHoursFor), so the column is off until the events
+   carry real timestamps. Flip this back to true and the header cell, the row
+   cell and the grid track all come back together — which is why all three
+   read the one flag instead of being commented out separately. */
+const OV_SHOW_DURATION = false;
 const _OV_COLS = [
-  ['Duration',   'How long this person had the job before they acted on it'],
+  ...(OV_SHOW_DURATION ? [['Duration', 'How long this person had the job before they acted on it']] : []),
   ['Who',        'The person who acted'],
   ['Artifact',   'The document the action happened in'],
   ['What',       'What they did — a count opens the list it counts'],
@@ -916,7 +922,7 @@ function _ovTlRow(o){
   return `<div class="ov-tl-r ov-tl-${o.kind}${o.detailId ? ' is-tappable' : ''}${o.wkFirst ? ' is-wkfirst' : ''}">
     <span class="ov-tl-when${L}"${tap}><b>${esc(o.day)}</b><i>${esc(o.sub || '')}</i></span>
     <span class="ov-tl-rail${L}"${tap}><span class="ov-tl-mk"></span></span>
-    <span class="ov-tl-dur${L}"${tap}>${o.dur ? esc(o.dur) : _OV_DASH}</span>
+    ${OV_SHOW_DURATION ? `<span class="ov-tl-dur${L}"${tap}>${o.dur ? esc(o.dur) : _OV_DASH}</span>` : ''}
     <span class="ov-tl-who${L}"${tap}>${o.who ? esc(o.who) : _OV_DASH}</span>
     <span class="ov-tl-where${L}"${tap}>${o.where || ''}</span>
     <span class="ov-tl-what${L}"${tap}>${caret}<span class="ov-tl-what-t">${o.what || ''}</span></span>
@@ -1006,14 +1012,14 @@ function _ovTrailHtml(){
      hide, the cells are still grid items of the parent). Two grids inside one
      scroller share a width, so the columns still line up across the seam. */
   if(cut >= entries.length) return `<div class="ov-trail">${standing}
-    <div class="ov-tl-scroll"><div class="ov-tl">${_ovTlHead()}${head}</div></div></div>`;
+    <div class="ov-tl-scroll"><div class="ov-tl${OV_SHOW_DURATION ? ' has-dur' : ''}">${_ovTlHead()}${head}</div></div></div>`;
   const rest = _ovFeedHtml(entries.slice(cut), weekState, true);
   const n = entries.length - cut;
   const lbl = `View all history (${n} earlier ${n === 1 ? 'entry' : 'entries'})`;
   return `<div class="ov-trail">
     ${standing}
     <div class="ov-tl-scroll">
-      <div class="ov-tl is-shut" id="ovTrailRest">${_ovTlHead()}${head}${rest}</div>
+      <div class="ov-tl is-shut${OV_SHOW_DURATION ? ' has-dur' : ''}" id="ovTrailRest">${_ovTlHead()}${head}${rest}</div>
     </div>
     <button type="button" class="ov-more" id="ovTrailMore"
             aria-expanded="false" aria-controls="ovTrailRest"
