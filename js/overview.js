@@ -1086,7 +1086,8 @@ function _ovTimelineFeedHtml(entries, weekState, later){
     const what = esc(e.what || '');
     const where = `<button type="button" class="ov-tl-doc" data-hv-doc="${esc(d.name)}"
         onclick="event.stopPropagation();ovOpenDoc('${esc(d.name).replace(/'/g, "\\'")}')"
-        >${esc(d.name)}</button><span class="ov-tl-state">${esc(d.state || '')}</span>`;
+        ><span class="ov-tl-doc-n">${esc(d.name)}</span></button
+      ><span class="ov-tl-state">${esc(d.state || '')}</span>`;
     html += _ovTlRow({
       kind:e.kind,
       day: e.railDay || _ovDayLabel(en.at),
