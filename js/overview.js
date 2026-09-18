@@ -230,7 +230,7 @@ function _ovTrail(){
        order it happened, so reversing it is exact — including the two events
        that share a date, where sorting on the date alone would have put them
        in whichever order the comparison happened to settle on. */
-    out.push({name:m.label || id, state: id === pending ? 'In review' : 'Approved',
+    out.push({name:m.label || id, state: id === pending ? 'Draft' : 'Approved',
               amount:amount, was:was, evs:evs.reverse()});
   });
 
@@ -240,7 +240,7 @@ function _ovTrail(){
   if(mode === 'closeout' || st === 'closeout' || st === 'closeout-approved'){
     const C = OVERVIEW_SEED.closeout;
     const done = st === 'closeout-approved';
-    out.push({name:'Closeout', state: done ? 'Approved' : 'In review', evs:[
+    out.push({name:'Closeout', state: done ? 'Approved' : 'Draft', evs:[
       {...author, verb:'started', when:C.opened, kind:'start'},
       {...author, verb:'handed off', to:people.manager, when:C.handed, kind:'handoff'},
       ...(done
@@ -1096,14 +1096,14 @@ function _ovTlRow(o){
     ? `<button type="button" class="ov-tl-car" aria-label="Show what this covers"
          aria-expanded="${!!_ovOpenChanges[o.detailId]}" aria-controls="ovCh-${o.detailId}"
          onclick="event.stopPropagation();ovToggleChanges('${o.detailId}')"
-         ><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1.2l4.2 3.8L3 8.8z"/></svg></button>`
+         ><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1.2 3.4h7.6L5 8.2z"/></svg></button>`
     : '';
   return `<div class="ov-tl-r ov-tl-${o.kind}${o.detailId ? ' is-tappable' : ''}${o.wkFirst ? ' is-wkfirst' : ''}">
     <span class="ov-tl-when${L}"${tap}><b>${esc(o.day)}</b><i>${esc(o.sub || '')}</i></span>
     <span class="ov-tl-rail${L}"${tap}><span class="ov-tl-mk"></span></span>
     ${OV_SHOW_DURATION ? `<span class="ov-tl-dur${L}"${tap}>${o.dur ? esc(o.dur) : _OV_DASH}</span>` : ''}
     <span class="ov-tl-who${L}"${tap}>${o.who ? esc(o.who) : _OV_DASH}</span>
-    <span class="ov-tl-what${L}"${tap}>${caret}<span class="ov-tl-what-t">${o.what || ''}</span></span>
+    <span class="ov-tl-what${L}"${tap}><span class="ov-tl-what-t">${o.what || ''}</span>${caret}</span>
     <span class="ov-tl-where${L}"${tap}>${o.where || ''}</span>
     <span class="ov-tl-note${L}"${tap}>${o.note ? esc(o.note) : _OV_DASH}</span>
     <span class="ov-tl-diff${L}"${tap}>${o.diff || ''}</span>
