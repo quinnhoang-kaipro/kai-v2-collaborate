@@ -218,7 +218,10 @@ function _renderRegisterSection(){
     </tbody>
   </table>`;
 
-  /* ── The ledger. One row per approved document, then today's total. */
+  /* ── The ledger. One row per approved document, then today's total.
+        Built oldest-first, because each row's index is how it knows whether
+        it is the original scope, and reversed at the end so the newest
+        document is the one the eye lands on. */
   const ledgerRows = rows.map((r, i) => {
     const v = r.v;
     const tag = versionTag(v);
@@ -284,7 +287,7 @@ function _renderRegisterSection(){
       <div class="reg-sub-note">Each group opens onto the lines it changed.</div>
       <button class="reg-sub-open" onclick="event.stopPropagation();openHistorical('${v.id}')">Open ${esc(versionLabel(v))} →</button>
     </td></tr>`;
-  }).join('');
+  }).reverse().join('');
 
   /* ── Anything staged but not approved sits below the line, excluded from
         the total. Only rendered when there actually is something. */
