@@ -4706,7 +4706,8 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tl-r > *{padding:11px 10px;font-family:var(--body);font-size:12.5px;color:var(--ink);
   line-height:1.4;display:flex;align-items:flex-start}
 .ov-tl-r > *:last-child{padding-right:0}
-.ov-tl-when{flex-direction:column;gap:1px;padding-left:0;padding-right:14px;white-space:nowrap;overflow:visible}
+.ov-tl-when{flex-direction:column;align-items:flex-end;text-align:right;gap:1px;
+  padding-left:0;padding-right:14px;white-space:nowrap;overflow:visible}
 .ov-tl-when b{font-weight:600;font-size:12.5px;font-variant-numeric:tabular-nums}
 .ov-tl-when i{font-style:normal;font-size:10.5px;color:var(--t3);font-variant-numeric:tabular-nums}
 .ov-tl-who{font-weight:500}
