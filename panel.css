@@ -4750,7 +4750,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tl-when i{font-style:normal;font-size:10.5px;color:var(--t3);font-variant-numeric:tabular-nums}
 .ov-tl-who{font-weight:500}
 .ov-tl-dur{color:var(--t2);font-size:12px}
-.ov-tl-note{color:var(--t2);font-size:12px;line-height:1.4;white-space:normal;min-width:0}
+.ov-tl-note{color:var(--t2);font-size:12.5px;line-height:1.45;white-space:normal;min-width:0}
 /* Two lines, then it stops — the cut is the affordance: a note that ends
    mid-sentence says there is more without needing a "more" to say it. */
 .ov-tl-note-t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
@@ -4804,7 +4804,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tl-what{flex-direction:column;align-items:flex-start;gap:3px}
 /* Quieter than the action above it: what they did is the row's news, where it
    went next is how the row ends. */
-.ov-tl-handoff{font-size:11.5px;color:var(--t3);line-height:1.35}
+.ov-tl-handoff{font-size:12px;color:var(--t3);line-height:1.4}
 .ov-tl-handoff b{font-weight:600;color:var(--t2)}
 .ov-tl-car{border:0;background:transparent;padding:0;margin-left:7px;color:var(--t3);
   cursor:pointer;display:inline-flex;vertical-align:baseline;flex-shrink:0;
