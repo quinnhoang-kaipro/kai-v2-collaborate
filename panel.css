@@ -4672,6 +4672,93 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    page even though each is its own grid — the money and the date have to
    form columns, not settle wherever their own group's content puts them. */
 .ov-trail{display:flex;flex-direction:column;gap:0}
+
+/* ── ACTIVITY TIMELINE ────────────────────────────────────────────────
+   One grid for the whole feed: the rows are display:contents so their cells
+   are the grid's own items, which is what keeps six columns true across
+   week rules and across the collapsed earlier block. Eight tracks — the
+   dated rail and the marker, then the six the header names. */
+.ov-tl-scroll{overflow-x:auto}
+.ov-tl{
+  display:grid;min-width:604px;
+  grid-template-columns:70px 18px minmax(70px,.9fr) minmax(58px,.7fr) minmax(100px,1.3fr) minmax(118px,1.7fr) minmax(62px,.9fr) auto;
+  align-items:stretch;
+}
+.ov-tl-hd,.ov-tl-r{display:contents}
+.ov-tl-h{
+  font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--t3);padding:0 10px 8px 0;align-self:end;
+  border-bottom:1.5px solid var(--ink);cursor:help;
+}
+.ov-tl-h:last-child{text-align:right;padding-right:0}
+.ov-tl-hd .ov-tl-when,.ov-tl-hd .ov-tl-rail{border-bottom:1.5px solid var(--ink)}
+
+/* The week rule. Spans every track so it reads as a break in the whole
+   timeline rather than a label in one column. */
+.ov-tl-wk{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:18px 0 4px}
+.ov-tl-wk span{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--t2);white-space:nowrap}
+.ov-tl-wk::after{content:"";flex:1;height:1px;background:var(--ink)}
+
+/* Cells. Padding lives here rather than on a row box, because there isn't one. */
+.ov-tl-r > *{padding:11px 10px;font-family:var(--body);font-size:12.5px;color:var(--ink);
+  line-height:1.4;display:flex;align-items:flex-start}
+.ov-tl-r > *:last-child{padding-right:0}
+.ov-tl-when{flex-direction:column;gap:1px;padding-left:0;white-space:nowrap}
+.ov-tl-when b{font-weight:600;font-size:12.5px;font-variant-numeric:tabular-nums}
+.ov-tl-when i{font-style:normal;font-size:10.5px;color:var(--t3);font-variant-numeric:tabular-nums}
+.ov-tl-who{font-weight:500}
+.ov-tl-dur,.ov-tl-note{color:var(--t2);font-size:12px}
+.ov-tl-where{flex-direction:column;gap:2px;align-items:flex-start;min-width:0}
+.ov-tl-diff{justify-content:flex-end;text-align:right;white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+.ov-tl-dash{color:var(--t3)}
+
+/* The rail. The connector runs the full height of each cell so consecutive
+   rows join up; the first row of a week starts it at the marker instead, so
+   the line doesn't climb through the rule above it. */
+.ov-tl-rail{position:relative;padding:0;justify-content:center}
+.ov-tl-rail::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;
+  background:var(--stroke);transform:translateX(-50%)}
+.ov-tl-r.is-wkfirst .ov-tl-rail::before{top:17px}
+.ov-tl-mk{position:relative;width:8px;height:8px;margin-top:13px;
+  background:var(--t3);transform:rotate(45deg);flex-shrink:0}
+/* Marker states carry the same meanings the rest of the tab uses: a document
+   settled (approved) is the only green, a hand-off is an outline because
+   nothing is finished by it, and site work is the quiet one. */
+.ov-tl-approved .ov-tl-mk{background:var(--success)}
+.ov-tl-handoff  .ov-tl-mk{background:var(--white);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.ov-tl-changed  .ov-tl-mk{background:var(--info)}
+.ov-tl-start    .ov-tl-mk{background:var(--ink)}
+.ov-tl-site     .ov-tl-mk{background:var(--stroke);width:6px;height:6px;margin-top:14px}
+
+.ov-tl-doc{border:0;background:transparent;padding:0;font-family:var(--body);font-size:12.5px;
+  font-weight:600;color:var(--ink);cursor:pointer;text-align:left;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.ov-tl-doc:hover{text-decoration:underline}
+.ov-tl-state,.ov-tl-onsite{font-family:var(--mono);font-size:8.5px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.ov-tl-what-t b{font-weight:600}
+.ov-tl-what{gap:7px}
+.ov-tl-car{border:0;background:transparent;padding:0;margin-top:3px;color:var(--t3);
+  cursor:pointer;display:inline-flex;flex-shrink:0;transition:transform .12s}
+.ov-tl-car svg{width:9px;height:9px;fill:currentColor}
+.ov-tl-r.is-tappable > *{cursor:pointer}
+.ov-tl-r.is-tappable:hover > *{background:var(--sunken)}
+.ov-tl-r.is-tappable:hover .ov-tl-car{color:var(--ink)}
+.ov-tl-car[aria-expanded="true"]{transform:rotate(90deg);color:var(--ink)}
+
+.ov-tl-delta{font-weight:600}
+.ov-tl-delta.is-up{color:var(--error)}
+.ov-tl-delta.is-dn{color:var(--success)}
+
+/* Expanded detail spans the grid and indents to the Who column, so it reads
+   as belonging to the row above rather than as a row of its own. */
+.ov-tl-detail{grid-column:1/-1;padding:2px 0 14px 108px;background:var(--sunken)}
+.ov-tl-detail[hidden]{display:none}
+/* Shut, the earlier stretch is hidden cell by cell — its rows share the grid
+   above so the columns cannot drift when it opens. */
+.ov-tl.is-shut .is-later{display:none}
 .ov-tr-rows{display:grid;grid-template-columns:minmax(0,1fr) 150px 108px;
   align-items:stretch}
 .ov-tr-r{display:contents}

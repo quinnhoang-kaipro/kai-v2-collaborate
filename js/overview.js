@@ -654,40 +654,6 @@ function _ovSiteRuns(older, newer){
   if(!rows.length) return null;
   return {rows, at, span};
 }
-/* `key` disambiguates the expand targets: every gap in the trail renders the
-   same row kinds, so the ids have to carry which gap they belong to. */
-function _ovWalksHtml(run, key){
-  const rows = run && run.rows;
-  if(!rows || !rows.length) return '';
-  return `<div class="ov-walks">${rows.map((r, i) => {
-    const id = `ovSite-${key}-${i}`;
-    const open = !!_ovOpenChanges[id];
-    return `<div class="ov-walk${r.detail ? ' is-tappable' : ''}"${
-      r.detail ? ` onclick="ovToggleChanges('${id}')"` : ''}>
-      <span class="ov-walk-c">${r.detail
-        ? `<button type="button" class="ov-tr-open ov-site-open"
-             aria-expanded="${open}" aria-controls="ovCh-${id}"
-             onclick="event.stopPropagation();ovToggleChanges('${id}')">${esc(r.text)}
-             <svg class="ov-tr-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
-           </button>`
-        : esc(r.text)}</span>
-      <span class="ov-walk-s">${esc(r.side)}</span>
-      <span class="ov-walk-d">${esc(r.when)}</span>
-      ${r.detail ? `<div class="ov-tr-detail ov-site-detail" id="ovCh-${id}"${open ? '' : ' hidden'} onclick="event.stopPropagation()">
-        ${r.detail.map(g => `<div class="ov-ch-g">
-          <button type="button" class="ov-ch-grp" data-hv-room="${esc(g.room)}" onclick="ovGoGroup('${esc(g.room).replace(/'/g, "\\'")}')">${esc(g.room)}</button>
-          <div class="ov-ch-ts">${g.tasks.map(t => `
-            <button type="button" class="ov-ch-task"
-              data-hv-code="${esc(t.code)}" data-hv-room="${esc(g.room)}" data-hv-name="${esc(t.name)}"
-              onclick="ovGoTask('${esc(t.code)}', '${esc(g.room).replace(/'/g, "\\'")}', '${esc(t.name).replace(/'/g, "\\'")}')">
-              <span class="ov-ch-code">${esc(t.code)}</span>
-              <span class="ov-ch-name">${esc(t.name)}</span></button>`).join('')}</div>
-        </div>`).join('')}
-      </div>` : ''}
-    </div>`;
-  }).join('')}</div>`;
-}
-
 const _OV_TICK = `<svg class="ov-tr-ck" viewBox="0 0 12 12" fill="none" stroke="currentColor"
   stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg>`;
 
@@ -718,56 +684,6 @@ function _ovMoneyHtml(d){
      leaves the reader to work out what it rose from. */
   return `<span class="ov-tr-money">${d.was ? `<s class="ov-tr-was">${esc(d.was)}</s>` : ''
     }<span class="ov-tr-now">${esc(d.amount)}</span></span>`;
-}
-/* One row of a document's chain. `lead` is the document's newest event, and
-   only that row carries the money: it is where the document currently
-   stands, so it is the honest place for it. */
-function _ovDocRowHtml(d, e, lead){
-  /* The name goes to the document, the row opens the list — so the name has
-     to stop the click reaching the row, or following a link would expand
-     something on the way out. */
-  const nm = `<button type="button" class="ov-tr-doc-n" data-hv-doc="${esc(d.name)}"
-      onclick="event.stopPropagation();ovOpenDoc('${esc(d.name).replace(/'/g, "\\'")}')">${esc(d.name)}</button>`;
-  const sentence = e.verb
-    ? `${e.who ? `<span class="ov-tr-who">${esc(e.who)}</span> ` : ''}${esc(e.verb)} ${nm}${
-        e.to ? ` to <span class="ov-tr-who2">${esc(e.to)}</span>` : ''}`
-    : `${esc(e.act)} in ${nm}`;
-  /* The count opens its own list, so that row is a button — but the document
-     name inside it is a link of its own, which a button cannot contain. The
-     caret is the control instead, sitting after the sentence. */
-  const body = e.detail
-    ? `<span class="ov-tr-act">${sentence}
-         <button type="button" class="ov-tr-open" aria-label="Show the tasks that changed"
-           aria-expanded="${!!_ovOpenChanges[e.ver]}" aria-controls="ovCh-${e.ver}"
-           onclick="event.stopPropagation();ovToggleChanges('${e.ver}')"
-           ><svg class="ov-tr-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg></button>
-       </span>`
-    : `<span class="ov-tr-act">${sentence}</span>`;
-  /* A row that opens is clickable across its whole width — a caret is a small
-     target for something the entire line is about. The row is display:contents
-     and has no box of its own to carry the handler, so each cell takes it. The
-     caret stays, for the keyboard and for saying the row does anything. */
-  const tap = e.detail ? ` onclick="ovToggleChanges('${e.ver}')"` : '';
-  return `<div class="ov-tr-r ov-tr-${e.kind}${e.detail ? ' is-tappable' : ''}">
-      <span class="ov-tr-ev"${tap}>
-        <span class="ov-tr-mk">${e.kind === 'approved' ? _OV_TICK : ''}</span>
-        ${body}
-      </span>
-      <span class="ov-tr-sum"${tap}>${lead ? _ovMoneyHtml(d) : ''}</span>
-      <span class="ov-tr-d"${tap}>${esc(e.when || '')}</span>
-    </div>
-    ${e.detail ? `<div class="ov-tr-detail" id="ovCh-${e.ver}"${_ovOpenChanges[e.ver] ? '' : ' hidden'} onclick="event.stopPropagation()">
-      ${e.detail.map(g => `<div class="ov-ch-g">
-        <button type="button" class="ov-ch-grp" data-hv-room="${esc(g.room)}" onclick="ovGoGroup('${esc(g.room).replace(/'/g, "\\'")}')">${esc(g.room)}</button>
-        <div class="ov-ch-ts">${g.tasks.map(t => `
-          <button type="button" class="ov-ch-task"
-            data-hv-code="${esc(t.code)}" data-hv-room="${esc(g.room)}" data-hv-name="${esc(t.name)}"
-          onclick="ovGoTask('${esc(t.code)}', '${esc(g.room).replace(/'/g, "\\'")}', '${esc(t.name).replace(/'/g, "\\'")}')">
-            <span class="ov-ch-code">${esc(t.code)}</span>
-            <span class="ov-ch-name">${esc(t.name)}</span>
-            ${t.what ? `<span class="ov-ch-what">${esc(t.what)}</span>` : ''}</button>`).join('')}</div>
-      </div>`).join('')}
-    </div>` : ''}`;
 }
 /* A document's name is the way to the document. Artifact 2 is where the
    change history lives, so that is where it goes. */
@@ -817,34 +733,181 @@ function _ovFeedEntries(docs){
     : ({approved:0, handoff:1, changed:2, start:3})[en.ev.kind] ?? 4;
   return out.sort((a, b) => (b.at - a.at) || (rank(a) - rank(b)));
 }
-function _ovMonthLabel(ts){
+/* ── the timeline ────────────────────────────────────────────────────
+   A dated rail with a marker per event, ruled off into weeks. The columns
+   answer six questions in the order they get asked: who acted, how long they
+   had held the job before they did, which document they were in, what they
+   did, anything recorded with it, and what it did to the money.
+
+   Weeks rather than months. A month is too coarse a rule for a document that
+   is opened, passed round and approved inside three of them — the rule is
+   there to say "this was a different stretch of work", and at month scale it
+   almost never falls where that changes. */
+const _OV_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function _ovWeekLabel(ts){
   const d = new Date(ts);
   if(isNaN(d.getTime())) return '';
-  const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${M[d.getMonth()].toUpperCase()} ${d.getFullYear()}`;
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() - d.getDay());          // back to the Sunday
+  return `Week of ${_OV_MON[d.getMonth()]} ${d.getDate()}`;
 }
-/* Consecutive document rows share one grid so their columns line up; a site
-   run or a month rule closes the grid and the next run of rows opens a new
-   one. The column tracks are fixed, so blocks still align with each other. */
-function _ovFeedHtml(entries, monthState){
-  let html = '', open = false;
-  const close = () => { if(open){ html += '</div>'; open = false; } };
+function _ovOrd(n){
+  const s = ['th','st','nd','rd'], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+function _ovDayLabel(ts){
+  const d = new Date(ts);
+  return isNaN(d.getTime()) ? '' : `${_OV_MON[d.getMonth()]} ${_ovOrd(d.getDate())}`;
+}
+/* Day granularity is all the records carry — inventing a clock time to fill
+   the rail would be inventing evidence. The year sits under the date instead,
+   which is the fact a reader actually wants on an audit trail. */
+function _ovYearLabel(ts){
+  const d = new Date(ts);
+  return isNaN(d.getTime()) ? '' : String(d.getFullYear());
+}
+function _ovHumanSpan(ms){
+  if(!(ms > 0)) return 'Same day';
+  const days = Math.round(ms / 864e5);
+  if(days < 1)  return 'Same day';
+  if(days === 1) return '1 day';
+  if(days < 30) return `${days} days`;
+  const mo = Math.round(days / 30);
+  return mo === 1 ? '1 month' : `${mo} months`;
+}
+/* How long the person had the job before this event — measured from whatever
+   last happened to the document, which is the moment it became theirs. The
+   first event has nothing before it, so it has no duration rather than a
+   made-up zero. Keyed by event object: the same person can hold the same
+   document twice. */
+const _ovDurCache = new WeakMap();
+function _ovDurations(d){
+  if(_ovDurCache.has(d)) return _ovDurCache.get(d);
+  const chrono = d.evs.slice().reverse();        // evs are newest-first
+  const out = new Map();
+  const at = e => e.at || Date.parse(e.when) || 0;   // 'changed' carries a span, not a date
+  chrono.forEach((e, i) => {
+    if(!i) return;
+    const a = at(chrono[i - 1]), b = at(e);
+    if(a && b) out.set(e, _ovHumanSpan(b - a));
+  });
+  _ovDurCache.set(d, out);
+  return out;
+}
+/* What the action did to the job total, as the difference it made. The pair
+   it is read from — what the document was worth before and after — stays in
+   the tooltip, so the column can be one signed figure without hiding what it
+   came from. */
+function _ovDiffHtml(d){
+  if(!d.amount) return '';
+  if(!d.was) return `<span class="ov-tl-delta">${esc(d.amount)}</span>`;
+  const delta = dollars(d.amount) - dollars(d.was);
+  const cls = delta > 0 ? ' is-up' : delta < 0 ? ' is-dn' : '';
+  const sign = delta > 0 ? '+' : delta < 0 ? '\u2212' : '';
+  return `<span class="ov-tl-delta${cls}" title="${esc(d.was)} \u2192 ${esc(d.amount)}"
+    >${sign}$${Math.abs(delta).toLocaleString('en-US')}</span>`;
+}
+
+const _OV_COLS = [
+  ['Who',        'The person who acted'],
+  ['Duration',   'How long this person had the job before they acted on it'],
+  ['Where',      'The document the action happened in'],
+  ['What',       'What they did — a count opens the list it counts'],
+  ['Note',       'Anything recorded alongside the action'],
+  ['Difference', 'What the action did to the job total'],
+];
+function _ovTlHead(){
+  return `<div class="ov-tl-hd">
+    <span class="ov-tl-when"></span><span class="ov-tl-rail"></span>
+    ${_OV_COLS.map(([l, t]) =>
+      `<span class="ov-tl-h" title="${esc(t)}">${esc(l)}</span>`).join('')}
+  </div>`;
+}
+function _ovTlDetail(groups){
+  return (groups || []).map(g => `<div class="ov-ch-g">
+    <button type="button" class="ov-ch-grp" data-hv-room="${esc(g.room)}"
+      onclick="ovGoGroup('${esc(g.room).replace(/'/g, "\\'")}')">${esc(g.room)}</button>
+    <div class="ov-ch-ts">${g.tasks.map(t => `
+      <button type="button" class="ov-ch-task"
+        data-hv-code="${esc(t.code)}" data-hv-room="${esc(g.room)}" data-hv-name="${esc(t.name)}"
+        onclick="ovGoTask('${esc(t.code)}', '${esc(g.room).replace(/'/g, "\\'")}', '${esc(t.name).replace(/'/g, "\\'")}')">
+        <span class="ov-ch-code">${esc(t.code)}</span>
+        <span class="ov-ch-name">${esc(t.name)}</span>
+        ${t.what ? `<span class="ov-ch-what">${esc(t.what)}</span>` : ''}</button>`).join('')}</div>
+  </div>`).join('');
+}
+const _OV_DASH = '<span class="ov-tl-dash">\u2014</span>';
+/* Rows are display:contents so every cell is a grid item of the one timeline
+   grid — that is what keeps the columns true across weeks and across the
+   collapsed block below. Which also means the row has no box to hang a click
+   handler on, so each cell takes it. */
+function _ovTlRow(o){
+  const tap = o.detailId ? ` onclick="ovToggleChanges('${o.detailId}')"` : '';
+  /* Earlier history is hidden cell by cell rather than by hiding a row box —
+     there isn't one. Which is also why it stays in the same grid as the rows
+     above it: two grids size their fr tracks to their own content, so the
+     columns drifted across the seam the moment you expanded it. */
+  const L = o.later ? ' is-later' : '';
+  const caret = o.detailId
+    ? `<button type="button" class="ov-tl-car" aria-label="Show what this covers"
+         aria-expanded="${!!_ovOpenChanges[o.detailId]}" aria-controls="ovCh-${o.detailId}"
+         onclick="event.stopPropagation();ovToggleChanges('${o.detailId}')"
+         ><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1.2l4.2 3.8L3 8.8z"/></svg></button>`
+    : '';
+  return `<div class="ov-tl-r ov-tl-${o.kind}${o.detailId ? ' is-tappable' : ''}${o.wkFirst ? ' is-wkfirst' : ''}">
+    <span class="ov-tl-when${L}"${tap}><b>${esc(o.day)}</b><i>${esc(o.sub || '')}</i></span>
+    <span class="ov-tl-rail${L}"${tap}><span class="ov-tl-mk"></span></span>
+    <span class="ov-tl-who${L}"${tap}>${o.who ? esc(o.who) : _OV_DASH}</span>
+    <span class="ov-tl-dur${L}"${tap}>${o.dur ? esc(o.dur) : _OV_DASH}</span>
+    <span class="ov-tl-where${L}"${tap}>${o.where || _OV_DASH}</span>
+    <span class="ov-tl-what${L}"${tap}>${caret}<span class="ov-tl-what-t">${o.what || ''}</span></span>
+    <span class="ov-tl-note${L}"${tap}>${o.note ? esc(o.note) : _OV_DASH}</span>
+    <span class="ov-tl-diff${L}"${tap}>${o.diff || ''}</span>
+  </div>${o.detailId ? `<div class="ov-tl-detail${L}" id="ovCh-${o.detailId}"${
+    _ovOpenChanges[o.detailId] ? '' : ' hidden'} onclick="event.stopPropagation()"
+    >${_ovTlDetail(o.detail)}</div>` : ''}`;
+}
+function _ovFeedHtml(entries, weekState, later){
+  let html = '';
+  const L = later ? ' is-later' : '';
   entries.forEach(en => {
-    const m = _ovMonthLabel(en.at);
-    if(m && m !== monthState.m){
-      monthState.m = m;
-      close();
-      html += `<div class="ov-tr-month"><span>${esc(m)}</span></div>`;
+    const wk = _ovWeekLabel(en.at);
+    let wkFirst = false;
+    if(wk && wk !== weekState.w){
+      weekState.w = wk; wkFirst = true;
+      html += `<div class="ov-tl-wk${L}"><span>${esc(wk)}</span></div>`;
     }
     if(en.kind === 'site'){
-      close();
-      html += _ovWalksHtml(en.run, en.key);
-    } else {
-      if(!open){ html += '<div class="ov-tr-rows">'; open = true; }
-      html += _ovDocRowHtml(en.doc, en.ev, en.lead);
+      /* Site work has no document and no one holding it — it is what happened
+         on the property while the documents were going round. The dashes in
+         Who and Duration are the point rather than missing data. */
+      en.run.rows.forEach((r, i) => {
+        html += _ovTlRow({
+          kind:'site', day:_ovDayLabel(en.at), sub:_ovYearLabel(en.at),
+          who:'', dur:'', where:'<span class="ov-tl-onsite">On site</span>',
+          what:esc(r.text), note:r.side || '', diff:'',
+          detailId: r.detail ? `ovSite-${en.key}-${i}` : null, detail:r.detail,
+          wkFirst: wkFirst && !i, later,
+        });
+      });
+      return;
     }
+    const d = en.doc, e = en.ev;
+    const what = e.verb === 'handed off'
+        ? `Handed off to <b>${esc(e.to || '')}</b>`
+      : e.verb === 'approved' ? 'Approved'
+      : e.verb === 'started'  ? 'Opened'
+      : esc(e.act || '');
+    const where = `<button type="button" class="ov-tl-doc" data-hv-doc="${esc(d.name)}"
+        onclick="event.stopPropagation();ovOpenDoc('${esc(d.name).replace(/'/g, "\\'")}')"
+        >${esc(d.name)}</button><span class="ov-tl-state">${esc(d.state || '')}</span>`;
+    html += _ovTlRow({
+      kind:e.kind, day:_ovDayLabel(en.at), sub:_ovYearLabel(en.at),
+      who:e.who, dur:_ovDurations(d).get(e), where, what,
+      note:'', diff: en.lead ? _ovDiffHtml(d) : '',
+      detailId: e.detail ? e.ver : null, detail:e.detail, wkFirst, later,
+    });
   });
-  close();
   return html;
 }
 /* Who is holding the newest document, said once at the top. It used to be an
@@ -876,16 +939,23 @@ function _ovTrailHtml(){
   const startedAt = Math.min(...current.evs.map(e => Date.parse(e.when) || Infinity));
   let cut = entries.findIndex(en => en.at < startedAt);
   if(cut < 0) cut = entries.length;
-  const monthState = {m:''};
-  const head = _ovFeedHtml(entries.slice(0, cut), monthState);
+  const weekState = {w:''};
+  const head = _ovFeedHtml(entries.slice(0, cut), weekState);
   const standing = _ovStandingLineHtml(docs);
-  if(cut >= entries.length) return `<div class="ov-trail">${standing}${head}</div>`;
-  const rest = _ovFeedHtml(entries.slice(cut), monthState);
+  /* The earlier block is a second grid rather than a hidden part of the first:
+     a display:contents row cannot be hidden (the [hidden] rule has nothing to
+     hide, the cells are still grid items of the parent). Two grids inside one
+     scroller share a width, so the columns still line up across the seam. */
+  if(cut >= entries.length) return `<div class="ov-trail">${standing}
+    <div class="ov-tl-scroll"><div class="ov-tl">${_ovTlHead()}${head}</div></div></div>`;
+  const rest = _ovFeedHtml(entries.slice(cut), weekState, true);
   const n = entries.length - cut;
   const lbl = `View all history (${n} earlier ${n === 1 ? 'entry' : 'entries'})`;
   return `<div class="ov-trail">
-    ${standing}${head}
-    <div class="ov-trail-rest" id="ovTrailRest" hidden>${rest}</div>
+    ${standing}
+    <div class="ov-tl-scroll">
+      <div class="ov-tl is-shut" id="ovTrailRest">${_ovTlHead()}${head}${rest}</div>
+    </div>
     <button type="button" class="ov-more" id="ovTrailMore"
             aria-expanded="false" aria-controls="ovTrailRest"
             onclick="ovTrailToggle()"
@@ -896,11 +966,11 @@ function _ovTrailHtml(){
 /* A class toggle rather than a re-render: renderOverview would rebuild the
    whole tab and lose the scroll position you were reading at. */
 function ovTrailToggle(){
-  const rest = document.getElementById('ovTrailRest');
+  const grid = document.getElementById('ovTrailRest');
   const btn  = document.getElementById('ovTrailMore');
-  if(!rest || !btn) return;
-  const open = rest.hidden;             // about to become open
-  rest.hidden = !open;
+  if(!grid || !btn) return;
+  const open = grid.classList.contains('is-shut');   // about to become open
+  grid.classList.toggle('is-shut', !open);
   btn.textContent = open ? btn.dataset.open : btn.dataset.shut;
   btn.setAttribute('aria-expanded', String(open));
 }
