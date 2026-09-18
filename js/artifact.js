@@ -27,9 +27,257 @@ function renderArtifact(){
 }
 function _renderArtifactIndex(){
   return `<div class="art-index">
+    ${_renderRegisterSection()}
     ${_renderHistoricalSection()}
     ${_renderCopiesSection()}
   </div>`;
+}
+
+/* ════════════ REGISTER ════════════
+   Every event that moved the Job Total, and how that total is classified
+   today. Two questions a job manager asks constantly and previously had to
+   answer by opening each document in turn and doing the arithmetic.
+
+   SOURCE OF TRUTH — the live scope (TASKS), not VERSIONS[].budget. The two
+   seeds disagree in this prototype (the sidebar reads $68,242 where the
+   version cards read $26,370), and a section whose whole job is to add money
+   up cannot be the place that publishes the stale one. So: the current Job
+   Total is the live scope, the classification partitions exactly that figure,
+   and each document's historical Job Total is derived by walking its change
+   back from today. Every row therefore ties, and the bottom line agrees with
+   the number the sidebar has been showing all along. */
+
+// Which ledger row is expanded. One at a time — the detail is a digression
+// from the running total, not a second column of it.
+let _regOpenVer = null;
+function toggleRegRow(id){
+  _regOpenVer = (_regOpenVer === id) ? null : id;
+  if(typeof renderArtifact === 'function') renderArtifact();
+}
+
+/* The a2 records (SCOPE / VER) hold what each version actually touched, keyed
+   by their own ids. VERSIONS is the ladder this tab already renders. Same
+   rungs, different keys — match them by position. */
+function _regVerKey(v){
+  if(typeof VER_ORDER === 'undefined') return null;
+  return VER_ORDER[(v.num || 1) - 1] || null;
+}
+function _regCounts(v){
+  const key = _regVerKey(v);
+  if(!key || typeof _ovChangeCounts !== 'function') return null;
+  try { return _ovChangeCounts(key); } catch(_){ return null; }
+}
+/* Added vs revised, off the same change rows the Overview reads. A line that
+   appeared is a different act from one that was repriced, and the split is
+   the first thing anyone asks about a change order's item count. */
+function _regAddedRevised(v){
+  const key = _regVerKey(v);
+  if(!key || typeof SCOPE === 'undefined') return null;
+  let added = 0, revised = 0;
+  SCOPE.forEach(g => g.tasks.forEach(t => {
+    const rows = (t.changes || []).filter(ch => ch.ver === key);
+    if(!rows.length) return;
+    const isAdd = rows.some(ch => (ch.rows || []).some(r => r.field === 'Line added'));
+    if(isAdd) added++; else revised++;
+  }));
+  return (added || revised) ? {added, revised} : null;
+}
+
+/* How today's Job Total splits. Precedence rather than overlap: a task held
+   for a change order is Deferred whatever else it carries, so the three
+   buckets partition the total exactly and the rows can be trusted to sum. */
+function _regClassify(){
+  const modsOf = t => {
+    const pm = (typeof taskProductMods === 'function') ? taskProductMods(t) : [];
+    return new Set([...(t.mods || []), ...pm]);
+  };
+  const out = {ready:0, tenant:0, deferred:0, readyN:0, tenantN:0, deferredN:0};
+  (typeof TASKS !== 'undefined' ? TASKS : []).forEach(t => {
+    const m = modsOf(t), c = dollars(t.cost);
+    if(m.has('deferred'))   { out.deferred += c; out.deferredN++; }
+    else if(m.has('tenant')){ out.tenant   += c; out.tenantN++;   }
+    else                    { out.ready    += c; out.readyN++;    }
+  });
+  out.total = out.ready + out.tenant + out.deferred;
+  out.onPos = out.ready + out.tenant;   // deferred is not on a PO yet
+  return out;
+}
+
+/* The ledger, oldest first. `total` is each document's Job Total as of its
+   approval, derived by unwinding the later changes from today's figure. */
+function _regLedger(){
+  const ordered = VERSIONS.slice().sort((a,b) => a.num - b.num);
+  const live = (typeof TASKS !== 'undefined' ? TASKS : []).reduce((s,t) => s + dollars(t.cost), 0);
+  // Each document's own movement, from the version ladder's budgets. The
+  // budgets disagree with the live scope in absolute terms but the steps
+  // between them are the real change-order amounts.
+  const rows = ordered.map((v, i) => {
+    const prev = i ? ordered[i-1] : null;
+    return {v, change: prev ? (dollars(v.budget) - dollars(prev.budget)) : null};
+  });
+  // Walk today's total backwards so the last row lands on it exactly.
+  let running = live;
+  for(let i = rows.length - 1; i >= 0; i--){
+    rows[i].total = running;
+    running -= (rows[i].change || 0);
+  }
+  // The walk assumes the live scope is the same body of work the ladder
+  // describes. Where it isn't — a seeded ladder against a scope that has been
+  // emptied or heavily cut — the derivation runs past zero and starts printing
+  // negative money. Fall back to each document's own budget then: those no
+  // longer agree with the sidebar, but a figure that disagrees beats a job
+  // total of minus fourteen hundred dollars.
+  if(rows.some(r => r.total < 0)){
+    rows.forEach(r => { r.total = dollars(r.v.budget); });
+    return {rows, live: rows[rows.length-1].total, derived:false};
+  }
+  return {rows, live, derived:true};
+}
+
+function _renderRegisterSection(){
+  // An empty scope has no job total to account for, and the seeded version
+  // ladder describes work that isn't there. The sidebar already says "Empty
+  // scope"; a register of nothing would only dress that up as an accounting.
+  if(typeof TASKS === 'undefined' || !TASKS.length) return '';
+  const {rows, live} = _regLedger();
+  if(!rows.length) return '';
+  const cls = _regClassify();
+  const first = rows[0];
+  const approvedChange = rows.slice(1).reduce((s,r) => s + (r.change || 0), 0);
+  const coCount = rows.length - 1;
+  const cur = VERSIONS.find(v => v.id === currentVersionId) || rows[rows.length-1].v;
+  const curTag = versionTag(cur);
+
+  const fmt = n => '$' + Math.round(n).toLocaleString('en-US') + '.00';
+  const sgn = n => (n > 0 ? '+' : n < 0 ? '−' : '') + '$' + Math.abs(Math.round(n)).toLocaleString('en-US') + '.00';
+
+  /* ── Three figures, in the order the question is asked: what was approved,
+        what has moved it since, what it is now. */
+  const cards = `<div class="reg-cards">
+    <div class="reg-card">
+      <div class="reg-card-lbl">Initial approved scope</div>
+      <div class="reg-card-val">${fmt(first.total)}</div>
+      <div class="reg-card-sub">${esc(first.v.at)} · ${TASKS.length} item${TASKS.length===1?'':'s'}</div>
+    </div>
+    <div class="reg-card">
+      <div class="reg-card-lbl">Approved changes</div>
+      <div class="reg-card-val">${sgn(approvedChange)}</div>
+      <div class="reg-card-sub">${coCount} change order${coCount===1?'':'s'}</div>
+    </div>
+    <div class="reg-card is-current">
+      <div class="reg-card-lbl">Current job total</div>
+      <div class="reg-card-val">${fmt(live)}</div>
+      <div class="reg-card-sub">${esc(versionLabel(cur))}${curTag.tag?' · '+esc(curTag.tag):''}</div>
+    </div>
+  </div>`;
+
+  /* ── Classification. "On Purchase Orders" deliberately excludes Deferred:
+        the whole point of that modifier is that the money is not committed. */
+  const clsRows = [
+    {name:'Ready to order',    chip:'',                      note:'In purchase orders',                  val:cls.ready,    n:cls.readyN},
+    {name:'Tenant responsible',chip:'Tracked cost',          note:'In purchase orders — reported separately', val:cls.tenant, n:cls.tenantN, chipCls:'is-quiet'},
+    {name:'Deferred',          chip:'Procure on change order', note:'Held until a change order is approved', val:cls.deferred, n:cls.deferredN, chipCls:'is-accent'},
+  ].filter(r => r.n > 0).map(r => `<tr>
+      <th>${esc(r.name)}${r.chip?`<span class="reg-chip ${r.chipCls||''}">${esc(r.chip)}</span>`:''}</th>
+      <td class="reg-cls-note">${esc(r.note)}</td>
+      <td class="reg-num">${fmt(r.val)}</td>
+    </tr>`).join('');
+
+  const classify = `<table class="reg-cls">
+    <caption>How the job total is classified</caption>
+    <tbody>
+      ${clsRows}
+      <tr class="is-total">
+        <th>On purchase orders</th>
+        <td class="reg-cls-note">Ready to order plus tracked cost</td>
+        <td class="reg-num">${fmt(cls.onPos)}</td>
+      </tr>
+    </tbody>
+  </table>`;
+
+  /* ── The ledger. One row per approved document, then today's total. */
+  const ledgerRows = rows.map((r, i) => {
+    const v = r.v;
+    const tag = versionTag(v);
+    const counts = i ? _regCounts(v) : null;
+    const open = _regOpenVer === v.id;
+    const items = i ? (counts ? counts.tasks : null) : TASKS.length;
+    const canOpen = !!(counts && counts.detail && counts.detail.length);
+    const head = `<tr class="reg-row${open?' is-open':''}${canOpen?' is-openable':''}"${canOpen?` onclick="toggleRegRow('${v.id}')"`:''}>
+      <td class="reg-date">${esc(v.at)}</td>
+      <td class="reg-doc">
+        ${canOpen?`<span class="reg-caret" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`:'<span class="reg-caret is-blank"></span>'}
+        <span class="reg-doc-name">${esc(versionLabel(v))}</span>
+        ${tag.tag?`<span class="hist-card-tag hist-tag-${esc(tag.tagCls||'')}">${esc(tag.tag)}</span>`:''}
+      </td>
+      <td class="reg-num reg-items">${items != null ? items : '—'}</td>
+      <td class="reg-num">${r.change == null ? 'Approved' : sgn(r.change)}</td>
+      <td class="reg-num reg-total">${fmt(r.total)}</td>
+    </tr>`;
+    if(!open || !canOpen) return head;
+    const ar = _regAddedRevised(v);
+    const chips = ar ? `<div class="reg-sub-chips">
+      ${ar.added?`<span class="reg-chip is-quiet">${ar.added} added</span>`:''}
+      ${ar.revised?`<span class="reg-chip is-quiet">${ar.revised} revised</span>`:''}
+    </div>` : '';
+    const groups = counts.detail.map(g => `<button class="reg-sub-row" onclick="event.stopPropagation();ovGoGroup('${esc(g.room)}')" title="Open ${esc(g.room)} in the Editor">
+      <span class="reg-sub-name">${esc(g.room)}</span>
+      <span class="reg-sub-n">${g.tasks.length}</span>
+      <span class="reg-sub-go" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </button>`).join('');
+    return head + `<tr class="reg-sub"><td colspan="5">
+      ${chips}
+      <div class="reg-sub-list">${groups}</div>
+      <div class="reg-sub-note">Each group opens in the Editor.</div>
+      <button class="reg-sub-open" onclick="event.stopPropagation();openHistorical('${v.id}')">Open ${esc(versionLabel(v))} →</button>
+    </td></tr>`;
+  }).join('');
+
+  /* ── Anything staged but not approved sits below the line, excluded from
+        the total. Only rendered when there actually is something. */
+  let pending = '';
+  const staged = (typeof TASKS !== 'undefined' && typeof taskHasOpenChangeOrder === 'function')
+    ? TASKS.filter(t => taskHasOpenChangeOrder(t)) : [];
+  if(staged.length){
+    const d = (typeof scopeDelta === 'function') ? scopeDelta() : 0;
+    pending = `<div class="reg-pending-cap">Not approved · not included in the job total</div>
+      <table class="reg-table reg-table-pending"><tbody><tr class="reg-row">
+        <td class="reg-date">Draft</td>
+        <td class="reg-doc"><span class="reg-caret is-blank"></span><span class="reg-doc-name">${esc(versionLabel({num:VERSIONS.length+1}))}</span></td>
+        <td class="reg-num reg-items">${staged.length}</td>
+        <td class="reg-num">${d ? sgn(d) : '—'}</td>
+        <td class="reg-num reg-total is-quiet">In progress</td>
+      </tr></tbody></table>`;
+  }
+
+  return `<section class="art-sec art-reg">
+    <header class="art-sec-hdr">
+      <div class="art-sec-hdr-l">
+        <h2 class="art-sec-title">Register</h2>
+        <p class="art-sec-desc">Every event that changed the job total, and how that total is classified today.</p>
+      </div>
+    </header>
+    ${cards}
+    ${classify}
+    <div class="reg-table-scroll">
+      <table class="reg-table">
+        <thead><tr>
+          <th class="reg-date">Date</th><th class="reg-doc">Document</th>
+          <th class="reg-num">Items</th><th class="reg-num">Change</th><th class="reg-num">Job total</th>
+        </tr></thead>
+        <tbody>
+          ${ledgerRows}
+          <tr class="reg-row is-grand">
+            <td class="reg-date"></td>
+            <td class="reg-doc"><span class="reg-caret is-blank"></span><span class="reg-doc-name">Current job total</span></td>
+            <td class="reg-num"></td><td class="reg-num"></td>
+            <td class="reg-num reg-total">${fmt(live)}</td>
+          </tr>
+        </tbody>
+      </table>
+      ${pending}
+    </div>
+  </section>`;
 }
 function _renderHistoricalSection(){
   // Historical artifacts = the audit trail. Each VERSION renders as a

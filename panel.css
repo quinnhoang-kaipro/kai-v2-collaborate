@@ -2586,6 +2586,76 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    view-only snapshot bound to a version, with its own share link. */
 .art-index{display:flex;flex-direction:column;gap:36px;padding:24px 26px 60px;max-width:none}
 .art-sec{display:flex;flex-direction:column;gap:14px}
+
+/* ── REGISTER (Artifact tab) ──────────────────────────────────────────
+   The money section. Everything here is a figure in a column, so the rules
+   are: tabular numerals throughout, one right-aligned money column, and
+   weight used only to mark the lines that are totals. */
+.art-reg{gap:18px}
+.reg-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.reg-card{border:1px solid var(--stroke);background:var(--white);padding:14px 16px 15px;display:flex;flex-direction:column;gap:5px;min-width:0}
+/* The figure the rest of the app quotes gets the heavier edge — the other
+   two are the arithmetic that arrives at it. */
+.reg-card.is-current{border-color:var(--ink)}
+.reg-card-lbl{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
+.reg-card-val{font-family:var(--display);font-size:24px;font-weight:700;color:var(--ink);letter-spacing:-.01em;line-height:1.1;font-variant-numeric:tabular-nums}
+.reg-card-sub{font-family:var(--body);font-size:11.5px;color:var(--t2);line-height:1.4}
+
+.reg-cls{width:100%;border-collapse:collapse;border:1px solid var(--stroke);background:var(--white)}
+.reg-cls caption{caption-side:top;text-align:left;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);padding:11px 16px 9px;border-bottom:1px solid var(--stroke);background:var(--sunken)}
+.reg-cls th,.reg-cls td{padding:10px 16px;border-bottom:1px solid var(--stroke);font-family:var(--body);font-size:13px;text-align:left;font-weight:400;vertical-align:baseline}
+.reg-cls tr:last-child th,.reg-cls tr:last-child td{border-bottom:0}
+.reg-cls th{color:var(--ink);font-weight:500;white-space:nowrap}
+.reg-cls-note{color:var(--t2);font-size:12px;width:99%}
+.reg-cls tr.is-total th,.reg-cls tr.is-total td{border-top:1.5px solid var(--ink);font-weight:700;color:var(--ink)}
+.reg-cls tr.is-total .reg-cls-note{font-weight:400;color:var(--t2)}
+
+.reg-chip{display:inline-block;margin-left:8px;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:2px 6px;vertical-align:1px;white-space:nowrap}
+.reg-chip.is-quiet{background:var(--sunken);color:var(--t2);border:1px solid var(--stroke)}
+.reg-chip.is-accent{background:var(--accent);color:var(--ink)}
+
+.reg-table-scroll{overflow-x:auto}
+.reg-table{width:100%;border-collapse:collapse;border:1px solid var(--stroke);background:var(--white)}
+.reg-table thead th{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);text-align:left;padding:10px 16px;background:var(--sunken);border-bottom:1px solid var(--stroke);white-space:nowrap}
+.reg-table td{padding:12px 16px;border-bottom:1px solid var(--stroke);font-family:var(--body);font-size:13px;color:var(--ink);vertical-align:middle}
+.reg-table tbody tr:last-child td{border-bottom:0}
+.reg-date{white-space:nowrap;color:var(--t2);font-size:12px;width:1%}
+.reg-doc{width:99%}
+.reg-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.reg-items{color:var(--t2)}
+.reg-total{font-weight:600}
+.reg-num.is-quiet{font-weight:400;color:var(--t2);font-style:normal}
+
+.reg-row.is-openable{cursor:pointer}
+.reg-row.is-openable:hover{background:var(--sunken)}
+.reg-row.is-open{background:var(--wash)}
+.reg-doc-name{font-weight:500}
+.reg-caret{display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;margin-right:8px;color:var(--t3);transition:transform .12s;vertical-align:-1px}
+.reg-caret svg{width:12px;height:12px}
+.reg-caret.is-blank{visibility:hidden}
+.reg-row.is-open .reg-caret{transform:rotate(90deg)}
+
+/* Expanded detail. Indented to the document name's column so it reads as
+   belonging to the row above rather than as a new section. */
+.reg-sub td{background:var(--wash);padding:2px 16px 14px 40px;border-bottom:1px solid var(--stroke)}
+.reg-sub-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.reg-sub-chips .reg-chip{margin-left:0}
+.reg-sub-list{display:flex;flex-direction:column;border:1px solid var(--stroke);background:var(--white)}
+.reg-sub-row{display:flex;align-items:center;gap:12px;width:100%;padding:9px 12px;border:0;border-bottom:1px solid var(--stroke);background:transparent;cursor:pointer;text-align:left;font-family:var(--body);font-size:12.5px;color:var(--ink)}
+.reg-sub-row:last-child{border-bottom:0}
+.reg-sub-row:hover{background:var(--sunken)}
+.reg-sub-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reg-sub-n{font-variant-numeric:tabular-nums;color:var(--t2);font-size:12px}
+.reg-sub-go{display:inline-flex;width:12px;height:12px;color:var(--t3)}
+.reg-sub-go svg{width:12px;height:12px}
+.reg-sub-note{font-family:var(--body);font-size:11.5px;color:var(--t3);margin-top:8px}
+.reg-sub-open{margin-top:10px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:8px 12px;border:1px solid var(--stroke);background:var(--white);color:var(--ink);cursor:pointer}
+.reg-sub-open:hover{border-color:var(--ink);background:var(--sunken)}
+
+.reg-row.is-grand td{border-top:1.5px solid var(--ink);font-weight:700}
+.reg-row.is-grand .reg-doc-name{font-weight:700}
+.reg-pending-cap{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin:16px 0 6px}
+.reg-table-pending{opacity:.85}
 .art-sec-hdr{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:4px}
 .art-sec-hdr-l{display:flex;flex-direction:column;gap:5px;min-width:0}
 .art-sec-eyebrow{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--t3)}
