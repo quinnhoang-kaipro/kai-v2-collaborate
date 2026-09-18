@@ -4680,8 +4680,8 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    dated rail and the marker, then the six the header names. */
 .ov-tl-scroll{overflow-x:auto}
 .ov-tl{
-  display:grid;min-width:604px;
-  grid-template-columns:70px 18px minmax(70px,.9fr) minmax(58px,.7fr) minmax(100px,1.3fr) minmax(118px,1.7fr) minmax(62px,.9fr) auto;
+  display:grid;min-width:622px;
+  grid-template-columns:88px 18px minmax(70px,.9fr) minmax(58px,.7fr) minmax(100px,1.3fr) minmax(118px,1.7fr) minmax(62px,.9fr) auto;
   align-items:stretch;
 }
 .ov-tl-hd,.ov-tl-r{display:contents}
@@ -4704,7 +4704,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tl-r > *{padding:11px 10px;font-family:var(--body);font-size:12.5px;color:var(--ink);
   line-height:1.4;display:flex;align-items:flex-start}
 .ov-tl-r > *:last-child{padding-right:0}
-.ov-tl-when{flex-direction:column;gap:1px;padding-left:0;white-space:nowrap}
+.ov-tl-when{flex-direction:column;gap:1px;padding-left:0;padding-right:14px;white-space:nowrap;overflow:visible}
 .ov-tl-when b{font-weight:600;font-size:12.5px;font-variant-numeric:tabular-nums}
 .ov-tl-when i{font-style:normal;font-size:10.5px;color:var(--t3);font-variant-numeric:tabular-nums}
 .ov-tl-who{font-weight:500}
@@ -5040,6 +5040,22 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-cw-list{list-style:none;margin:16px 0 0;padding:0 0 0 17px;position:relative}
 .ov-cw-list::before{content:'';position:absolute;left:3px;top:0;bottom:15px;width:1px;
   background:var(--stroke)}
+/* ── Collapsed trade list ──
+   One line standing in for the folded rows, on the same four tracks so the
+   money and the task count do not jump sideways when the list opens. */
+.ov-cw-sum{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) auto auto;
+  align-items:baseline;gap:0 16px;width:100%;padding:11px 0;border:0;border-top:1px solid var(--stroke);
+  background:transparent;cursor:pointer;text-align:left;font-family:var(--body)}
+.ov-cw-sum[hidden]{display:none}
+.ov-cw-sum:hover{background:var(--sunken)}
+.ov-cw-sumk{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:700;color:var(--ink)}
+.ov-cw-sumk svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.5;
+  stroke-linecap:round;stroke-linejoin:round;transition:transform .12s}
+.ov-cw-sum[aria-expanded="true"] .ov-cw-sumk svg{transform:rotate(180deg)}
+.ov-cw-sumd{font-size:12.5px;color:var(--t2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ov-cw-list[hidden]{display:none}
+.ov-cw-rootnote[hidden]{display:none}
+
 .ov-cw-row{position:relative;display:grid;
   grid-template-columns:minmax(0,150px) minmax(0,1fr) auto auto;
   align-items:baseline;gap:0 16px;padding:9px 0;border-bottom:1px solid var(--hair,var(--stroke))}

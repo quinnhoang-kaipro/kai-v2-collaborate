@@ -363,11 +363,24 @@ let _ovAccessOpen = false;
    so it is not left blank: it shows the name it inherits, greyed and
    marked FROM GENERAL, so the reader sees the fallback happening rather
    than being told about it. */
-let _ovCrewOpen = true;
+/* Collapsed by default. Eleven trades is a page of rows that mostly say the
+   same thing — a trade, its default contractor, a figure — and the two facts
+   worth the space are the ones the list is an exception to: who the general
+   is, and what still has nobody on it. Those stay; the list folds behind a
+   line that counts it. */
+let _ovCrewOpen = false;
 function ovCrewToggle(btn){
   _ovCrewOpen = !_ovCrewOpen;
-  const box = document.getElementById('ovCrewBody');
-  if(box) box.hidden = !_ovCrewOpen;
+  const list = document.getElementById('ovCrewList');
+  const sum  = document.getElementById('ovCrewSum');
+  const note = document.getElementById('ovCrewNote');
+  if(list) list.hidden = !_ovCrewOpen;
+  if(sum)  sum.hidden  = _ovCrewOpen;
+  if(note) note.hidden = !_ovCrewOpen;
+  /* Both the header caret and the summary line drive the same state, so
+     whichever was not clicked has to be told too. */
+  document.querySelectorAll('.ov-crew-fold,.ov-cw-sum').forEach(b =>
+    b.setAttribute('aria-expanded', String(_ovCrewOpen)));
   if(btn) btn.setAttribute('aria-expanded', String(_ovCrewOpen));
 }
 /* The strip is the count of what the cascade cannot reach, so it goes to
@@ -441,6 +454,30 @@ function _ovCrewRowHtml(r, gc){
       <span class="ov-cw-n">${esc(n(r.tasks))}</span>
     </li>${over}`;
 }
+/* What the folded list adds up to. The breakdown names the two things the
+   rows would have told you — how many trades are covered by the general, and
+   how many tasks override their trade's default — because those are the only
+   lines in the list anyone scans for. */
+function _ovCrewSumHtml(S, inheriting){
+  const ts = S.trades || [];
+  if(!ts.length) return '';
+  const money = ts.reduce((k, t) => k + _ovMoney(t.amount || ''), 0);
+  const tasks = ts.reduce((k, t) => k + (t.tasks || 0), 0);
+  const overs = ts.reduce((k, t) => k + ((t.over || []).length), 0);
+  const bits = [
+    `${ts.length - inheriting} assigned`,
+    inheriting ? `${inheriting} from general` : '',
+    overs ? `${overs} override${overs === 1 ? '' : 's'}` : '',
+  ].filter(Boolean).join(' \u00b7 ');
+  return `<button type="button" class="ov-cw-sum" id="ovCrewSum"${_ovCrewOpen ? ' hidden' : ''}
+      aria-expanded="${_ovCrewOpen}" aria-controls="ovCrewList" onclick="ovCrewToggle(this)">
+    <span class="ov-cw-sumk">${ts.length} trade${ts.length === 1 ? '' : 's'}
+      <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg></span>
+    <span class="ov-cw-sumd">${esc(bits)}</span>
+    <span class="ov-cw-amt">${money ? esc(_fmtDollars(money)) : '&mdash;'}</span>
+    <span class="ov-cw-n">${tasks} ${tasks === 1 ? 'task' : 'tasks'}</span>
+  </button>`;
+}
 function _ovCrewHtml(){
   const S = OVERVIEW_SEED;
   const g = S.general || {};
@@ -465,12 +502,12 @@ function _ovCrewHtml(){
       <h3 class="ov-crew-h">Contractor assignments</h3>
       <button type="button" class="ov-crew-edit" onclick="ovCrewEdit()">Edit</button>
       <button type="button" class="ov-crew-fold" aria-expanded="${_ovCrewOpen}"
-              aria-controls="ovCrewBody" aria-label="Show or hide contractor assignments"
+              aria-controls="ovCrewList" aria-label="Show or hide the trade list"
               onclick="ovCrewToggle(this)">
         <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
       </button>
     </div>
-    <div class="ov-crew-body" id="ovCrewBody"${_ovCrewOpen ? '' : ' hidden'}>
+    <div class="ov-crew-body" id="ovCrewBody">
       <div class="ov-cw-root">
         <div class="ov-cw-rootbar">
           <span class="ov-cw-rootk">General contractor</span>
@@ -478,12 +515,13 @@ function _ovCrewHtml(){
           <span class="ov-cw-amt">${esc(g.amount || '')}</span>
           <span class="ov-cw-n">${esc(n(g.tasks || 0))}</span>
         </div>
-        <p class="ov-cw-rootnote">${inheriting
+        <p class="ov-cw-rootnote" id="ovCrewNote"${_ovCrewOpen ? '' : ' hidden'}>${inheriting
           ? `Fallback for <b>${inheriting} ${inheriting === 1 ? 'trade' : 'trades'}</b> with no assigned trade contractor`
           : 'Fallback for any trade with no assigned trade contractor'}</p>
       </div>
 
-      <ul class="ov-cw-list">
+      ${_ovCrewSumHtml(S, inheriting)}
+      <ul class="ov-cw-list" id="ovCrewList"${_ovCrewOpen ? '' : ' hidden'}>
         ${(S.trades || []).map(r => _ovCrewRowHtml(r, g.who)).join('')}
       </ul>
 
