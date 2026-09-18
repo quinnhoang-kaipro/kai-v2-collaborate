@@ -262,10 +262,17 @@ function _renderRegisterSection(){
           onclick="event.stopPropagation();toggleRegGroup('${esc(gk).replace(/'/g, "\\'")}')"
           title="${open ? 'Hide' : 'Show'} the lines this changed in ${esc(g.room)}">
           <span class="reg-sub-name">${esc(g.room)}</span>
-          <span class="reg-sub-n">${g.tasks.length}</span>
+          <span class="reg-sub-n">${g.tasks.length} ${g.tasks.length === 1 ? 'task' : 'tasks'}</span>
           <span class="reg-sub-go" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </button>
-        ${open ? `<div class="reg-tasks">${rows}</div>` : ''}
+        ${open ? `<div class="reg-tasks">
+          <div class="reg-task reg-task-hd">
+            <span class="reg-task-code">ID</span>
+            <span class="reg-task-name">Task</span>
+            <span class="reg-task-prod">Product</span>
+            <span class="reg-task-qty">Qty</span>
+            <span class="reg-task-amt">Amount</span>
+          </div>${rows}</div>` : ''}
       </div>`;
     }).join('');
     return head + `<tr class="reg-sub"><td colspan="5">

@@ -2676,6 +2676,11 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    what it is, what it carries, how much of it, and what that costs — and the
    money is the column the eye runs down, so it is the one that is aligned. */
 .reg-tasks{border-top:1px solid var(--stroke);background:var(--white)}
+/* Named on the ledger's own footing, so the nested table reads like the one
+   it sits inside rather than like a different kind of thing. */
+.reg-task-hd{background:var(--sunken);border-bottom:1px solid var(--stroke);padding-top:7px;padding-bottom:7px}
+.reg-task-hd > *{font-family:var(--mono)!important;font-size:8.5px!important;font-weight:700!important;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--t3)!important;font-style:normal!important}
 .reg-task{display:grid;grid-template-columns:76px minmax(96px,1.1fr) minmax(120px,1.8fr) 64px auto;
   gap:0 12px;align-items:baseline;padding:8px 12px 8px 24px;
   border-bottom:1px solid var(--hair);font-family:var(--body);font-size:12px}
