@@ -4858,7 +4858,8 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    A standing, not an event: the feed says a hand-off happened, this says
    nothing has happened since. */
 .ov-tr-now-line{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 6px;
-  margin-bottom:0;padding:9px 12px;background:var(--sunken)}
+  margin-bottom:0;padding:7px 0 7px 9px;background:transparent;
+  border-left:3px solid var(--accent)}
 .ov-tr-now-v{font-size:13px;color:var(--t2)}
 .ov-tr-now-v b{color:var(--ink);font-weight:700}
 .ov-tr-now-d{font-size:13px;color:var(--t2);white-space:nowrap}
