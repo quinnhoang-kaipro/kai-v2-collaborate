@@ -34,6 +34,8 @@
   --sunken:#F4F0E6;       /* sunken fill (bone, derived) */
   --hair:#EDE9DE;         /* row divider — a step lighter than --stroke, which
                              bounds objects; this only separates lines */
+  --zebra:#FBF9F3;        /* alternating row band — lighter than --sunken so it
+                             does not compete with the bands that mean something */
   --t2:#5C5750;
   --t3:#8a8470;
   /* attention dot palette */
@@ -4764,7 +4766,14 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tl-when i{font-style:normal;font-size:10.5px;color:var(--t3);font-variant-numeric:tabular-nums}
 .ov-tl-who{font-weight:500}
 .ov-tl-dur{color:var(--t2);font-size:12px}
-.ov-tl-note{color:var(--t2);font-size:12px;line-height:1.4;white-space:normal}
+.ov-tl-note{color:var(--t2);font-size:12px;line-height:1.4;white-space:normal;min-width:0}
+/* Two lines, then it stops — the cut is the affordance: a note that ends
+   mid-sentence says there is more without needing a "more" to say it. */
+.ov-tl-note-t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;border:0;background:transparent;padding:0;margin:0;text-align:left;
+  font:inherit;color:inherit;cursor:pointer}
+.ov-tl-note-t:hover{color:var(--ink)}
+.ov-tl-note-t:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .ov-tl-where{flex-direction:column;gap:2px;align-items:flex-start;min-width:0}
 .ov-tl-diff,.ov-tl-total{justify-content:flex-end;text-align:right;white-space:nowrap;
   font-variant-numeric:tabular-nums}
@@ -4808,6 +4817,10 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
   cursor:pointer;display:inline-flex;vertical-align:baseline;flex-shrink:0;
   transition:transform .12s}
 .ov-tl-car svg{width:9px;height:9px;fill:currentColor}
+/* Alternating bands. The hairline says where one row ends; the band says
+   which row your eye is on across seven columns, which is the harder job at
+   this width. Both are kept, at weights that do not compete. */
+.ov-tl-r.is-alt > *{background:var(--zebra)}
 .ov-tl-r.is-tappable > *{cursor:pointer}
 .ov-tl-r.is-tappable:hover > *{background:var(--sunken)}
 .ov-tl-r.is-tappable:hover .ov-tl-car{color:var(--ink)}

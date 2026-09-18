@@ -1031,6 +1031,13 @@ function _ovTlDetail(groups){
   </div>`).join('');
 }
 const _OV_DASH = '<span class="ov-tl-dash">\u2014</span>';
+/* Where the rest of a note lives. The events carry no note of their own yet
+   (see _OV_LOREM), so this goes to the scope's notes — the drawer this column
+   will read from once hand-off notes are stored on the event. */
+function ovOpenNote(){
+  if(typeof openScopeDrawer === 'function') openScopeDrawer('notes');
+  else if(typeof toast === 'function') toast('Notes drawer unavailable here');
+}
 /* "Tara O." rather than "T. Okafor". The Activity names the same four people
    on every row, so a surname is doing no work — the first name is how anyone
    on the job actually refers to them, and the last initial is there for the
@@ -1051,12 +1058,15 @@ function _ovWhoShort(who){
    stands in to show the column at its real width. Picked by hash, not at
    random, so a row keeps the same note between renders. Replace the whole
    thing the moment hand-off notes are stored. */
+/* Long enough to run past two lines, because a note that fits is a note with
+   nothing behind it — the column has to show that there is more to read
+   before the click that opens it means anything. */
 const _OV_LOREM = [
-  'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-  'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-  'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.',
-  'Duis aute irure dolor in reprehenderit in voluptate velit esse.',
-  'Excepteur sint occaecat cupidatat non proident, sunt in culpa.',
+  'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip.',
+  'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur, excepteur sint occaecat.',
+  'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit.',
+  'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.',
+  'Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia.',
 ];
 function _ovLorem(seed){
   const t = String(seed || '');
@@ -1081,14 +1091,17 @@ function _ovTlRow(o){
          onclick="event.stopPropagation();ovToggleChanges('${o.detailId}')"
          ><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1.2 3.4h7.6L5 8.2z"/></svg></button>`
     : '';
-  return `<div class="ov-tl-r ov-tl-${o.kind}${o.detailId ? ' is-tappable' : ''}${o.wkFirst ? ' is-wkfirst' : ''}">
+  return `<div class="ov-tl-r ov-tl-${o.kind}${o.detailId ? ' is-tappable' : ''}${o.wkFirst ? ' is-wkfirst' : ''}${o.alt ? ' is-alt' : ''}">
     <span class="ov-tl-when${L}"${tap}><b>${esc(o.day)}</b><i>${esc(o.sub || '')}</i></span>
     <span class="ov-tl-rail${L}"${tap}><span class="ov-tl-mk"></span></span>
     ${OV_SHOW_DURATION ? `<span class="ov-tl-dur${L}"${tap}>${o.dur ? esc(o.dur) : _OV_DASH}</span>` : ''}
     <span class="ov-tl-who${L}"${tap}>${o.who ? esc(o.who) : _OV_DASH}</span>
     <span class="ov-tl-what${L}"${tap}><span class="ov-tl-what-t">${o.what || ''}${caret}</span></span>
     <span class="ov-tl-where${L}"${tap}>${o.where || ''}</span>
-    <span class="ov-tl-note${L}"${tap}>${o.note ? esc(o.note) : _OV_DASH}</span>
+    <span class="ov-tl-note${L}"${tap}>${o.note
+      ? `<button type="button" class="ov-tl-note-t" title="Open the note"
+           onclick="event.stopPropagation();ovOpenNote()">${esc(o.note)}</button>`
+      : _OV_DASH}</span>
     <span class="ov-tl-diff${L}"${tap}>${o.diff || ''}</span>
     <span class="ov-tl-total${L}"${tap}>${o.total || ''}</span>
   </div>${o.detailId ? `<div class="ov-tl-detail${L}" id="ovCh-${o.detailId}"${
@@ -1104,11 +1117,12 @@ function _ovFeedHtml(entries, state, later){
 function _ovTimelineFeedHtml(entries, weekState, later){
   let html = '';
   const L = later ? ' is-later' : '';
+  let band = 0;
   entries.forEach(en => {
     const wk = _ovWeekLabel(en.at);
     let wkFirst = false;
     if(wk && wk !== weekState.w){
-      weekState.w = wk; wkFirst = true;
+      weekState.w = wk; wkFirst = true; band = 0;
       html += `<div class="ov-tl-wk${L}"><span>${esc(wk)}</span></div>`;
     }
     if(en.kind === 'site'){
@@ -1124,7 +1138,7 @@ function _ovTimelineFeedHtml(entries, weekState, later){
             : [r.side, r.text].filter(Boolean).join(' \u00b7 ')),
           note:_ovLorem(`${en.key}|${i}|${r.text}`), diff:'', total:'',
           detailId: r.detail ? `ovSite-${en.key}-${i}` : null, detail:r.detail,
-          wkFirst: wkFirst && !i, later,
+          wkFirst: wkFirst && !i, later, alt: (band++ % 2) === 1,
         });
       });
       return;
@@ -1145,6 +1159,7 @@ function _ovTimelineFeedHtml(entries, weekState, later){
       diff: en.lead ? _ovDiffHtml(d) : '',
       total: en.lead ? _ovTotalHtml(d) : '',
       detailId: e.detail ? e.ver : null, detail:e.detail, wkFirst, later,
+      alt: (band++ % 2) === 1,
     });
   });
   return html;
