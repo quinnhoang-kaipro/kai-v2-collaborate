@@ -2613,7 +2613,7 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    The money section. Everything here is a figure in a column, so the rules
    are: tabular numerals throughout, one right-aligned money column, and
    weight used only to mark the lines that are totals. */
-.art-reg{gap:18px}
+.art-reg{gap:18px;container-type:inline-size}
 /* Full column: the shared 60ch measure broke this one line in two while
    there was still space beside it. Still wraps rather than overflows when
    the panel is genuinely narrow. */
@@ -2667,7 +2667,38 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 .reg-sub-chips .reg-chip{margin-left:0}
 .reg-sub-list{display:flex;flex-direction:column;border:1px solid var(--stroke);background:var(--white)}
 .reg-sub-row{display:flex;align-items:center;gap:12px;width:100%;padding:9px 12px;border:0;border-bottom:1px solid var(--stroke);background:transparent;cursor:pointer;text-align:left;font-family:var(--body);font-size:12.5px;color:var(--ink)}
-.reg-sub-row:last-child{border-bottom:0}
+.reg-sub-g:last-child > .reg-sub-row{border-bottom:0}
+.reg-sub-g.is-open > .reg-sub-row{background:var(--sunken)}
+.reg-sub-g.is-open > .reg-sub-row .reg-sub-go{transform:rotate(90deg)}
+.reg-sub-row .reg-sub-go{transition:transform .12s}
+
+/* The lines themselves. Five columns because a line is five facts — its code,
+   what it is, what it carries, how much of it, and what that costs — and the
+   money is the column the eye runs down, so it is the one that is aligned. */
+.reg-tasks{border-top:1px solid var(--stroke);background:var(--white)}
+.reg-task{display:grid;grid-template-columns:76px minmax(96px,1.1fr) minmax(120px,1.8fr) 64px auto;
+  gap:0 12px;align-items:baseline;padding:8px 12px 8px 24px;
+  border-bottom:1px solid var(--hair);font-family:var(--body);font-size:12px}
+.reg-tasks .reg-task:last-child{border-bottom:0}
+.reg-task-code{font-family:var(--mono);font-size:10.5px;color:var(--t3);white-space:nowrap}
+.reg-task-name{color:var(--ink);font-weight:500;min-width:0}
+/* A line this version brought in, rather than one it repriced. */
+.reg-task-new{display:inline-block;margin-left:6px;font-family:var(--mono);font-size:8px;
+  font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--t2);
+  background:var(--sunken);border:1px solid var(--stroke);padding:1px 4px;vertical-align:1px}
+.reg-task-prod{color:var(--t2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reg-task-none{color:var(--t3);font-style:italic}
+.reg-task-qty{color:var(--t2);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.reg-task-amt{color:var(--ink);font-weight:600;text-align:right;white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+@container (max-width:620px){
+  .reg-task{grid-template-columns:minmax(0,1fr) auto;row-gap:2px}
+  .reg-task-code{grid-column:1;grid-row:1}
+  .reg-task-name{grid-column:1;grid-row:2}
+  .reg-task-prod{grid-column:1;grid-row:3}
+  .reg-task-qty{grid-column:2;grid-row:1}
+  .reg-task-amt{grid-column:2;grid-row:2}
+}
 .reg-sub-row:hover{background:var(--sunken)}
 .reg-sub-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .reg-sub-n{font-variant-numeric:tabular-nums;color:var(--t2);font-size:12px}

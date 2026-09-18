@@ -50,6 +50,29 @@ function _renderArtifactIndex(){
 // Which ledger row is expanded. One at a time — the detail is a digression
 // from the running total, not a second column of it.
 let _regOpenVer = null;
+/* Which groups inside it are open. Several at once, unlike the rows: comparing
+   two rooms of one change order is the reason to be down here at all. Keyed by
+   version and room, so opening Kitchen in one document does not open it in
+   another. */
+let _regOpenGroups = {};
+function toggleRegGroup(key){
+  _regOpenGroups[key] = !_regOpenGroups[key];
+  if(typeof renderArtifact === 'function') renderArtifact();
+}
+/* The lines of one room that this version touched, with what each carries and
+   what it costs. Read off SCOPE, the same records the counts come from, so a
+   room that says 4 opens onto four. */
+function _regGroupTasks(verKey, room){
+  if(typeof SCOPE === 'undefined') return [];
+  const g = SCOPE.find(x => x.room === room);
+  if(!g) return [];
+  return g.tasks
+    .filter(t => (t.changes || []).some(ch => ch.ver === verKey))
+    .map(t => ({code:t.code, name:t.name, product:t.product || '',
+                qty:t.qty || '', amount:t.amount || '',
+                added:(t.changes || []).some(ch => ch.ver === verKey
+                  && (ch.rows || []).some(r => r.field === 'Line added'))}));
+}
 function toggleRegRow(id){
   _regOpenVer = (_regOpenVer === id) ? null : id;
   if(typeof renderArtifact === 'function') renderArtifact();
@@ -220,15 +243,35 @@ function _renderRegisterSection(){
       ${ar.added?`<span class="reg-chip is-quiet">${ar.added} added</span>`:''}
       ${ar.revised?`<span class="reg-chip is-quiet">${ar.revised} revised</span>`:''}
     </div>` : '';
-    const groups = counts.detail.map(g => `<button class="reg-sub-row" onclick="event.stopPropagation();ovGoGroup('${esc(g.room)}')" title="Open ${esc(g.room)} in the Editor">
-      <span class="reg-sub-name">${esc(g.room)}</span>
-      <span class="reg-sub-n">${g.tasks.length}</span>
-      <span class="reg-sub-go" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-    </button>`).join('');
+    const verKey = _regVerKey(v);
+    const groups = counts.detail.map(g => {
+      const gk = `${v.id}|${g.room}`;
+      const open = !!_regOpenGroups[gk];
+      const rows = open ? _regGroupTasks(verKey, g.room).map(t => `
+        <div class="reg-task">
+          <span class="reg-task-code">${esc(t.code)}</span>
+          <span class="reg-task-name">${esc(t.name)}${t.added
+            ? `<span class="reg-task-new">New</span>` : ''}</span>
+          <span class="reg-task-prod">${t.product
+            ? esc(t.product) : '<span class="reg-task-none">No product selected</span>'}</span>
+          <span class="reg-task-qty">${esc(t.qty)}</span>
+          <span class="reg-task-amt">${esc(t.amount)}</span>
+        </div>`).join('') : '';
+      return `<div class="reg-sub-g${open ? ' is-open' : ''}">
+        <button class="reg-sub-row" aria-expanded="${open}"
+          onclick="event.stopPropagation();toggleRegGroup('${esc(gk).replace(/'/g, "\\'")}')"
+          title="${open ? 'Hide' : 'Show'} the lines this changed in ${esc(g.room)}">
+          <span class="reg-sub-name">${esc(g.room)}</span>
+          <span class="reg-sub-n">${g.tasks.length}</span>
+          <span class="reg-sub-go" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </button>
+        ${open ? `<div class="reg-tasks">${rows}</div>` : ''}
+      </div>`;
+    }).join('');
     return head + `<tr class="reg-sub"><td colspan="5">
       ${chips}
       <div class="reg-sub-list">${groups}</div>
-      <div class="reg-sub-note">Each group opens in the Editor.</div>
+      <div class="reg-sub-note">Each group opens onto the lines it changed.</div>
       <button class="reg-sub-open" onclick="event.stopPropagation();openHistorical('${v.id}')">Open ${esc(versionLabel(v))} →</button>
     </td></tr>`;
   }).join('');
