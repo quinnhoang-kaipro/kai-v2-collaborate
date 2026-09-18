@@ -732,6 +732,16 @@ function _ovMoneyHtml(d){
   return `<span class="ov-tr-money">${d.was ? `<s class="ov-tr-was">${esc(d.was)}</s>` : ''
     }<span class="ov-tr-now">${esc(d.amount)}</span></span>`;
 }
+/* Site work happens on the property, and the Progress tab is where the
+   property's walks and photos live — so the Where column names that tab and
+   goes to it, the same way a document row names its document and opens it.
+   The tab's id is 'pano'; only its label ever changed. */
+function ovGoProgress(){
+  if(typeof setWorkMode === 'function') setWorkMode('pano');
+}
+const _OV_PROGRESS_LINK = `<button type="button" class="ov-tl-doc"
+  onclick="event.stopPropagation();ovGoProgress()"
+  title="Open the Progress tab">Progress</button>`;
 /* A document's name is the way to the document. Artifact 2 is where the
    change history lives, so that is where it goes. */
 function ovOpenDoc(name){
@@ -943,7 +953,7 @@ function _ovFeedHtml(entries, weekState, later){
       en.run.rows.forEach((r, i) => {
         html += _ovTlRow({
           kind:'site', day:_ovDayLabel(en.at), sub:_ovYearLabel(en.at),
-          who:'', dur:'', where:'<span class="ov-tl-onsite">On site</span>',
+          who:'', dur:'', where:_OV_PROGRESS_LINK,
           what:esc(r.text), note:r.side || '', diff:'',
           detailId: r.detail ? `ovSite-${en.key}-${i}` : null, detail:r.detail,
           wkFirst: wkFirst && !i, later,

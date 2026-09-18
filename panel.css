@@ -4736,7 +4736,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
   font-weight:600;color:var(--ink);cursor:pointer;text-align:left;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
 .ov-tl-doc:hover{text-decoration:underline}
-.ov-tl-state,.ov-tl-onsite{font-family:var(--mono);font-size:8.5px;font-weight:700;
+.ov-tl-state{font-family:var(--mono);font-size:8.5px;font-weight:700;
   letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
 .ov-tl-what-t b{font-weight:600}
 .ov-tl-what{gap:7px}
