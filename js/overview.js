@@ -188,7 +188,8 @@ function _ovTrail(){
        "started it" only worked while a header above the row said what "it"
        was, and that header is what made the rows under it look owned. */
     const evs = [{...author, verb:'started',
-                  when: m.opened || (prev && prev.date) || m.date, kind:'start'}];
+                  when: m.opened || (prev && prev.date) || m.date,
+                  time: m.openedTime || (prev && prev.time) || m.time, kind:'start'}];
     /* Each signature is the point the document had reached that person, so
        the hand-off is from whoever held it before them. */
     /* What the editing came to, as its own event: it is the answer to "what
@@ -215,7 +216,7 @@ function _ovTrail(){
     let from = author;
     signs.forEach(sig => {
       evs.push({who:from.who, role:from.role, verb:'handed off', to:sig.who,
-                when:sig.date, kind:'handoff'});
+                when:sig.date, time:sig.time, kind:'handoff'});
       from = sig;
     });
     /* Nothing is added for a document still out for approval. "S. Patel has
@@ -223,7 +224,7 @@ function _ovTrail(){
        In review chip beside the title — three ways of saying one thing. */
     if(id !== pending){
       evs.push({who:people.manager, role:'Job manager', verb:'approved',
-                when:m.date, kind:'approved'});
+                when:m.date, time:m.time, kind:'approved'});
     }
     /* Newest first, like the documents themselves. The chain is built in the
        order it happened, so reversing it is exact — including the two events
@@ -780,6 +781,123 @@ function _ovFeedEntries(docs){
     : ({approved:0, handoff:1, changed:2, start:3})[en.ev.kind] ?? 4;
   return out.sort((a, b) => (b.at - a.at) || (rank(a) - rank(b)));
 }
+/* `key` disambiguates the expand targets: every gap in the trail renders the
+   same row kinds, so the ids have to carry which gap they belong to. */
+function _ovWalksHtml(run, key){
+  const rows = run && run.rows;
+  if(!rows || !rows.length) return '';
+  return `<div class="ov-walks">${rows.map((r, i) => {
+    const id = `ovSite-${key}-${i}`;
+    const open = !!_ovOpenChanges[id];
+    return `<div class="ov-walk${r.detail ? ' is-tappable' : ''}"${
+      r.detail ? ` onclick="ovToggleChanges('${id}')"` : ''}>
+      <span class="ov-walk-c">${r.detail
+        ? `<button type="button" class="ov-tr-open ov-site-open"
+             aria-expanded="${open}" aria-controls="ovCh-${id}"
+             onclick="event.stopPropagation();ovToggleChanges('${id}')">${esc(r.text)}
+             <svg class="ov-tr-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
+           </button>`
+        : esc(r.text)}</span>
+      <span class="ov-walk-s">${esc(r.side)}</span>
+      <span class="ov-walk-d">${esc(r.when)}</span>
+      ${r.detail ? `<div class="ov-tr-detail ov-site-detail" id="ovCh-${id}"${open ? '' : ' hidden'} onclick="event.stopPropagation()">
+        ${r.detail.map(g => `<div class="ov-ch-g">
+          <button type="button" class="ov-ch-grp" data-hv-room="${esc(g.room)}" onclick="ovGoGroup('${esc(g.room).replace(/'/g, "\\'")}')">${esc(g.room)}</button>
+          <div class="ov-ch-ts">${g.tasks.map(t => `
+            <button type="button" class="ov-ch-task"
+              data-hv-code="${esc(t.code)}" data-hv-room="${esc(g.room)}" data-hv-name="${esc(t.name)}"
+              onclick="ovGoTask('${esc(t.code)}', '${esc(g.room).replace(/'/g, "\\'")}', '${esc(t.name).replace(/'/g, "\\'")}')">
+              <span class="ov-ch-code">${esc(t.code)}</span>
+              <span class="ov-ch-name">${esc(t.name)}</span></button>`).join('')}</div>
+        </div>`).join('')}
+      </div>` : ''}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+
+/* One row of a document's chain. `lead` is the document's newest event, and
+   only that row carries the money: it is where the document currently
+   stands, so it is the honest place for it. */
+function _ovDocRowHtml(d, e, lead){
+  /* The name goes to the document, the row opens the list — so the name has
+     to stop the click reaching the row, or following a link would expand
+     something on the way out. */
+  const nm = `<button type="button" class="ov-tr-doc-n" data-hv-doc="${esc(d.name)}"
+      onclick="event.stopPropagation();ovOpenDoc('${esc(d.name).replace(/'/g, "\\'")}')">${esc(d.name)}</button>`;
+  const sentence = e.verb
+    ? `${e.who ? `<span class="ov-tr-who">${esc(e.who)}</span> ` : ''}${esc(e.verb)} ${nm}${
+        e.to ? ` to <span class="ov-tr-who2">${esc(e.to)}</span>` : ''}`
+    : `${esc(e.act)} in ${nm}`;
+  /* The count opens its own list, so that row is a button — but the document
+     name inside it is a link of its own, which a button cannot contain. The
+     caret is the control instead, sitting after the sentence. */
+  const body = e.detail
+    ? `<span class="ov-tr-act">${sentence}
+         <button type="button" class="ov-tr-open" aria-label="Show the tasks that changed"
+           aria-expanded="${!!_ovOpenChanges[e.ver]}" aria-controls="ovCh-${e.ver}"
+           onclick="event.stopPropagation();ovToggleChanges('${e.ver}')"
+           ><svg class="ov-tr-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg></button>
+       </span>`
+    : `<span class="ov-tr-act">${sentence}</span>`;
+  /* A row that opens is clickable across its whole width — a caret is a small
+     target for something the entire line is about. The row is display:contents
+     and has no box of its own to carry the handler, so each cell takes it. The
+     caret stays, for the keyboard and for saying the row does anything. */
+  const tap = e.detail ? ` onclick="ovToggleChanges('${e.ver}')"` : '';
+  return `<div class="ov-tr-r ov-tr-${e.kind}${e.detail ? ' is-tappable' : ''}">
+      <span class="ov-tr-ev"${tap}>
+        <span class="ov-tr-mk">${e.kind === 'approved' ? _OV_TICK : ''}</span>
+        ${body}
+      </span>
+      <span class="ov-tr-sum"${tap}>${lead ? _ovMoneyHtml(d) : ''}</span>
+      <span class="ov-tr-d"${tap}>${esc(e.when || '')}</span>
+    </div>
+    ${e.detail ? `<div class="ov-tr-detail" id="ovCh-${e.ver}"${_ovOpenChanges[e.ver] ? '' : ' hidden'} onclick="event.stopPropagation()">
+      ${e.detail.map(g => `<div class="ov-ch-g">
+        <button type="button" class="ov-ch-grp" data-hv-room="${esc(g.room)}" onclick="ovGoGroup('${esc(g.room).replace(/'/g, "\\'")}')">${esc(g.room)}</button>
+        <div class="ov-ch-ts">${g.tasks.map(t => `
+          <button type="button" class="ov-ch-task"
+            data-hv-code="${esc(t.code)}" data-hv-room="${esc(g.room)}" data-hv-name="${esc(t.name)}"
+          onclick="ovGoTask('${esc(t.code)}', '${esc(g.room).replace(/'/g, "\\'")}', '${esc(t.name).replace(/'/g, "\\'")}')">
+            <span class="ov-ch-code">${esc(t.code)}</span>
+            <span class="ov-ch-name">${esc(t.name)}</span>
+            ${t.what ? `<span class="ov-ch-what">${esc(t.what)}</span>` : ''}</button>`).join('')}</div>
+      </div>`).join('')}
+    </div>` : ''}`;
+}
+
+function _ovMonthLabel(ts){
+  const d = new Date(ts);
+  if(isNaN(d.getTime())) return '';
+  const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${M[d.getMonth()].toUpperCase()} ${d.getFullYear()}`;
+}
+/* Consecutive document rows share one grid so their columns line up; a site
+   run or a month rule closes the grid and the next run of rows opens a new
+   one. The column tracks are fixed, so blocks still align with each other. */
+function _ovSentenceFeedHtml(entries, monthState){
+  let html = '', open = false;
+  const close = () => { if(open){ html += '</div>'; open = false; } };
+  entries.forEach(en => {
+    const m = _ovMonthLabel(en.at);
+    if(m && m !== monthState.m){
+      monthState.m = m;
+      close();
+      html += `<div class="ov-tr-month"><span>${esc(m)}</span></div>`;
+    }
+    if(en.kind === 'site'){
+      close();
+      html += _ovWalksHtml(en.run, en.key);
+    } else {
+      if(!open){ html += '<div class="ov-tr-rows">'; open = true; }
+      html += _ovDocRowHtml(en.doc, en.ev, en.lead);
+    }
+  });
+  close();
+  return html;
+}
+
 /* ── the timeline ────────────────────────────────────────────────────
    A dated rail with a marker per event, ruled off into weeks. The columns
    answer six questions in the order they get asked: who acted, how long they
@@ -813,20 +931,30 @@ function _ovYearLabel(ts){
   const d = new Date(ts);
   return isNaN(d.getTime()) ? '' : String(d.getFullYear());
 }
-/* Hours for anything inside a day. The records are dated to the day and carry
-   no clock, so the figure is derived from the event rather than measured —
-   stable across renders (a hash, not a random), plausible for a working day,
-   and the first thing to replace when the events start carrying timestamps. */
-function _ovHoursFor(seed){
-  const s = String(seed || '');
-  let h = 0;
-  for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return 2 + (h % 8);          // 2–9 hours
+/* '4:40pm' -> minutes past midnight. The seed writes times the way a person
+   would, so they are parsed here rather than stored as numbers nobody can
+   read in the data file. */
+function _ovClockMins(t){
+  const m = String(t || '').trim().match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+  if(!m) return null;
+  let h = +m[1] % 12;
+  if(/pm/i.test(m[3])) h += 12;
+  return h * 60 + (+m[2]);
 }
-function _ovHumanSpan(ms, seed){
+/* An event's moment, to the minute where the record has one. */
+function _ovEventAt(e){
+  const day = Date.parse(e.when);
+  if(isNaN(day)) return e.at || 0;
+  const mins = _ovClockMins(e.time);
+  return mins == null ? day : day + mins * 60000;
+}
+function _ovHumanSpan(ms){
+  if(!(ms > 0)) return 'Under a minute';
+  const mins = Math.round(ms / 60000);
+  if(mins < 60) return `${mins} minute${mins === 1 ? '' : 's'}`;
   const days = Math.round(ms / 864e5);
-  if(!(ms > 0) || days < 1){
-    const h = _ovHoursFor(seed);
+  if(days < 1){
+    const h = Math.round(ms / 36e5);
     return `${h} hour${h === 1 ? '' : 's'}`;
   }
   if(days === 1) return '1 day';
@@ -844,11 +972,11 @@ function _ovDurations(d){
   if(_ovDurCache.has(d)) return _ovDurCache.get(d);
   const chrono = d.evs.slice().reverse();        // evs are newest-first
   const out = new Map();
-  const at = e => e.at || Date.parse(e.when) || 0;   // 'changed' carries a span, not a date
+  const at = e => e.at || _ovEventAt(e);   // 'changed' carries a span, not a date
   chrono.forEach((e, i) => {
     if(!i) return;
     const a = at(chrono[i - 1]), b = at(e);
-    if(a && b) out.set(e, _ovHumanSpan(b - a, `${d.name}|${e.who}|${e.when}|${e.kind}`));
+    if(a && b) out.set(e, _ovHumanSpan(b - a));
   });
   _ovDurCache.set(d, out);
   return out;
@@ -932,7 +1060,13 @@ function _ovTlRow(o){
     _ovOpenChanges[o.detailId] ? '' : ' hidden'} onclick="event.stopPropagation()"
     >${_ovTlDetail(o.detail)}</div>` : ''}`;
 }
-function _ovFeedHtml(entries, weekState, later){
+/* One entry point, two shapes. Everything above this — the entries, their
+   order, the change detail they open — is shared; only the row markup differs. */
+function _ovFeedHtml(entries, state, later){
+  return OV_SENTENCES ? _ovSentenceFeedHtml(entries, state)
+                      : _ovTimelineFeedHtml(entries, state, later);
+}
+function _ovTimelineFeedHtml(entries, weekState, later){
   let html = '';
   const L = later ? ' is-later' : '';
   entries.forEach(en => {
@@ -967,7 +1101,7 @@ function _ovFeedHtml(entries, weekState, later){
         onclick="event.stopPropagation();ovOpenDoc('${esc(d.name).replace(/'/g, "\\'")}')"
         >${esc(d.name)}</button><span class="ov-tl-state">${esc(d.state || '')}</span>`;
     html += _ovTlRow({
-      kind:e.kind, day:_ovDayLabel(en.at), sub:_ovYearLabel(en.at),
+      kind:e.kind, day:_ovDayLabel(en.at), sub:e.time || _ovYearLabel(en.at),
       who:e.who, dur:_ovDurations(d).get(e), where, what,
       note:'', diff: en.lead ? _ovDiffHtml(d) : '',
       detailId: e.detail ? e.ver : null, detail:e.detail, wkFirst, later,
@@ -1004,23 +1138,28 @@ function _ovTrailHtml(){
   const startedAt = Math.min(...current.evs.map(e => Date.parse(e.when) || Infinity));
   let cut = entries.findIndex(en => en.at < startedAt);
   if(cut < 0) cut = entries.length;
-  const weekState = {w:''};
-  const head = _ovFeedHtml(entries.slice(0, cut), weekState);
+  const state = {w:'', m:''};   // week for the timeline, month for the sentences
+  const head = _ovFeedHtml(entries.slice(0, cut), state);
   const standing = _ovStandingLineHtml(docs);
   /* The earlier block is a second grid rather than a hidden part of the first:
      a display:contents row cannot be hidden (the [hidden] rule has nothing to
      hide, the cells are still grid items of the parent). Two grids inside one
      scroller share a width, so the columns still line up across the seam. */
-  if(cut >= entries.length) return `<div class="ov-trail">${standing}
-    <div class="ov-tl-scroll"><div class="ov-tl${OV_SHOW_DURATION ? ' has-dur' : ''}">${_ovTlHead()}${head}</div></div></div>`;
-  const rest = _ovFeedHtml(entries.slice(cut), weekState, true);
+  /* Sentences stack as plain blocks; the timeline has to live in its grid,
+     with the header row and the earlier stretch inside the same one. */
+  const wrap = body => OV_SENTENCES ? body
+    : `<div class="ov-tl-scroll"><div class="ov-tl${OV_SHOW_DURATION ? ' has-dur' : ''}">${_ovTlHead()}${body}</div></div>`;
+  if(cut >= entries.length) return `<div class="ov-trail">${standing}${wrap(head)}</div>`;
+  const rest = _ovFeedHtml(entries.slice(cut), state, true);
   const n = entries.length - cut;
   const lbl = `View all history (${n} earlier ${n === 1 ? 'entry' : 'entries'})`;
   return `<div class="ov-trail">
     ${standing}
-    <div class="ov-tl-scroll">
-      <div class="ov-tl is-shut${OV_SHOW_DURATION ? ' has-dur' : ''}" id="ovTrailRest">${_ovTlHead()}${head}${rest}</div>
-    </div>
+    ${OV_SENTENCES
+      ? `${head}<div class="ov-trail-rest" id="ovTrailRest" hidden>${rest}</div>`
+      : `<div class="ov-tl-scroll">
+           <div class="ov-tl is-shut${OV_SHOW_DURATION ? ' has-dur' : ''}" id="ovTrailRest">${_ovTlHead()}${head}${rest}</div>
+         </div>`}
     <button type="button" class="ov-more" id="ovTrailMore"
             aria-expanded="false" aria-controls="ovTrailRest"
             onclick="ovTrailToggle()"
@@ -1031,11 +1170,16 @@ function _ovTrailHtml(){
 /* A class toggle rather than a re-render: renderOverview would rebuild the
    whole tab and lose the scroll position you were reading at. */
 function ovTrailToggle(){
-  const grid = document.getElementById('ovTrailRest');
-  const btn  = document.getElementById('ovTrailMore');
-  if(!grid || !btn) return;
-  const open = grid.classList.contains('is-shut');   // about to become open
-  grid.classList.toggle('is-shut', !open);
+  const el  = document.getElementById('ovTrailRest');
+  const btn = document.getElementById('ovTrailMore');
+  if(!el || !btn) return;
+  /* Two shapes, two ways of hiding: the timeline's rows are display:contents
+     and have no box to hide, so its earlier stretch goes behind a class on
+     the grid; the sentence block is an ordinary div. */
+  const isGrid = el.classList.contains('ov-tl');
+  const open = isGrid ? el.classList.contains('is-shut') : el.hidden;
+  if(isGrid) el.classList.toggle('is-shut', !open);
+  else el.hidden = !open;
   btn.textContent = open ? btn.dataset.open : btn.dataset.shut;
   btn.setAttribute('aria-expanded', String(open));
 }
@@ -1124,6 +1268,14 @@ function _ovPropFields(){
    out of the data, which is why restoring them is a flag rather than a
    rewrite. */
 const OV_FULL = (typeof window !== 'undefined') && !!window.__KAI_ACTIVITY_FULL;
+/* index-activity.html keeps the Activity as it read before the timeline: one
+   sentence per row that names its own subject — "T. Okafor approved Change
+   Order 1" — rather than a grid of columns. Both renderers are live; this
+   chooses between them, and index.html leaves it unset so it gets the
+   timeline. The two answer different questions: a sentence reads as a story,
+   a column reads as a comparison, and the page that exists to compare the
+   full feed against the pared one wants the first. */
+const OV_SENTENCES = (typeof window !== 'undefined') && !!window.__KAI_ACTIVITY_SENTENCES;
 function renderOverview(){
   const body = document.getElementById('workBody');
   if(!body) return;

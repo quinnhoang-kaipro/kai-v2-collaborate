@@ -50,9 +50,9 @@ const CT = {
 const VER = {
   // `opened` is where the timeline starts — the first walk, ten days before
   // the scope was approved. Only the first version needs it.
-  orig:{label:'Scope',          date:'Apr 12, 2026', rank:0, opened:'Apr 2, 2026', sow:'SOW-00000E7B', tag:'Original', tagCls:'archived', stateCls:''},
-  co1: {label:'Change Order 1', date:'Apr 22, 2026', rank:1, sow:'SOW-00000E7C', tag:'Outdated', tagCls:'outdated', stateCls:' is-outdated'},
-  co2: {label:'Change Order 2', date:'Apr 30, 2026', rank:2, sow:'SOW-00000E7D', tag:'Current',  tagCls:'',         stateCls:' is-current'},
+  orig:{label:'Scope',          date:'Apr 12, 2026', time:'2:10pm',  rank:0, opened:'Apr 2, 2026', openedTime:'8:20am', sow:'SOW-00000E7B', tag:'Original', tagCls:'archived', stateCls:''},
+  co1: {label:'Change Order 1', date:'Apr 22, 2026', time:'11:40am', rank:1, opened:'Apr 12, 2026', openedTime:'3:35pm', sow:'SOW-00000E7C', tag:'Outdated', tagCls:'outdated', stateCls:' is-outdated'},
+  co2: {label:'Change Order 2', date:'Apr 30, 2026', time:'4:20pm',  rank:2, opened:'Apr 22, 2026', openedTime:'1:05pm', sow:'SOW-00000E7D', tag:'Current',  tagCls:'',         stateCls:' is-current'},
 };
 const VER_ORDER = ['orig','co1','co2'];
 
@@ -73,13 +73,16 @@ const REVIEWERS = [
   {who:'D. Reyes',   role:'Designer'},
   {who:'M. Alvarez', role:'Field Agent'},
 ];
+/* Times are part of the record: a scope changes hands more than once a day,
+   and without them the Activity could not say in what order — or how long
+   anyone actually held it. */
 const REVIEWS = [
-  {ver:'orig', who:'S. Patel',  role:'Ops',      date:'Apr 10, 2026'},
-  {ver:'orig', who:'T. Okafor', role:'Job manager',  date:'Apr 11, 2026'},
-  {ver:'co1',  who:'D. Reyes',  role:'Designer', date:'Apr 20, 2026'},
-  {ver:'co1',  who:'T. Okafor', role:'Job manager',  date:'Apr 21, 2026'},
-  {ver:'co2',  who:'S. Patel',  role:'Ops',      date:'Apr 28, 2026'},
-  {ver:'co2',  who:'T. Okafor', role:'Job manager',  date:'Apr 29, 2026'},
+  {ver:'orig', who:'S. Patel',  role:'Ops',          date:'Apr 10, 2026', time:'9:05am'},
+  {ver:'orig', who:'T. Okafor', role:'Job manager',  date:'Apr 11, 2026', time:'4:40pm'},
+  {ver:'co1',  who:'D. Reyes',  role:'Designer',     date:'Apr 20, 2026', time:'11:12am'},
+  {ver:'co1',  who:'T. Okafor', role:'Job manager',  date:'Apr 21, 2026', time:'2:55pm'},
+  {ver:'co2',  who:'S. Patel',  role:'Ops',          date:'Apr 28, 2026', time:'10:30am'},
+  {ver:'co2',  who:'T. Okafor', role:'Job manager',  date:'Apr 29, 2026', time:'5:15pm'},
 ];
 // `budget` is stamped onto each version by stampVersionBudgets() — it is the
 // sum of the lines that exist at that point, not a figure kept by hand.

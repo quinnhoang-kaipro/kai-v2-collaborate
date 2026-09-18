@@ -22,10 +22,15 @@ function KAI_PANEL_DOC(qs){
      put in a URL. */
   const full = (typeof window.__KAI_ACTIVITY_FULL !== 'undefined')
     && !!window.__KAI_ACTIVITY_FULL;
+  /* Same arrangement for the Activity's shape: index.html leaves it unset and
+     gets the timeline; index-activity.html asks for the sentence feed. */
+  const sent = (typeof window.__KAI_ACTIVITY_SENTENCES !== 'undefined')
+    && !!window.__KAI_ACTIVITY_SENTENCES;
   const boot =
     '<base href="' + location.href.split('#')[0] + '">' +
     '<scr' + 'ipt>window.__KAI_QS=' + JSON.stringify(qs ? '?' + qs : '')
-      + ';window.__KAI_ACTIVITY_FULL=' + (full ? 'true' : 'false') + ';<\/script>';
+      + ';window.__KAI_ACTIVITY_FULL=' + (full ? 'true' : 'false')
+      + ';window.__KAI_ACTIVITY_SENTENCES=' + (sent ? 'true' : 'false') + ';<\/script>';
   return KAI_PANEL_RAW.replace(/<head([^>]*)>/i, '<head$1>' + boot);
 }
 
