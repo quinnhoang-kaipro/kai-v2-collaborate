@@ -32,6 +32,8 @@
   --error-fill:#F5E1DE;   /* paired light bg for error/rework chips */
   --wash:#FDFDEA;         /* selected-row wash */
   --sunken:#F4F0E6;       /* sunken fill (bone, derived) */
+  --hair:#EDE9DE;         /* row divider — a step lighter than --stroke, which
+                             bounds objects; this only separates lines */
   --t2:#5C5750;
   --t3:#8a8470;
   /* attention dot palette */
@@ -4697,13 +4699,13 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
   border-bottom:1px solid var(--stroke);cursor:help;
 }
 .ov-tl-h.is-num{text-align:right}
-.ov-tl-h:last-child{text-align:right;padding-right:0;padding-left:16px}
+.ov-tl-h:last-child{text-align:right;padding-right:0;padding-left:6px}
 .ov-tl-hd .ov-tl-when,.ov-tl-hd .ov-tl-rail{border-bottom:1px solid var(--stroke)}
 
 /* The week rule. Spans every track so it reads as a break in the whole
    timeline rather than a label in one column. */
-.ov-tl-wk{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:30px 0 6px}
-.ov-tl-wk:first-of-type{margin-top:14px}
+.ov-tl-wk{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:24px 0 6px}
+.ov-tl-wk:first-of-type{margin-top:12px}
 .ov-tl-wk span{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.13em;
   text-transform:uppercase;color:var(--t2);white-space:nowrap}
 /* No trailing rule: the label is already set apart by its case, its tracking
@@ -4712,7 +4714,10 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 
 /* Cells. Padding lives here rather than on a row box, because there isn't one. */
 .ov-tl-r > *{padding:11px 10px;font-family:var(--body);font-size:12.5px;color:var(--ink);
-  line-height:1.4;display:flex;align-items:flex-start}
+  line-height:1.4;display:flex;align-items:flex-start;border-bottom:1px solid var(--hair)}
+/* An open row runs straight into its own detail, so the line between them
+   comes off and the detail block closes the pair instead. */
+.ov-tl-r.is-open > *{border-bottom:0}
 .ov-tl-r > *:last-child{padding-right:0}
 .ov-tl-when{flex-direction:column;align-items:flex-end;text-align:right;gap:1px;
   padding-left:0;padding-right:14px;white-space:nowrap;overflow:visible}
@@ -4726,7 +4731,11 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
   font-variant-numeric:tabular-nums}
 /* The difference is the event; the total is where it left things. The figure
    that moved gets the weight, the standing figure stays quiet. */
-.ov-tl-total{padding-left:16px}
+/* Tightened from 16px: the arrow carries the join now, and the two figures
+   have to sit close enough to read as one phrase rather than two columns
+   that happen to be adjacent. */
+.ov-tl-total{padding-left:6px}
+.ov-tl-arrow{margin-right:7px;color:var(--t3);font-weight:400}
 .ov-tl-tot{font-weight:600;color:var(--ink)}
 .ov-tl-dash{color:var(--t3)}
 
@@ -4770,7 +4779,8 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 
 /* Expanded detail spans the grid and indents to the Who column, so it reads
    as belonging to the row above rather than as a row of its own. */
-.ov-tl-detail{grid-column:1/-1;padding:2px 0 14px 108px;background:var(--sunken)}
+.ov-tl-detail{grid-column:1/-1;padding:2px 0 14px 108px;background:var(--sunken);
+  border-bottom:1px solid var(--hair)}
 .ov-tl-detail[hidden]{display:none}
 /* Shut, the earlier stretch is hidden cell by cell — its rows share the grid
    above so the columns cannot drift when it opens. */
@@ -4778,11 +4788,14 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tr-rows{display:grid;grid-template-columns:104px minmax(0,1fr) 150px;
   align-items:stretch}
 .ov-tr-r{display:contents}
-.ov-tr-r > *{padding:9px 0;display:flex;align-items:center}
+.ov-tr-r > *{padding:8px 0;display:flex;align-items:center}
 .ov-tr-r > .ov-tr-d{justify-content:flex-start;text-align:left;padding-right:16px}
 .ov-tr-r > .ov-tr-sum{justify-content:flex-end}
-/* No row-to-row rule. Rows are one or two lines with a date starting each
-   one; the eye tracks them on that column, not on a hairline. */
+/* A row rule, in the lightest weight the palette has. Without one the rows
+   were hard to track across seven columns — the eye needs a line to run
+   along when the cells are this far apart. It is --hair rather than
+   --stroke so it separates lines without bounding them into cells. */
+.ov-tr-r + .ov-tr-r > *{border-top:1px solid var(--hair)}
 /* A row that opens says so across its whole width: the cursor on all of it,
    and a wash on hover so the target is the line rather than the caret. */
 .ov-tr-r.is-tappable > *{cursor:pointer}
@@ -4820,7 +4833,8 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tr-st.is-done{color:var(--success)}
 .ov-tr-sum{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--ink);
   font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
-.ov-tr-money{display:inline-flex;align-items:baseline;gap:9px}
+.ov-tr-money{display:inline-flex;align-items:baseline;gap:7px}
+.ov-tr-arrow{color:var(--t3);font-weight:400}
 .ov-tr-delta{font-weight:700}
 .ov-tr-delta.is-up{color:var(--error)}
 .ov-tr-delta.is-dn{color:var(--success)}
@@ -4831,7 +4845,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    Documents overlap each other — a change order is passed around for a
    fortnight while the property is worked on — so they cannot be the grouping
    without lying about when things happened. A month can be. */
-.ov-tr-rule{display:flex;align-items:center;gap:12px;margin:28px 0 8px}
+.ov-tr-rule{display:flex;align-items:center;gap:12px;margin:22px 0 6px}
 .ov-tr-rule:first-child{margin-top:4px}
 .ov-tr-rule span{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.12em;
   text-transform:uppercase;color:var(--ink);flex-shrink:0}

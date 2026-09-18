@@ -751,7 +751,8 @@ function _ovMoneyHtml(d){
   const dl = _ovDelta(d);
   if(!dl) return `<span class="ov-tr-money">${now}</span>`;
   return `<span class="ov-tr-money" title="${esc(dl.title)}"
-    ><span class="ov-tr-delta ${dl.cls}">${esc(dl.text)}</span>${now}</span>`;
+    ><span class="ov-tr-delta ${dl.cls}">${esc(dl.text)}</span
+    ><span class="ov-tr-arrow" aria-hidden="true">\u2192</span>${now}</span>`;
 }
 /* A document's name is the way to the document. Artifact 2 is where the
    change history lives, so that is where it goes. */
@@ -1000,7 +1001,9 @@ function _ovDurations(d){
    the tooltip, so the column can be one signed figure without hiding what it
    came from. */
 function _ovTotalHtml(d){
-  return d.amount ? `<span class="ov-tl-tot">${esc(d.amount)}</span>` : '';
+  if(!d.amount) return '';
+  const from = _ovDelta(d) ? '<span class="ov-tl-arrow" aria-hidden="true">\u2192</span>' : '';
+  return `${from}<span class="ov-tl-tot">${esc(d.amount)}</span>`;
 }
 function _ovDiffHtml(d){
   if(!d.amount) return '';
