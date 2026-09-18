@@ -2864,28 +2864,9 @@ function syncSbOptSeg(){
     b.classList.toggle('on', keys[i] === sbOptChoice);
   });
 }
-/* ── Overview activity, on a switch ──
-   Same shape as the sidebar look above: the shell holds the choice, the panel
-   is told on every load, because a preset change blanks the src and remounts
-   it with none of this remembered. Off by default — it is here to put the
-   feed back for a look, not to leave it on. */
-let ovActivityOn = (typeof window.__KAI_ACTIVITY_FULL !== 'undefined')
-  && !!window.__KAI_ACTIVITY_FULL;
-function setOvActivity(on){
-  ovActivityOn = !!on;
-  applyOvActivity();
-}
-function applyOvActivity(){
-  try{
-    const w = (document.getElementById('iframe') || {}).contentWindow;
-    if(w && typeof w.ovSetActivity === 'function') w.ovSetActivity(ovActivityOn);
-  }catch(e){ /* iframe still loading — the load handler below retries */ }
-}
 document.addEventListener('DOMContentLoaded', () => {
   syncSbOptSeg();
-  const cb = document.getElementById('ovActivity');
-  if(cb) cb.checked = ovActivityOn;
   const ifr = document.getElementById('iframe');
   // Re-apply after every load: a preset change blanks the src and remounts.
-  if(ifr) ifr.addEventListener('load', () => { applySbOpt(); applyOvActivity(); });
+  if(ifr) ifr.addEventListener('load', () => { applySbOpt(); });
 });

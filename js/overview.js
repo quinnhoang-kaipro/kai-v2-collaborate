@@ -989,14 +989,6 @@ function _ovPropFields(){
    out of the data, which is why restoring them is a flag rather than a
    rewrite. */
 const OV_FULL = (typeof window !== 'undefined') && !!window.__KAI_ACTIVITY_FULL;
-let OV_ACTIVITY = OV_FULL;
-function ovSetActivity(on){
-  const next = !!on;
-  if(next === OV_ACTIVITY) return;
-  OV_ACTIVITY = next;
-  if(typeof workMode !== 'undefined' && workMode === 'overview'
-     && typeof renderOverview === 'function') renderOverview();
-}
 function renderOverview(){
   const body = document.getElementById('workBody');
   if(!body) return;
@@ -1081,11 +1073,10 @@ function renderOverview(){
   const propSec = _ovSec('Property info',
     _ovFieldsHtml(_ovPropFields()) + accessDetail, 'ov-job ov-prop', _editBtn('Property'));
 
-  /* Off unless the shell's demo panel has switched it on — see ovSetActivity
-     below. Skipped rather than hidden: the feed walks every document and
-     every walk to build itself, and none of that is work worth doing for
-     something nobody is looking at. */
-  const trailSec = OV_ACTIVITY ? _ovSec('Activity', _ovTrailHtml(), 'ov-trail-sec') : '';
+  /* Part of the tab. It was behind a demo switch while it was being decided
+     whether the Overview carried a feed at all; it does, so the switch is
+     gone and this is built on every render like everything above it. */
+  const trailSec = _ovSec('Activity', _ovTrailHtml(), 'ov-trail-sec');
 
   /* The title and the figures are one module, split by a rule: the eyebrow
      names the project, the title names the property, and the standing sits on
