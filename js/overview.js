@@ -1370,32 +1370,32 @@ function renderOverview(){
       </div>
     </div>`;
 
-  /* Two blocks, because they answer two questions that happen to sit next to
-     each other: who is running this job, and what the building is. They were
-     one grid, so "Field agent" and "Year built" shared a row and the eye had
-     to sort them by meaning — the section headings do that work now.
+  /* Property info stays its own block — it answers a different question (what
+     the building is, not who is running the job). Job info does not: it folds
+     into the head, under the figures, because every field left in it is about
+     the same thing the head already names.
 
-     Getting in belongs to the property, not the project, so it folds into the
-     second block rather than the first. */
+     Three fields came out on the way in. Job name repeated the title directly
+     above it; Job type is the TURN chip on that title's line; General
+     contractor is the subject of the whole Contractor assignments block below.
+     Each was a second place to read something already on the page — tolerable
+     while this was a separate section, not once it sits inches from the
+     original. */
   const _editBtn = which =>
     `<button type="button" class="ov-sec-edit" onclick="ovInfoEdit('${which}')">Edit</button>`;
   const _tplName = S.template.name;
-  const jobSec = _ovSec('Job info', _ovFieldsHtml([
-    /* The two long values share the first column, one under the other, and
-       that column is given the extra width — an address and a template name
-       both wrap at the measure the short fields are sized for, and wrapping
-       them in a narrow track pushed the rows below out of line. */
-    {k:'Job name',    v:S.address, cls:'is-wide'},
-    {k:'Job ID',      v:S.projectId},
-    {k:'Job type',    v:S.type},
-    {k:'Job manager', v:people.manager},
-    {k:'Field agent',     v:people.agent},
-    {k:'General contractor', v:S.gc},
-    {k:'Template',        cls:'is-wide2', html:`<a class="ov-field-link" href="#"
-        onclick="event.preventDefault();ovOpenTemplate('${esc(_tplName).replace(/'/g, "\\'")}')"
-        >${esc(_tplName)}</a>`},
-    {k:'Last updated',    v:S.updated},
-  ]), 'ov-job', _editBtn('Job'));
+  const jobFields = `<div class="ov-head-fields">
+    ${_ovFieldsHtml([
+      {k:'Job ID',       v:S.projectId},
+      {k:'Job manager',  v:people.manager},
+      {k:'Field agent',  v:people.agent},
+      {k:'Template',     cls:'is-tpl', html:`<a class="ov-field-link" href="#"
+          onclick="event.preventDefault();ovOpenTemplate('${esc(_tplName).replace(/'/g, "\\'")}')"
+          >${esc(_tplName)}</a>`},
+      {k:'Last updated', v:S.updated},
+    ])}
+    ${_editBtn('Job')}
+  </div>`;
   const propSec = _ovSec('Property info',
     _ovFieldsHtml(_ovPropFields()) + accessDetail, 'ov-job ov-prop', _editBtn('Property'));
 
@@ -1426,9 +1426,10 @@ function renderOverview(){
         ${_ovStandingHtml()}
       </header>
       ${stats}
+      ${jobFields}
       </div>
     </section>
-    ${jobSec}${propSec}${_ovCrewHtml()}${trailSec}
+    ${propSec}${_ovCrewHtml()}${trailSec}
   </div>`;
 }
 
@@ -1499,7 +1500,7 @@ function _ovHoverData(el){
       const photo = _ovLatestPhoto(p => p.kind === 'task' && p.task === t.code)
                  || _ovLatestPhoto(p => p.room === t.room && p.kind === 'group');
       return {kind:'task', photo, code:t.code, title:t.name, room:t.room,
-              desc:t.desc || '', product:t.product || '', spec:t.opt || '',
+              desc:t.desc || '', product:t.product || '',
               cost:t.cost || ''};
     }
   }
@@ -1553,8 +1554,9 @@ function _ovHoverHtml(d){
         ${d.tasks.length ? `<div class="ov-hv-list">${d.tasks.map(n => esc(n)).join(' · ')}</div>` : ''}
       </div>`;
   }
-  const row = (lbl, val) => val
-    ? `<div class="ov-hv-row"><span class="ov-hv-lbl">${lbl}</span><span class="ov-hv-val">${esc(val)}</span></div>`
+  const row = (lbl, val, cls) => val
+    ? `<div class="ov-hv-row"><span class="ov-hv-lbl">${lbl}</span
+       ><span class="ov-hv-val${cls ? ' ' + cls : ''}">${esc(val)}</span></div>`
     : '';
   return `${shot}
     <div class="ov-hv-body">
@@ -1562,7 +1564,7 @@ function _ovHoverHtml(d){
       <div class="ov-hv-title">${esc(d.title)}</div>
       ${d.desc ? `<p class="ov-hv-desc">${esc(d.desc)}</p>` : ''}
       ${row('Product', d.product)}
-      ${row('Scope', d.spec)}
+      ${row('Amount', d.cost, 'is-amt')}
     </div>`;
 }
 /* Fixed to the viewport, beside the link and flipped to whichever side has

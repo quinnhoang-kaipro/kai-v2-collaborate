@@ -4507,8 +4507,19 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 /* The head module is two columns: the photo, and everything said about the
    property. The photo spans the title and the figures rather than sitting
    beside the title alone, which would have left a column of white under it. */
-.ov-mod-head{padding-bottom:0;display:grid;grid-template-columns:196px minmax(0,1fr);
+.ov-mod-head{display:grid;grid-template-columns:196px minmax(0,1fr);
   gap:0 18px;align-items:start}
+/* The job's fields, folded under the figures they belong with. The rule is
+   the same one that already sits between the title and the figures, so the
+   module reads as three bands of one thing rather than two blocks joined. */
+.ov-head-fields{display:flex;align-items:flex-start;gap:18px;
+  margin-top:16px;padding-top:16px;border-top:1px solid var(--stroke)}
+.ov-head-fields .ov-fields{flex:1;min-width:0;
+  grid-template-columns:repeat(auto-fit,minmax(112px,1fr))}
+/* The template name is the one value long enough to wrap, so it gets two
+   tracks before anything else is allowed to. */
+.ov-head-fields .ov-field.is-tpl{grid-column:span 2}
+.ov-head-fields .ov-sec-edit{flex-shrink:0}
 .ov-head-r{min-width:0}
 .ov-photo{position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--sunken);
   border:1px solid var(--stroke);margin:0 0 16px}
@@ -4603,22 +4614,11 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 /* An explicit column count rather than the even grid's auto-fit: auto-fit
    cannot be combined with a flexible track beside it, so the wide first
    column has to come with its own breakpoints. They are on the section's
-   width, since this pane is narrow long before the window is. */
-.ov-job:not(.ov-prop){container-type:inline-size}
-.ov-job:not(.ov-prop) .ov-fields{grid-template-columns:1.7fr 1fr 1fr 1fr}
-.ov-field.is-wide{grid-column:1;grid-row:1}
-.ov-field.is-wide2{grid-column:1;grid-row:2}
-@container (max-width:760px){
-  .ov-job:not(.ov-prop) .ov-fields{grid-template-columns:1.6fr 1fr 1fr}
-}
-@container (max-width:540px){
-  .ov-job:not(.ov-prop) .ov-fields{grid-template-columns:1.5fr 1fr}
-}
-/* One column: the stack is the order, so the two long values lead it and
-   the explicit placement is all that is needed. */
-@container (max-width:330px){
-  .ov-job:not(.ov-prop) .ov-fields{grid-template-columns:minmax(0,1fr)}
-}
+   width, since this pane is narrow long before the window is.
+
+   The Job info section's own rules lived here and are gone with it — its
+   fields sit in the head module now, on auto-fit tracks that need no
+   breakpoints of their own. */
 
 /* ── getting in ──
    Codes are read aloud over a phone, so they are the largest mono on the
@@ -5017,6 +5017,9 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    group can be a sentence long on its own. */
 .ov-hv-money{display:block;margin-top:5px;font-family:var(--mono);
   font-variant-numeric:tabular-nums}
+/* A figure, so it is set as one: the job's numerals, lining up if a second
+   money row is ever added beside it. */
+.ov-hv-val.is-amt{font-weight:600;font-variant-numeric:tabular-nums}
 .ov-hv-delta{font-style:normal;margin-right:8px;font-size:12px;font-weight:700}
 .ov-hv-delta.is-up{color:var(--error)}
 .ov-hv-delta.is-dn{color:var(--success)}
