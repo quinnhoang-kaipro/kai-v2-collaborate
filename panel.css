@@ -2709,7 +2709,10 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 }
 .reg-sub-row:hover{background:var(--sunken)}
 .reg-sub-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.reg-sub-n{font-variant-numeric:tabular-nums;color:var(--t2);font-size:12px}
+.reg-sub-n{font-variant-numeric:tabular-nums;color:var(--t3);font-size:11.5px}
+/* The room's own total, aligned with the amounts of the lines it opens onto. */
+.reg-sub-amt{font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink);
+  min-width:64px;text-align:right}
 .reg-sub-go{display:inline-flex;width:12px;height:12px;color:var(--t3)}
 .reg-sub-go svg{width:12px;height:12px}
 .reg-sub-note{font-family:var(--body);font-size:11.5px;color:var(--t3);margin-top:8px}

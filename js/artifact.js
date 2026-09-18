@@ -73,6 +73,14 @@ function _regGroupTasks(verKey, room){
                 added:(t.changes || []).some(ch => ch.ver === verKey
                   && (ch.rows || []).some(r => r.field === 'Line added'))}));
 }
+/* What the room's lines come to in this version. Summed from the same rows
+   the group opens onto, so the figure and the lines under it are one sum. */
+function _regGroupAmount(verKey, room){
+  const ts = _regGroupTasks(verKey, room);
+  if(!ts.length) return '';
+  const n = ts.reduce((k, t) => k + (parseFloat(String(t.amount).replace(/[^0-9.\-]/g, '')) || 0), 0);
+  return n ? '$' + Math.round(n).toLocaleString('en-US') : '';
+}
 function toggleRegRow(id){
   _regOpenVer = (_regOpenVer === id) ? null : id;
   if(typeof renderArtifact === 'function') renderArtifact();
@@ -276,6 +284,7 @@ function _renderRegisterSection(){
           title="${open ? 'Hide' : 'Show'} the lines this changed in ${esc(g.room)}">
           <span class="reg-sub-name">${esc(g.room)}</span>
           <span class="reg-sub-n">${g.tasks.length} ${g.tasks.length === 1 ? 'task' : 'tasks'}</span>
+          <span class="reg-sub-amt">${esc(_regGroupAmount(verKey, g.room))}</span>
           <span class="reg-sub-go" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </button>
         ${open ? `<div class="reg-tasks">${rows}</div>` : ''}
