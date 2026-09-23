@@ -33,16 +33,6 @@
    display-type addresses, status carried by a hairline rather than a fill.
    ════════════════════════════════════════════════════════════ */
 body{background:var(--app-bg)}
-/* The job tag's phase colours. Not in shell.css's token set — they exist only
-   here and in the shipped dashboard, so they are declared rather than borrowed. */
-:root{--tag-blue:#2F6FB5;--tag-orange:#C2761B;
-  /* Status-chip pairs, shared with the Property Overview. Each is a text
-     colour and the wash it sits on. */
-  --st-ok-fg:#2E7D42;    --st-ok-bg:#DCEBDD;   /* settled  — approved          */
-  --st-go-fg:#1E76B8;    --st-go-bg:#D9E9F6;   /* moving   — in progress       */
-  --st-alert-fg:#C0443A; --st-alert-bg:#F7DEDB;/* wants you— review in progress*/
-  --st-co-fg:#B4651A;    --st-co-bg:#F7E7D4}   /* a change order is in flight  */
-
 /* ── top bar ──
    The page's title, then the three views, then who you are. The views are the
    only navigation in here; anything that narrows what you see lives down in the
@@ -61,6 +51,9 @@ body{background:var(--app-bg)}
 .db-top-title{font-family:var(--display);font-size:15px;font-weight:700;color:var(--white);
   letter-spacing:-.01em;white-space:nowrap;margin:0;
   padding-right:18px;border-right:1px solid rgba(255,255,255,.16)}
+/* The rule divides the page name from the views beside it. A builder has no
+   views, so it would be dividing the title from nothing. */
+.db-top.is-titleonly .db-top-title{padding-right:0;border-right:0}
 .db-views{display:flex;align-items:center;gap:2px}
 .db-view{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:rgba(255,255,255,.5);background:none;border:0;
@@ -153,25 +146,28 @@ body{background:var(--app-bg)}
   padding-bottom:14px;border-bottom:1px solid var(--stroke)}
 .db-seg{display:flex}
 .db-seg button{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
-  text-transform:uppercase;padding:6px 12px;border:1px solid var(--stroke);background:var(--white);
-  color:var(--t3);cursor:pointer;margin-left:-1px;line-height:1.2;transition:color .12s,border-color .12s}
+  text-transform:uppercase;height:29px;padding:0 12px;border:1px solid var(--stroke);
+  background:var(--white);color:var(--t3);cursor:pointer;margin-left:-1px;line-height:1;
+  transition:color .12s,border-color .12s}
 .db-seg button:first-child{margin-left:0}
 .db-seg button.on{background:var(--ink);border-color:var(--ink);color:#fff;position:relative;z-index:1}
 .db-seg .n{margin-left:5px;color:var(--midtone);font-variant-numeric:tabular-nums}
 .db-seg button.on .n{color:rgba(255,255,255,.55)}
 /* A control with one option left is not a control. When the role allows only
-   one view the whole thing goes, rather than sitting there as a lone segment
-   naming the only list it could ever show. `display:flex` beats the UA's
-   [hidden] rule, so both the buttons and the container need saying. */
+   one view the whole thing goes, rather than sitting there naming the only list
+   it could ever show. `display:flex` beats the UA's [hidden] rule, so both the
+   buttons and their container need saying. */
 .db-seg button[hidden],.db-seg[hidden]{display:none}
+.db-views[hidden]{display:none}
 .db-seg button:hover:not(.on){color:var(--ink);border-color:var(--ink);position:relative;z-index:1}
 .db-seg button:focus-visible{outline:2px solid var(--ink);outline-offset:1px;z-index:2}
 .db-lbl{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3)}
 .db-bar > .db-lbl{white-space:nowrap;flex-shrink:0}
-.db-sel{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+/* Sort and search are one group at the right end of the row. */
+.db-sel{margin-left:auto;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--ink);background:var(--white);border:1px solid var(--stroke);
-  padding:6px 8px;outline:none;cursor:pointer;transition:border-color .12s}
+  height:29px;padding:0 8px;outline:none;cursor:pointer;transition:border-color .12s}
 .db-sel:hover{border-color:var(--ink)}
 .db-sel:focus{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 /* ── the attention filter ──────────────────────────────────────────
@@ -261,9 +257,9 @@ body{background:var(--app-bg)}
 .af-clear:hover:not(:disabled){text-decoration:underline;text-underline-offset:3px}
 .af-clear:disabled{color:var(--t3);cursor:default}
 
-/* The search is an icon until it is wanted, then it is a field. It holds the
-   right end of the bar either way, so opening it grows leftwards into space the
-   row already had rather than shoving the New job button anywhere.
+/* The search is an icon until it is wanted, then it is a field. It sits at the
+   right end of the bar either way, and opening it grows leftwards into space the
+   row already had.
 
    There is no open button and no JS focus: the *input itself* is the icon-sized
    box, so clicking it focuses it the way clicking any field does, and
@@ -271,12 +267,11 @@ body{background:var(--app-bg)}
    elements competing for one click — the button takes focus on mousedown,
    script moves it to the field, the browser puts it back — and the first thing
    typed went nowhere. One element cannot race itself. */
-.db-search{position:relative;margin-left:auto;flex:0 0 29px;width:29px;height:29px;
+.db-search{position:relative;flex:0 0 29px;width:29px;height:29px;
   transition:width .18s ease-out,flex-basis .18s ease-out}
 /* Open while it is being used, and while it still holds a query — a query in a
    collapsed box would hide the reason the list is short. */
 .db-search:focus-within,.db-search.has-query{flex:0 1 300px;width:300px}
-.db-bar .db-btn.is-primary{flex-shrink:0}
 
 .db-search-ico{position:absolute;left:0;top:0;z-index:1;width:29px;height:29px;
   display:flex;align-items:center;justify-content:center;color:var(--t2);
@@ -285,12 +280,21 @@ body{background:var(--app-bg)}
 .db-search:hover .db-search-ico{color:var(--ink)}
 .db-search:focus-within .db-search-ico{color:var(--t3)}
 
+/* No padding while collapsed. With box-sizing:border-box a 29px box cannot be
+   narrower than its own padding, so the 27px the icon needs was forcing the
+   field to 39px — a visibly oblong box with the icon sitting left of its
+   centre. The padding arrives with the width. */
 .db-search input{position:absolute;inset:0;width:100%;height:29px;box-sizing:border-box;
   font-family:var(--body);font-size:13px;color:var(--ink);background:var(--white);
-  border:1px solid var(--stroke);padding:0 10px 0 27px;outline:none;line-height:29px;
-  cursor:pointer;transition:border-color .12s,box-shadow .12s}
+  border:1px solid var(--stroke);padding:0;outline:none;line-height:29px;
+  cursor:pointer;transition:border-color .12s,box-shadow .12s,padding .18s ease-out}
+.db-search:focus-within input,.db-search.has-query input{padding:0 10px 0 27px}
 .db-search:hover input{border-color:var(--ink)}
-.db-search input::placeholder{color:var(--t3)}
+/* The placeholder is hidden while the field is an icon — at 29px wide it had
+   nowhere to go and printed "Sear" straight through the magnifier. It arrives
+   with the width, like the padding. */
+.db-search input::placeholder{color:transparent}
+.db-search:focus-within input::placeholder{color:var(--t3)}
 .db-search input:focus{cursor:text;border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 /* Chrome's own clear button would sit outside the 29px box while collapsed. */
 .db-search input::-webkit-search-cancel-button{display:none}
@@ -307,27 +311,29 @@ body{background:var(--app-bg)}
    The Editor's card: white, one hairline all the way round, on the tan. Photo
    left at thumbnail size, then eyebrow → title → figure right, and the facts
    under it in one row of mono-labelled cells. */
-.db-row{display:grid;grid-template-columns:132px minmax(0,1fr);gap:0;
+.db-row{display:grid;grid-template-columns:197px minmax(0,1fr);gap:0;
   background:var(--white);border:1px solid var(--stroke);margin-bottom:10px;
   cursor:pointer;transition:border-color .12s}
 .db-row:hover{border-color:var(--ink)}
 .db-row:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-/* Late is a rule down the edge of the whole card and a line of red type in the
-   eyebrow — the old red date was a cue you had to already be looking at. */
-.db-row.is-late{border-left:3px solid var(--error)}
+/* The accent edge marks the cards that are waiting on you. Lateness used to
+   have a red one beside it; the red due date carries that on its own now. */
 .db-row.is-mine{box-shadow:inset 3px 0 0 var(--accent)}
-.db-row.is-late.is-mine{box-shadow:none}
+/* Full card height at a fixed 197px wide — 132:100 at the height a card
+   usually comes to, and the picture inside is cropped to fill rather than
+   squashed, so its own proportions are never touched.
+
+   The width is a number and not `aspect-ratio` on an `auto` column, which is
+   circular: the track is sized before the row's height is known, so the photo
+   computed a width from a height the track had not been given. It measured
+   correctly at one window size and at 1000px painted itself 288×218 inside a
+   197×151 cell, straight over the text. */
 .db-thumb{position:relative;overflow:hidden;background:var(--sunken);
-  border-right:1px solid var(--stroke)}
+  align-self:stretch;border-right:1px solid var(--stroke)}
 .db-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .db-thumb-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
   color:var(--t3);text-align:center;padding:0 8px}
-/* The thumbnail says when it was taken, because a photo with no date on a
-   property that has been renovated twice is a photo of nothing in particular. */
-.db-thumb-cap{position:absolute;left:0;bottom:0;padding:3px 7px;background:rgba(26,26,26,.72);
-  color:#fff;font-family:var(--mono);font-size:7.5px;font-weight:700;letter-spacing:.08em;
-  text-transform:uppercase}
 .db-body{min-width:0;padding:13px 16px 14px;display:flex;flex-direction:column}
 
 .db-hdr{display:flex;align-items:flex-start;gap:14px}
@@ -339,67 +345,32 @@ body{background:var(--app-bg)}
 .db-eyebrow .sep{margin:0 1px;color:var(--midtone)}
 .db-eyebrow .ink{color:var(--ink)}
 /* ── the job tag ──
-   The product's own three-segment tag: type, then phase, then status. It is one
-   object rather than three chips because it is one sentence — what kind of work,
-   how far through it, and what state that step is in — and reading it left to
-   right is the whole point.
-
-   The first two segments are filled and the third is outlined, so the status is
-   the part that carries colour. Status colour is keyed to the phase as well as
-   the status, which is how the shipped app does it: an in-progress punch list
-   and an in-progress change order are not the same news. */
+   What kind of work this is, and nothing else. It was a three-segment bar —
+   type, then artifact, then status — which said a full sentence per card and
+   made every row open with a paragraph of small caps. The artifact and the
+   status still drive the list; they are in the filter, where you go when you
+   want to narrow by them, rather than repeated on all nine cards. */
 .db-tag{display:inline-flex;align-items:stretch;flex-shrink:0}
 .db-tag > span{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.09em;
   text-transform:uppercase;padding:4px 9px;line-height:1.3;display:inline-flex;align-items:center;
   gap:5px;border:1px solid transparent;white-space:nowrap}
-/* Borders overlap by a pixel so the three read as one bar rather than three
-   boxes with a seam between them. */
-.db-tag > span + span{margin-left:-1px}
 .db-tag .t-type{background:#6E6A64;border-color:#6E6A64;color:#fff}
-.db-tag .t-phase{background:var(--ink);border-color:var(--ink);color:#fff}
-/* The status segment steps out of the bar and becomes a soft pill. It was the
-   one outlined box in a joined run of two filled ones, which made the seam
-   between phase and status the loudest edge in the tag — and an outlined box
-   reads as something you press. Detached and washed, it is plainly a state: the
-   bar says what work this is, the pill says where it stands.
-
-   Every in-flight state keeps a hollow diamond and every settled or
-   attention-wanting one a filled diamond, so the shape carries the distinction
-   before the colour does. */
-.db-tag .t-status{background:var(--st-go-bg);color:var(--st-go-fg);border:0;border-radius:999px;
-  padding:5px 11px;gap:7px;position:relative;z-index:1}
-/* Overrides the -1px seam the joined segments share. */
-.db-tag > span + span.t-status{margin-left:7px}
-.db-tag .t-status::before{content:'';width:7px;height:7px;box-sizing:border-box;flex-shrink:0;
-  background:none;border:1.5px solid currentColor;transform:rotate(45deg)}
-.db-tag .t-status.is-approved{background:var(--st-ok-bg);color:var(--st-ok-fg)}
-.db-tag .t-status.is-review{background:var(--st-alert-bg);color:var(--st-alert-fg)}
-/* Settled, or waiting on a person — the diamond fills in. */
-.db-tag .t-status.is-approved::before,.db-tag .t-status.is-review::before{
-  background:currentColor;border-color:transparent}
-/* Punch-list blue was already the in-progress blue, so those two converge; a
-   change order in flight stays the one phase that reads differently. */
-.db-tag .t-status.ph-punch{background:var(--st-go-bg);color:var(--st-go-fg)}
-.db-tag .t-status.ph-co{background:var(--st-co-bg);color:var(--st-co-fg)}
 /* Whose turn. Yours is the only one that gets the accent — it is the difference
    between a list you read and a list you act on. */
+/* Same box as a tag segment — matching padding and line-height, so the chip
+   sits level with the bar beside it rather than 3px short of it. */
 .db-turn{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;
   font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);
-  border:1px solid var(--stroke);padding:3px 8px;line-height:1.2}
+  border:1px solid var(--stroke);padding:4px 9px;line-height:1.3;white-space:nowrap}
 .db-turn.is-mine{background:var(--accent);border-color:var(--ink);color:var(--ink)}
-.db-late-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;
-  font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--error);
-  border:1px solid var(--error);padding:3px 8px;line-height:1.2}
-.db-late-chip::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
-/* Tov: a job carrying a pile of change orders is a job that went wrong. It is a
-   fact worth seeing from the list rather than after three clicks. */
-.db-co-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;
-  font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t2);
-  border:1px dashed var(--midtone);padding:3px 8px;line-height:1.2}
-.db-co-chip.is-many{color:var(--error);border-color:var(--error);border-style:solid}
-
 .db-row-title{font-family:var(--display);font-size:16px;font-weight:700;color:var(--ink);
   letter-spacing:-.005em;line-height:1.25}
+/* The address is the display face; the project name beside it is body text. The
+   address is what names the thing — the project name is a label someone typed,
+   and setting it in the same display face gave a made-up name the weight of the
+   property itself. */
+.db-row-name{font-family:var(--body);font-size:14px;font-weight:400;color:var(--t3);
+  letter-spacing:0}
 .db-specs{font-size:12.5px;color:var(--t3);line-height:1.35;font-variant-numeric:tabular-nums}
 .db-specs .sep{margin:0 5px;color:var(--stroke)}
 .db-hdr-r{flex-shrink:0;display:flex;align-items:flex-start;gap:10px}
@@ -417,19 +388,27 @@ body{background:var(--app-bg)}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .db-f dd.dim{color:var(--t3)}
 .db-f dd.is-late{color:var(--error);font-weight:600}
-.db-who{display:flex;align-items:center}
-.db-av{width:21px;height:21px;border-radius:50%;background:var(--sunken);border:1px solid var(--stroke);
-  color:var(--t2);display:inline-flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-size:8px;font-weight:700;margin-right:-5px;flex-shrink:0}
-.db-av:last-child{margin-right:0}
-.db-av.more{background:var(--white);color:var(--t3)}
-.db-av.is-turn{background:var(--accent);border-color:var(--ink);color:var(--ink)}
-
+.db-kebab-wrap{position:relative;align-self:flex-start}
+/* The menu opens on hover, so it has to be reachable: it hangs off the wrapper
+   rather than the button and starts flush against it, giving the pointer an
+   unbroken path down into it. A gap of even a pixel and the menu closes while
+   you are on your way to it. */
+.db-kebab-wrap:hover,.db-kebab-wrap:focus-within{z-index:30}
 .db-kebab{opacity:0;background:none;border:0;padding:4px;cursor:pointer;color:var(--t3);
-  transition:opacity .1s,color .12s;align-self:flex-start}
-.db-row:hover .db-kebab,.db-kebab:focus-visible{opacity:1}
-.db-kebab:hover{color:var(--ink)}
+  transition:opacity .1s,color .12s;display:block}
+.db-row:hover .db-kebab,.db-kebab:focus-visible,.db-kebab-wrap:focus-within .db-kebab{opacity:1}
+.db-kebab:hover,.db-kebab-wrap:hover .db-kebab{color:var(--ink)}
 .db-kebab svg{width:14px;height:14px;fill:currentColor}
+
+.db-kebab-menu{display:none;position:absolute;top:100%;right:0;min-width:168px;
+  background:var(--white);border:1px solid var(--stroke);
+  box-shadow:0 8px 24px rgba(26,26,26,.14);padding:4px}
+.db-kebab-wrap:hover .db-kebab-menu,.db-kebab-wrap:focus-within .db-kebab-menu{display:block}
+.db-kebab-item{display:block;width:100%;padding:8px 10px;border:0;background:none;
+  font-family:var(--body);font-size:12.5px;color:var(--ink);text-align:left;cursor:pointer;
+  white-space:nowrap;transition:background .1s}
+.db-kebab-item:hover{background:var(--sunken)}
+.db-kebab-item:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
 
 .db-empty{background:var(--white);border:1px solid var(--stroke);padding:34px 18px;
   font-size:13px;color:var(--t3);font-style:italic}
@@ -539,7 +518,11 @@ body{background:var(--app-bg)}
 }
 @media (max-width:860px){
   .db-row{grid-template-columns:minmax(0,1fr)}
-  .db-thumb{aspect-ratio:16/7;border-right:0;border-bottom:1px solid var(--stroke)}
+  /* Stacked, the photo spans the card's width, so the ratio is let go — keeping
+     it here would hold the photo to 132px in a card three times that wide. The
+     divider between the columns becomes the one under it. */
+  .db-thumb{aspect-ratio:auto;height:120px;align-self:stretch;
+    border-right:0;border-bottom:1px solid var(--stroke)}
   .db-m-grid{grid-template-columns:1fr}
   .db-bar{gap:6px}
 }
@@ -562,10 +545,10 @@ body{background:var(--app-bg)}
   </div>
 <header class="db-top">
   <h1 class="db-top-title">Dashboard</h1>
-  <nav class="db-views" aria-label="Job state">
-    <button class="db-view on" type="button" data-state="active">Active <span class="n" id="nActive">0</span></button>
-    <button class="db-view" type="button" data-state="completed">Completed <span class="n" id="nCompleted">0</span></button>
-    <button class="db-view" type="button" data-state="archived">Archived <span class="n" id="nArchived">0</span></button>
+  <nav class="db-views" id="dbViews" aria-label="Whose jobs">
+    <button class="db-view on" type="button" data-view="mine">My work <span class="n" id="nMine">0</span></button>
+    <button class="db-view" type="button" data-view="team">My team <span class="n" id="nTeam">0</span></button>
+    <button class="db-view" type="button" data-view="all">All jobs <span class="n" id="nAll">0</span></button>
   </nav>
   <span class="db-sp"></span>
   <!-- Demo-only. Roles and permissions are in the backlog; this switch exists so
@@ -633,10 +616,10 @@ body{background:var(--app-bg)}
     <div class="db-wrap">
 
       <div class="db-bar">
-        <div class="db-seg" id="dbViews" role="group" aria-label="Whose jobs">
-          <button type="button" class="on" data-view="mine">My work <span class="n" id="nMine">0</span></button>
-          <button type="button" data-view="team">My team <span class="n" id="nTeam">0</span></button>
-          <button type="button" data-view="all">All jobs <span class="n" id="nAll">0</span></button>
+        <div class="db-seg" role="group" aria-label="Job state">
+          <button type="button" class="on" data-state="active">Active <span class="n" id="nActive">0</span></button>
+          <button type="button" data-state="completed">Completed <span class="n" id="nCompleted">0</span></button>
+          <button type="button" data-state="archived">Archived <span class="n" id="nArchived">0</span></button>
         </div>
         <!-- The product's own attention filter (.af — panel.css / renderFilter in
              js/panel-core.js), with the dashboard's content in it. Two "All"
@@ -656,20 +639,20 @@ body{background:var(--app-bg)}
           </button>
           <div class="af-menu" id="dbAfMenu"></div>
         </div>
-        <!-- The label is back. "Due date" said what it was on its own; "My turn"
-             on a bare control reads like a filter you switch on, not an order
-             you sort by — which is why the shipped menu heads itself "Sort by". -->
-        <span class="db-lbl">Sort</span>
-        <select class="db-sel" id="dbSort" aria-label="Sort by">
-          <option value="addr">Address</option>
-          <option value="due">Due date</option>
-          <option value="updated">Last updated</option>
-          <option value="market">Market name</option>
-          <option value="turn" selected>My turn</option>
-          <option value="propid">Org property ID</option>
-        </select>
         <span class="db-note" id="dbNote"></span>
         <button class="db-clear" type="button" id="dbClear" hidden onclick="dbReset()">Clear all</button>
+        <!-- The word is inside the control rather than beside it: "My turn" on
+             a bare select reads like a filter you switch on, not an order you
+             sort by, and every option carrying the prefix means the closed
+             control always says which of the two it is. -->
+        <select class="db-sel" id="dbSort" aria-label="Sort by">
+          <option value="addr">Sort: Address</option>
+          <option value="due">Sort: Due date</option>
+          <option value="updated">Sort: Last updated</option>
+          <option value="market">Sort: Market name</option>
+          <option value="turn" selected>Sort: My turn</option>
+          <option value="propid">Sort: Org property ID</option>
+        </select>
         <!-- Collapsed to its icon until someone wants it. A field this wide sat
              in the bar all day announcing a thing most people do rarely; the
              icon holds the place and the field arrives when asked for. -->
@@ -681,7 +664,6 @@ body{background:var(--app-bg)}
           <input id="dbQ" type="search" placeholder="Search address, ID, job name"
                  aria-label="Search jobs">
         </div>
-        <button class="db-btn is-primary" type="button" onclick="dbNew(true)">+ New job</button>
       </div>
 
       <div id="dbSections"></div>
@@ -768,52 +750,62 @@ body{background:var(--app-bg)}
 var DB_TODAY = '2026-09-14';
 var ME       = 'QH';
 
+/* Job names are all the same placeholder on purpose: the grey text after the
+   address is a field, and spelling that out reads better to someone seeing the
+   screen for the first time than six invented project names would. Jobs with no
+   name keep none, since that is a real and common state.
+
+   Status follows the phase, because in the product it does: a scope still being
+   drafted or a change order awaiting a decision is In progress, and anything
+   past approval — dispatched, on the punch list, closing out — is Approved. Set
+   by hand here rather than derived, so a job can be given an odd pairing when a
+   demo needs one. */
 var DB_JOBS = [
   {addr:'10912 Pilgrimage Drive', city:'Austin, TX 78754', market:'Austin', id:'1234',
-   type:'Turn', phase:'Scope', status:'approved', beds:3, baths:'3½', sqft:1590,
+   type:'Turn', phase:'Scope', status:'progress', beds:3, baths:'3½', sqft:1590,
    due:'2026-03-03', updated:'2026-08-21', amount:null, team:['M. Alvarez','G. Han'],
    turn:'G. Han', done:0, tasks:24, cos:0, name:'', state:'active'},
 
   {addr:'10800 Gonzales Ranger Pass', city:'Austin, TX 78754', market:'Austin', id:'111222',
-   type:'Acquisition', phase:'Close out', status:'progress', beds:4, baths:'3½', sqft:1666,
+   type:'Acquisition', phase:'Close out', status:'approved', beds:4, baths:'3½', sqft:1666,
    due:'2026-03-26', updated:'2026-08-10', amount:null, team:['M. Alvarez','J. Duarte','S. Kwon','QH'],
-   turn:'J. Duarte', done:18, tasks:19, cos:1, name:'', state:'active'},
+   turn:null, done:19, tasks:19, cos:1, name:'', state:'completed'},
 
   {addr:'10724 Defender Trl', city:'Austin, TX 78754', market:'Austin', id:'827346287346',
-   type:'Acquisition', phase:'Scope', status:'review', beds:3, baths:'11½', sqft:2032,
+   type:'Acquisition', phase:'Scope', status:'progress', beds:3, baths:'11½', sqft:2032,
    due:'2026-04-15', updated:'2026-09-09', amount:null, team:['QH'],
    turn:'QH', done:0, tasks:31, cos:0, name:'', state:'active'},
 
   {addr:'10800 Gonzales Ranger Pass', city:'Austin, TX 78754', market:'Austin', id:'111222',
-   type:'Turn', phase:'Punch list', status:'progress', beds:4, baths:'3½', sqft:1666,
+   type:'Turn', phase:'Close out', status:'progress', beds:4, baths:'3½', sqft:1666,
    due:'2026-04-23', updated:'2026-08-21', amount:null,
    team:['M. Alvarez','G. Han','J. Duarte','S. Kwon'],
-   turn:'M. Alvarez', done:41, tasks:47, cos:3, name:'test 4/23', state:'active'},
+   turn:'M. Alvarez', done:41, tasks:47, cos:3, name:'Project Name Example Placeholder', state:'active'},
 
   {addr:'2525 McDonald Way', city:'Austin, TX 78754', market:'Austin', id:'9876',
    type:'Acquisition', phase:'Change order', status:'progress', beds:3, baths:'2', sqft:1346,
    due:'2026-10-02', updated:'2026-09-12', amount:68242, team:['G. Han','S. Kwon','QH'],
-   turn:'QH', done:12, tasks:38, cos:4, name:'Unit 2 full turn', state:'active'},
+   turn:'QH', done:12, tasks:38, cos:4, name:'Project Name Example Placeholder', state:'active'},
 
   {addr:'1408 Cedar Bend Dr', city:'Austin, TX 78753', market:'Austin', id:'4417',
-   type:'Renovation', phase:'Scope', status:'review', beds:3, baths:'2', sqft:1512,
+   type:'Renovation', phase:'Scope', status:'progress', beds:3, baths:'2', sqft:1512,
    due:'2026-09-30', updated:'2026-09-11', amount:26434, team:['QH','M. Alvarez'],
-   turn:'QH', done:0, tasks:22, cos:0, name:'Kitchen scope v2', state:'active'},
+   turn:'QH', done:0, tasks:22, cos:0, name:'Project Name Example Placeholder', state:'active'},
 
   {addr:'715 Wheless Ln', city:'Austin, TX 78723', market:'New Market', id:'5520',
-   type:'Maintenance', phase:'Dispatch', status:'progress', beds:2, baths:'1', sqft:980,
+   type:'Maintenance', phase:'Scope', status:'approved', beds:2, baths:'1', sqft:980,
    due:'2026-09-19', updated:'2026-09-08', amount:9800, team:['J. Duarte'],
-   turn:'J. Duarte', done:2, tasks:6, cos:0, name:'Roof + gutter repair', state:'active'},
+   turn:'J. Duarte', done:2, tasks:6, cos:0, name:'Project Name Example Placeholder', state:'active'},
 
   {addr:'3484 South Main Street', city:'Austin, TX 78704', market:'Test new staging market', id:'7781',
-   type:'Turn', phase:'Scope', status:'review', beds:4, baths:'2½', sqft:2140,
+   type:'Turn', phase:'Close out', status:'approved', beds:4, baths:'2½', sqft:2140,
    due:'2026-09-12', updated:'2026-09-13', amount:41200, team:['QH','G. Han','S. Kwon'],
-   turn:'QH', done:0, tasks:29, cos:0, name:'', state:'active'},
+   turn:null, done:29, tasks:29, cos:0, name:'', state:'completed'},
 
   {addr:'6120 Manchaca Rd', city:'Austin, TX 78745', market:'Austin', id:'3390',
    type:'Renovation', phase:'Change order', status:'progress', beds:3, baths:'2', sqft:1610,
    due:'2026-08-30', updated:'2026-08-14', amount:52310, team:['S. Kwon','G. Han','QH'],
-   turn:'S. Kwon', done:22, tasks:44, cos:6, name:'Full gut — bath + kitchen', state:'active'},
+   turn:'S. Kwon', done:22, tasks:44, cos:6, name:'Project Name Example Placeholder', state:'active'},
 
   {addr:'9002 Tallwood Dr', city:'Austin, TX 78759', market:'Test new staging market', id:'6640',
    type:'Acquisition', phase:'Close out', status:'approved', beds:3, baths:'2', sqft:1744,
@@ -828,7 +820,7 @@ var DB_JOBS = [
   {addr:'2525 McDonald Way', city:'Austin, TX 78754', market:'Austin', id:'9876',
    type:'Turn', phase:'Close out', status:'approved', beds:3, baths:'2', sqft:1346,
    due:'2025-11-20', updated:'2026-01-14', amount:41200, team:['M. Alvarez'],
-   turn:null, done:33, tasks:33, cos:2, name:'2025 make-ready', state:'archived'}
+   turn:null, done:33, tasks:33, cos:2, name:'Project Name Example Placeholder', state:'archived'}
 ];
 
 /* The properties the "start a job" search looks through — the dashboard lists
@@ -849,6 +841,21 @@ var DB_PROPERTIES = [
   {addr:'1500 Tillery St, Austin, TX 78702',          market:'Austin', id:'8802'}
 ];
 
+/* Close out + Approved means the job is finished: it leaves the active list and
+   it is nobody's turn. Stated here rather than trusted, so a hand-written row
+   cannot leave a finished job sitting in someone's queue.
+
+   The phase check alongside it is the other half of the rule — the middle tag
+   can only ever be one of these three. */
+var DB_PHASES = ['Scope', 'Change order', 'Close out'];
+DB_JOBS.forEach(function(p){
+  if(DB_PHASES.indexOf(p.phase) === -1) p.phase = 'Scope';
+  if(p.phase === 'Close out' && p.status === 'approved'){
+    p.turn = null;
+    if(p.state === 'active') p.state = 'completed';
+  }
+});
+
 var DB_MARKETS  = ['Austin','Example Market','New Market','Test new staging market'];
 /* Per-market template defaults. Austin's was empty in staging, which is the
    configuration bug Aaron found; it is spelled out here so a missing default
@@ -861,8 +868,6 @@ var DB_TEMPLATES = {
   'Test new staging market': {Turn:'Staging Turn 02', Acquisition:'', Maintenance:'', Renovation:''},
   'Example Market': {}
 };
-
-var DB_STATUS = {approved:'Approved', progress:'In progress', review:'Review in progress', draft:'Draft'};
 
 var dbView  = 'mine';
 var dbState = 'active';
@@ -885,12 +890,14 @@ function dbFmtMoney(n){
   if(n === null || n === undefined) return '<span class="db-amt is-unset">&mdash;</span>';
   return '<span class="db-amt">$' + n.toLocaleString('en-US') + '</span>';
 }
-function dbInitials(s){
-  if(s === ME) return 'QH';
-  var parts = String(s).replace(/[.]/g,'').split(/\s+/).filter(Boolean);
-  if(parts.length === 1) return parts[0].slice(0,2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+/* "S. Kwon's turn". A name already ending in s takes the bare apostrophe, which
+   is the one case a naive + "'s" gets visibly wrong. */
+function dbPossessive(n){
+  return n + (/s$/i.test(n) ? '\u2019' : '\u2019s');
 }
+/* Only live work can be late. A finished job's due date is a record of when it
+   was wanted, not a deadline still to be missed — which also keeps it out of the
+   past-due count and off the top of every sort. */
 function dbIsLate(p){ return p.state === 'active' && p.due < DB_TODAY; }
 function dbMine(p){ return p.team.indexOf(ME) !== -1; }
 function dbMyTurn(p){ return p.turn === ME; }
@@ -930,13 +937,13 @@ var DB_FILTERS = {
 
 var DB_BANDS = [
   {key:'type',   label:'Type'},
-  {key:'phase',  label:'Phase'},
+  {key:'phase',  label:'Artifact'},
   {key:'status', label:'Status'}
 ];
 
 var dbActive = {};     // filter key → true
 
-var DB_DOT = {ok:'var(--success)', ink:'var(--ink)', alert:'var(--error)'};
+var DB_DOT = {ok:'var(--success)', ink:'var(--ink)'};
 
 /* Does a job survive everything except the attention filter? Counts are taken
    against this, so a number beside a filter answers "how many would I get if I
@@ -1060,82 +1067,75 @@ function dbPasses(p){
   return dbScope(p) && dbPassesFilters(p);
 }
 
-/* Late first, always — whatever the sort is, an overdue job outranks an on-time
-   one, because the sort answers "in what order" and lateness answers "does this
-   need me at all". */
+/* Two keys, and which one leads depends on the sort.
+
+   Sorting by My turn, yours leads: the whole point of the sort is to put what
+   is waiting on you at the top, and a late job someone else is holding is not
+   something you can act on. Lateness then orders within each half, so it reads
+   your late work, your rest, then everyone else's late work, then the rest.
+
+   Under every other sort lateness leads instead, because those sorts answer "in
+   what order" and lateness answers "does this need me at all". */
 function dbSortFn(a, b){
-  var la = dbIsLate(a) ? 0 : 1, lb = dbIsLate(b) ? 0 : 1;
-  if(la !== lb) return la - lb;
-  switch(dbVal('dbSort')){
+  var sort = dbVal('dbSort');
+  var late = function(x, y){
+    var lx = dbIsLate(x) ? 0 : 1, ly = dbIsLate(y) ? 0 : 1;
+    return lx - ly;
+  };
+
+  if(sort === 'turn'){
+    var mine = (dbMyTurn(a) ? 0 : 1) - (dbMyTurn(b) ? 0 : 1);
+    return mine || late(a, b) || a.due.localeCompare(b.due);
+  }
+
+  var byLate = late(a, b);
+  if(byLate) return byLate;
+
+  switch(sort){
     case 'addr':    return a.addr.localeCompare(b.addr) || a.due.localeCompare(b.due);
-    case 'due':     return a.due.localeCompare(b.due);
     case 'updated': return b.updated.localeCompare(a.updated);
     case 'market':  return a.market.localeCompare(b.market) || a.due.localeCompare(b.due);
     /* Numeric so 9876 does not sort above 111222 the way a string compare
        would — these are digits that happen to be stored as text. */
     case 'propid':  return String(a.id).localeCompare(String(b.id), undefined, {numeric:true});
-    /* The default, and the reason the old "Needs review" is gone: one status
-       standing in for everyone answered nobody's question, where "is it my
-       turn" answers the one people actually arrive with. Mine first, then
-       soonest due within each half. */
-    default:
-      var ma = dbMyTurn(a) ? 0 : 1, mb = dbMyTurn(b) ? 0 : 1;
-      return ma !== mb ? ma - mb : a.due.localeCompare(b.due);
+    default:        return a.due.localeCompare(b.due);
   }
 }
 
-/* Status colour follows the phase as well as the status, matching the shipped
-   dashboard: approved is green, anything under review is red and carries a dot,
-   and an in-progress step takes its phase's colour. */
 function dbTag(p){
-  var ph = p.phase === 'Punch list' ? ' ph-punch'
-         : p.phase === 'Change order' ? ' ph-co' : '';
-  var st = p.status === 'approved' ? ' is-approved'
-         : p.status === 'review'   ? ' is-review' : ph;
-  return '<span class="db-tag">'
-    + '<span class="t-type">' + dbEsc(p.type) + '</span>'
-    + '<span class="t-phase">' + dbEsc(p.phase) + '</span>'
-    + '<span class="t-status' + st + '">' + DB_STATUS[p.status] + '</span>'
-  + '</span>';
+  return '<span class="db-tag"><span class="t-type">' + dbEsc(p.type) + '</span></span>';
 }
 
 /* ── a job ── */
-function dbRow(p){
+function dbRow(p, i){
   var late  = dbIsLate(p);
   var mine  = dbMyTurn(p);
-  var days  = late ? dbDays(p.due, DB_TODAY) : 0;
 
-  var who = p.team.slice(0,3).map(function(w){
-    return '<span class="db-av' + (w === p.turn ? ' is-turn' : '') + '" title="' + dbEsc(w) + '">'
-      + dbInitials(w) + '</span>'; }).join('')
-    + (p.team.length > 3 ? '<span class="db-av more">+' + (p.team.length - 3) + '</span>' : '');
+  /* A count, not a row of initials. Two letters in a circle only identify
+     someone you already know, and whoever the job is actually waiting on is
+     named in full by the turn chip above. */
+  var who = p.team.length
+    ? p.team.length + ' assignee' + (p.team.length === 1 ? '' : 's')
+    : '<span class="dim">Unassigned</span>';
 
   var turnChip = p.turn
     ? '<span class="db-turn' + (mine ? ' is-mine' : '') + '">'
-        + (mine ? 'Your turn' : 'With ' + dbEsc(p.turn)) + '</span>'
+        + (mine ? 'Your turn' : dbPossessive(dbEsc(p.turn)) + ' turn') + '</span>'
     : '';
 
-  var lateChip = late
-    ? '<span class="db-late-chip">' + days + ' day' + (days === 1 ? '' : 's') + ' late</span>' : '';
-
-  var coChip = p.cos
-    ? '<span class="db-co-chip' + (p.cos >= 3 ? ' is-many' : '') + '">'
-        + p.cos + ' change order' + (p.cos === 1 ? '' : 's') + '</span>' : '';
-
-  return '<article class="db-row' + (late ? ' is-late' : '') + (mine && !late ? ' is-mine' : '') + '" tabindex="0">'
+  return '<article class="db-row' + (mine ? ' is-mine' : '') + '" tabindex="0">'
     + '<figure class="db-thumb">'
       + '<span class="db-thumb-empty">No photo</span>'
-      + '<figcaption class="db-thumb-cap">' + dbFmtDate(p.updated) + '</figcaption>'
     + '</figure>'
     + '<div class="db-body">'
       + '<div class="db-hdr">'
         + '<div class="db-hdr-l">'
           + '<div class="db-eyebrow">'
             + dbTag(p)
-            + turnChip + lateChip + coChip
+            + turnChip
           + '</div>'
           + '<div class="db-row-title">' + dbEsc(p.addr)
-            + (p.name ? ' <span style="font-weight:400;color:var(--t3)">&middot; ' + dbEsc(p.name) + '</span>' : '')
+            + (p.name ? ' <span class="db-row-name">&middot; ' + dbEsc(p.name) + '</span>' : '')
           + '</div>'
           + '<div class="db-specs">' + dbEsc(p.city)
             + '<span class="sep">&middot;</span>' + p.beds + ' bed'
@@ -1144,9 +1144,16 @@ function dbRow(p){
         + '</div>'
         + '<div class="db-hdr-r">'
           + '<div class="db-amt-w">' + dbFmtMoney(p.amount) + '<span class="db-lbl">Amount</span></div>'
-          + '<button class="db-kebab" type="button" aria-label="More actions for ' + dbEsc(p.addr) + '">'
-            + '<svg viewBox="0 0 14 14"><circle cx="7" cy="3" r="1.4"/><circle cx="7" cy="7" r="1.4"/><circle cx="7" cy="11" r="1.4"/></svg>'
-          + '</button>'
+          + '<div class="db-kebab-wrap">'
+            + '<button class="db-kebab" type="button" aria-haspopup="true" '
+              + 'aria-label="More actions for ' + dbEsc(p.addr) + '">'
+              + '<svg viewBox="0 0 14 14"><circle cx="7" cy="3" r="1.4"/><circle cx="7" cy="7" r="1.4"/><circle cx="7" cy="11" r="1.4"/></svg>'
+            + '</button>'
+            + '<div class="db-kebab-menu" role="menu">'
+              + '<button class="db-kebab-item" type="button" role="menuitem" '
+                + 'data-archive="' + i + '">Archive project</button>'
+            + '</div>'
+          + '</div>'
         + '</div>'
       + '</div>'
       + '<dl class="db-facts">'
@@ -1156,7 +1163,7 @@ function dbRow(p){
           + dbFmtDate(p.due) + '</dd></div>'
         + '<div class="db-f"><dt>Last updated</dt><dd class="dim">' + dbFmtDate(p.updated)
           + (dbStalled(p) ? ' &middot; ' + dbDays(p.updated, DB_TODAY) + 'd ago' : '') + '</dd></div>'
-        + '<div class="db-f"><dt>Assignees</dt><dd><span class="db-who">' + who + '</span></dd></div>'
+        + '<div class="db-f"><dt>Assignees</dt><dd>' + who + '</dd></div>'
       + '</dl>'
     + '</div>'
   + '</article>';
@@ -1170,7 +1177,7 @@ function dbRow(p){
 function dbRender(){
   var rows = DB_JOBS.filter(dbPasses).sort(dbSortFn);
   document.getElementById('dbSections').innerHTML = rows.length
-    ? rows.map(dbRow).join('')
+    ? rows.map(function(p){ return dbRow(p, DB_JOBS.indexOf(p)); }).join('')
     : '<div class="db-empty">No jobs match what you have asked for.</div>';
 
   /* The tabs say which view and how many; the rail says which market. What
@@ -1277,13 +1284,29 @@ function dbApplyRole(){
   });
   /* A builder only ever sees their own work, so the control that would say so
      is not shown at all. */
-  document.getElementById('dbViews').hidden = allowed.length === 1;
+  var lone = allowed.length === 1;
+  document.getElementById('dbViews').hidden = lone;
+  document.querySelector('.db-top').classList.toggle('is-titleonly', lone);
   dbRender();
 }
 
 document.getElementById('dbRole').addEventListener('change', function(){
   dbRole = this.value;
   dbApplyRole();
+});
+
+/* A menu item that does nothing is worse than no menu, so this archives: the
+   job moves to the Archived tab, where it is still reachable, rather than
+   disappearing. */
+document.getElementById('dbSections').addEventListener('click', function(ev){
+  var b = ev.target.closest('[data-archive]');
+  if(!b) return;
+  ev.stopPropagation();
+  var job = DB_JOBS[+b.dataset.archive];
+  if(!job) return;
+  job.state = 'archived';
+  job.turn  = null;
+  dbRender();
 });
 
 /* ── the search ──

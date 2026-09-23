@@ -1,0 +1,157 @@
+/* ════════════════════════════════════════════════════════════
+   THE ACTIVITY LOG — one pattern, every level
+   ────────────────────────────────────────────────────────────
+   From the 2026-09-08 review: "as long as we start to reuse the patterns …
+   they can go 'I'm looking at the task activity, I'm looking at the job
+   activity, I'm looking at the property activity' and it's very clear what
+   they're looking at" (Tov). And from Maria: the same visual language at every
+   level, one of them zoomed out and collapsible, the other granular.
+
+   So this is a stylesheet rather than a block of CSS inside one page. The
+   property page loads it today; the job page and the task panel load the same
+   file when they get there, pass a different `level`, and the reader sees the
+   thing they already know how to read.
+
+   THE PATTERN, in one sentence: a time rail down the left, one row per event,
+   the event's own sentence in the middle, and what it touched on the right —
+   and any row that summarises other rows opens to show them.
+
+   TWO LANES. Tov: "here was the paperwork behind the decisions and then here
+   was the execution of the actual work." Administrative events (submitted,
+   approved, change order) and work events (started, completed) are the same
+   rows, marked differently, and filterable apart — not two separate logs, which
+   would make you read the story twice to get it once.
+
+   Depends on shell.css for the tokens.
+   ════════════════════════════════════════════════════════════ */
+
+.ka{background:var(--white);border:1px solid var(--stroke)}
+
+/* ── head ──
+   Says which level you are looking at, because that is the one thing the
+   pattern cannot tell you by looking. */
+.ka-head{display:flex;align-items:center;gap:12px;padding:14px 18px;
+  border-bottom:1px solid var(--stroke)}
+.ka-lbl{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3)}
+.ka-head .ka-lbl .lvl{color:var(--ink)}
+.ka-tools{margin-left:auto;display:flex;align-items:center;gap:8px}
+/* Lane filter and time grouping are the two controls the log needs and the only
+   two it gets. Both are segmented, because each is a small closed set and a
+   dropdown would hide which one is on. */
+.ka-seg{display:flex}
+.ka-seg button{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;padding:5px 9px;border:1px solid var(--stroke);background:var(--white);
+  color:var(--t3);cursor:pointer;margin-left:-1px;line-height:1.2;transition:color .12s,border-color .12s}
+.ka-seg button:first-child{margin-left:0}
+.ka-seg button.on{background:var(--ink);border-color:var(--ink);color:#fff;position:relative;z-index:1}
+.ka-seg button:hover:not(.on){color:var(--ink);border-color:var(--ink);position:relative;z-index:1}
+.ka-seg button:focus-visible{outline:2px solid var(--ink);outline-offset:1px;z-index:2}
+.ka-collapse{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9px;
+  font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);
+  background:none;border:0;padding:5px 2px;cursor:pointer;transition:color .12s}
+.ka-collapse:hover{color:var(--ink)}
+.ka-collapse svg{width:9px;height:9px;stroke:currentColor;stroke-width:2;fill:none;
+  transition:transform .15s}
+.ka.is-closed .ka-collapse svg{transform:rotate(-90deg)}
+.ka.is-closed .ka-body{display:none}
+
+.ka-body{padding:4px 0 6px}
+
+/* ── a time bucket ──
+   Quinn: group by day, week or month so a project's history stops being one
+   scroll. The bucket head is a date, not a card — the rail runs through it so
+   the timeline is unbroken. */
+.ka-bucket{position:relative}
+.ka-bucket-h{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;
+  padding:9px 18px 7px;background:var(--white)}
+.ka-bucket-h .d{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink)}
+.ka-bucket-h .r{flex:1;height:1px;background:var(--stroke)}
+.ka-bucket-h .c{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--t3)}
+
+/* ── a row ──
+   Time, marker, sentence, target. The rail is a border on the marker column, so
+   it is continuous without a pseudo-element per row. */
+.ka-row{display:grid;grid-template-columns:62px 22px minmax(0,1fr) auto;align-items:start;
+  gap:0 10px;padding:0 18px;position:relative}
+.ka-t{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--t3);padding:9px 0 9px;
+  text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ka-rail{position:relative;align-self:stretch;display:flex;justify-content:center}
+.ka-rail::before{content:'';position:absolute;top:0;bottom:0;left:50%;width:1px;
+  margin-left:-.5px;background:var(--stroke)}
+.ka-bucket:last-child .ka-row:last-of-type .ka-rail::before{bottom:auto;height:16px}
+.ka-dot{position:relative;z-index:1;margin-top:11px;width:9px;height:9px;border-radius:50%;
+  background:var(--white);border:1.5px solid var(--midtone);box-sizing:border-box;flex-shrink:0}
+/* Work events are filled, administrative events are hollow. One glance down the
+   rail tells you whether this stretch of the story was paperwork or hammers. */
+.ka-row.lane-work .ka-dot{background:var(--ink);border-color:var(--ink)}
+.ka-row.is-co .ka-dot{border-color:var(--error);background:var(--error)}
+.ka-row.is-good .ka-dot{border-color:var(--success);background:var(--success)}
+.ka-row.is-open-dot .ka-dot{background:var(--accent);border-color:var(--ink)}
+
+.ka-main{padding:8px 0 9px;min-width:0}
+.ka-ttl{font-size:13.5px;color:var(--ink);line-height:1.4}
+.ka-ttl .who{font-weight:600}
+/* The job an event belongs to. At property level this is the fact that makes the
+   row make sense; at job level it is absent, because you are already in it. */
+.ka-job{display:inline-flex;align-items:center;font-family:var(--mono);font-size:8.5px;
+  font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);
+  border:1px solid var(--stroke);padding:2px 6px;margin-left:8px;white-space:nowrap;
+  vertical-align:1px}
+.ka-sub{font-size:12px;color:var(--t3);margin-top:3px;line-height:1.4}
+.ka-sub .num{font-variant-numeric:tabular-nums;color:var(--t2);font-weight:600}
+.ka-sub .up{color:var(--error);font-weight:600;font-variant-numeric:tabular-nums}
+.ka-sub .down{color:var(--success);font-weight:600;font-variant-numeric:tabular-nums}
+
+/* Links out of a row. Christine: a change order is two things — the document and
+   the task that changed — and people want both, at different moments. So a
+   change-order row carries both links rather than picking one. */
+.ka-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.ka-link{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8.5px;
+  font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink);
+  background:var(--white);border:1px solid var(--stroke);padding:4px 8px;cursor:pointer;
+  line-height:1.2;transition:border-color .12s,background .12s}
+.ka-link:hover{border-color:var(--ink);background:var(--sunken)}
+.ka-link:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.ka-link svg{width:9px;height:9px;stroke:currentColor;stroke-width:1.8;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
+.ka-link.is-open svg{transform:rotate(180deg)}
+
+.ka-right{padding:9px 0;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.ka-amt{font-family:var(--body);font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.ka-amt.up{color:var(--error)}
+.ka-amt.down{color:var(--success)}
+
+/* ── the drill-down ──
+   Maria's flow: property → job → group → task. A summary row opens in place to
+   show what it summarised; each child is a link one level down. Opening in place
+   rather than navigating means you can read three change orders without losing
+   your seat in the timeline. */
+.ka-kids{grid-column:3 / -1;padding:0 0 10px;display:none}
+.ka-row.is-open .ka-kids{display:block}
+.ka-kid{display:flex;align-items:baseline;gap:10px;padding:7px 10px;border:1px solid var(--stroke);
+  border-bottom:0;background:var(--sunken);cursor:pointer;transition:background .1s}
+.ka-kid:last-child{border-bottom:1px solid var(--stroke)}
+.ka-kid:hover{background:var(--white)}
+.ka-kid-g{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3);flex:0 0 92px;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.ka-kid-n{flex:1;min-width:0;font-size:12.5px;color:var(--ink)}
+.ka-kid-n .was{color:var(--t3);font-size:11.5px;margin-left:6px;font-variant-numeric:tabular-nums}
+.ka-kid-d{font-family:var(--body);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.ka-kid-d.up{color:var(--error)}
+.ka-kid-d.down{color:var(--success)}
+
+.ka-foot{display:flex;align-items:center;justify-content:center;padding:10px 18px 4px}
+.ka-more{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t2);background:none;border:1px solid var(--stroke);
+  padding:6px 12px;cursor:pointer;transition:border-color .12s,color .12s}
+.ka-more:hover{border-color:var(--ink);color:var(--ink)}
+.ka-empty{padding:26px 18px;font-size:13px;color:var(--t3);font-style:italic}
+
+@media (max-width:720px){
+  .ka-row{grid-template-columns:46px 20px minmax(0,1fr);gap:0 8px}
+  .ka-right{grid-column:3;padding:0 0 8px}
+  .ka-kids{grid-column:3}
+}
