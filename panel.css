@@ -4775,23 +4775,10 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tl-hd .ov-tl-when,.ov-tl-hd .ov-tl-rail{background:var(--sunken)}
 .ov-tl-hd .ov-tl-rail::before{display:none}
 
-/* The week rule. Spans every track so it reads as a break in the whole
-   timeline rather than a label in one column. */
-.ov-tl-wk{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:24px 0 6px}
-.ov-tl-hd + .ov-tl-wk{margin-top:10px}
-/* The week is the one label that has to be seen from across the feed — it is
-   what tells you which rows belong together — so it is set darker and larger
-   than the column headers it sits under. */
-.ov-tl-wk span{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--ink);white-space:nowrap}
-/* No trailing rule: the label is already set apart by its case, its tracking
-   and the space around it, and a full-width line for every week turned the
-   feed into a stack of boxes. */
-
 /* Cells. Padding lives here rather than on a row box, because there isn't one. */
 .ov-tl-r > *{padding:11px 10px;font-family:var(--body);font-size:12.5px;color:var(--ink);
   line-height:1.4;display:flex;align-items:flex-start;border-top:1px solid var(--hair)}
-.ov-tl-r.is-wkfirst > *{border-top:0}
+.ov-tl-r.is-first > *{border-top:0}
 .ov-tl-r > *:last-child{padding-right:0}
 .ov-tl-when{flex-direction:column;align-items:flex-end;text-align:right;gap:1px;
   padding-left:0;padding-right:14px;white-space:nowrap;overflow:visible}
@@ -4820,13 +4807,14 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .ov-tl-tot{font-weight:600;color:var(--ink)}
 .ov-tl-dash{color:var(--t3)}
 
-/* The rail. The connector runs the full height of each cell so consecutive
-   rows join up; the first row of a week starts it at the marker instead, so
-   the line doesn't climb through the rule above it. */
+/* The rail. The connector runs the full height of each cell, so every row
+   joins the one below it and the feed reads as one continuous thread. Only
+   the first row starts the line at its own marker, so it does not climb into
+   the column header above it. */
 .ov-tl-rail{position:relative;padding:0;justify-content:center}
 .ov-tl-rail::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;
   background:var(--stroke);transform:translateX(-50%)}
-.ov-tl-r.is-wkfirst .ov-tl-rail::before{top:17px}
+.ov-tl-r.is-first .ov-tl-rail::before{top:17px}
 .ov-tl-mk{position:relative;width:8px;height:8px;margin-top:13px;
   background:var(--t3);transform:rotate(45deg);flex-shrink:0}
 /* Marker states carry the same meanings the rest of the tab uses: a document

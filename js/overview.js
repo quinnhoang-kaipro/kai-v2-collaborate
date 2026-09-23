@@ -1091,7 +1091,7 @@ function _ovTlRow(o){
          onclick="event.stopPropagation();ovToggleChanges('${o.detailId}')"
          ><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1.2 3.4h7.6L5 8.2z"/></svg></button>`
     : '';
-  return `<div class="ov-tl-r ov-tl-${o.kind}${o.detailId ? ' is-tappable' : ''}${o.wkFirst ? ' is-wkfirst' : ''}${o.alt ? ' is-alt' : ''}${o.current ? ' is-current' : ''}">
+  return `<div class="ov-tl-r ov-tl-${o.kind}${o.detailId ? ' is-tappable' : ''}${o.wkFirst ? ' is-first' : ''}${o.alt ? ' is-alt' : ''}${o.current ? ' is-current' : ''}">
     <span class="ov-tl-when${L}"${tap}><b>${esc(o.day)}</b><i>${esc(o.sub || '')}</i></span>
     <span class="ov-tl-rail${L}"${tap}><span class="ov-tl-mk"></span></span>
     ${OV_SHOW_DURATION ? `<span class="ov-tl-dur${L}"${tap}>${o.dur ? esc(o.dur) : _OV_DASH}</span>` : ''}
@@ -1114,17 +1114,19 @@ function _ovFeedHtml(entries, state, later){
   return OV_SENTENCES ? _ovSentenceFeedHtml(entries, state)
                       : _ovTimelineFeedHtml(entries, state, later);
 }
+/* No week rules. The rail is the thing that says these events belong to one
+   run of work, and a heading every few rows kept cutting it — the dates in the
+   When column already say which week a row is in, so the rule was a second
+   answer to a question the row had answered. Only the first row is special
+   now: it starts the rail at its own marker rather than letting the line climb
+   into the header above it. */
 function _ovTimelineFeedHtml(entries, weekState, later){
   let html = '';
   const L = later ? ' is-later' : '';
-  let band = 0;
+  let band = weekState.band || 0;
   entries.forEach(en => {
-    const wk = _ovWeekLabel(en.at);
-    let wkFirst = false;
-    if(wk && wk !== weekState.w){
-      weekState.w = wk; wkFirst = true; band = 0;
-      html += `<div class="ov-tl-wk${L}"><span>${esc(wk)}</span></div>`;
-    }
+    const wkFirst = !weekState.started;
+    weekState.started = true;
     const d = en.doc, e = en.ev;
     const what = esc(e.what || '');
     /* Under the action, not beside it: the What cell already wraps, and a
@@ -1148,6 +1150,7 @@ function _ovTimelineFeedHtml(entries, weekState, later){
       alt: (band++ % 2) === 1, current: !!e.current,
     });
   });
+  weekState.band = band;
   return html;
 }
 /* Who is holding the newest document, said once at the top. It used to be an
