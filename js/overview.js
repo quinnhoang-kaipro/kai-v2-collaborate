@@ -101,6 +101,44 @@ function _ovPeople(){
   };
 }
 
+/* Whose turn it is, said the way the toolbar's chip says it. During a change
+   order that is the person holding the document, read from the same trail
+   the Activity is built from; otherwise it is the shell's own answer, by
+   role and stage. Null when it is nobody's turn — a finished job — or when
+   the shell cannot be reached. */
+function _ovTurn(){
+  const co = (typeof STAGE_ID !== 'undefined') && STAGE_ID === 'published'
+          && (typeof WORK_TRACK !== 'undefined') && WORK_TRACK === 'change_order';
+  if(co && typeof window.a2CurrentHolder === 'function'){
+    const h = window.a2CurrentHolder();
+    if(h) return {who:h.short, doc:h.doc};
+  }
+  try{
+    const P = window.parent;
+    if(P && P !== window && typeof P.kaiCurrentTurn === 'function'){
+      const t = P.kaiCurrentTurn();
+      if(t && t.who) return {who:t.who, doc:null};
+    }
+  }catch(e){ /* not reachable */ }
+  return null;
+}
+/* Whose move it is and when the job last changed, as two cells of the
+   figure strip. They are read with the figures — the state of the job at a
+   glance — at the same size as the dates: a name and a time, not a number
+   to compare. The turn names the person and nothing else (the document is the
+   Activity's to name); the update is a time, not an attribution. */
+function _ovTurnStats(){
+  const S = OVERVIEW_SEED;
+  const t = _ovTurn();
+  const who = t
+    ? `<span class="ov-turn-dot" aria-hidden="true"></span>${esc(t.who)}`
+    : 'Nobody';
+  return {
+    turn: `<div class="ov-stat is-turn"><span class="ov-stat-v">${who}</span>
+        <span class="ov-stat-k">With</span></div>`,
+    updated: S.updated ? _ovStat('Last updated', S.updated) : '',
+  };
+}
 /* The live scope total, by the same sum the sidebar rollup uses. */
 function _ovBudget(){
   const tasks = (typeof visibleTasks === 'function') ? visibleTasks() : (TASKS || []);
@@ -108,39 +146,6 @@ function _ovBudget(){
     return __KAI_SCOPE_TOTAL_OVERRIDE;
   }
   return money(tasks.reduce((s, t) => s + dollars(t.cost), 0));
-}
-
-/* ── the project's standing, in three parts ──────────────────────────
-   One "Active" chip could not say which of a turn's phases the project was
-   in, or whether the phase was moving. Three segments read left to right as
-   programme, phase, state — the same order a person says it out loud: "the
-   turn, in closeout, in progress".  */
-function _ovStanding(){
-  const st   = (typeof STAGE_ID !== 'undefined') ? STAGE_ID : 'edit';
-  const mode = (typeof PROJ_MODE !== 'undefined') ? PROJ_MODE : '';
-  const co   = ['published', 'closeout', 'closeout-approved'].includes(st)
-            && (typeof WORK_TRACK !== 'undefined') && WORK_TRACK === 'change_order';
-  const phase =
-      st === 'closeout' || st === 'closeout-approved' ? 'Close out'
-    : st === 'published' ? (co ? 'Change order' : 'Construction')
-    : ['submitted', 'reviewing', 'review-done', 'awaiting-pub'].includes(st) ? 'Scope review'
-    : 'Scoping';
-  const state =
-      st === 'closeout-approved' ? 'Complete'
-    : st === 'closeout'  ? 'In review'
-    : st === 'published' ? (co ? 'In review' : 'In progress')
-    : st === 'edit'      ? 'In draft'
-    : 'In review';
-  return [
-    {k:'programme', v:OVERVIEW_SEED.type},
-    {k:'phase',     v:phase},
-    {k:'state',     v:state},
-  ];
-}
-function _ovStandingHtml(){
-  return `<div class="ov-standing" role="group" aria-label="Job status">${
-    _ovStanding().map(seg =>
-      `<span class="ov-stand ov-stand-${seg.k}">${esc(seg.v)}</span>`).join('')}</div>`;
 }
 
 /* ── who has had this document ───────────────────────────────────────
@@ -652,11 +657,8 @@ function ovAccessToggle(btn){
   if(box) box.hidden = !_ovAccessOpen;
   if(btn){
     btn.setAttribute('aria-expanded', String(_ovAccessOpen));
-    /* The label names what the click does, so it has to turn over with the
-       state — a caret alone left "See access details" sitting above the
-       details it had already shown. */
     const t = btn.querySelector('.ov-access-cta-t');
-    if(t) t.textContent = _ovAccessOpen ? 'Hide access info' : 'See access info';
+    if(t) t.textContent = _ovAccessOpen ? 'Hide' : 'Show';
   }
 }
 /* Called from the caret and from the row around it, so the caret is found
@@ -1295,12 +1297,12 @@ function ovOpenTemplate(name){
 /* A figure with its label under it, optionally a button. The counts are the
    way into the notes and photo drawers, so they are the control themselves
    rather than a number sitting next to one. */
-function _ovStat(label, value, go){
+function _ovStat(label, value, go, cls){
   const inner = `<span class="ov-stat-v">${esc(value)}</span>
     <span class="ov-stat-k">${esc(label)}</span>`;
   return go
-    ? `<button type="button" class="ov-stat is-link" onclick="${go}">${inner}</button>`
-    : `<div class="ov-stat">${inner}</div>`;
+    ? `<button type="button" class="ov-stat is-link${cls ? ' ' + cls : ''}" onclick="${go}">${inner}</button>`
+    : `<div class="ov-stat${cls ? ' ' + cls : ''}">${inner}</div>`;
 }
 
 /* The property's own facts, ordered the way someone reads a listing rather
@@ -1352,35 +1354,36 @@ function renderOverview(){
   if(typeof seedPhotos === 'function' && (typeof PHOTOS === 'undefined' || !PHOTOS.length)) seedPhotos();
   const photoCount = (typeof PHOTOS !== 'undefined') ? PHOTOS.length : 0;
 
-  /* The strip under the title: the five numbers someone opens this tab to
-     check, at figure size, before any labelled list. */
+  /* The budget is the one figure at figure size, on the title's line at the
+     right. The strip under the title is the six smaller facts in two rows of
+     three — the dates and whose turn it is, then the counts and when it last
+     moved. A fixed grid rather than a wrapping row, because mixed sizes in a
+     row that wraps stagger into uneven lines. */
+  const _ts = _ovTurnStats();
+  const budget = _ovStat('Budget', _ovBudget(), null, 'is-lead');
   const stats = `<div class="ov-stats">
-    ${_ovStat('Budget', _ovBudget())}
-    ${_ovStat('Scope due', S.scopeDue)}
-    ${_ovStat('Job end', S.endDate)}
-    ${_ovStat('Notes', String(notes.length), "openScopeDrawer('notes')")}
-    ${_ovStat('Photos', String(photoCount), "openScopeDrawer('photos')")}
+    <div class="ov-stats-rest">
+      ${_ovStat('Scope due', S.scopeDue)}
+      ${_ovStat('Job end', S.endDate)}
+      ${_ts.turn}
+      ${_ovStat('Notes', String(notes.length), "openScopeDrawer('notes')")}
+      ${_ovStat('Photos', String(photoCount), "openScopeDrawer('photos')")}
+      ${_ts.updated}
+    </div>
   </div>`;
 
-  /* Getting in, folded into the property module rather than standing beside
-     it. It is the same errand as the fields above — what this place is and
-     how you get into it — and as its own module it was a framed box holding
-     one line, drawing more attention than a set of codes read once a project
-     deserves.
-
-     Shut it is the title and nothing else. The codes were on the bar until
-     now; they are behind the click with the note, because two people in ten
-     open this at all and the row above it is the property, not the visit. */
-  const accessDetail = `
-    <div class="ov-access">
-      <button type="button" class="ov-access-bar" aria-expanded="${_ovAccessOpen}"
+  /* Access info is a fact about the property — how you get into it — so it
+     is a cell of Property info, labelled like the rest, with the way to open
+     it as its value. Shut it is that one control, because two people in ten
+     open it at all. Open, the codes and the note run the width of the
+     band's fields, directly under the cell that opened them. */
+  const accessToggle = `
+      <button type="button" class="ov-access-cta" aria-expanded="${_ovAccessOpen}"
               aria-controls="ovAccessBody" onclick="ovAccessToggle(this)">
-        <span class="ov-sec-h">Getting in</span>
-        <span class="ov-access-cta">
-          <span class="ov-access-cta-t">${_ovAccessOpen ? 'Hide access info' : 'See access info'}</span>
-          <svg class="ov-access-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
-        </span>
-      </button>
+        <span class="ov-access-cta-t">${_ovAccessOpen ? 'Hide' : 'Show'}</span>
+        <svg class="ov-access-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
+      </button>`;
+  const accessDetail = `
       <div class="ov-access-body" id="ovAccessBody"${_ovAccessOpen ? '' : ' hidden'}>
         <div class="ov-access-codes">
           ${S.access.map(a => `<span class="ov-acc-pair"><span class="ov-acc-k">${esc(a.k)}</span
@@ -1391,37 +1394,44 @@ function renderOverview(){
           ${S.dispatch ? `<p class="ov-dispatch">${esc(S.dispatch)}</p>`
                        : `<p class="ov-empty">Nothing for the crew yet.</p>`}
         </div>
-      </div>
-    </div>`;
+      </div>`;
 
   /* Property info stays its own block — it answers a different question (what
      the building is, not who is running the job). Job info does not: it folds
      into the head, under the figures, because every field left in it is about
      the same thing the head already names.
 
-     Three fields came out on the way in. Job name repeated the title directly
-     above it; Job type is the TURN chip on that title's line; General
-     contractor is the subject of the whole Contractor assignments block below.
+     Two fields came out on the way in. Job name repeated the title directly
+     above it; General contractor is the subject of the whole Contractor
+     assignments block below. Job type came back in: it replaced the three
+     status tags that sat on the title's line.
      Each was a second place to read something already on the page — tolerable
      while this was a separate section, not once it sits inches from the
      original. */
   const _editBtn = which =>
     `<button type="button" class="ov-sec-edit" onclick="ovInfoEdit('${which}')">Edit</button>`;
   const _tplName = S.template.name;
-  const jobFields = `<div class="ov-head-fields">
+  const jobFields = `<div class="ov-head-fields ov-head-band is-job">
+    <h3 class="ov-sec-h">Job info</h3>
     ${_ovFieldsHtml([
       {k:'Job ID',       v:S.projectId},
+      {k:'Job type',     v:S.type},
       {k:'Job manager',  v:people.manager},
       {k:'Field agent',  v:people.agent},
       {k:'Template',     cls:'is-tpl', html:`<a class="ov-field-link" href="#"
           onclick="event.preventDefault();ovOpenTemplate('${esc(_tplName).replace(/'/g, "\\'")}')"
           >${esc(_tplName)}</a>`},
-      {k:'Last updated', v:S.updated},
     ])}
     ${_editBtn('Job')}
   </div>`;
-  const propSec = _ovSec('Property info',
-    _ovFieldsHtml(_ovPropFields()) + accessDetail, 'ov-job ov-prop', _editBtn('Property'));
+  /* Property info is the band under Job info, on the same five columns, so
+     Square feet stands under Job ID. */
+  const propBand = `<div class="ov-head-fields ov-head-band is-prop">
+    <h3 class="ov-sec-h">Property info</h3>
+    ${_ovFieldsHtml(_ovPropFields().concat([{k:'Access info', cls:'is-access', html:accessToggle}]))}
+    ${_editBtn('Property')}
+    ${accessDetail}
+  </div>`;
 
   /* Part of the tab. It was behind a demo switch while it was being decided
      whether the Overview carried a feed at all; it does, so the switch is
@@ -1447,13 +1457,14 @@ function renderOverview(){
           <h2>${esc(S.address)}</h2>
           <div class="ov-head-sub">${esc(S.city)}</div>
         </div>
-        ${_ovStandingHtml()}
+        ${budget}
       </header>
       ${stats}
       </div>
       ${jobFields}
+      ${propBand}
     </section>
-    ${propSec}${_ovCrewHtml()}${trailSec}
+    ${_ovCrewHtml()}${trailSec}
   </div>`;
 }
 

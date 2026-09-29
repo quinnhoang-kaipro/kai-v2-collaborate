@@ -76,33 +76,52 @@ body{background:var(--app-bg)}
   text-transform:uppercase;color:var(--ink)}
 .po-sec-h .r{flex:1;height:1px;background:var(--stroke)}
 
-/* ── the property header ── */
-/* Photo, identity, facts — one row of three, then the jobs across the whole
-   card beneath it. The facts were the last band on a card whose first row was
-   two-thirds white, and the jobs were in a column narrower than the space they
-   had. Level with the address, the facts are read as what the address *is*;
-   full width, the jobs get the room they were always the reason for. */
-.po-hero{display:grid;grid-template-columns:260px minmax(200px,0.7fr) minmax(0,2fr);
-  gap:20px 26px;align-items:stretch}
-/* A hairline between the identity and the facts, so the two columns read as two
-   answers rather than one paragraph that happens to wrap. */
-.po-hero-facts{min-width:0;padding-left:26px;border-left:1px solid var(--stroke);
-  display:flex;flex-direction:column}
-.po-hero-facts .po-asof{margin-top:auto}
-.po-photo{position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--sunken);
-  border:1px solid var(--stroke)}
-.po-photo-cap{position:absolute;left:0;bottom:0;padding:5px 9px;background:rgba(26,26,26,.72);
-  color:#fff;font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.1em;
-  text-transform:uppercase}
-.po-hero-id{min-width:0;display:flex;flex-direction:column;justify-content:center;height:100%}
-.po-hdr{display:flex;align-items:flex-start;gap:14px}
-.po-hdr-l{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
-.po-eyebrow{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.11em;
-  text-transform:uppercase;color:var(--t3)}
-.po-eyebrow .sep{margin:0 4px;color:var(--midtone)}
+/* ── the property header ──
+   The job Overview's head (.ov-mod-head in panel.css), at the property's
+   altitude: the photo on the left, and everything said about the property
+   beside it — the address with one figure leading on its line, the figures
+   under a hairline, and the building's facts under another. The right column
+   is one grid of four columns and the Edit, carried by subgrid into the
+   figures and the facts so every value lands on the same edges. The facts
+   sit beside the photo rather than in a band under it: under it, the photo
+   stood over a column of white while the band ran the card's full width. */
+.po-head{display:grid;grid-template-columns:300px minmax(0,1fr);column-gap:28px;padding:18px 20px}
+.po-photo{position:relative;margin:0;min-height:150px;overflow:hidden;
+  background:var(--sunken);border:1px solid var(--stroke)}
+.po-head-r{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;column-gap:24px;
+  align-content:start;min-width:0}
+.po-hdr{grid-column:1 / -1;display:flex;align-items:flex-start;gap:14px;margin-bottom:12px}
+.po-hdr-l{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
 .po-hdr h1{font-family:var(--display);font-size:20px;font-weight:700;color:var(--ink);
   letter-spacing:-.005em;line-height:1.2;margin:0}
 .po-hdr-sub{font-family:var(--body);font-size:13px;color:var(--t2);line-height:1.35}
+/* The figures. One leads, on the title's line at the right; the rest sit on
+   the columns at body size. */
+.po-stat{display:flex;flex-direction:column;gap:2px;align-items:flex-start;padding:0;margin:0;
+  border:0;background:none;text-align:left;font:inherit;color:inherit;min-width:0}
+.po-stat-v{font-family:var(--body);font-size:13.5px;font-weight:600;color:var(--ink);
+  line-height:1.35;font-variant-numeric:tabular-nums}
+.po-stat-k{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t3)}
+.po-stat.is-lead{margin-left:auto;flex-shrink:0;align-items:flex-end;text-align:right}
+.po-stat.is-lead .po-stat-v{font-family:var(--display);font-size:26px;font-weight:700;
+  letter-spacing:-.015em;line-height:1.1}
+.po-stat.is-link{cursor:pointer}
+.po-stat.is-link .po-stat-v{border-bottom:1.5px solid var(--stroke);transition:border-color .12s}
+.po-stat.is-link:hover .po-stat-v{border-bottom-color:var(--ink)}
+.po-stat.is-link:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.po-stats{grid-column:1 / -1;display:grid;grid-template-columns:subgrid;row-gap:12px;
+  padding:12px 0 14px;border-top:1px solid var(--stroke)}
+/* The facts: four to a row, the Edit in the last column. */
+.po-band{grid-column:1 / -1;display:grid;grid-template-columns:subgrid;align-items:start;
+  padding-top:14px;border-top:1px solid var(--stroke)}
+.po-band > .po-grid{grid-column:1 / 5;display:grid;grid-template-columns:subgrid;row-gap:14px;margin:0}
+.po-band-acts{grid-column:5;justify-self:end;display:flex}
+.po-sec-edit{padding:0;background:none;border:0;cursor:pointer;font-family:var(--mono);
+  font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--t2);
+  border-bottom:1.5px solid var(--stroke);transition:color .12s,border-color .12s}
+.po-sec-edit:hover{color:var(--ink);border-bottom-color:var(--ink)}
+.po-sec-edit:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 
 
 /* status + turn chips, shared with the dashboard
@@ -146,10 +165,7 @@ body{background:var(--app-bg)}
    The summary that used to sit on the closed header is gone with it: it was a
    preview of what was folded, and the grid three lines below now says the same
    four numbers. */
-.po-band-h{display:flex;align-items:center;gap:12px;width:100%;margin-bottom:13px}
-.po-band-h .po-btn{margin-left:auto}
 .po-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:14px 22px}
-.po-hero-facts .po-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 20px}
 .po-f{min-width:0;display:flex;flex-direction:column;gap:4px}
 .po-f dt{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3)}
@@ -166,10 +182,6 @@ body{background:var(--app-bg)}
 .po-f input:focus,.po-f select:focus{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 body.po-editing #poGrid .po-f dd{display:none}
 body.po-editing #poGrid .po-f input,body.po-editing #poGrid .po-f select{display:block}
-/* Christine: a renovation can change the bedroom count, so the facts are the
-   *current* facts and the page says as of when. */
-.po-asof{font-size:12px;color:var(--t3);margin-top:12px;padding-top:10px;
-  border-top:1px solid var(--stroke)}
 
 .po-btn{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;padding:6px 12px;border:1px solid var(--stroke);background:var(--white);
@@ -218,7 +230,6 @@ body.po-editing #poEditBtn{display:none}
 .po-tbl td{padding:12px 18px;font-size:14px;color:var(--ink);vertical-align:middle}
 .po-tbl td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
 .po-desc-c{min-width:90px}
-.po-chg{color:var(--t2);font-weight:500}
 .po-lifetime{display:flex;align-items:center;justify-content:space-between;gap:16px;
   padding:14px 18px;border-top:1px solid var(--stroke);background:var(--sunken)}
 .po-lifetime .k{font-size:13px;font-weight:600;color:var(--ink)}
@@ -236,9 +247,10 @@ body.po-editing #poEditBtn{display:none}
    was explicit that archived work keeps its story. */
 /* ── the property's activity ──
    One row per event, newest first, split into the columns the tables above it
-   use: what happened, which job, what it was worth, who, when. The feed
-   reports — it is not a way into anything, so its rows do not respond to a
-   click and carry no affordance that says they would. */
+   use: what happened, which job, what it was worth, who, when. The name of
+   the event is a link — to the job's document trail, or to the asset record —
+   and only the name: the row itself stays still, so the link says exactly
+   what it opens. */
 .po-ev-filter{margin-left:auto;font-family:var(--mono);font-size:9px;font-weight:700;
   letter-spacing:.08em;text-transform:uppercase;color:var(--t2);background:var(--white);
   border:1px solid var(--stroke);padding:7px 9px;cursor:pointer;outline:none;
@@ -247,10 +259,27 @@ body.po-editing #poEditBtn{display:none}
 .po-ev-filter:focus-visible{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 .po-ev-t{display:block;font-family:var(--display);font-size:14px;font-weight:700;
   color:var(--ink);letter-spacing:-.005em;line-height:1.3}
+/* The same underline the page's other links wear (.po-f-link): a quiet rule
+   that darkens to ink on hover. */
+.po-ev-link{background:none;border:0;padding:0;cursor:pointer;text-align:left;
+  text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px;
+  text-decoration-color:var(--midtone);transition:text-decoration-color .12s}
+.po-ev-link:hover{text-decoration-color:var(--ink)}
+.po-ev-link:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 /* The size of the thing, under its name — the tasks a scope covered, the make
    an asset record captured. */
 .po-ev-s{display:block;font-size:12.5px;color:var(--t3);line-height:1.35;margin-top:2px}
-.po-ev-job{font-size:14px;color:var(--ink)}
+.po-ev-job{display:block;font-size:14px;font-weight:600;color:var(--ink)}
+/* The job's kind sits under its name, the way the job page's Artifact column
+   carries a document's state under the document. */
+.po-ev-jt{display:block;font-family:var(--mono);font-size:9px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-top:3px}
+/* Date first, laid out like the job page's timeline (.ov-tl-when). */
+.po-tbl th.po-ev-when-h,.po-ev-when{text-align:right}
+.po-ev-when b{display:block;font-size:12.5px;font-weight:600;color:var(--ink);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.po-ev-when i{display:block;font-style:normal;font-size:10.5px;color:var(--t3);
+  font-variant-numeric:tabular-nums;margin-top:1px}
 .po-ev .is-sys{font-style:italic}
 .po-ev-more{padding:12px 18px;border-top:1px solid var(--stroke)}
 .po-ev-more:empty{display:none}
@@ -481,17 +510,19 @@ body.po-editing #poEditBtn{display:none}
 .po-crumbs .note{margin-left:auto;font-family:var(--body);font-size:12px;color:var(--t3);
   text-transform:none;letter-spacing:0;font-weight:400}
 
-/* Two rows before one column: the facts drop under the identity while the photo
-   keeps its place, which is a smaller change than stacking everything. */
+/* Narrower, the header keeps its shape on three field columns; narrower
+   still, it stacks. */
 @media (max-width:1180px){
-  .po-hero{grid-template-columns:300px minmax(0,1fr)}
-  .po-hero-facts{grid-column:2;padding-left:0;border-left:0;padding-top:15px;
-    border-top:1px solid var(--stroke)}
+  .po-head{grid-template-columns:220px minmax(0,1fr)}
 }
 @media (max-width:900px){
-  .po-hero{grid-template-columns:minmax(0,1fr)}
-  .po-hero-facts{grid-column:auto}
-  .po-photo{max-width:420px}
+  .po-head{display:block}
+  .po-photo{aspect-ratio:4/3;max-width:320px;min-height:0;margin-bottom:16px}
+  .po-head-r{grid-template-columns:repeat(2,minmax(0,1fr)) auto}
+  .po-band > .po-grid{grid-column:1 / 3}
+  .po-band-acts{grid-column:3}
+  .po-hdr{flex-direction:column;gap:10px}
+  .po-stat.is-lead{margin-left:0;align-items:flex-start;text-align:left}
   .po-cmp-pair{grid-template-columns:1fr}
 }
 
@@ -686,63 +717,52 @@ body.po-editing #poEditBtn{display:none}
          What is happening at this address today. Everything descriptive moved
          below it — the review's "elevate the current state of the property and
          its active jobs to the top level of the view". -->
-    <section class="po-mod">
-      <div class="po-mod-pad">
-        <div class="po-hero">
-          <figure class="po-photo">
-            <!-- Promoted up from the most recent capture at this property, per
-                 Tov: "whatever was the most recent, that's what we promote, and
-                 that lives at the property level." The caption says when, and
-                 only when — the job and the room were two more labels on a
-                 picture that shows the room and sits on the job's own page. -->
-            <figcaption class="po-photo-cap" id="poHeroCap">&mdash;</figcaption>
-          </figure>
-          <div class="po-hero-id">
-            <div class="po-hdr">
-              <div class="po-hdr-l">
-                <div class="po-eyebrow">Austin<span class="sep">&middot;</span>Test ID 9876</div>
-                <h1>2525 McDonald Way</h1>
-                <div class="po-hdr-sub">Austin, TX 78754 &nbsp;&middot;&nbsp;
-                  <button class="po-f-link" type="button" onclick="poMarketOpen()">View market</button></div>
-              </div>
-            </div>
+    <section class="po-mod po-head">
+      <!-- The property, photographed. The same slot, in the same place, as the
+           job's own Overview tab, so the two pages read as one object at two
+           altitudes. -->
+      <figure class="po-photo"></figure>
+      <div class="po-head-r">
+        <header class="po-hdr">
+          <div class="po-hdr-l">
+            <h1>2525 McDonald Way</h1>
+            <div class="po-hdr-sub">Austin, TX 78754 &nbsp;&middot;&nbsp;
+              <button class="po-f-link" type="button" onclick="poMarketOpen()">View market</button></div>
           </div>
-
-          <!-- The building's own facts, level with the address rather than
-               stacked under the jobs: they are what the address *is*, and they
-               were the last thing on a card whose first row had space to spare. -->
-          <div class="po-hero-facts" id="poDisc">
-            <div class="po-band-h">
-              <span class="po-lbl">Property info</span>
-              <button class="po-btn" id="poEditBtn" type="button" onclick="poEdit(true)">Edit</button>
-              <span class="po-edit-acts">
-                <button class="po-btn" type="button" onclick="poEdit(false)">Cancel</button>
-                <button class="po-btn is-primary" type="button" onclick="poSave()">Save info</button>
-              </span>
-            </div>
-            <dl class="po-grid" id="poGrid">
-              <div class="po-f"><dt>Beds</dt><dd id="v-beds">3</dd><input id="i-beds" type="number" value="3" aria-label="Beds"></div>
-              <div class="po-f"><dt>Full baths</dt><dd id="v-full">3</dd><input id="i-full" type="number" value="3" aria-label="Full baths"></div>
-              <div class="po-f"><dt>Half baths</dt><dd id="v-half">0</dd><input id="i-half" type="number" value="0" aria-label="Half baths"></div>
-              <div class="po-f"><dt>Square feet</dt><dd id="v-sqft">1,422<span class="u">sqft</span></dd><input id="i-sqft" type="number" value="1422" aria-label="Square feet"></div>
-              <div class="po-f"><dt>Acres</dt><dd id="v-acres">0.101<span class="u">acres</span></dd><input id="i-acres" type="number" step="0.001" value="0.101" aria-label="Acres"></div>
-              <div class="po-f"><dt>Garage</dt><dd id="v-garage">Yes</dd>
-                <select id="i-garage" aria-label="Garage"><option>Yes</option><option>No</option></select></div>
-              <div class="po-f"><dt>Market</dt><dd id="v-market">Austin</dd>
-                <select id="i-market" aria-label="Market"><option>Austin</option><option>Atlanta</option><option>Dallas</option><option>Phoenix</option></select></div>
-              <div class="po-f"><dt>Test ID</dt><dd id="v-testid">9876</dd><input id="i-testid" value="9876" aria-label="Test ID"></div>
-            </dl>
-            <div class="po-asof">Last changed by <b>Expansion &mdash; 2525 McDonald Way</b> completed on
-              01-14-26 &mdash; that job took the property from 3 bed / 2 bath to 3 bed / 3 bath.</div>
+          <div class="po-stat is-lead"><span class="po-stat-v" id="poHeadLife"></span>
+            <span class="po-stat-k">Lifetime value</span></div>
+        </header>
+        <!-- The figures, filled from PO_JOBS, PO_ASSETS and PO_MEDIA by
+             poHead() so they cannot disagree with the tables below. -->
+        <div class="po-stats" id="poHeadStats"></div>
+        <!-- The building's own facts, on the same columns as the figures
+             above them. -->
+        <div class="po-band" id="poDisc">
+          <dl class="po-grid" id="poGrid">
+            <div class="po-f"><dt>Beds</dt><dd id="v-beds">3</dd><input id="i-beds" type="number" value="3" aria-label="Beds"></div>
+            <div class="po-f"><dt>Full baths</dt><dd id="v-full">3</dd><input id="i-full" type="number" value="3" aria-label="Full baths"></div>
+            <div class="po-f"><dt>Half baths</dt><dd id="v-half">0</dd><input id="i-half" type="number" value="0" aria-label="Half baths"></div>
+            <div class="po-f"><dt>Square feet</dt><dd id="v-sqft">1,422<span class="u">sqft</span></dd><input id="i-sqft" type="number" value="1422" aria-label="Square feet"></div>
+            <div class="po-f"><dt>Acres</dt><dd id="v-acres">0.101<span class="u">acres</span></dd><input id="i-acres" type="number" step="0.001" value="0.101" aria-label="Acres"></div>
+            <div class="po-f"><dt>Garage</dt><dd id="v-garage">Yes</dd>
+              <select id="i-garage" aria-label="Garage"><option>Yes</option><option>No</option></select></div>
+            <div class="po-f"><dt>Market</dt><dd id="v-market">Austin</dd>
+              <select id="i-market" aria-label="Market"><option>Austin</option><option>Atlanta</option><option>Dallas</option><option>Phoenix</option></select></div>
+            <div class="po-f"><dt>Test ID</dt><dd id="v-testid">9876</dd><input id="i-testid" value="9876" aria-label="Test ID"></div>
+          </dl>
+          <div class="po-band-acts">
+            <button class="po-sec-edit" id="poEditBtn" type="button" onclick="poEdit(true)">Edit</button>
+            <span class="po-edit-acts">
+              <button class="po-btn" type="button" onclick="poEdit(false)">Cancel</button>
+              <button class="po-btn is-primary" type="button" onclick="poSave()">Save info</button>
+            </span>
           </div>
         </div>
-
       </div>
-
     </section>
 
     <!-- ══ 2 · JOBS ═══════════════════════════════════════════════ -->
-        <section class="po-mod">
+        <section class="po-mod" id="poJobsSec">
       <div class="po-proj-h">
         <span class="po-mod-name">Jobs</span>
         <div class="po-seg" id="poSeg">
@@ -757,10 +777,9 @@ body.po-editing #poEditBtn{display:none}
         <thead>
           <tr>
             <th style="width:25%">Job</th>
-            <th style="width:8%">Description</th>
+            <th style="width:19%">Description</th>
             <th style="width:11%">Status</th>
             <th class="num" style="width:12%">Initial scope</th>
-            <th class="num" style="width:11%">Changes</th>
             <th class="num" style="width:12%">Total</th>
             <th style="width:8%">Created</th>
             <th style="width:9%">
@@ -790,7 +809,7 @@ body.po-editing #poEditBtn{display:none}
          asset has a service life, so it outlives the job that put it in and
          belongs to the property — which is why it sits under the jobs rather
          than inside one. -->
-        <section class="po-mod">
+        <section class="po-mod" id="poAssetsSec">
       <div class="po-proj-h">
         <span class="po-mod-name">Assets</span>
         <span class="po-lbl" id="poAssetCount">4</span>
@@ -872,11 +891,11 @@ body.po-editing #poEditBtn{display:none}
       <table class="po-tbl">
         <thead>
           <tr>
-            <th style="width:35%">Activity</th>
-            <th style="width:25%">Job</th>
-            <th class="num" style="width:14%">Total</th>
-            <th style="width:13%">User</th>
-            <th style="width:13%">Date</th>
+            <th class="po-ev-when-h" style="width:11%">Date</th>
+            <th style="width:14%">User</th>
+            <th style="width:33%">Activity</th>
+            <th style="width:27%">Job</th>
+            <th class="num" style="width:15%">Total</th>
           </tr>
         </thead>
         <tbody id="poEvents"></tbody>
@@ -1022,8 +1041,11 @@ var PO_TODAY = '2026-09-14';
 var ME       = 'QH';
 var PO_ADDR  = '2525 McDonald Way';
 
+/* A job is named for the address when it is made, and people then rename it,
+   copy it, or make a second one — so the names drift. `title` is what the jobs
+   table shows; without one it is just the address. */
 var PO_JOBS = [
-  {name:'Unit 2 full turn', desc:'Tenant out Sep 14 · 4 rooms', type:'Turn', phase:'Change order',
+  {name:'Unit 2 full turn', title:'2525 McDonald Way – Unit 2', desc:'Tenant out Sep 14 · 4 rooms', type:'Turn', phase:'Change order',
    budget:68242, status:'active', admin:'progress', turn:'QH', cos:4, done:12, tasks:38,
    created:'2026-08-27', updated:'2026-09-12', due:'2026-10-02', archived:false},
 
@@ -1031,15 +1053,15 @@ var PO_JOBS = [
    budget:9800, status:'active', admin:'progress', turn:'J. Duarte', cos:0, done:2, tasks:6,
    created:'2026-08-19', updated:'2026-09-04', due:'2026-09-11', archived:false},
 
-  {name:'Kitchen scope v2', desc:'', type:'Renovation', phase:'Scope',
+  {name:'Kitchen scope v2', title:'New 2525 McDonald Way', desc:'', type:'Renovation', phase:'Scope',
    budget:26434, status:'active', admin:'review', turn:'Aaron Mosny', cos:0, done:0, tasks:22,
    created:'2026-08-11', updated:'2026-08-30', due:'2026-09-30', archived:false},
 
-  {name:'Dashboard testing Sep 8', desc:'', type:'Acquisition', phase:'Close out',
+  {name:'Dashboard testing Sep 8', title:'Copy of 2525 McDonald Way', desc:'', type:'Acquisition', phase:'Close out',
    budget:10000, status:'completed', admin:'approved', turn:null, cos:0, done:9, tasks:9,
    created:'2026-09-08', updated:'2026-09-11', due:'2026-09-11', archived:false},
 
-  {name:'Visibility test', desc:'', type:'Acquisition', phase:'Scope',
+  {name:'Visibility test', title:'2525 McDonald Way (2)', desc:'', type:'Acquisition', phase:'Scope',
    budget:null, status:'active', admin:'review', turn:'G. Han', cos:0, done:0, tasks:4,
    created:'2026-09-02', updated:'2026-09-10', due:'2026-09-25', archived:false},
 
@@ -1047,7 +1069,7 @@ var PO_JOBS = [
    budget:5400, status:'completed', admin:'approved', turn:null, cos:1, done:7, tasks:7,
    created:'2026-07-30', updated:'2026-08-22', due:'2026-08-20', archived:false},
 
-  {name:'2025 make-ready', desc:'Added the third bathroom', type:'Turn', phase:'Close out',
+  {name:'2025 make-ready', title:'2525 McDonald Way – 2025', desc:'Added the third bathroom', type:'Turn', phase:'Close out',
    budget:41200, status:'completed', admin:'approved', turn:null, cos:2, done:33, tasks:33,
    created:'2025-11-02', updated:'2026-01-14', due:'2026-01-10', archived:true},
 
@@ -1055,7 +1077,7 @@ var PO_JOBS = [
    budget:7350, status:'completed', admin:'approved', turn:null, cos:0, done:5, tasks:5,
    created:'2025-09-18', updated:'2025-10-02', due:'2025-10-01', archived:true},
 
-  {name:'Acquisition inspection', desc:'The original walk', type:'Acquisition', phase:'Close out',
+  {name:'Acquisition inspection', title:'New 2525 McDonald Way (1)', desc:'The original walk', type:'Acquisition', phase:'Close out',
    budget:1200, status:'completed', admin:'approved', turn:null, cos:0, done:12, tasks:12,
    created:'2025-08-04', updated:'2025-08-20', due:'2025-08-18', archived:true},
 
@@ -1129,16 +1151,6 @@ function poFmtMoney(n){
 function poIsLate(j){ return j.status === 'active' && j.due < PO_TODAY; }
 
 /* ════════════════════════════════════════════════════════════
-   1 · RIGHT NOW
-   ════════════════════════════════════════════════════════════ */
-function poNow(){
-  /* The hero photo is whatever was captured most recently anywhere on the
-     property, and it says which job produced it. */
-  var latest = PO_MEDIA.slice().sort(function(a, b){ return b.date.localeCompare(a.date); })[0];
-  document.getElementById('poHeroCap').textContent = poShortDate(latest.date);
-}
-
-/* ════════════════════════════════════════════════════════════
    2 · JOBS
    ════════════════════════════════════════════════════════════ */
 var poView = 'active';
@@ -1152,7 +1164,7 @@ function poRender(){
 
   document.getElementById('poRows').innerHTML = rows.length ? rows.map(function(j){
     return '<tr>'
-      + '<td><span class="po-name">' + poEsc(PO_ADDR) + '</span>'
+      + '<td><span class="po-name">' + poEsc(j.title || PO_ADDR) + '</span>'
         + '<span class="po-type">' + poEsc(j.type) + '</span>'
         + '</td>'
       /* Held open for the description the product will carry. Empty on
@@ -1160,7 +1172,6 @@ function poRender(){
       + '<td class="po-desc-c"></td>'
       + '<td><span class="po-st po-st-' + j.status + '">' + PO_STATUS[j.status] + '</span></td>'
       + '<td class="num">' + poFmtMoney(poScope(j)) + '</td>'
-      + '<td class="num po-chg">' + poFmtChange(poChange(j)) + '</td>'
       + '<td class="num">' + poFmtMoney(j.budget) + '</td>'
       + '<td class="dim">' + poFmtDate(j.created) + '</td>'
       + '<td class="dim">' + poFmtDate(j.updated) + '</td>'
@@ -1168,7 +1179,7 @@ function poRender(){
         + '<svg viewBox="0 0 14 14"><circle cx="7" cy="3" r="1.4"/><circle cx="7" cy="7" r="1.4"/><circle cx="7" cy="11" r="1.4"/></svg>'
         + '</button></td>'
       + '</tr>';
-  }).join('') : '<tr><td colspan="9" class="po-empty">No ' + poView + ' jobs on this property.</td></tr>';
+  }).join('') : '<tr><td colspan="8" class="po-empty">No ' + poView + ' jobs on this property.</td></tr>';
 
 
   var life = PO_JOBS.reduce(function(sum, j){ return sum + (j.budget || 0); }, 0);
@@ -1176,6 +1187,29 @@ function poRender(){
   var nLive = PO_JOBS.filter(function(x){ return !x.archived; }).length;
   document.getElementById('poSegActive').textContent = 'Active ' + nLive;
   document.getElementById('poSegArch').textContent  = 'Archived ' + (PO_JOBS.length - nLive);
+}
+/* The header's figures. Derived, like everything else on the page, so the
+   head cannot say something the tables below it do not. */
+function poHead(){
+  var life   = PO_JOBS.reduce(function(sum, j){ return sum + (j.budget || 0); }, 0);
+  var active = PO_JOBS.filter(function(j){ return j.status === 'active'; });
+  var byUpd  = PO_JOBS.slice().sort(function(a, b){ return b.updated.localeCompare(a.updated); });
+
+  var stat = function(k, v, go, cls){
+    var inner = '<span class="po-stat-v">' + v + '</span><span class="po-stat-k">' + k + '</span>';
+    return go
+      ? '<button type="button" class="po-stat is-link' + (cls ? ' ' + cls : '') + '" onclick="' + go + '">' + inner + '</button>'
+      : '<div class="po-stat' + (cls ? ' ' + cls : '') + '">' + inner + '</div>';
+  };
+  document.getElementById('poHeadLife').textContent = '$' + Math.round(life).toLocaleString('en-US');
+  document.getElementById('poHeadStats').innerHTML =
+      stat('Active jobs', String(active.length), "poScrollTo('poJobsSec')")
+    + stat('Assets', String(PO_ASSETS.length), "poScrollTo('poAssetsSec')")
+    + stat('Last updated', byUpd.length ? poShortDate(byUpd[0].updated) : '&mdash;');
+}
+function poScrollTo(id){
+  var el = document.getElementById(id);
+  if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
 }
 function poFilter(v){
   poView = v;
@@ -1619,7 +1653,8 @@ function poEvents(){
     var docs  = poTrDocs(j);
     var scope = poScope(j), change = poChange(j);
 
-    out.push({when:j.created, title:'Job created', total:null,
+    var open = 'poEvOpenJob(' + PO_JOBS.indexOf(j) + ')';
+    out.push({when:j.created, title:'Job created', total:null, open:open,
               who:poEvWho(j, 0), job:j.name, type:j.type});
 
     /* The scope lands a few days after the job opens — the same offset the
@@ -1627,7 +1662,7 @@ function poEvents(){
     var sAt = poEvDocDate(docs[docs.length - 1], j.created);
     out.push({when:sAt, title:'Scope of Work approved',
               detail:j.tasks + ' task' + (j.tasks === 1 ? '' : 's'),
-              total:poFmtMoney(scope),
+              total:poFmtMoney(scope), open:open,
               who:poEvWho(j, 1), job:j.name, type:j.type});
 
     /* One line per change order, splitting the job's change total between
@@ -1635,19 +1670,19 @@ function poEvents(){
     for(var n = 1; n <= (j.cos || 0); n++){
       var d = docs[Math.max(0, docs.length - 1 - n)];
       out.push({when:poEvDocDate(d, j.updated), title:'Change Order ' + n + ' approved',
-                total:poFmtChange(change / j.cos),
+                total:poFmtChange(change / j.cos), open:open,
                 who:poEvWho(j, 2), job:j.name, type:j.type});
     }
 
     if(j.status === 'completed'){
-      out.push({when:j.updated, title:'Job closed', total:poFmtMoney(j.budget),
+      out.push({when:j.updated, title:'Job closed', total:poFmtMoney(j.budget), open:open,
                 who:poEvWho(j, 3), job:j.name, type:j.type});
     }
   });
 
   /* Assets are the property's, not a job's, so they have no job to open and
      no person to name — the record was created, not decided. */
-  PO_ASSETS.forEach(function(a){
+  PO_ASSETS.forEach(function(a, i){
     if(!a.installed) return;
     var iso = poEvAssetDate(a.installed);
     if(!iso) return;
@@ -1659,7 +1694,7 @@ function poEvents(){
               detail:'Asset record created' + (made ? ' &middot; ' + poEsc(made) : ''),
               /* An asset belongs to the property, so the Job column says what
                  it belongs to instead — the room it is installed in. */
-              asset:poEsc(a.room), total:null,
+              asset:poEsc(a.room), total:null, open:'poAssetOpen(' + i + ')',
               who:'System', sys:true, job:null});
   });
 
@@ -1694,15 +1729,18 @@ function poEvDraw(){
   document.getElementById('poEvents').innerHTML = show.length ? show.map(function(e){
     var job = e.job
       ? '<span class="po-ev-job">' + poEsc(e.job) + '</span>'
-        + '<span class="po-type">' + poEsc(e.type) + '</span>'
+        + '<span class="po-ev-jt">' + poEsc(e.type) + '</span>'
       : '<span class="dim">' + (e.asset || '&mdash;') + '</span>';
     return '<tr class="po-ev">'
-      + '<td><span class="po-ev-t">' + e.title + '</span>'
+      + '<td class="po-ev-when">' + poEvWhen(e.when) + '</td>'
+      + '<td class="dim' + (e.sys ? ' is-sys' : '') + '">' + poEsc(e.who) + '</td>'
+      + '<td>' + (e.open
+          ? '<button type="button" class="po-ev-t po-ev-link" onclick="' + e.open + '">'
+            + e.title + '</button>'
+          : '<span class="po-ev-t">' + e.title + '</span>')
         + (e.detail ? '<span class="po-ev-s">' + e.detail + '</span>' : '') + '</td>'
       + '<td>' + job + '</td>'
       + '<td class="num">' + (e.total || '<span class="dim">&mdash;</span>') + '</td>'
-      + '<td class="dim' + (e.sys ? ' is-sys' : '') + '">' + poEsc(e.who) + '</td>'
-      + '<td class="dim">' + poTrDate(e.when) + '</td>'
       + '</tr>';
   }).join('') : '<tr><td colspan="5" class="po-empty">Nothing has happened here yet.</td></tr>';
 
@@ -1712,6 +1750,16 @@ function poEvDraw(){
     ? '<button type="button" onclick="poEvMore()">Show ' + (all.length - show.length)
       + ' earlier event' + (all.length - show.length === 1 ? '' : 's') + '</button>'
     : '';
+}
+
+function poEvOpenJob(i){ if(PO_JOBS[i]) poOpenJob(PO_JOBS[i].name); }
+
+/* The date leads the row, as it does on the job's own Activity: the day in
+   bold, the year under it, both right-aligned against the rows that follow. */
+function poEvWhen(iso){
+  var d = new Date(iso + 'T00:00:00');
+  var M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return '<b>' + M[d.getMonth()] + ' ' + d.getDate() + '</b><i>' + d.getFullYear() + '</i>';
 }
 
 function poEvMore(){
@@ -1830,7 +1878,6 @@ function poCreate(){
      be looking at. */
   poNew(false);
   poFilter('active');
-  poNow();
   /* A new job shows up everywhere it belongs at once — the band at the top, the
      table, and the log — rather than only in the list you happened to be
      looking at. It is the newest thing here, so the log opens on it. */
@@ -2233,9 +2280,9 @@ document.addEventListener('keydown', function(e){
   if(document.body.classList.contains('po-editing')) poEdit(false);
 });
 
-poNow();
 poRender();
 poAssets();
+poHead();
 poEvFilterFill();
 poEvDraw();
 if(PO_SHOW_PROGRESS){ poDrawCmp(); poDrawStrip(); }

@@ -1102,6 +1102,11 @@ function whoseTurn(stage, role, twoStep){
   const p = ROLE_PEOPLE[owner] || {name:owner, initials:'?'};
   return {mine: role === owner, role:owner, who:p.name, initials:p.initials};
 }
+/* The same answer, for the panel. `state` is a module-level let, so it is not
+   on window and the panel cannot pass it in; it asks this instead. */
+window.kaiCurrentTurn = function(){
+  return whoseTurn(state.projectStage, state.role, state.twoStep);
+};
 
 const STAGES = [
   {id:'edit',          name:'Edit',           sub:'Draft',                 iframe:'ProjectReview_ScopePanel_ShopEdit.html'},

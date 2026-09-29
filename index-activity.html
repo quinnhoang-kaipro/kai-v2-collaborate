@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kai — Job Comprehensive (Activity variant)</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shell.css">
+</head>
+<body>
+  <!-- TOP BAR — demo-only chrome (demo picker · role picker · collapse). Kai
+       brand, project address, and the yellow stage CTA all moved out of this
+       nav; they either live inside the iframe or are gone entirely now. -->
+  <header class="tb">
+    <span class="tb-demo-label" aria-hidden="true">Demo Nav</span>
+    <span class="tb-sp"></span>
+
+    <!-- Demo trigger (to the left of the role picker) -->
+    <div class="tb-set" id="tbSet">
+      <button class="tb-set-btn" onclick="toggleSet(event)" aria-label="Demo scenarios" title="Demo scenarios">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="2.5"/><path d="M9 1.5v3M9 13.5v3M1.5 9h3M13.5 9h3M3.6 3.6l2.1 2.1M12.3 12.3l2.1 2.1M3.6 14.4l2.1-2.1M12.3 5.7l2.1-2.1"/></svg>
+        Demo
+      </button>
+      <div class="tb-set-menu" id="setMenu">
+        <div class="tb-set-h">Demo scenarios</div>
+        <div class="tb-presets" id="tbPresets"></div>
+        <div class="tb-set-h" style="margin-top:14px">Approval flow</div>
+        <div class="tb-set-row">
+          <div>
+            <div class="ll">2-step approval</div>
+            <div class="sub">Publishing becomes its own step after the review.</div>
+          </div>
+          <label class="tb-toggle"><input type="checkbox" id="twoStep" onchange="setTwoStep(this.checked)"><span class="sw"></span></label>
+        </div>
+        <!-- SCRATCH · picking a sidebar look. Goes with the sbopt-* rules in
+             panel.css once an option is chosen. -->
+        <div class="tb-set-h" style="margin-top:14px">Sidebar look</div>
+        <div class="tb-set-row">
+          <div>
+            <div class="ll">Group rows</div>
+            <div class="sub">Show the scope sidebar to compare.</div>
+          </div>
+          <div class="sb-opt-seg" id="sbOptSeg">
+            <button type="button" onclick="setSbOpt('')">Now</button>
+            <button type="button" onclick="setSbOpt('a')">A</button>
+            <button type="button" onclick="setSbOpt('b')">B</button>
+            <button type="button" onclick="setSbOpt('c')">C</button>
+          </div>
+        </div>
+        <div class="tb-set-foot">
+          <button class="reset" onclick="resetDemo()">Reset demo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Role switcher -->
+    <div class="tb-role" id="tbRole">
+      <button class="tb-role-btn" onclick="toggleRole(event)">
+        Role · <span class="who" id="roleLabel">Admin</span>
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4.5l3 3 3-3"/></svg>
+      </button>
+      <div class="tb-role-menu" id="roleMenu"></div>
+    </div>
+
+    <!-- Stage CTA host removed — the primary action moved into the ScopePanel
+         toolbar. Kept as a hidden stub so any code that writes into it is safe. -->
+    <div class="tb-actions" id="tbActions" hidden></div>
+
+    <!-- Collapse the black bar to reclaim vertical space. Toggled via localStorage. -->
+    <button class="tb-collapse" id="tbCollapse" onclick="toggleTopBar()" aria-label="Hide top bar" title="Hide top bar">
+      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5l3-3 3 3"/></svg>
+    </button>
+  </header>
+
+<div class="app-shell">
+<!-- Global primary nav — collapsed left rail. Permanent decoration for
+     the demo (icons + labels are baked into the SVG). The top ~43px of
+     the source SVG holds an arrow chevron; we shift the SVG up so that
+     area is clipped and put the Kai wordmark in a white box here
+     instead — matches Kai's design system. -->
+<aside class="global-nav" aria-label="Primary navigation">
+  <div class="global-nav-logo" aria-label="Kai">
+    <svg viewBox="175 0 260 117" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#1A1A1A" d="M357.442 65.6901C357.442 57.263 357.442 48.8433 357.442 40.4162C357.442 27.9084 350.638 19.4813 338.073 16.6772C329 14.6553 320.244 15.3785 312.224 20.5144C305.794 24.632 302.149 30.5871 301.221 38.1877C300.831 41.3681 301.295 41.0435 297.936 41.0582C293.768 41.073 289.592 40.977 285.424 41.1025C283.561 41.1541 283.104 40.4457 283.244 38.7338C284.275 26.0267 289.82 15.8212 300.227 8.44935C309.683 1.74899 320.465 -0.33933 331.828 0.0443902C340.04 0.317422 348.045 1.63831 355.491 5.4091C364.888 10.1687 370.603 17.8357 373.379 27.8936C374.816 33.096 375.361 38.3943 375.368 43.759C375.397 58.3921 375.368 73.0325 375.39 87.6655C375.39 88.9495 375.419 90.263 375.677 91.5175C376.745 96.8084 380.862 99.6494 386.894 99.3616C389.525 99.2386 390.841 100.535 390.841 103.25C390.841 106.881 390.819 110.504 390.856 114.135C390.863 115.183 390.672 115.958 389.479 116.127C380.81 117.382 372.51 116.644 365.382 110.977C359.851 106.579 357.73 100.365 357.582 93.5468C357.384 84.2637 357.531 74.9806 357.531 65.6975C357.501 65.6975 357.465 65.6975 357.435 65.6975L357.442 65.6901Z"/>
+      <path fill="#1A1A1A" d="M279.915 3.03295C279.282 3.77087 278.928 4.23576 278.516 4.64162C261.239 21.9238 243.946 39.1986 226.669 56.4882C223.745 59.4104 223.841 58.6503 226.654 61.4692C243.394 78.2496 260.171 94.993 276.947 111.744C277.978 112.777 279.105 113.714 280.188 114.696C280.121 114.88 280.048 115.065 279.982 115.242C279.37 115.293 278.766 115.389 278.155 115.389C271.284 115.397 264.413 115.448 257.542 115.338C256.51 115.323 255.236 114.814 254.507 114.091C243.91 103.582 233.386 93.0007 222.839 82.4483C217.412 77.0172 211.999 71.5861 206.512 66.214C205.547 65.2695 205.128 64.3249 205.164 62.9819C205.245 60.2147 205.105 57.4475 205.238 54.6803C205.282 53.7947 205.65 52.71 206.254 52.0975C222.272 35.9886 238.342 19.9314 254.434 3.89632C254.986 3.34287 255.884 2.83371 256.621 2.82633C263.919 2.74515 271.225 2.77467 278.523 2.78943C278.818 2.78943 279.113 2.88536 279.901 3.02557L279.915 3.03295Z"/>
+      <path fill="#1A1A1A" d="M348.722 44.6225C348.722 46.2164 348.722 47.6037 348.722 48.991C348.722 51.7582 348.663 54.5254 348.744 57.2927C348.788 58.6799 348.28 59.167 346.925 59.44C336.224 61.5948 325.524 63.7569 314.867 66.1108C310.735 67.0259 306.773 68.5755 303.29 71.114C297.914 75.0324 296.411 80.4487 297.324 86.7506C298.223 92.9934 302.082 96.779 307.885 98.4983C316.959 101.184 326.039 100.417 334.833 97.325C339.185 95.7902 343.228 93.355 347.411 91.3331C347.721 91.1855 348.037 91.0453 348.501 90.8313C348.59 91.3995 348.707 91.8054 348.715 92.2038C348.73 96.5724 348.774 100.941 348.671 105.302C348.656 106.01 348.126 106.97 347.536 107.353C335.532 115.212 322.541 118.511 308.283 115.626C299.32 113.81 291.455 110.01 285.386 102.919C274.811 90.5583 275.864 66.6569 295.447 57.2336C301.743 54.2007 308.335 52.1124 315.147 50.7694C325.553 48.7106 335.996 46.8363 346.432 44.8955C347.073 44.7775 347.735 44.7332 348.73 44.6151L348.722 44.6225Z"/>
+      <path fill="#1A1A1A" d="M406.682 58.237C406.682 40.4087 406.682 22.5731 406.682 4.74486C406.682 2.2802 406.682 2.2802 409.068 2.27282C413.487 2.27282 417.906 2.32447 422.317 2.2433C423.857 2.21379 424.298 2.76723 424.291 4.27259C424.254 40.3054 424.254 76.3383 424.291 112.371C424.291 113.869 423.871 114.437 422.325 114.408C417.788 114.327 413.244 114.319 408.708 114.408C407.058 114.445 406.645 113.869 406.645 112.283C406.697 94.2698 406.675 76.2497 406.675 58.237H406.682Z"/>
+      <path fill="#1A1A1A" d="M180.721 58.4805C180.721 40.7039 180.721 22.9347 180.721 5.15811C180.721 3.43628 181.607 2.57291 183.38 2.56799C187.614 2.56799 191.849 2.64916 196.084 2.5311C197.829 2.47944 198.249 3.0993 198.249 4.75225C198.205 24.9271 198.219 45.0946 198.219 65.2694C198.219 80.8913 198.219 96.5131 198.219 112.128C198.219 113.785 197.367 114.614 195.664 114.614C191.37 114.614 187.069 114.548 182.776 114.651C181.141 114.688 180.691 114.135 180.699 112.533C180.75 94.5133 180.728 76.4932 180.728 58.4731L180.721 58.4805Z"/>
+    </svg>
+  </div>
+  <div class="global-nav-body">
+    <nav class="gnav">
+    <button class="gnav-item on" type="button" aria-current="page"><span class="gnav-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 1.5H0.5V10.5H9.5V1.5Z"/><path d="M22.5 1.5H13.5V10.5H22.5V1.5Z"/><path d="M9.5 14.5H0.5V23.5H9.5V14.5Z"/><path d="M22.5 14.5H13.5V23.5H22.5V14.5Z"/></svg></span><span class="lbl">Dashboard</span></button>
+    <button class="gnav-item" type="button"><span class="gnav-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 23.5L4.5 11V5L12 0.5L19.5 5V11L12 23.5Z"/><path d="M8.5 6.59207L12 4.51807L15.5 6.59207V10.4441L12 12.5181L8.5 10.4441V6.59207Z"/></svg></span><span class="lbl">Markets</span></button>
+    <button class="gnav-item" type="button"><span class="gnav-ico"><svg viewBox="0 0 26 24" aria-hidden="true"><path d="M9.19601 9.56611L15.5606 3.9971L21.9252 9.56611V15.1351C21.9252 15.5571 21.9252 16.3019 21.9252 16.7263C21.5009 16.7263 20.756 16.7263 20.334 16.7263H10.7872C10.3652 16.7263 9.30209 16.7263 9.19601 16.7263C9.19601 16.4218 9.19601 15.5571 9.19601 15.1351V9.56611Z"/><path d="M3.71268 11.9161L10.0773 6.34711L16.4418 11.9161V17.4851C16.4418 17.9071 16.4418 18.652 16.4418 19.0763C16.0175 19.0763 15.2727 19.0763 14.8507 19.0763H5.30382C4.88183 19.0763 3.81875 19.0763 3.71268 19.0763C3.71268 18.7718 3.71268 17.9071 3.71268 17.4851V11.9161Z" style="fill:#1A1A1A"/></svg></span><span class="lbl">Properties</span></button>
+    <button class="gnav-item" type="button"><span class="gnav-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.9992 0.500244L7.99927 5.50015L18.499 15.9998L23.4989 10.9999L12.9992 0.500244Z"/><path d="M14.25 11.75L2.5 23.5L1 23L0.5 21.5L12.25 9.75"/><path d="M17.25 4.75L19 3L21 5L19.25 6.75"/></svg></span><span class="lbl">Contractors</span></button>
+    <button class="gnav-item" type="button"><span class="gnav-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.5 8.5L0.5 4.5L12 0.5L23.5 4.5L11.5 8.5Z"/><path d="M23.5 4.5V18.5L11.5 23.5L0.5 18.5V4.5"/><path d="M11.5 8.5V23.5"/><path d="M6 6.50003L17.625 2.45703"/></svg></span><span class="lbl">Products</span></button>
+    <button class="gnav-item" type="button"><span class="gnav-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22.5 1.5H0.5V23.5H22.5V1.5Z"/><path d="M0.5 7.5H22.5"/><path d="M7.5 7.5V23.5"/><path d="M7.5 15.5H22.5"/></svg></span><span class="lbl">Templates</span></button>
+    <button class="gnav-item" type="button"><span class="gnav-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.5 13L7.5 14.5L3.5 13V7.5L7.5 6L11.5 7.5V13Z"/><path d="M14.5 21.5V17L7.5 15.5L0.5 17V21.5"/><path d="M21.5 13L18.5 14.5L15.5 13V9.5L18.5 8L21.5 9.5V13Z"/><path d="M23.5 21.5V17L18.5 15.5L16.5 16.1"/></svg></span><span class="lbl">Users</span></button>
+    <span class="gnav-sp"></span>
+    <button class="gnav-item" type="button"><span class="gnav-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 7.5H20.5"/><path d="M2.5 7.5H5.5"/><path d="M10.5 17.5H2.5"/><path d="M20.5 17.5H17.5"/><path d="M7.232 10.5L5.5 7.5L7.232 4.5H10.768L12.5 7.5L10.768 10.5H7.232Z"/><path d="M12.232 20.5L10.5 17.5L12.232 14.5H15.768L17.5 17.5L15.768 20.5H12.232Z"/></svg></span><span class="lbl">Org Settings</span></button>
+  </nav>
+  </div>
+</aside>
+<div id="app">
+
+  <!-- Reveal strip: appears at top when the black bar is collapsed. Click to bring it back. -->
+  <button class="tb-reveal" id="tbReveal" onclick="toggleTopBar()" aria-label="Show top bar" title="Show top bar">
+    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"/></svg>
+  </button>
+
+  <!-- APP TOOLBAR — Kai identity + inline progress stepper + primary CTA + avatar.
+       Consolidated: the stepper now lives inside this dark bar; the Attention
+       filter moved down to the right panel's tab bar; Kaiizen + bell removed. -->
+  <div class="app-toolbar" id="appToolbar">
+    <!-- Kai wordmark moved to the top of the global left rail (in a white
+         box) so the top toolbar no longer duplicates the brand. -->
+    <span class="tb-address">3484 South Main Street</span>
+    <!-- Group by + Filters moved to the right panel's work-hdr tab bar. -->
+    <!-- Inline progress stepper (renderStages writes into #stages). -->
+    <div class="stages" id="stages"></div>
+    <!-- Cancel Change Order — only shown when the iframe reports staged
+         change-order edits (kai-edit-mode: on:true) AND the stage is one
+         where change orders happen (published / closeout). Ghost button
+         sits to the LEFT of the primary CTA so the destructive action
+         doesn't pull focus. -->
+    <button class="btn-ghost" id="appCancelCoBtn" onclick="triggerIframeCancelCo()" hidden>Cancel change order</button>
+    <!-- Generic secondary CTA, to the left of the primary. Label and handler are
+         set by syncAppApproveBtn; hidden unless a branch there claims it. Used
+         for the manager's Approve alongside Hand off at review. -->
+    <button class="btn-ghost" id="appSecondBtn" hidden></button>
+    <span class="btn-tooltip-wrap" id="appApproveWrap">
+      <button class="btn-primary" id="appApproveBtn" onclick="triggerIframeApprove()">Approve scope</button>
+      <span class="btn-tooltip" id="appApproveTip" hidden>All tasks must be marked as Completed before you can submit the closeout.</span>
+    </span>
+    <button class="app-notif" aria-label="Notifications" title="Notifications">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-miterlimit="10">
+        <path d="M22 19.65H2L5 16.15V7.15002L12 2.65002L19 7.15002V16.15L22 19.65Z"/>
+        <path d="M12 2.65002V0.650024"/>
+        <path d="M10 19.65V21.65L12 22.65L14 21.65V19.65"/>
+      </svg>
+    </button>
+    <!-- The viewer's own identity. Was hidden; it's shown now because it is one
+         half of the "is this my turn" comparison — the other half is the turn
+         marker on the stepper's active node. -->
+    <span class="avatar" id="meAvatar" style="margin:0 16px 0 12px">QH</span>
+  </div>
+
+  <!-- UPPER NAV: just the state bar now. Stepper moved into the app-toolbar. -->
+  <div class="nav-top">
+    <!-- State bar (V3 DRAFT · Editing · Submit for review, etc.) -->
+    <!-- State bar moved into the iframe's sidebar (right under the SCOPE
+         header). This shell element is retained as a hidden stub so the
+         legacy renderVersionNotice() call sites don't crash. -->
+    <div class="ver-notice" id="verNotice" hidden style="display:none!important"></div>
+    <!-- Hidden stub kept so any legacy code that writes into them is safe. -->
+    <div id="actMsg" hidden></div>
+    <div id="stageCaps" hidden></div>
+  </div>
+
+  <!-- Secondary action bar (Send back to draft, Re-open review, etc.).
+       Hidden entirely when no secondary buttons apply for the current stage. -->
+  <div class="actbar" id="actbar">
+    <div class="actbar-actions" id="actActions"></div>
+  </div>
+
+  <!-- IFRAME HOST -->
+  <div class="host" id="host">
+    <!-- Fed from the embedded panel source below via srcdoc, not a file. -->
+    <iframe id="iframe" title="Kai scope panel"></iframe>
+    <div class="lock-overlay">
+      <div class="lock-overlay-inner" id="lockInner"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- Modal -->
+<div class="modal-scrim" id="modalScrim" onclick="closeModal()"></div>
+<div class="modal" id="modal"></div>
+
+<div id="toast"></div>
+
+<!-- The panel document (previously inline here as a text/html script block)
+     now lives in js/panel-doc.js, so this page and the focused
+     Artifact-Change-Order-View load one copy of it. shell.js reads it as
+     window.KAI_PANEL_SRC and must load after it. -->
+<!-- ── the activity variant ──────────────────────────────────────
+     index.html with the Overview's activity feed on and carrying the detail
+     the tab dropped: "5 groups · 7 tasks changed in Change Order 2" back on
+     the document rows, and "11 photos · 4 notes added" back at the head of
+     each site band. Set before the shell loads, because KAI_PANEL_DOC reads
+     it when it builds the panel's boot script.
+
+     One flag rather than a forked overview.js: both rows are still built
+     from the same data, they were only kept off the feed, so the two pages
+     stay one implementation and cannot drift. -->
+<script>window.__KAI_ACTIVITY_FULL = true;
+            window.__KAI_ACTIVITY_SENTENCES = true;</script>
+<script src="js/panel-doc.js"></script>
+<script src="js/shell.js"></script>
+</body>
+</html>

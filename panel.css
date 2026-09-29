@@ -4567,9 +4567,9 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    with the page's ground between them is how every other tab is built, and a
    tab that invents its own surface reads as a different product.
    ══════════════════════════════════════════════════════════════════════ */
-.ov-root{padding:18px 22px 40px;background:var(--app-bg);min-height:100%}
+.ov-root{padding:18px 22px 40px;background:var(--app-bg);min-height:100%;container:ov-root / inline-size}
 /* The module. Same numbers as .sec-taskcard in the Editor. */
-.ov-mod{background:var(--white);border:1px solid var(--stroke);padding:16px 18px;margin-bottom:14px}
+.ov-mod{background:var(--white);border:1px solid var(--stroke);padding:14px 18px;margin-bottom:12px}
 /* The head module is two columns: the photo, and everything said about the
    property. The photo spans the title and the figures rather than sitting
    beside the title alone, which would have left a column of white under it. */
@@ -4579,16 +4579,32 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    the same one that already sits between the title and the figures, so the
    module reads as three bands of one thing rather than two blocks joined. */
 .ov-head-fields{grid-column:1/-1;display:flex;align-items:flex-start;gap:18px;
-  margin-top:16px;padding-top:16px;border-top:1px solid var(--stroke)}
-.ov-head-fields .ov-fields{flex:1;min-width:0;
-  grid-template-columns:minmax(0,.8fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.8fr) minmax(0,1.1fr)}
+  margin-top:11px;padding-top:11px;border-top:1px solid var(--stroke)}
+.ov-head-fields .ov-fields{flex:1;min-width:0}
+/* The column counts follow the module's width, not the window's, because
+   this pane is narrow long before the window is. */
+.ov-mod-head{container-type:inline-size}
+.ov-head-band > .ov-fields{grid-template-columns:repeat(5,minmax(0,1fr))}
+@container (max-width:720px){
+  .ov-head-band > .ov-fields{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
+/* The band's label rides at the head of its own row rather than sitting on a
+   line by itself — a line for two words is the kind of height this module was
+   spending too much of. Where the pane is too narrow to spare the column, the
+   values drop below the label instead of laddering into one field per line;
+   the min-width is what decides, since a media query here would measure the
+   window and the thing that actually varies is this pane. */
+.ov-head-band{flex-wrap:wrap}
+.ov-head-band > .ov-sec-h{margin:0;flex-shrink:0;width:96px;padding-top:2px}
+.ov-head-band > .ov-fields{min-width:300px}
 .ov-head-fields .ov-sec-edit{flex-shrink:0}
 .ov-head-r{min-width:0}
 /* The photo takes the height of the column beside it rather than a ratio of
    its own: at 4/3 it ran 20px past the figures and left the module sitting on
    a bottom edge that was 36px below the last thing said on the right, against
    16px above the first. Both columns now end on the same line. */
-.ov-photo{position:relative;height:100%;min-height:120px;overflow:hidden;background:var(--sunken);
+.ov-photo{position:relative;height:100%;min-height:104px;overflow:hidden;background:var(--sunken);
   border:1px solid var(--stroke);margin:0}
 .ov-photo figcaption{position:absolute;left:0;bottom:0;padding:5px 9px;
   background:rgba(26,26,26,.72);color:var(--white);font-family:var(--mono);font-size:8px;
@@ -4601,37 +4617,38 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 }
 
 /* ── title ── */
-.ov-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px}
+.ov-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:11px}
 .ov-head h2{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-.005em;
   line-height:1.2;margin:0}
 .ov-head-sub{font-size:13px;color:var(--t2);margin-top:3px}
-/* ── the three-part standing ──
-   Programme · phase · state, reading left to right and getting lighter as it
-   goes, so the darkest block is the phase the project is actually in and the
-   outlined one is the part still moving. */
-.ov-standing{margin-left:auto;display:flex;flex-shrink:0;align-self:flex-start;margin-top:14px}
-.ov-stand{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.11em;
-  text-transform:uppercase;padding:6px 12px;white-space:nowrap;
-  display:inline-flex;align-items:center}
-.ov-stand-programme{background:var(--t3);color:var(--white)}
-.ov-stand-phase{background:var(--ink);color:var(--white)}
-.ov-stand-state{background:var(--white);color:var(--ink);box-shadow:inset 0 0 0 1px var(--stroke)}
-@media (max-width:760px){
-  .ov-head{flex-wrap:wrap}
-  .ov-standing{margin-left:0;flex-basis:100%}
-}
-
 /* ── the figure strip ──
    Five numbers at figure size between two hairlines. The two counts are
    buttons into the drawers, so they carry the only underline on the page. */
-.ov-stats{display:flex;flex-wrap:wrap;gap:0 40px;padding:14px 0 16px;
+.ov-stats{display:flex;flex-wrap:wrap;gap:0 40px;padding:10px 0 11px;
   border-top:1px solid var(--stroke)}
-.ov-stat{display:flex;flex-direction:column;gap:3px;align-items:flex-start;
+.ov-stat{display:flex;flex-direction:column;gap:2px;align-items:flex-start;
   padding:0;margin:0;border:0;background:none;text-align:left;font:inherit;color:inherit}
 .ov-stat-v{font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:-.015em;
   color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.1}
 .ov-stat-k{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3)}
+/* One figure leads. The budget is the number this tab is opened to check,
+   so it is the only one at figure size, on the title's line at the right —
+   read level with the address, right-aligned so its edge is the card's.
+   Everything under the title is one smaller size, in a grid of three so the
+   rows stay even. */
+.ov-head > .ov-stat.is-lead{margin-left:auto;flex-shrink:0;align-items:flex-end;text-align:right}
+.ov-stat.is-lead .ov-stat-v{font-size:26px}
+.ov-stats{display:block}
+/* The third column — whose turn, and when it last moved — is the strip's
+   right edge, with nothing beside it, so it takes the width its values need
+   and keeps the date and time on one line. */
+.ov-stats-rest{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px 24px}
+.ov-stats-rest > .ov-stat:nth-child(3n) .ov-stat-v{white-space:nowrap}
+.ov-stats-rest .ov-stat-v{font-family:var(--body);font-size:13.5px;font-weight:600;
+  letter-spacing:0;line-height:1.35}
+.ov-stat.is-turn .ov-stat-v{display:inline-flex;align-items:center;gap:6px}
+.ov-turn-dot{width:6px;height:6px;border-radius:50%;background:var(--ink);flex-shrink:0}
 .ov-stat.is-link{cursor:pointer}
 .ov-stat.is-link .ov-stat-v{border-bottom:1.5px solid var(--stroke);transition:border-color .12s}
 .ov-stat.is-link:hover .ov-stat-v{border-bottom-color:var(--ink)}
@@ -4668,7 +4685,7 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 
 /* Label above value, in as many columns as the width allows. */
 .ov-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));
-  gap:14px 24px;margin:0}
+  gap:11px 24px;margin:0}
 .ov-field{display:block;min-width:0}
 .ov-field dt{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3);margin-bottom:3px}
@@ -4689,40 +4706,32 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    fields sit in the head module now, on auto-fit tracks that need no
    breakpoints of their own. */
 
-/* ── getting in ──
-   Codes are read aloud over a phone, so they are the largest mono on the
-   page and the only thing here that is spaced out. */
-/* ── Getting in ──
-   No longer a module of its own — it is the last row of the property block,
-   full-bleed to that block's edges so the rule above it reads as a divider
-   inside one card rather than the seam between two. Shut, it is the title
-   and the way in, nothing else. */
-.ov-job .ov-access{margin:15px -18px -16px;border-top:1px solid var(--stroke)}
-.ov-access-bar{display:flex;align-items:center;gap:18px;width:100%;
-  padding:11px 18px;background:none;border:0;cursor:pointer;font:inherit;text-align:left}
-.ov-access-bar:hover{background:var(--app-bg)}
-.ov-access-bar:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
-.ov-access-bar .ov-sec-h{margin:0;flex-shrink:0}
-/* A caret on its own says "this does something", not what. The label names
-   what is behind it, so the bar reads as a way in rather than a row that
-   happens to be clickable — and it underlines on hover the way every other
-   text control in the tab does. */
-.ov-access-cta{display:inline-flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0}
-.ov-access-cta-t{font-size:11.5px;font-weight:600;color:var(--t2);
-  border-bottom:1.5px solid var(--stroke);transition:border-color .12s,color .12s}
-.ov-access-bar:hover .ov-access-cta-t{color:var(--ink);border-bottom-color:var(--ink)}
+/* ── Access info ──
+   A cell of Property info: labelled like its neighbours, with the way to
+   open it as the value. A caret on its own says "this does something", not
+   what; the word says which way it goes, and it underlines on hover the way
+   every other text control in the tab does. */
+.ov-access-cta{display:inline-flex;align-items:center;gap:6px;
+  padding:0;background:none;border:0;cursor:pointer;font:inherit}
+.ov-access-cta:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.ov-access-cta-t{font-size:13.5px;color:var(--ink);line-height:1.35;
+  border-bottom:1px solid var(--stroke);transition:border-color .12s}
+.ov-access-cta:hover .ov-access-cta-t{border-bottom-color:var(--ink);border-bottom-width:1.5px}
 .ov-access-car{width:10px;height:10px;flex-shrink:0;stroke:var(--t3);
   stroke-width:1.8;fill:none;transition:transform .14s}
-.ov-access-bar:hover .ov-access-car{stroke:var(--ink)}
-.ov-access-bar[aria-expanded="true"] .ov-access-car{transform:rotate(180deg)}
-/* Open: the codes on one line, the note under them. Both indent to the bar's
-   own gutter so they hang under the title rather than restarting at the
-   card's edge. */
-.ov-access-body{padding:0 18px 14px}
+.ov-access-cta:hover .ov-access-car{stroke:var(--ink)}
+.ov-access-cta[aria-expanded="true"] .ov-access-car{transform:rotate(180deg)}
+/* Open: a row of the band under its fields, hung from the fields' edge
+   rather than the label's. */
+.ov-access-body{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px 30px;
+  flex-basis:100%;margin-left:114px;padding:12px 0 2px;border-top:1px dashed var(--stroke)}
 .ov-access-body[hidden]{display:none}
-.ov-access-codes{display:flex;flex-wrap:wrap;gap:6px 30px;padding-bottom:11px}
-.ov-access-note{display:flex;flex-direction:column;gap:4px}
-.ov-acc-pair{display:inline-flex;align-items:baseline;gap:8px;white-space:nowrap}
+/* Codes and the note share one row: each is a label over its value, so the
+   three labels sit on one line. The note takes the slack and drops to its
+   own line only when there is none. */
+.ov-access-codes{display:flex;flex-wrap:wrap;gap:12px 30px;flex-shrink:0}
+.ov-access-note{display:flex;flex-direction:column;gap:4px;flex:1 1 260px;min-width:0}
+.ov-acc-pair{display:inline-flex;flex-direction:column;gap:4px;white-space:nowrap}
 .ov-acc-k{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.09em;
   text-transform:uppercase;color:var(--t3)}
 .ov-acc-v{font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:.1em;color:var(--ink)}
@@ -5340,3 +5349,28 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .mkt-btn.is-primary{background:var(--accent);border-color:var(--accent-deep,var(--ink))}
 .mkt-btn.is-primary:hover{background:var(--accent-deep,var(--accent));border-color:var(--ink)}
 .mkt-btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+/* ── the head module on one set of columns ──
+   Wide enough, the whole module shares the fields' tracks: the band label,
+   five field columns, and the Edit. The photo takes the label's column and
+   the first field's, so the address and the grid under it land on the same
+   edges as Job type, Job manager and the rest below — rather
+   than each band spacing itself from wherever it happens to start. Subgrid
+   carries the tracks down into the bands and the figure strip. Narrower,
+   the module keeps its own layout above. Last in the file so it outranks
+   the rules it overrides at equal specificity. */
+@container ov-root (min-width:820px){
+  .ov-mod-head{grid-template-columns:96px repeat(5,minmax(0,1fr)) auto;column-gap:24px}
+  .ov-photo{grid-column:1 / 3}
+  .ov-head-r{grid-column:3 / -1;display:grid;grid-template-columns:subgrid;align-content:start}
+  .ov-head-r > .ov-head{grid-column:1 / -1}
+  .ov-head-r > .ov-stats{grid-column:1 / -1;display:grid;grid-template-columns:subgrid;gap:0 24px}
+  .ov-stats > .ov-stats-rest{grid-column:1 / 4;grid-template-columns:subgrid}
+  /* On the shared tracks the third column is Field agent's width, and the
+     time runs on into Template's, which is empty on this row. */
+  .ov-head-fields{grid-column:1 / -1;display:grid;grid-template-columns:subgrid;gap:0 24px}
+  .ov-head-fields > .ov-sec-h{grid-column:1;width:auto}
+  .ov-head-fields > .ov-fields{grid-column:2 / 7;grid-template-columns:subgrid;min-width:0}
+  .ov-head-fields > .ov-sec-edit{grid-column:7;justify-self:end}
+  .ov-head-fields > .ov-access-body{grid-column:2 / 7;margin:11px 0 0}
+}
