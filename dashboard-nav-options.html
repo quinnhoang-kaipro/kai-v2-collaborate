@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kai — Dashboard nav: combining the two controls</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shell.css">
+<style>
+/* ════════════════════════════════════════════════════════════════════
+   A study, not a screen. Five ways to make it read that the three tabs in
+   the black bar and the three tabs under it are not siblings — one picks
+   WHOSE jobs, the other picks WHAT STATE they are in, and today nothing
+   on the page says so.
+
+   Every option is live: click the tabs. What you are judging is whether the
+   arrangement tells you, without being told, that changing the top one
+   changes what the bottom one is counting.
+   ════════════════════════════════════════════════════════════════════ */
+html,body{overflow:auto;height:auto}
+body{background:var(--sunken);padding:34px 30px 80px;font-family:var(--body)}
+
+.pg-h{max-width:1180px;margin:0 auto 30px}
+.pg-h h1{font-family:var(--display);font-size:23px;font-weight:700;letter-spacing:-.01em;margin:0 0 8px}
+.pg-h p{font-size:14px;line-height:1.55;color:var(--t2);margin:0;max-width:70ch}
+.pg-h .k{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink)}
+
+.opt{max-width:1180px;margin:0 auto 26px;background:var(--white);border:1px solid var(--stroke)}
+.opt-h{display:flex;align-items:baseline;gap:12px;padding:15px 20px 13px;border-bottom:1px solid var(--stroke)}
+.opt-n{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--white);background:var(--ink);padding:4px 8px;line-height:1}
+.opt-t{font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:-.005em;margin:0}
+.opt-sub{font-size:12.5px;color:var(--t3);margin-left:auto}
+.opt-body{background:var(--app-bg);padding:0 0 18px}
+.opt-note{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 26px;
+  padding:14px 20px 16px;border-top:1px solid var(--stroke);background:var(--white)}
+.opt-note h4{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--t3);margin:0 0 5px}
+.opt-note p{font-size:13px;line-height:1.5;color:var(--t2);margin:0}
+.opt-note .for h4{color:var(--ink)}
+@media (max-width:820px){ .opt-note{grid-template-columns:minmax(0,1fr);gap:14px} }
+
+/* ── the chrome each option is dressed in ─────────────────────────── */
+.frame{display:flex;align-items:stretch}
+.brand{flex:0 0 72px;width:72px;background:var(--white);display:flex;align-items:center;
+  justify-content:center;border-bottom:1px solid var(--stroke)}
+.brand svg{height:16px;width:auto;display:block}
+.bar{flex:1;min-width:0;height:52px;background:var(--ink);display:flex;align-items:center;
+  gap:18px;padding:0 20px}
+.bar-title{font-family:var(--display);font-size:15px;font-weight:700;color:var(--white);
+  letter-spacing:-.01em;white-space:nowrap;margin:0;padding-right:18px;
+  border-right:1px solid rgba(255,255,255,.16)}
+.bar-title.is-plain{padding-right:0;border-right:0}
+.sp{flex:1}
+.who{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:rgba(255,255,255,.4)}
+.me{width:25px;height:25px;background:var(--accent);color:var(--ink);display:inline-flex;
+  align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700}
+
+/* Tabs in the black bar — the shipped treatment. */
+.tabs{display:flex;align-items:center;gap:2px}
+.tab{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:rgba(255,255,255,.5);background:none;border:0;
+  padding:16px 11px;cursor:pointer;position:relative;transition:color .12s}
+.tab:hover{color:rgba(255,255,255,.85)}
+.tab .n{color:rgba(255,255,255,.38);margin-left:6px;font-variant-numeric:tabular-nums}
+.tab.on{color:var(--white)}
+.tab.on .n{color:var(--accent)}
+.tab.on::after{content:'';position:absolute;left:11px;right:11px;bottom:9px;height:2px;background:var(--accent)}
+/* The second group in the bar, when an option puts one there. */
+.tabs.is-second .tab{font-size:11px}
+.bar-div{width:1px;align-self:stretch;margin:14px 0;background:rgba(255,255,255,.16);flex-shrink:0}
+
+/* The page under the bar. */
+.page{display:flex}
+.rail{flex:0 0 72px;background:var(--white);border-right:1px solid var(--stroke);min-height:118px}
+.pane{flex:1;min-width:0;padding:16px 20px 0}
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding-bottom:13px;border-bottom:1px solid var(--stroke)}
+
+/* Outlined segmented control — the shipped state tabs. */
+.seg{display:flex}
+.seg button{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;height:29px;padding:0 12px;border:1px solid var(--stroke);
+  background:var(--white);color:var(--t3);cursor:pointer;margin-left:-1px;line-height:1;
+  transition:color .12s,border-color .12s}
+.seg button:first-child{margin-left:0}
+.seg button.on{background:var(--ink);border-color:var(--ink);color:#fff;position:relative;z-index:1}
+.seg button:hover:not(.on){color:var(--ink);border-color:var(--ink);position:relative;z-index:1}
+.seg .n{margin-left:5px;color:var(--midtone);font-variant-numeric:tabular-nums}
+.seg button.on .n{color:rgba(255,255,255,.55)}
+/* The quieter of the two, when an option needs to rank them. */
+.seg.is-soft button.on{background:var(--sunken);border-color:var(--ink);color:var(--ink)}
+.seg.is-soft button.on .n{color:var(--t3)}
+
+.filters,.sortish{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;height:29px;padding:0 10px;border:1px solid var(--stroke);
+  background:var(--white);color:var(--ink);display:inline-flex;align-items:center;gap:6px}
+.sortish{margin-left:auto;color:var(--t2)}
+.late{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--error)}
+.car{width:9px;height:9px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.6}
+
+/* The stand-in for the list, so each option is judged with something under it. */
+.rows{padding:14px 0 0}
+.row{height:11px;background:var(--sunken);margin-bottom:9px}
+.row:nth-child(2){width:88%}
+.row:nth-child(3){width:94%}
+.row:nth-child(4){width:80%}
+
+/* ── B · the crumb ── */
+.crumb{display:inline-flex;align-items:center;gap:8px;flex-shrink:0}
+.crumb-who{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink)}
+.crumb-car{width:8px;height:8px;stroke:var(--t3);fill:none;stroke-width:1.8}
+
+/* ── C · both controls in the toolbar ── */
+.pillset{display:flex;align-items:center;gap:2px;background:var(--sunken);
+  border:1px solid var(--stroke);padding:2px}
+.pill{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;height:23px;padding:0 10px;border:0;background:none;
+  color:var(--t3);cursor:pointer;line-height:1;transition:color .12s,background .12s}
+.pill:hover:not(.on){color:var(--ink)}
+.pill.on{background:var(--white);color:var(--ink);box-shadow:0 1px 0 rgba(26,26,26,.1)}
+.pill .n{margin-left:5px;color:var(--midtone);font-variant-numeric:tabular-nums}
+.tool-div{width:1px;height:20px;background:var(--stroke);flex-shrink:0;margin:0 4px}
+
+/* ── D · one control, a matrix behind it ── */
+.scope{position:relative;flex-shrink:0}
+.scope-btn{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;height:29px;padding:0 11px;border:1px solid var(--ink);
+  background:var(--ink);color:var(--white);cursor:pointer;display:inline-flex;
+  align-items:center;gap:8px;line-height:1}
+.scope-btn .sep{color:rgba(255,255,255,.35)}
+.scope-btn .n{color:var(--accent);font-variant-numeric:tabular-nums}
+.scope-menu{position:absolute;top:calc(100% + 6px);left:0;z-index:40;background:var(--white);
+  border:1px solid var(--stroke);box-shadow:0 12px 30px rgba(26,26,26,.16);padding:10px}
+.scope-menu[hidden]{display:none}
+.mx{border-collapse:collapse}
+.mx th,.mx td{padding:0;text-align:left}
+.mx thead th{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--t3);padding:0 10px 7px;text-align:center}
+.mx tbody th{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--t3);padding-right:12px;white-space:nowrap}
+.mx-c{width:100%;min-width:62px;height:31px;border:1px solid var(--stroke);background:var(--white);
+  color:var(--ink);font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;
+  margin:0 0 -1px -1px;font-variant-numeric:tabular-nums;transition:background .12s}
+.mx-c:hover{background:var(--sunken)}
+.mx-c.on{background:var(--ink);color:var(--white);position:relative;z-index:1}
+.mx-c.is-zero{color:var(--stroke)}
+.mx-c.is-zero.on{color:rgba(255,255,255,.45)}
+.mx-foot{font-size:11.5px;color:var(--t3);padding:9px 2px 1px;line-height:1.4;max-width:250px}
+/* The grid is a layer, so it would otherwise open on top of this option's own
+   explanation. D keeps room under its list for it. */
+[data-opt="d"] .rows{padding-bottom:128px}
+
+/* ── E · the sentence ── */
+.sentence{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--t2);
+  flex-shrink:0;flex-wrap:wrap}
+.sen-pick{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink);background:none;border:0;border-bottom:1.5px solid var(--stroke);
+  padding:2px 1px 2px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;
+  transition:border-color .12s}
+.sen-pick:hover{border-bottom-color:var(--ink)}
+.sen-pick .n{color:var(--midtone);font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+
+<div class="pg-h">
+  <h1>Whose jobs, and in what state</h1>
+  <p>Two controls, two questions. <span class="k">My work · My team · All jobs</span> picks
+     <em>whose</em> jobs; <span class="k">Active · Completed · Archived</span> picks <em>what state</em>
+     they are in. Today they sit in different bars in the same visual language, which makes them
+     read as two sets of tabs rather than one narrowing the other — and the counts move when you
+     switch the top one, with nothing on the page explaining why.</p>
+  <p style="margin-top:9px">Every option below is live. Click the tabs and watch the other
+     control's counts change; that is the relationship each arrangement is trying to make obvious.</p>
+</div>
+
+<!-- ══ 0 · as built ═══════════════════════════════════════════════ -->
+<section class="opt" data-opt="now">
+  <div class="opt-h">
+    <span class="opt-n">Now</span>
+    <h2 class="opt-t">As built</h2>
+    <span class="opt-sub">The baseline to judge against</span>
+  </div>
+  <div class="opt-body"></div>
+  <div class="opt-note">
+    <div><h4>What it gets right</h4><p>Both controls are visible at once, and the state tabs
+      sit directly above the list they filter.</p></div>
+    <div><h4>The problem</h4><p>Nothing marks one as subordinate to the other. Two rows of
+      counted tabs, one above the other, read as peers — so the counts appear to contradict
+      each other rather than to nest.</p></div>
+  </div>
+</section>
+
+<!-- ══ A ══════════════════════════════════════════════════════════ -->
+<section class="opt" data-opt="a">
+  <div class="opt-h">
+    <span class="opt-n">A</span>
+    <h2 class="opt-t">One bar, two groups</h2>
+    <span class="opt-sub">Both sets of tabs move into the black bar</span>
+  </div>
+  <div class="opt-body"></div>
+  <div class="opt-note">
+    <div class="for"><h4>Why it might work</h4><p>One place to look. Side by side on a single
+      line, left to right, they read as a sentence — my work, active — instead of as two
+      competing rows.</p></div>
+    <div><h4>What it costs</h4><p>It puts the state tabs a long way from the list they filter,
+      and the divider is doing all the work of saying these are two questions. A narrow window
+      has to drop one group somewhere.</p></div>
+  </div>
+</section>
+
+<!-- ══ B ══════════════════════════════════════════════════════════ -->
+<section class="opt" data-opt="b">
+  <div class="opt-h">
+    <span class="opt-n">B</span>
+    <h2 class="opt-t">Say the nesting out loud</h2>
+    <span class="opt-sub">Smallest change — the toolbar names what it is inside of</span>
+  </div>
+  <div class="opt-body"></div>
+  <div class="opt-note">
+    <div class="for"><h4>Why it might work</h4><p>Nothing moves. The toolbar simply leads with
+      the view it is sitting inside, so the counts have a stated subject: these three numbers
+      are <em>within My work</em>. One line of markup, and it survives any later change to
+      either control.</p></div>
+    <div><h4>What it costs</h4><p>It explains the relationship rather than showing it, and it
+      repeats the view's name on screen twice. The weakest option if the black bar is what
+      people are skipping past.</p></div>
+  </div>
+</section>
+
+<!-- ══ C ══════════════════════════════════════════════════════════ -->
+<section class="opt" data-opt="c">
+  <div class="opt-h">
+    <span class="opt-n">C</span>
+    <h2 class="opt-t">Both come down to the list</h2>
+    <span class="opt-sub">The black bar goes back to being chrome</span>
+  </div>
+  <div class="opt-body"></div>
+  <div class="opt-note">
+    <div class="for"><h4>Why it might work</h4><p>Everything that narrows the list lives with
+      the list, and the two controls are given different shapes — a soft pill group for whose,
+      the hard outlined segments for state — so they stop looking like the same control twice.
+      The black bar becomes navigation again.</p></div>
+    <div><h4>What it costs</h4><p>The busiest toolbar of the five, and it takes the view
+      switch out of the global bar where a reader might expect account-level things to live.</p></div>
+  </div>
+</section>
+
+<!-- ══ D ══════════════════════════════════════════════════════════ -->
+<section class="opt" data-opt="d">
+  <div class="opt-h">
+    <span class="opt-n">D</span>
+    <h2 class="opt-t">One control, a grid behind it</h2>
+    <span class="opt-sub">Click the black button</span>
+  </div>
+  <div class="opt-body"></div>
+  <div class="opt-note">
+    <div class="for"><h4>Why it might work</h4><p>The two questions are genuinely one choice,
+      so this makes them one control. The grid is the only option here that shows every count
+      at once — you can see that My team has nothing archived without switching to find out.</p></div>
+    <div><h4>What it costs</h4><p>Six visible tabs become one button, so nothing is switchable
+      in a single click any more, and the arrangement has to be opened before it teaches
+      anything. The biggest departure from what people use today.</p></div>
+  </div>
+</section>
+
+<!-- ══ E ══════════════════════════════════════════════════════════ -->
+<section class="opt" data-opt="e">
+  <div class="opt-h">
+    <span class="opt-n">E</span>
+    <h2 class="opt-t">A sentence with two blanks</h2>
+    <span class="opt-sub">Both picks inline, in reading order</span>
+  </div>
+  <div class="opt-body"></div>
+  <div class="opt-note">
+    <div class="for"><h4>Why it might work</h4><p>The grammar carries the relationship, which
+      no arrangement of tabs can do on its own: state qualifies jobs, and jobs belong to
+      someone. Quietest toolbar of the five.</p></div>
+    <div><h4>What it costs</h4><p>Two dropdowns instead of six tabs — slower for someone who
+      switches all day, and prose in a toolbar is a different register from the rest of the
+      product.</p></div>
+  </div>
+</section>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   One set of numbers behind all five, so they can be compared honestly:
+   an option that looks clear with flattering counts is not evidence.
+   Counts are per view AND state, which is the whole point — switching the
+   view changes what the state tabs are counting, and that is the thing
+   the arrangement has to make obvious.
+   ════════════════════════════════════════════════════════════════════ */
+var N = {
+  mine: {active:4, completed:3, archived:0, label:'My work'},
+  team: {active:3, completed:1, archived:2, label:'My team'},
+  all:  {active:7, completed:4, archived:2, label:'All jobs'}
+};
+var VIEWS  = ['mine','team','all'];
+var STATES = [['active','Active'],['completed','Completed'],['archived','Archived']];
+/* Each option keeps its own selection. Sharing one would mean clicking in B
+   silently rearranged C, and the point is to try them one at a time. */
+var SEL = {};
+
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+/* The view counts are scoped to the state on screen, exactly as the dashboard
+   does it — My work 4 next to Active 4 is the same four jobs counted twice, in
+   two controls, in two bars. That circularity is most of why the pair reads
+   badly, so the study has to reproduce it rather than quietly tidy it away. */
+function viewTotal(opt, v){ return N[v][SEL[opt].state]; }
+
+/* ── the pieces each option is assembled from ── */
+function barTabs(opt, second){
+  return '<nav class="tabs' + (second ? ' is-second' : '') + '">' + VIEWS.map(function(v){
+    return '<button class="tab' + (SEL[opt].view === v ? ' on' : '') + '" type="button"'
+      + ' data-act="view" data-v="' + v + '">' + esc(N[v].label)
+      + ' <span class="n">' + viewTotal(opt, v) + '</span></button>';
+  }).join('') + '</nav>';
+}
+function barStates(opt){
+  return '<nav class="tabs is-second">' + STATES.map(function(s){
+    return '<button class="tab' + (SEL[opt].state === s[0] ? ' on' : '') + '" type="button"'
+      + ' data-act="state" data-v="' + s[0] + '">' + esc(s[1])
+      + ' <span class="n">' + N[SEL[opt].view][s[0]] + '</span></button>';
+  }).join('') + '</nav>';
+}
+function segStates(opt, soft){
+  return '<div class="seg' + (soft ? ' is-soft' : '') + '" role="group" aria-label="Job state">'
+    + STATES.map(function(s){
+        return '<button type="button" class="' + (SEL[opt].state === s[0] ? 'on' : '') + '"'
+          + ' data-act="state" data-v="' + s[0] + '">' + esc(s[1])
+          + ' <span class="n">' + N[SEL[opt].view][s[0]] + '</span></button>';
+      }).join('') + '</div>';
+}
+function pillViews(opt){
+  return '<div class="pillset" role="group" aria-label="Whose jobs">' + VIEWS.map(function(v){
+    return '<button type="button" class="pill' + (SEL[opt].view === v ? ' on' : '') + '"'
+      + ' data-act="view" data-v="' + v + '">' + esc(N[v].label)
+      + ' <span class="n">' + viewTotal(opt, v) + '</span></button>';
+  }).join('') + '</div>';
+}
+var CARET = '<svg class="car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>';
+var FUNNEL = '<svg class="car" viewBox="0 0 14 14" aria-hidden="true">'
+  + '<path d="M1.5 2.5h11L8.2 7.6v4.2L5.8 12.5V7.6z"/></svg>';
+function toolRight(){
+  return '<span class="sortish">Sort: My turn ' + CARET + '</span>';
+}
+function filtersBtn(){ return '<span class="filters">' + FUNNEL + ' Filters ' + CARET + '</span>'; }
+function lateNote(opt){
+  var n = SEL[opt].state === 'active' ? 2 : 0;
+  return n ? '<span class="late">' + n + ' past due</span>' : '';
+}
+function rows(){ return '<div class="rows"><div class="row"></div><div class="row"></div>'
+  + '<div class="row"></div><div class="row"></div></div>'; }
+var MARK = document.querySelector('.brand svg');
+
+function shell(opt, barInner, toolInner){
+  return '<div class="frame">'
+    + '<div class="brand">' + KAI + '</div>'
+    + '<div class="bar">' + barInner
+      + '<span class="sp"></span>'
+      + '<span class="who">Kaiizen Testing</span><span class="me">Q</span>'
+    + '</div></div>'
+    + '<div class="page"><div class="rail"></div><div class="pane">'
+      + '<div class="toolbar">' + toolInner + '</div>' + rows()
+    + '</div></div>';
+}
+
+/* The Kai mark, so each option is seen in the corner it actually sits in. */
+var KAI = '<svg viewBox="175 0 260 117" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
++ '<path fill="#1A1A1A" d="M357.442 65.6901C357.442 57.263 357.442 48.8433 357.442 40.4162C357.442 27.9084 350.638 19.4813 338.073 16.6772C329 14.6553 320.244 15.3785 312.224 20.5144C305.794 24.632 302.149 30.5871 301.221 38.1877C300.831 41.3681 301.295 41.0435 297.936 41.0582C293.768 41.073 289.592 40.977 285.424 41.1025C283.561 41.1541 283.104 40.4457 283.244 38.7338C284.275 26.0267 289.82 15.8212 300.227 8.44935C309.683 1.74899 320.465 -0.33933 331.828 0.0443902C340.04 0.317422 348.045 1.63831 355.491 5.4091C364.888 10.1687 370.603 17.8357 373.379 27.8936C374.816 33.096 375.361 38.3943 375.368 43.759C375.397 58.3921 375.368 73.0325 375.39 87.6655C375.39 88.9495 375.419 90.263 375.677 91.5175C376.745 96.8084 380.862 99.6494 386.894 99.3616C389.525 99.2386 390.841 100.535 390.841 103.25C390.841 106.881 390.819 110.504 390.856 114.135C390.863 115.183 390.672 115.958 389.479 116.127C380.81 117.382 372.51 116.644 365.382 110.977C359.851 106.579 357.73 100.365 357.582 93.5468C357.384 84.2637 357.531 74.9806 357.531 65.6975C357.501 65.6975 357.465 65.6975 357.435 65.6975L357.442 65.6901Z"/>'
++ '<path fill="#1A1A1A" d="M279.915 3.03295C279.282 3.77087 278.928 4.23576 278.516 4.64162C261.239 21.9238 243.946 39.1986 226.669 56.4882C223.745 59.4104 223.841 58.6503 226.654 61.4692C243.394 78.2496 260.171 94.993 276.947 111.744C277.978 112.777 279.105 113.714 280.188 114.696C280.121 114.88 280.048 115.065 279.982 115.242C279.37 115.293 278.766 115.389 278.155 115.389C271.284 115.397 264.413 115.448 257.542 115.338C256.51 115.323 255.236 114.814 254.507 114.091C243.91 103.582 233.386 93.0007 222.839 82.4483C217.412 77.0172 211.999 71.5861 206.512 66.214C205.547 65.2695 205.128 64.3249 205.164 62.9819C205.245 60.2147 205.105 57.4475 205.238 54.6803C205.282 53.7947 205.65 52.71 206.254 52.0975C222.272 35.9886 238.342 19.9314 254.434 3.89632C254.986 3.34287 255.884 2.83371 256.621 2.82633C263.919 2.74515 271.225 2.77467 278.523 2.78943C278.818 2.78943 279.113 2.88536 279.901 3.02557L279.915 3.03295Z"/>'
++ '<path fill="#1A1A1A" d="M348.722 44.6225C348.722 46.2164 348.722 47.6037 348.722 48.991C348.722 51.7582 348.663 54.5254 348.744 57.2927C348.788 58.6799 348.28 59.167 346.925 59.44C336.224 61.5948 325.524 63.7569 314.867 66.1108C310.735 67.0259 306.773 68.5755 303.29 71.114C297.914 75.0324 296.411 80.4487 297.324 86.7506C298.223 92.9934 302.082 96.779 307.885 98.4983C316.959 101.184 326.039 100.417 334.833 97.325C339.185 95.7902 343.228 93.355 347.411 91.3331C347.721 91.1855 348.037 91.0453 348.501 90.8313C348.59 91.3995 348.707 91.8054 348.715 92.2038C348.73 96.5724 348.774 100.941 348.671 105.302C348.656 106.01 348.126 106.97 347.536 107.353C335.532 115.212 322.541 118.511 308.283 115.626C299.32 113.81 291.455 110.01 285.386 102.919C274.811 90.5583 275.864 66.6569 295.447 57.2336C301.743 54.2007 308.335 52.1124 315.147 50.7694C325.553 48.7106 335.996 46.8363 346.432 44.8955C347.073 44.7775 347.735 44.7332 348.73 44.6151L348.722 44.6225Z"/>'
++ '<path fill="#1A1A1A" d="M406.682 58.237C406.682 40.4087 406.682 22.5731 406.682 4.74486C406.682 2.2802 406.682 2.2802 409.068 2.27282C413.487 2.27282 417.906 2.32447 422.317 2.2433C423.857 2.21379 424.298 2.76723 424.291 4.27259C424.254 40.3054 424.254 76.3383 424.291 112.371C424.291 113.869 423.871 114.437 422.325 114.408C417.788 114.327 413.244 114.319 408.708 114.408C407.058 114.445 406.645 113.869 406.645 112.283C406.697 94.2698 406.675 76.2497 406.675 58.237H406.682Z"/>'
++ '<path fill="#1A1A1A" d="M180.721 58.4805C180.721 40.7039 180.721 22.9347 180.721 5.15811C180.721 3.43628 181.607 2.57291 183.38 2.56799C187.614 2.56799 191.849 2.64916 196.084 2.5311C197.829 2.47944 198.249 3.0993 198.249 4.75225C198.205 24.9271 198.219 45.0946 198.219 65.2694C198.219 80.8913 198.219 96.5131 198.219 112.128C198.219 113.785 197.367 114.614 195.664 114.614C191.37 114.614 187.069 114.548 182.776 114.651C181.141 114.688 180.691 114.135 180.699 112.533C180.75 94.5133 180.728 76.4932 180.728 58.4731L180.721 58.4805Z"/></svg>';
+
+/* ── the five arrangements ── */
+var BUILD = {
+  now: function(o){
+    return shell(o,
+      '<h1 class="bar-title">Dashboard</h1>' + barTabs(o),
+      segStates(o) + filtersBtn() + lateNote(o) + toolRight());
+  },
+  a: function(o){
+    return shell(o,
+      '<h1 class="bar-title">Dashboard</h1>' + barTabs(o)
+        + '<span class="bar-div"></span>' + barStates(o),
+      filtersBtn() + lateNote(o) + toolRight());
+  },
+  b: function(o){
+    return shell(o,
+      '<h1 class="bar-title">Dashboard</h1>' + barTabs(o),
+      '<span class="crumb"><span class="crumb-who">' + esc(N[SEL[o].view].label) + '</span>'
+        + '<svg class="crumb-car" viewBox="0 0 12 12" aria-hidden="true">'
+        + '<path d="M4.5 3l3 3-3 3"/></svg></span>'
+        + segStates(o) + filtersBtn() + lateNote(o) + toolRight());
+  },
+  c: function(o){
+    return shell(o,
+      '<h1 class="bar-title is-plain">Dashboard</h1>',
+      pillViews(o) + '<span class="tool-div"></span>' + segStates(o, true)
+        + filtersBtn() + lateNote(o) + toolRight());
+  },
+  d: function(o){
+    var v = SEL[o].view, s = SEL[o].state;
+    var menu = '<div class="scope-menu" data-menu' + (SEL[o].open ? '' : ' hidden') + '>'
+      + '<table class="mx"><thead><tr><th></th>'
+      + STATES.map(function(x){ return '<th>' + esc(x[1]) + '</th>'; }).join('')
+      + '</tr></thead><tbody>'
+      + VIEWS.map(function(vv){
+          return '<tr><th>' + esc(N[vv].label) + '</th>' + STATES.map(function(x){
+            var n = N[vv][x[0]];
+            return '<td><button type="button" class="mx-c' + (vv === v && x[0] === s ? ' on' : '')
+              + (n === 0 ? ' is-zero' : '') + '" data-act="cell" data-v="' + vv + '" data-s="'
+              + x[0] + '">' + n + '</button></td>';
+          }).join('') + '</tr>';
+        }).join('')
+      + '</tbody></table>'
+      + '<p class="mx-foot">Every count at once — the only arrangement where an empty cell '
+      + 'is visible without going to look for it.</p></div>';
+    return shell(o,
+      '<h1 class="bar-title is-plain">Dashboard</h1>',
+      '<span class="scope"><button type="button" class="scope-btn" data-act="open">'
+        + esc(N[v].label) + '<span class="sep">/</span>'
+        + esc(STATES.filter(function(x){ return x[0] === s; })[0][1])
+        + ' <span class="n">' + N[v][s] + '</span>' + CARET + '</button>' + menu + '</span>'
+        + filtersBtn() + lateNote(o) + toolRight());
+  },
+  e: function(o){
+    var v = SEL[o].view, s = SEL[o].state;
+    var sl = STATES.filter(function(x){ return x[0] === s; })[0][1];
+    return shell(o,
+      '<h1 class="bar-title is-plain">Dashboard</h1>',
+      '<span class="sentence">Showing'
+        + '<button type="button" class="sen-pick" data-act="cycle-state">' + esc(sl)
+        + ' <span class="n">' + N[v][s] + '</span>' + CARET + '</button>'
+        + 'jobs in'
+        + '<button type="button" class="sen-pick" data-act="cycle-view">' + esc(N[v].label)
+        + CARET + '</button></span>'
+        + filtersBtn() + lateNote(o) + toolRight());
+  }
+};
+
+function draw(opt){
+  var host = document.querySelector('[data-opt="' + opt + '"] .opt-body');
+  host.innerHTML = BUILD[opt](opt);
+}
+
+/* One listener for the page. Each option re-renders itself, so a handler bound
+   to a button would be thrown away by the render that follows its own click. */
+document.addEventListener('click', function(ev){
+  var sec = ev.target.closest('[data-opt]');
+  if(!sec) { // a click anywhere else shuts D's menu
+    if(SEL.d && SEL.d.open){ SEL.d.open = false; draw('d'); }
+    return;
+  }
+  var opt = sec.dataset.opt;
+  var btn = ev.target.closest('[data-act]');
+  if(!btn){
+    if(opt !== 'd' && SEL.d.open){ SEL.d.open = false; draw('d'); }
+    return;
+  }
+  var act = btn.dataset.act;
+  if(act === 'view')  SEL[opt].view = btn.dataset.v;
+  if(act === 'state') SEL[opt].state = btn.dataset.v;
+  if(act === 'open')  SEL[opt].open = !SEL[opt].open;
+  if(act === 'cell'){ SEL[opt].view = btn.dataset.v; SEL[opt].state = btn.dataset.s;
+                      SEL[opt].open = false; }
+  if(act === 'cycle-view')
+    SEL[opt].view = VIEWS[(VIEWS.indexOf(SEL[opt].view) + 1) % VIEWS.length];
+  if(act === 'cycle-state')
+    SEL[opt].state = STATES[(STATES.map(function(x){ return x[0]; }).indexOf(SEL[opt].state) + 1)
+      % STATES.length][0];
+  draw(opt);
+});
+
+Object.keys(BUILD).forEach(function(o){
+  SEL[o] = {view:'mine', state:'active', open:false};
+  draw(o);
+});
+</script>
+</body>
+</html>

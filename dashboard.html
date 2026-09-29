@@ -15,7 +15,7 @@
    Rebuilt against the 2026-09-08 design review:
    · "Needs review" is gone. It was one status standing in for everyone, which
      Christine called vague for exactly that reason. In its place are the views
-     the team aligned on — My work for everyone, My team additionally for
+     the team aligned on — Assigned to you for everyone, Everyone else for
      approvers — because the question people actually arrive with is "what is
      mine" and not "what state is the database in".
    · Turn-based ordering. We know whose turn it is, so what is your turn goes to
@@ -49,23 +49,11 @@ body{background:var(--app-bg)}
 .db-top{flex:1;min-width:0;height:56px;background:var(--ink);display:flex;align-items:center;
   gap:18px;padding:0 20px}
 .db-top-title{font-family:var(--display);font-size:15px;font-weight:700;color:var(--white);
-  letter-spacing:-.01em;white-space:nowrap;margin:0;
-  padding-right:18px;border-right:1px solid rgba(255,255,255,.16)}
-/* The rule divides the page name from the views beside it. A builder has no
-   views, so it would be dividing the title from nothing. */
-.db-top.is-titleonly .db-top-title{padding-right:0;border-right:0}
-.db-views{display:flex;align-items:center;gap:2px}
-.db-view{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.08em;
-  text-transform:uppercase;color:rgba(255,255,255,.5);background:none;border:0;
-  padding:18px 11px;cursor:pointer;position:relative;transition:color .12s}
-.db-view:hover{color:rgba(255,255,255,.85)}
-.db-view .n{color:rgba(255,255,255,.38);margin-left:6px;font-variant-numeric:tabular-nums}
-.db-view.on{color:var(--white)}
-.db-view.on .n{color:var(--accent)}
-.db-view.on::after{content:'';position:absolute;left:11px;right:11px;bottom:11px;height:2px;
-  background:var(--accent)}
-.db-view:focus-visible{outline:2px solid var(--accent);outline-offset:-4px}
-.db-view[hidden]{display:none}
+  letter-spacing:-.01em;white-space:nowrap;margin:0}
+/* Whose jobs and which market are the same kind of choice — a place the list
+   is being read from — so they are the same row, and the heading above each
+   says which question it answers. */
+.db-mk[hidden],.db-side-h[hidden]{display:none}
 .db-sp{flex:1}
 /* Roles and permissions are in the backlog, so the role here is a demo switch
    rather than a claim about the account — it exists to show that My team is an
@@ -158,7 +146,7 @@ body{background:var(--app-bg)}
    it could ever show. `display:flex` beats the UA's [hidden] rule, so both the
    buttons and their container need saying. */
 .db-seg button[hidden],.db-seg[hidden]{display:none}
-.db-views[hidden]{display:none}
+.db-side-list[hidden]{display:none}
 .db-seg button:hover:not(.on){color:var(--ink);border-color:var(--ink);position:relative;z-index:1}
 .db-seg button:focus-visible{outline:2px solid var(--ink);outline-offset:1px;z-index:2}
 .db-lbl{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
@@ -338,64 +326,100 @@ body{background:var(--app-bg)}
 
 .db-hdr{display:flex;align-items:flex-start;gap:14px}
 .db-hdr-l{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
-/* The job line. "Acquisition job · Change order" — the type of work first,
-   because that is what tells two jobs at the same address apart. */
-.db-eyebrow{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.11em;
-  text-transform:uppercase;color:var(--t3);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.db-eyebrow .sep{margin:0 1px;color:var(--midtone)}
-.db-eyebrow .ink{color:var(--ink)}
-/* ── the job tag ──
-   Three joined segments: what kind of work, which artifact, and whose turn it
-   is. It is one object rather than three chips because it is one sentence, and
-   reading it left to right is the whole point — an acquisition's scope, waiting
-   on you.
-
-   The status the third segment used to carry said less than the turn does: "in
-   progress" is true of nearly every live job, where the name of the person
-   holding it tells you whether to open the card. Status is still in the filter.
-
-   The first two are filled and the third is outlined, so the one thing that is
-   about a person carries the contrast. */
-.db-tag{display:inline-flex;align-items:stretch;flex-shrink:0}
-.db-tag > span{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.09em;
-  text-transform:uppercase;padding:4px 9px;line-height:1.3;display:inline-flex;align-items:center;
-  gap:5px;border:1px solid transparent;white-space:nowrap}
-/* Borders overlap by a pixel so the three read as one bar rather than three
-   boxes with a seam between them. */
-.db-tag > span + span{margin-left:-1px}
-.db-tag .t-type{background:#6E6A64;border-color:#6E6A64;color:#fff}
-.db-tag .t-phase{background:var(--ink);border-color:var(--ink);color:#fff}
-/* z-index so this segment's border draws over the filled one beside it rather
-   than under it. */
-.db-tag .t-turn{background:var(--white);border-color:var(--stroke);color:var(--t3);
-  position:relative;z-index:1}
-/* Yours is the only one that gets the accent — it is the difference between a
-   list you read and a list you act on. */
-.db-tag .t-turn.is-mine{background:var(--accent);border-color:var(--ink);color:var(--ink)}
 .db-row-title{font-family:var(--display);font-size:16px;font-weight:700;color:var(--ink);
-  letter-spacing:-.005em;line-height:1.25}
+  letter-spacing:-.005em;line-height:1.25;
+  /* One line. The address never gives way; the project name beside it shrinks
+     to an ellipsis, since it is the only part of the line a reader can do
+     without. */
+  display:flex;align-items:center;gap:8px;min-width:0}
+.db-row-addr{flex-shrink:0;white-space:nowrap}
 /* The address is the display face; the project name beside it is body text. The
    address is what names the thing — the project name is a label someone typed,
    and setting it in the same display face gave a made-up name the weight of the
    property itself. */
 .db-row-name{font-family:var(--body);font-size:14px;font-weight:400;color:var(--t3);
-  letter-spacing:0}
+  letter-spacing:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .db-specs{font-size:12.5px;color:var(--t3);line-height:1.35;font-variant-numeric:tabular-nums}
 .db-specs .sep{margin:0 5px;color:var(--stroke)}
 .db-hdr-r{flex-shrink:0;display:flex;align-items:flex-start;gap:10px}
-.db-amt-w{display:flex;flex-direction:column;align-items:flex-end;gap:1px;text-align:right}
+/* A width, so the amount column is the same width on every card whatever the
+   number in it. Without one the left column ends 14px further right on a card
+   with no amount, and the tags that now sit at the end of that column stop
+   lining up down the list. */
+.db-amt-w{display:flex;flex-direction:column;align-items:flex-end;gap:1px;text-align:right;
+  min-width:78px}
 .db-amt{font-family:var(--body);font-size:17px;font-weight:700;color:var(--ink);
   font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .db-amt.is-unset{color:var(--t3);font-weight:400}
 
+/* Narrow, the columns are equal and wrap when they run out of room.
+
+   The right padding is the kebab's footprint — the button plus the gap that
+   separates it from the amount. Both rows of the card are the same box, so
+   without it the facts run 32px past the amount above them and the card has
+   two different right edges. */
 .db-facts{margin-top:11px;padding-top:10px;border-top:1px solid var(--stroke);
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:10px 20px}
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:10px 16px;
+  padding-right:32px}
+/* Wide, they are sized to what is actually in them. Equal columns gave the job
+   a double-width cell its chip did not fill, so it sat in a pool of white the
+   size of the gap it was meant to close, while the one column that can hold
+   something unpredictable — a person's name — got the same width as a date
+   that is always eight characters. */
+@media (min-width:1340px){
+  .db-facts{grid-template-columns:
+    172px                    /* job: the chip, at its widest pairing */
+    minmax(78px,1fr)         /* market */
+    minmax(92px,1.05fr)      /* test id */
+    76px                     /* due date */
+    86px                     /* last updated: the label is wider than its value,
+                                and at 72px it wrapped and took the whole row
+                                with it */
+    minmax(110px,1.15fr)     /* waiting on: still the widest of the flexible
+                                columns, since a name is the one value here
+                                nobody can predict — but only just. At 1.5fr it
+                                took every spare pixel in the row and left a
+                                pool of white between it and the column after */
+    minmax(76px,.8fr)}       /* assignees: the narrowest of the flexible four.
+                                Its value is right-aligned to finish the row
+                                flush with the amount, so any slack in this
+                                column shows up as a gap in front of it rather
+                                than behind it */
+  /* Beats the span-2 rule that the narrow layout needs, which is declared
+     later in the file — same specificity there would lose on source order. */
+  .db-facts .db-f.is-job{grid-column:auto}
+  /* The last column ends the row the way the amount ends the one above it, so
+     the card reads as one block with one right edge rather than two rows that
+     happen to be the same width. Only while the facts are a single line — in
+     the wrapped layout the last field is not at the end of anything. */
+  .db-f:last-child{align-items:flex-end;text-align:right}
+}
 .db-f{min-width:0;display:flex;flex-direction:column;gap:3px}
 .db-f dt{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--t3)}
 .db-f dd{margin:0;font-size:13px;color:var(--ink);line-height:1.35;font-variant-numeric:tabular-nums;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Two segments wide, so the phrase is not broken across a wrap. */
+.db-f.is-job{grid-column:span 2}
+.db-job{display:inline-flex;align-items:stretch;max-width:100%}
+.db-job > span{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;padding:3px 7px;line-height:1.35;display:inline-flex;
+  align-items:center;border:1px solid transparent;white-space:nowrap}
+/* The borders overlap by a pixel so the two read as one object rather than two
+   chips with a seam between them. */
+.db-job > span + span{margin-left:-1px}
+/* The warm grey the type segment has always carried, against the artifact's
+   ink. The two tell each other apart by weight rather than by hue, which
+   leaves colour on this card to mean one thing: yellow is the job waiting on
+   you, red is the job running late. */
+.db-job .j-type{background:#6E6A64;border-color:#6E6A64;color:#fff}
+.db-job .j-art{background:var(--ink);border-color:var(--ink);color:#fff}
 .db-f dd.dim{color:var(--t3)}
+/* A marker pen, not a chip: it sits in the line of the value rather than
+   making a second object out of it. */
+.db-f .db-you{background:var(--accent);box-shadow:0 0 0 2px var(--accent);
+  font-weight:600;color:var(--ink)}
+.db-f dd .dim{color:var(--t3)}
 .db-f dd.is-late{color:var(--error);font-weight:600}
 .db-kebab-wrap{position:relative;align-self:flex-start}
 /* The menu opens on hover, so it has to be reachable: it hangs off the wrapper
@@ -510,7 +534,6 @@ body{background:var(--app-bg)}
   .db-top-title{display:none}
   .db-org,.db-role{display:none}
   .db-top{gap:10px;padding:0 12px}
-  .db-view{padding:18px 7px;letter-spacing:.06em}
 
   .db-page{flex-direction:column}
   .db-side{flex:0 0 auto;width:100%;border-right:0;border-bottom:1px solid var(--stroke);
@@ -521,6 +544,9 @@ body{background:var(--app-bg)}
   .db-mk{width:auto;padding:6px 11px;border:1px solid var(--stroke);border-left-width:1px;
     white-space:nowrap;flex:0 0 auto;font-size:12.5px}
   .db-mk.on{border-color:var(--ink)}
+  /* Stacked into one strip, the two lists run together and "You" reads as a
+     market. The seam is what the headings were doing in the column. */
+  #dbViews{padding-right:10px;border-right:1px solid var(--stroke)}
   .db-side-foot{border-top:0;padding:0;flex-shrink:0}
   .db-ver{display:none}
   .db-btn.is-wide{width:auto;padding:6px 11px}
@@ -554,11 +580,6 @@ body{background:var(--app-bg)}
   </div>
 <header class="db-top">
   <h1 class="db-top-title">Dashboard</h1>
-  <nav class="db-views" id="dbViews" aria-label="Whose jobs">
-    <button class="db-view on" type="button" data-view="mine">My work <span class="n" id="nMine">0</span></button>
-    <button class="db-view" type="button" data-view="team">My team <span class="n" id="nTeam">0</span></button>
-    <button class="db-view" type="button" data-view="all">All jobs <span class="n" id="nAll">0</span></button>
-  </nav>
   <span class="db-sp"></span>
   <!-- Demo-only. Roles and permissions are in the backlog; this switch exists so
        the two aligned views can be seen side by side. -->
@@ -604,6 +625,27 @@ body{background:var(--app-bg)}
   <!-- ── which market ── -->
   <aside class="db-side" aria-label="Markets">
     <div class="db-side-scroll">
+      <!-- Whose jobs, as a list rather than tabs. It was a row of tabs in the
+           black bar, then a row of tabs beside the state tabs, and both times
+           it read as a peer of the state control because it was wearing the
+           same clothes. Here it is a place you are in — the same shape as the
+           market you are in, above it, because it narrows the same list.
+
+           The heading carries the verb, so the rows are only recipients. That
+           is what keeps this readable next to the turn tag on the cards: the
+           two controls answer different questions — who a job belongs to, and
+           who has to move it next — and until the heading said "assigned to",
+           both were saying it with a possessive and neither said which. -->
+      <div class="db-side-h" id="dbViewsH">Assigned to</div>
+      <div class="db-side-list" id="dbViews">
+        <button class="db-mk on" type="button" data-view="mine">
+          <span class="nm">You</span><span class="ct" id="nMine">0</span></button>
+        <!-- Literally what the filter does: every job I am not on. -->
+        <button class="db-mk" type="button" data-view="team">
+          <span class="nm">Everyone else</span><span class="ct" id="nTeam">0</span></button>
+        <button class="db-mk" type="button" data-view="all">
+          <span class="nm">Anyone in the team</span><span class="ct" id="nAll">0</span></button>
+      </div>
       <!-- One list, one heading. "My dashboard" was a label over a single row,
            and "All markets" belongs at the top of the markets it stands for. -->
       <div class="db-side-h">Markets</div>
@@ -650,7 +692,7 @@ body{background:var(--app-bg)}
         </div>
         <span class="db-note" id="dbNote"></span>
         <button class="db-clear" type="button" id="dbClear" hidden onclick="dbReset()">Clear all</button>
-        <!-- The word is inside the control rather than beside it: "My turn" on
+        <!-- The word is inside the control rather than beside it: "Your turn" on
              a bare select reads like a filter you switch on, not an order you
              sort by, and every option carrying the prefix means the closed
              control always says which of the two it is. -->
@@ -659,7 +701,7 @@ body{background:var(--app-bg)}
           <option value="due">Sort: Due date</option>
           <option value="updated">Sort: Last updated</option>
           <option value="market">Sort: Market name</option>
-          <option value="turn" selected>Sort: My turn</option>
+          <option value="turn" selected>Sort: Your turn</option>
           <option value="propid">Sort: Org property ID</option>
         </select>
         <!-- Collapsed to its icon until someone wants it. A field this wide sat
@@ -899,11 +941,6 @@ function dbFmtMoney(n){
   if(n === null || n === undefined) return '<span class="db-amt is-unset">&mdash;</span>';
   return '<span class="db-amt">$' + n.toLocaleString('en-US') + '</span>';
 }
-/* "S. Kwon's turn". A name already ending in s takes the bare apostrophe, which
-   is the one case a naive + "'s" gets visibly wrong. */
-function dbPossessive(n){
-  return n + (/s$/i.test(n) ? '\u2019' : '\u2019s');
-}
 /* Only live work can be late. A finished job's due date is a record of when it
    was wanted, not a deadline still to be missed — which also keeps it out of the
    past-due count and off the top of every sort. */
@@ -1078,7 +1115,7 @@ function dbPasses(p){
 
 /* Two keys, and which one leads depends on the sort.
 
-   Sorting by My turn, yours leads: the whole point of the sort is to put what
+   Sorting by Your turn, yours leads: the whole point of the sort is to put what
    is waiting on you at the top, and a late job someone else is holding is not
    something you can act on. Lateness then orders within each half, so it reads
    your late work, your rest, then everyone else's late work, then the rest.
@@ -1111,18 +1148,17 @@ function dbSortFn(a, b){
   }
 }
 
-function dbTag(p){
-  var mine = dbMyTurn(p);
-  /* A finished job is nobody's turn, so the bar is two segments rather than
-     three — there is no third thing to say about it. */
-  var turn = p.turn
-    ? '<span class="t-turn' + (mine ? ' is-mine' : '') + '">'
-        + (mine ? 'Your turn' : dbPossessive(dbEsc(p.turn)) + ' turn') + '</span>'
-    : '';
-  return '<span class="db-tag">'
-    + '<span class="t-type">' + dbEsc(p.type) + '</span>'
-    + '<span class="t-phase">' + dbEsc(p.phase) + '</span>'
-    + turn
+/* What kind of job, and which artifact. Whose turn used to be a third segment
+   here and is a fact below now: a chip has to fit, so it forced a possessive
+   short enough to sit in one — and "turn" was the one word on the card not
+   shared with any other control on the page. */
+
+/* One object, two segments: what kind of work, and which artifact. Joined
+   rather than spaced because it is one phrase — an acquisition's scope. */
+function dbJob(p){
+  return '<span class="db-job">'
+    + '<span class="j-type">' + dbEsc(p.type) + '</span>'
+    + '<span class="j-art">' + dbEsc(p.phase) + '</span>'
   + '</span>';
 }
 
@@ -1138,6 +1174,14 @@ function dbRow(p, i){
     ? p.team.length + ' assignee' + (p.team.length === 1 ? '' : 's')
     : '<span class="dim">Unassigned</span>';
 
+  /* Yours is marked, not worded differently — the accent behind "You" is the
+     same yellow the row's left edge already carries, so a glance down the
+     column and a glance down the edge say the same thing. A finished job is
+     waiting on nobody, which is a dash rather than a name. */
+  var waiting = p.turn
+    ? (mine ? '<span class="db-you">You</span>' : dbEsc(p.turn))
+    : '<span class="dim">&mdash;</span>';
+
   return '<article class="db-row' + (mine ? ' is-mine' : '') + '" tabindex="0">'
     + '<figure class="db-thumb">'
       + '<span class="db-thumb-empty">No photo</span>'
@@ -1145,11 +1189,9 @@ function dbRow(p, i){
     + '<div class="db-body">'
       + '<div class="db-hdr">'
         + '<div class="db-hdr-l">'
-          + '<div class="db-eyebrow">'
-            + dbTag(p)
-          + '</div>'
-          + '<div class="db-row-title">' + dbEsc(p.addr)
-            + (p.name ? ' <span class="db-row-name">&middot; ' + dbEsc(p.name) + '</span>' : '')
+          + '<div class="db-row-title">'
+            + '<span class="db-row-addr">' + dbEsc(p.addr) + '</span>'
+            + (p.name ? '<span class="db-row-name">&middot; ' + dbEsc(p.name) + '</span>' : '')
           + '</div>'
           + '<div class="db-specs">' + dbEsc(p.city)
             + '<span class="sep">&middot;</span>' + p.beds + ' bed'
@@ -1170,13 +1212,28 @@ function dbRow(p, i){
           + '</div>'
         + '</div>'
       + '</div>'
+      /* The job, first, because the kind of work is what tells two jobs at one
+         address apart. It was a filled tag on the address line and before that
+         a line of its own above it; as a chip it had to be anchored to
+         something, and the only thing beside it was the amount, which it has
+         nothing to do with. It keeps the chip — a field of plain text was as
+         quiet as the Test ID beside it — but the chip is anchored to the grid
+         now, so it starts at the same x on every card. */
       + '<dl class="db-facts">'
+        + '<div class="db-f is-job"><dt>Job</dt><dd>' + dbJob(p) + '</dd></div>'
         + '<div class="db-f"><dt>Market</dt><dd>' + dbEsc(p.market) + '</dd></div>'
         + '<div class="db-f"><dt>Test ID</dt><dd>' + dbEsc(p.id) + '</dd></div>'
         + '<div class="db-f"><dt>Due date</dt><dd class="' + (late ? 'is-late' : '') + '">'
           + dbFmtDate(p.due) + '</dd></div>'
+        /* The date, full stop. How long ago it was is a thing to filter on —
+           Stalled is one of the attention filter's choices — not a second
+           value crammed into a column sized for a date. */
         + '<div class="db-f"><dt>Last updated</dt><dd class="dim">' + dbFmtDate(p.updated)
-          + (dbStalled(p) ? ' &middot; ' + dbDays(p.updated, DB_TODAY) + 'd ago' : '') + '</dd></div>'
+          + '</dd></div>'
+        /* Next to Assignees on purpose: "3 assignees" and "waiting on one of
+           them" is the clearest statement on the page of the difference
+           between being on a job and owing it something. */
+        + '<div class="db-f"><dt>Waiting on</dt><dd>' + waiting + '</dd></div>'
         + '<div class="db-f"><dt>Assignees</dt><dd>' + who + '</dd></div>'
       + '</dl>'
     + '</div>'
@@ -1185,9 +1242,9 @@ function dbRow(p, i){
 
 /* One list, in sort order. The headed bands that used to split it — Your turn
    above Waiting on someone else — said in a row of type what the order already
-   says by putting those jobs first, and what each card repeats in its own turn
-   chip. The order survives: My turn is the default sort, and late still outranks
-   everything whatever the sort. */
+   says by putting those jobs first, and what each card repeats in its Waiting
+   on field. The order survives: Your turn is the default sort, and late still
+   outranks everything whatever the sort. */
 function dbRender(){
   var rows = DB_JOBS.filter(dbPasses).sort(dbSortFn);
   document.getElementById('dbSections').innerHTML = rows.length
@@ -1300,7 +1357,8 @@ function dbApplyRole(){
      is not shown at all. */
   var lone = allowed.length === 1;
   document.getElementById('dbViews').hidden = lone;
-  document.querySelector('.db-top').classList.toggle('is-titleonly', lone);
+  /* The heading goes with the list it names. */
+  document.getElementById('dbViewsH').hidden = lone;
   dbRender();
 }
 
