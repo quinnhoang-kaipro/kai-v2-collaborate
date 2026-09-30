@@ -98,7 +98,11 @@ body{background:var(--app-bg)}
 /* A market with something late in it says so here, so you can see where the
    trouble is before you pick a market to look at. */
 .db-mk .late{width:6px;height:6px;border-radius:50%;background:var(--error);flex-shrink:0}
-.db-mk.on{background:var(--sunken);border-left-color:var(--ink);color:var(--ink);font-weight:600}
+/* PREVIEW — the selected row in the accent rather than the sunken tan. A pale
+   wash of the accent with the accent itself as the edge, the way the scope
+   editor marks the line you are on. Revert to
+   `background:var(--sunken);border-left-color:var(--ink)` to go back. */
+.db-mk.on{background:#FCFDE0;border-left-color:var(--accent);color:var(--ink);font-weight:600}
 .db-mk.on .ct{color:var(--ink)}
 .db-mk:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
 .db-side-foot{padding:12px 18px 16px;border-top:1px solid var(--stroke);flex-shrink:0}
@@ -367,24 +371,23 @@ body{background:var(--app-bg)}
    something unpredictable — a person's name — got the same width as a date
    that is always eight characters. */
 @media (min-width:1340px){
-  .db-facts{grid-template-columns:
-    172px                    /* job: the chip, at its widest pairing */
-    minmax(78px,1fr)         /* market */
-    minmax(92px,1.05fr)      /* test id */
-    76px                     /* due date */
-    86px                     /* last updated: the label is wider than its value,
-                                and at 72px it wrapped and took the whole row
-                                with it */
-    minmax(110px,1.15fr)     /* waiting on: still the widest of the flexible
-                                columns, since a name is the one value here
-                                nobody can predict — but only just. At 1.5fr it
-                                took every spare pixel in the row and left a
-                                pool of white between it and the column after */
-    minmax(76px,.8fr)}       /* assignees: the narrowest of the flexible four.
-                                Its value is right-aligned to finish the row
-                                flush with the amount, so any slack in this
-                                column shows up as a gap in front of it rather
-                                than behind it */
+  /* Each column is the width of its own widest content, and the space left
+     over is dealt out equally between them. Sizing them in fractions did the
+     opposite of what it looked like it would: a column got a share of the row
+     whether or not it had anything to put there, so "Austin" sat in the same
+     width as a twelve-digit ID and the white between columns came out uneven
+     while the columns themselves were tidy. The gaps are what a reader sees,
+     so the gaps are what is held constant. */
+  .db-facts{justify-content:space-between;grid-template-columns:
+    172px   /* job: the chip, at its widest pairing */
+    96px    /* market: fits every real name; the demo's "Test new staging
+               market" is the one that ellipses, and it is not worth 45px on
+               every other card */
+    90px    /* test id */
+    56px    /* due date: the label is wider than the date under it */
+    76px    /* last updated: same */
+    100px   /* waiting on: room for a name longer than the ones in the seed */
+    68px}   /* assignees */
   /* Beats the span-2 rule that the narrow layout needs, which is declared
      later in the file — same specificity there would lose on source order. */
   .db-facts .db-f.is-job{grid-column:auto}
@@ -640,11 +643,8 @@ body{background:var(--app-bg)}
       <div class="db-side-list" id="dbViews">
         <button class="db-mk on" type="button" data-view="mine">
           <span class="nm">You</span><span class="ct" id="nMine">0</span></button>
-        <!-- Literally what the filter does: every job I am not on. -->
-        <button class="db-mk" type="button" data-view="team">
-          <span class="nm">Everyone else</span><span class="ct" id="nTeam">0</span></button>
         <button class="db-mk" type="button" data-view="all">
-          <span class="nm">Anyone in the team</span><span class="ct" id="nAll">0</span></button>
+          <span class="nm">Your team</span><span class="ct" id="nAll">0</span></button>
       </div>
       <!-- One list, one heading. "My dashboard" was a label over a single row,
            and "All markets" belongs at the top of the markets it stands for. -->
@@ -1104,9 +1104,14 @@ document.addEventListener('keydown', function(ev){
 });
 
 /* ── which jobs are on screen ── */
+/* Two views, and the second contains the first. "Everyone else" was the
+   complement — every job you are not on — which made the three rows a
+   partition and the counts refuse to add up the way anyone expected: team 3
+   beside mine 4 looked like a contradiction rather than a share. Your team is
+   the whole team's work, yours included, so the second number is simply the
+   larger one. */
 function dbInView(p){
   if(dbView === 'mine') return dbMine(p);
-  if(dbView === 'team') return !dbMine(p);
   return true;
 }
 function dbPasses(p){
@@ -1286,8 +1291,6 @@ function dbCounts(){
   function inState(p){ return p.state === dbState && here(p); }
   document.getElementById('nMine').textContent =
     DB_JOBS.filter(function(p){ return inState(p) && dbMine(p); }).length;
-  document.getElementById('nTeam').textContent =
-    DB_JOBS.filter(function(p){ return inState(p) && !dbMine(p); }).length;
   document.getElementById('nAll').textContent = DB_JOBS.filter(inState).length;
 
   var all = DB_JOBS.filter(function(p){ return p.state === dbState && dbInView(p); });
@@ -1342,7 +1345,7 @@ document.getElementById('dbQ').addEventListener('input', function(){
    Written as a list of what the role may see rather than as a rule per tab, so a
    third role is one entry rather than another special case. */
 var DB_ROLE_VIEWS = {
-  approver: ['mine', 'team', 'all'],
+  approver: ['mine', 'all'],
   builder:  ['mine']
 };
 
