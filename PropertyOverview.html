@@ -39,25 +39,29 @@
    ════════════════════════════════════════════════════════════ */
 body{background:var(--app-bg)}
 
-/* ── top bar ── */
-.po-top{height:56px;background:var(--ink);display:flex;align-items:center;gap:14px;
-  padding:0 20px;flex-shrink:0;position:relative;z-index:10}
-.po-top-crumb{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.13em;
-  text-transform:uppercase;color:rgba(255,255,255,.45)}
-.po-top-crumb a{color:inherit;text-decoration:none}
-.po-top-crumb a:hover{color:rgba(255,255,255,.8)}
-.po-top-addr{font-family:var(--display);font-size:15px;font-weight:700;color:var(--white);
-  letter-spacing:-.01em;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
-.po-top-addr .q{color:rgba(255,255,255,.55);font-weight:400}
+/* ── top bar ──
+   The product's bar: the Kai mark in its white box at the corner, where the
+   rail below it starts, the page named in full, and the account on the
+   right. */
+.po-top{height:56px;background:var(--ink);display:flex;align-items:center;gap:20px;
+  padding:0 20px 0 0;flex-shrink:0;position:relative;z-index:10}
+.po-top-logo{flex:0 0 72px;width:72px;height:100%;background:var(--white);display:flex;
+  align-items:center;justify-content:center}
+.po-top-logo svg{height:18px;width:auto;display:block}
+.po-top-title{font-family:var(--body);font-size:16px;font-weight:700;color:var(--white);
+  letter-spacing:-.005em;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .po-sp{flex:1}
-.po-org{font-size:12.5px;color:rgba(255,255,255,.72)}
-.po-bell{position:relative;display:inline-flex;color:rgba(255,255,255,.72)}
-.po-bell svg{width:18px;height:18px;stroke:currentColor;stroke-width:1.5;fill:none}
-.po-bell .n{position:absolute;top:-6px;right:-9px;min-width:17px;height:15px;padding:0 4px;
-  background:var(--error);color:#fff;border-radius:8px;font-family:var(--mono);font-size:8.5px;
+.po-org{font-size:12.5px;font-weight:700;color:var(--white);white-space:nowrap}
+.po-top-ico{position:relative;display:inline-flex;background:none;border:0;padding:0;
+  cursor:pointer;color:rgba(255,255,255,.85);transition:color .12s}
+.po-top-ico:hover{color:var(--white)}
+.po-top-ico:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.po-top-ico svg{width:22px;height:22px;stroke:currentColor;stroke-width:1.5;fill:none}
+.po-bell .n{position:absolute;top:-9px;right:-8px;min-width:18px;height:14px;padding:0 4px;
+  background:var(--error);color:#fff;border-radius:2px;font-family:var(--body);font-size:9px;
   font-weight:700;display:flex;align-items:center;justify-content:center}
-.po-me{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.14);
-  color:#fff;display:flex;align-items:center;justify-content:center;
+.po-me{width:30px;height:30px;border-radius:50%;background:#B9B3A7;flex-shrink:0;
+  color:var(--ink);display:flex;align-items:center;justify-content:center;
   font-family:var(--mono);font-size:10px;font-weight:700}
 
 /* ── page ── */
@@ -171,9 +175,9 @@ body{background:var(--app-bg)}
   text-transform:uppercase;color:var(--t3)}
 .po-f dd{margin:0;font-size:14px;color:var(--ink);line-height:1.35;font-variant-numeric:tabular-nums}
 .po-f dd .u{font-size:11.5px;color:var(--t3);margin-left:3px;font-variant-numeric:normal}
-.po-f-link{font-size:13px;color:var(--ink);text-decoration:underline;text-underline-offset:2px;
-  text-decoration-color:var(--stroke);background:none;border:0;padding:0;cursor:pointer;font:inherit}
-.po-f-link:hover{text-decoration-color:var(--ink)}
+.po-f-link{font-size:13px;color:var(--ink);text-decoration:none;text-underline-offset:2px;
+  background:none;border:0;padding:0;cursor:pointer;font:inherit}
+.po-f-link:hover{text-decoration:underline}
 .po-f input,.po-f select{display:none;width:100%;box-sizing:border-box;
   font-family:var(--body);font-size:14px;color:var(--ink);background:var(--white);
   border:1px solid var(--stroke);padding:8px 10px;outline:none;line-height:1.4;
@@ -247,10 +251,9 @@ body.po-editing #poEditBtn{display:none}
    was explicit that archived work keeps its story. */
 /* ── the property's activity ──
    One row per event, newest first, split into the columns the tables above it
-   use: what happened, which job, what it was worth, who, when. The name of
-   the event is a link — to the job's document trail, or to the asset record —
-   and only the name: the row itself stays still, so the link says exactly
-   what it opens. */
+   use: what happened, which job, what it was worth, who, when. The job's
+   name is the link — to its document trail — and only the name: the row
+   itself stays still, so the link says exactly what it opens. */
 .po-ev-filter{margin-left:auto;font-family:var(--mono);font-size:9px;font-weight:700;
   letter-spacing:.08em;text-transform:uppercase;color:var(--t2);background:var(--white);
   border:1px solid var(--stroke);padding:7px 9px;cursor:pointer;outline:none;
@@ -259,8 +262,7 @@ body.po-editing #poEditBtn{display:none}
 .po-ev-filter:focus-visible{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 .po-ev-t{display:block;font-family:var(--display);font-size:14px;font-weight:700;
   color:var(--ink);letter-spacing:-.005em;line-height:1.3}
-/* The same underline the page's other links wear (.po-f-link): a quiet rule
-   that darkens to ink on hover. */
+/* A quiet underline that darkens to ink on hover. */
 .po-ev-link{background:none;border:0;padding:0;cursor:pointer;text-align:left;
   text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px;
   text-decoration-color:var(--midtone);transition:text-decoration-color .12s}
@@ -269,17 +271,14 @@ body.po-editing #poEditBtn{display:none}
 /* The size of the thing, under its name — the tasks a scope covered, the make
    an asset record captured. */
 .po-ev-s{display:block;font-size:12.5px;color:var(--t3);line-height:1.35;margin-top:2px}
-.po-ev-job{display:block;font-size:14px;font-weight:600;color:var(--ink)}
-/* The job's kind sits under its name, the way the job page's Artifact column
-   carries a document's state under the document. */
-.po-ev-jt{display:block;font-family:var(--mono);font-size:9px;font-weight:700;
-  letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-top:3px}
+.po-ev-job{display:block;font-family:var(--body);font-size:14px;font-weight:600;color:var(--ink)}
 /* Date first, laid out like the job page's timeline (.ov-tl-when). */
-.po-tbl th.po-ev-when-h,.po-ev-when{text-align:right}
-.po-ev-when b{display:block;font-size:12.5px;font-weight:600;color:var(--ink);
+.po-ev-tbl{border-collapse:collapse}
+/* Every other row banded, as on the job's Activity (--zebra in panel.css):
+   the eye keeps its row across six columns. */
+.po-ev.is-alt{background:#FBF9F3}
+.po-tbl td.po-ev-when{font-size:12.5px;font-weight:600;color:var(--ink);
   font-variant-numeric:tabular-nums;white-space:nowrap}
-.po-ev-when i{display:block;font-style:normal;font-size:10.5px;color:var(--t3);
-  font-variant-numeric:tabular-nums;margin-top:1px}
 .po-ev .is-sys{font-style:italic}
 .po-ev-more{padding:12px 18px;border-top:1px solid var(--stroke)}
 .po-ev-more:empty{display:none}
@@ -578,6 +577,8 @@ body.po-editing #poEditBtn{display:none}
 .po-m-note{font-size:12.5px;color:var(--t3);line-height:1.45;padding:9px 12px;
   border-left:2px solid var(--stroke);background:var(--sunken);margin-top:8px}
 .po-m-note b{color:var(--ink)}
+/* Says nothing until a job type is picked — and an empty box is not nothing. */
+.po-m-note:empty{display:none}
 .po-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .po-chips:empty{display:none}
 .po-chip-p{display:inline-flex;align-items:center;gap:7px;padding:5px 8px 5px 10px;
@@ -594,32 +595,13 @@ body.po-editing #poEditBtn{display:none}
 .po-m-req{font-size:12px;color:var(--t3)}
 @media (max-width:620px){ .po-m-grid{grid-template-columns:1fr} }
 
-/* ── the market, from the side ──
-   Ported from the panel's drawer (js/overview.js + panel.css) so the Market
-   link here opens the same thing it opens there. This page is self-contained,
-   so the chrome the panel's #drawer supplied comes with it — the rules below
-   are copies of .dw-* from panel.css, unchanged, rather than a second look for
-   the same object. */
-.dw-head{flex-shrink:0;border-bottom:1px solid var(--stroke);background:var(--white)}
-.dw-top{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 18px 12px}
-.dw-task{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--t3);margin-bottom:4px}
-.dw-title{font-family:var(--display);font-size:17px;font-weight:700;color:var(--ink);line-height:1.2}
-.dw-close{flex-shrink:0;width:30px;height:30px;border:1px solid var(--stroke);background:var(--white);
-  display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t2);transition:all .12s}
-.dw-close:hover{border-color:var(--ink);color:var(--ink)}
-.dw-close svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.6}
-.dw-body{flex:1;overflow-y:auto;padding:18px}
-
-#mkt-scrim,#ast-scrim{position:fixed;inset:0;background:rgba(26,26,26,.32);opacity:0;pointer-events:none;
-  transition:opacity .2s;z-index:300}
-#mkt-scrim.open,#ast-scrim.open{opacity:1;pointer-events:auto}
-#mkt-drawer,#ast-drawer{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:90vw;
-  background:var(--white);border-left:1px solid var(--stroke);
-  transform:translateX(100%);transition:transform .24s cubic-bezier(.4,0,.2,1);
-  z-index:301;display:flex;flex-direction:column;box-shadow:-8px 0 28px rgba(26,26,26,.12)}
-#mkt-drawer.open,#ast-drawer.open{transform:translateX(0)}
-@media (prefers-reduced-motion:reduce){ #mkt-drawer,#ast-drawer{transition:none} }
+/* ── the asset record and the market ──
+   Both open as modals, the same one New job uses (.po-modal), with the field
+   treatment below inside. */
+.po-modal .mkt-sec{padding-top:20px;padding-bottom:20px}
+.po-modal .mkt-sec:first-child{padding-top:22px}
+.po-modal .mkt-pair{gap:16px 18px}
+@media (max-width:620px){ .po-modal .mkt-pair{grid-template-columns:1fr} }
 .mkt-body{display:flex;flex-direction:column;gap:0}
 /* Sections divided by a rule rather than boxed — the drawer is already a box,
    and a card inside a card is two edges saying one thing. */
@@ -650,6 +632,10 @@ body.po-editing #poEditBtn{display:none}
    sits on one line, so the section reads as four questions rather than eight. */
 .mkt-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .mkt-note{font-size:12px;color:var(--t3);line-height:1.4}
+.mkt-check{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:var(--ink);
+  line-height:1.4;cursor:pointer}
+.mkt-check input{width:15px;height:15px;margin:1px 0 0;flex-shrink:0;accent-color:var(--ink);cursor:pointer}
+.mkt-f[hidden]{display:none}
 /* Chips sit under the control that adds them, so the pair reads as one field. */
 .mkt-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:3px}
 .mkt-chips:empty{display:none}
@@ -659,35 +645,12 @@ body.po-editing #poEditBtn{display:none}
   display:inline-flex;transition:color .12s}
 .mkt-chip button:hover{color:var(--error)}
 .mkt-chip svg{width:10px;height:10px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round}
-/* Actions pinned to the foot, so a long roster scrolls behind them. */
-.mkt-acts{flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;gap:10px;
-  padding:14px 18px;border-top:1px solid var(--stroke);background:var(--white)}
-.mkt-btn{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--ink);background:var(--white);
-  border:1px solid var(--stroke);padding:9px 14px;cursor:pointer;transition:all .12s}
-.mkt-btn:hover{border-color:var(--ink)}
-.mkt-btn.is-primary{background:var(--accent);border-color:var(--accent-deep,var(--ink))}
-.mkt-btn.is-primary:hover{background:var(--accent-deep,var(--accent));border-color:var(--ink)}
-.mkt-btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 </style>
 </head>
 <body>
 
 <header class="po-top">
-  <span class="po-top-crumb"><a href="dashboard.html">Properties</a></span>
-  <span class="po-top-addr">2525 McDonald Way<span class="q">, Austin, TX 78754</span></span>
-  <span class="po-sp"></span>
-  <span class="po-org">Kaiizen Testing</span>
-  <span class="po-bell">
-    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17a5 5 0 0 1 10 0M12 3v2M9 19a3 3 0 0 0 6 0"/></svg>
-    <span class="n">135</span>
-  </span>
-  <span class="po-me">Q</span>
-</header>
-
-<div class="app-shell">
-<aside class="global-nav" aria-label="Primary navigation">
-  <div class="global-nav-logo" aria-label="Kai">
+  <a class="po-top-logo" href="dashboard.html" aria-label="Kai">
     <svg viewBox="175 0 260 117" xmlns="http://www.w3.org/2000/svg">
       <path fill="#1A1A1A" d="M357.442 65.6901C357.442 57.263 357.442 48.8433 357.442 40.4162C357.442 27.9084 350.638 19.4813 338.073 16.6772C329 14.6553 320.244 15.3785 312.224 20.5144C305.794 24.632 302.149 30.5871 301.221 38.1877C300.831 41.3681 301.295 41.0435 297.936 41.0582C293.768 41.073 289.592 40.977 285.424 41.1025C283.561 41.1541 283.104 40.4457 283.244 38.7338C284.275 26.0267 289.82 15.8212 300.227 8.44935C309.683 1.74899 320.465 -0.33933 331.828 0.0443902C340.04 0.317422 348.045 1.63831 355.491 5.4091C364.888 10.1687 370.603 17.8357 373.379 27.8936C374.816 33.096 375.361 38.3943 375.368 43.759C375.397 58.3921 375.368 73.0325 375.39 87.6655C375.39 88.9495 375.419 90.263 375.677 91.5175C376.745 96.8084 380.862 99.6494 386.894 99.3616C389.525 99.2386 390.841 100.535 390.841 103.25C390.841 106.881 390.819 110.504 390.856 114.135C390.863 115.183 390.672 115.958 389.479 116.127C380.81 117.382 372.51 116.644 365.382 110.977C359.851 106.579 357.73 100.365 357.582 93.5468C357.384 84.2637 357.531 74.9806 357.531 65.6975C357.501 65.6975 357.465 65.6975 357.435 65.6975L357.442 65.6901Z"/>
       <path fill="#1A1A1A" d="M279.915 3.03295C279.282 3.77087 278.928 4.23576 278.516 4.64162C261.239 21.9238 243.946 39.1986 226.669 56.4882C223.745 59.4104 223.841 58.6503 226.654 61.4692C243.394 78.2496 260.171 94.993 276.947 111.744C277.978 112.777 279.105 113.714 280.188 114.696C280.121 114.88 280.048 115.065 279.982 115.242C279.37 115.293 278.766 115.389 278.155 115.389C271.284 115.397 264.413 115.448 257.542 115.338C256.51 115.323 255.236 114.814 254.507 114.091C243.91 103.582 233.386 93.0007 222.839 82.4483C217.412 77.0172 211.999 71.5861 206.512 66.214C205.547 65.2695 205.128 64.3249 205.164 62.9819C205.245 60.2147 205.105 57.4475 205.238 54.6803C205.282 53.7947 205.65 52.71 206.254 52.0975C222.272 35.9886 238.342 19.9314 254.434 3.89632C254.986 3.34287 255.884 2.83371 256.621 2.82633C263.919 2.74515 271.225 2.77467 278.523 2.78943C278.818 2.78943 279.113 2.88536 279.901 3.02557L279.915 3.03295Z"/>
@@ -695,7 +658,22 @@ body.po-editing #poEditBtn{display:none}
       <path fill="#1A1A1A" d="M406.682 58.237C406.682 40.4087 406.682 22.5731 406.682 4.74486C406.682 2.2802 406.682 2.2802 409.068 2.27282C413.487 2.27282 417.906 2.32447 422.317 2.2433C423.857 2.21379 424.298 2.76723 424.291 4.27259C424.254 40.3054 424.254 76.3383 424.291 112.371C424.291 113.869 423.871 114.437 422.325 114.408C417.788 114.327 413.244 114.319 408.708 114.408C407.058 114.445 406.645 113.869 406.645 112.283C406.697 94.2698 406.675 76.2497 406.675 58.237H406.682Z"/>
       <path fill="#1A1A1A" d="M180.721 58.4805C180.721 40.7039 180.721 22.9347 180.721 5.15811C180.721 3.43628 181.607 2.57291 183.38 2.56799C187.614 2.56799 191.849 2.64916 196.084 2.5311C197.829 2.47944 198.249 3.0993 198.249 4.75225C198.205 24.9271 198.219 45.0946 198.219 65.2694C198.219 80.8913 198.219 96.5131 198.219 112.128C198.219 113.785 197.367 114.614 195.664 114.614C191.37 114.614 187.069 114.548 182.776 114.651C181.141 114.688 180.691 114.135 180.699 112.533C180.75 94.5133 180.728 76.4932 180.728 58.4731L180.721 58.4805Z"/>
     </svg>
-  </div>
+  </a>
+  <span class="po-top-title">Property: 2525 McDonald Way, Austin, TX 78754 (Market: <span id="poTopMarket">Austin</span>)</span>
+  <span class="po-sp"></span>
+  <span class="po-org">Kaiizen Testing</span>
+  <button class="po-top-ico po-bell" type="button" aria-label="Notifications, 135 unread">
+    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 17V11a6 6 0 0 1 12 0v6"/><path d="M4 17h16"/><path d="M10 20h4"/></svg>
+    <span class="n">135</span>
+  </button>
+  <button class="po-top-ico" type="button" aria-label="Sync settings">
+    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 9.5a4 4 0 0 1-.5 8.5"/><circle cx="12" cy="15" r="2.2"/><path d="M12 11.3v1.2M12 17.5v1.2M8.3 15h1.2M14.5 15h1.2M9.4 12.4l.85.85M13.75 16.75l.85.85M9.4 17.6l.85-.85M13.75 13.25l.85-.85"/></svg>
+  </button>
+  <span class="po-me">Q</span>
+</header>
+
+<div class="app-shell">
+<aside class="global-nav" aria-label="Primary navigation">
   <div class="global-nav-body">
     <nav class="gnav">
     <button class="gnav-item" type="button"><span class="gnav-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 1.5H0.5V10.5H9.5V1.5Z"/><path d="M22.5 1.5H13.5V10.5H22.5V1.5Z"/><path d="M9.5 14.5H0.5V23.5H9.5V14.5Z"/><path d="M22.5 14.5H13.5V23.5H22.5V14.5Z"/></svg></span><span class="lbl">Dashboard</span></button>
@@ -820,11 +798,13 @@ body.po-editing #poEditBtn{display:none}
       <table class="po-tbl">
         <thead>
           <tr>
-            <th style="width:36%">Asset</th>
-            <th style="width:12%">Location</th>
-            <th style="width:22%">Make &amp; model</th>
-            <th style="width:13%">Installed</th>
-            <th style="width:13%">Warranty</th>
+            <th style="width:27%">Asset</th>
+            <th style="width:12%">Category</th>
+            <th style="width:11%">Location</th>
+            <th style="width:12%">Brand</th>
+            <th style="width:13%">Condition</th>
+            <th style="width:10%">Installed</th>
+            <th style="width:11%">Warranty</th>
             <th style="width:4%"></th>
           </tr>
         </thead>
@@ -888,13 +868,14 @@ body.po-editing #poEditBtn{display:none}
                 aria-label="Filter activity by job"></select>
       </div>
       <div class="po-tbl-wrap">
-      <table class="po-tbl">
+      <table class="po-tbl po-ev-tbl">
         <thead>
           <tr>
-            <th class="po-ev-when-h" style="width:11%">Date</th>
+            <th style="width:11%">Date</th>
             <th style="width:14%">User</th>
-            <th style="width:33%">Activity</th>
-            <th style="width:27%">Job</th>
+            <th style="width:24%">Activity</th>
+            <th style="width:24%">Job</th>
+            <th style="width:12%">Type</th>
             <th class="num" style="width:15%">Total</th>
           </tr>
         </thead>
@@ -954,7 +935,7 @@ body.po-editing #poEditBtn{display:none}
         </div>
         <div class="po-m-f wide">
           <label for="np-name">Job name <span class="opt">optional</span></label>
-          <input id="np-name" placeholder="Defaults to the job type and today&rsquo;s date">
+          <input id="np-name" placeholder="Defaults to the address and today&rsquo;s date">
         </div>
         <div class="po-m-f">
           <label for="np-due">Scope due date</label>
@@ -1024,7 +1005,7 @@ body.po-editing #poEditBtn{display:none}
   </div>
 
   <div class="po-m-acts">
-    <span class="po-m-req" id="npHint">Job type is required.</span>
+    <span class="po-m-req" id="npHint"></span>
     <button class="po-btn" type="button" onclick="poNew(false)">Cancel</button>
     <button class="po-btn is-primary" type="button" onclick="poCreate()">Create job</button>
   </div>
@@ -1625,9 +1606,9 @@ function poOpenJob(name){
 /* ════════════════════════════════════════════════════════════
    PROPERTY ACTIVITY — the feed
    ────────────────────────────────────────────────────────────
-   Every event at the address, newest first, whatever job produced it. Derived
-   from PO_JOBS, PO_ASSETS and the same money split the table and the trail
-   use, so the three cannot disagree. A row opens the job behind it.
+   Every job's comings and goings at the address, newest first. Derived from
+   PO_JOBS, so it cannot disagree with the table above it. A row opens the
+   job behind it.
    ════════════════════════════════════════════════════════════ */
 var PO_EV_PAGE = 10;
 var poEvShown  = PO_EV_PAGE;
@@ -1639,78 +1620,35 @@ function poEvWho(job, n){
   return pool[(PO_JOBS.indexOf(job) + n) % pool.length];
 }
 
-/* A document's date is the date of its last event — the trail hangs the dates
-   on the chain, not on the document. */
-function poEvDocDate(doc, fallback){
-  if(!doc || !doc.evs || !doc.evs.length) return fallback;
-  return doc.evs[doc.evs.length - 1].when || fallback;
-}
-
 function poEvents(){
   var out = [];
 
+  /* A job's life at the property's altitude: it was opened, it was finished,
+     and — once it has stopped being worth seeing — it was archived. What
+     happened inside it (the scope, the change orders) is the job's own
+     Activity to tell. */
   PO_JOBS.forEach(function(j){
-    var docs  = poTrDocs(j);
-    var scope = poScope(j), change = poChange(j);
-
     var open = 'poEvOpenJob(' + PO_JOBS.indexOf(j) + ')';
+
     out.push({when:j.created, title:'Job created', total:null, open:open,
               who:poEvWho(j, 0), job:j.name, type:j.type});
 
-    /* The scope lands a few days after the job opens — the same offset the
-       document trail uses, so a date here matches the date there. */
-    var sAt = poEvDocDate(docs[docs.length - 1], j.created);
-    out.push({when:sAt, title:'Scope of Work approved',
-              detail:j.tasks + ' task' + (j.tasks === 1 ? '' : 's'),
-              total:poFmtMoney(scope), open:open,
-              who:poEvWho(j, 1), job:j.name, type:j.type});
-
-    /* One line per change order, splitting the job's change total between
-       them so the feed adds up to the Changes column. */
-    for(var n = 1; n <= (j.cos || 0); n++){
-      var d = docs[Math.max(0, docs.length - 1 - n)];
-      out.push({when:poEvDocDate(d, j.updated), title:'Change Order ' + n + ' approved',
-                total:poFmtChange(change / j.cos), open:open,
-                who:poEvWho(j, 2), job:j.name, type:j.type});
-    }
-
     if(j.status === 'completed'){
-      out.push({when:j.updated, title:'Job closed', total:poFmtMoney(j.budget), open:open,
+      out.push({when:j.updated, title:'Job completed', total:poFmtMoney(j.budget), open:open,
                 who:poEvWho(j, 3), job:j.name, type:j.type});
     }
-  });
 
-  /* Assets are the property's, not a job's, so they have no job to open and
-     no person to name — the record was created, not decided. */
-  PO_ASSETS.forEach(function(a, i){
-    if(!a.installed) return;
-    var iso = poEvAssetDate(a.installed);
-    if(!iso) return;
-    /* What the record says, in the order someone would ask for it: where it
-       lives, and what it is. An asset with no make yet says so rather than
-       trailing a separator with nothing after it. */
-    var made = [a.brand, a.model].filter(function(x){ return x; }).join(' ');
-    out.push({when:iso, title:poEsc(a.name) + ' installed',
-              detail:'Asset record created' + (made ? ' &middot; ' + poEsc(made) : ''),
-              /* An asset belongs to the property, so the Job column says what
-                 it belongs to instead — the room it is installed in. */
-              asset:poEsc(a.room), total:null, open:'poAssetOpen(' + i + ')',
-              who:'System', sys:true, job:null});
+    /* Archiving follows completion by a month or so; the jobs carry no date
+       for it, so it is read off the completion, and never later than today. */
+    if(j.archived){
+      var at = poTrShift(j.updated, 30);
+      if(at > PO_TODAY) at = PO_TODAY;
+      out.push({when:at, title:'Job archived', total:null, open:open,
+                who:poEvWho(j, 1), job:j.name, type:j.type});
+    }
   });
 
   return out.sort(function(x, y){ return y.when.localeCompare(x.when); });
-}
-
-/* The assets carry human dates ("Mar 2026", "2009"). The feed sorts on ISO, so
-   they are read into one — the first of the month, which is as precise as the
-   record itself is. */
-var PO_EV_M = {jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',
-               jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
-function poEvAssetDate(txt){
-  var m = /^([A-Za-z]{3})[a-z]*\s+(\d{4})$/.exec(txt.trim());
-  if(m && PO_EV_M[m[1].toLowerCase()]) return m[2] + '-' + PO_EV_M[m[1].toLowerCase()] + '-01';
-  var y = /^(\d{4})$/.exec(txt.trim());
-  return y ? y[1] + '-01-01' : null;
 }
 
 function poEvFilterFill(){
@@ -1726,23 +1664,23 @@ function poEvDraw(){
   var all  = poEvents().filter(function(e){ return !pick || e.job === pick; });
   var show = all.slice(0, poEvShown);
 
-  document.getElementById('poEvents').innerHTML = show.length ? show.map(function(e){
+  document.getElementById('poEvents').innerHTML = show.length ? show.map(function(e, i){
     var job = e.job
-      ? '<span class="po-ev-job">' + poEsc(e.job) + '</span>'
-        + '<span class="po-ev-jt">' + poEsc(e.type) + '</span>'
+      ? (e.open
+          ? '<button type="button" class="po-ev-job po-ev-link" onclick="' + e.open + '">'
+            + poEsc(e.job) + '</button>'
+          : '<span class="po-ev-job">' + poEsc(e.job) + '</span>')
       : '<span class="dim">' + (e.asset || '&mdash;') + '</span>';
-    return '<tr class="po-ev">'
+    return '<tr class="po-ev' + (i % 2 ? ' is-alt' : '') + '">'
       + '<td class="po-ev-when">' + poEvWhen(e.when) + '</td>'
       + '<td class="dim' + (e.sys ? ' is-sys' : '') + '">' + poEsc(e.who) + '</td>'
-      + '<td>' + (e.open
-          ? '<button type="button" class="po-ev-t po-ev-link" onclick="' + e.open + '">'
-            + e.title + '</button>'
-          : '<span class="po-ev-t">' + e.title + '</span>')
+      + '<td><span class="po-ev-t">' + e.title + '</span>'
         + (e.detail ? '<span class="po-ev-s">' + e.detail + '</span>' : '') + '</td>'
       + '<td>' + job + '</td>'
+      + '<td class="dim">' + (e.type ? poEsc(e.type) : '&mdash;') + '</td>'
       + '<td class="num">' + (e.total || '<span class="dim">&mdash;</span>') + '</td>'
       + '</tr>';
-  }).join('') : '<tr><td colspan="5" class="po-empty">Nothing has happened here yet.</td></tr>';
+  }).join('') : '<tr><td colspan="6" class="po-empty">Nothing has happened here yet.</td></tr>';
 
   document.getElementById('poEvCount').textContent =
     all.length + ' event' + (all.length === 1 ? '' : 's');
@@ -1754,12 +1692,11 @@ function poEvDraw(){
 
 function poEvOpenJob(i){ if(PO_JOBS[i]) poOpenJob(PO_JOBS[i].name); }
 
-/* The date leads the row, as it does on the job's own Activity: the day in
-   bold, the year under it, both right-aligned against the rows that follow. */
+/* The date leads the row, on one line like everything else in it. */
 function poEvWhen(iso){
   var d = new Date(iso + 'T00:00:00');
   var M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return '<b>' + M[d.getMonth()] + ' ' + d.getDate() + '</b><i>' + d.getFullYear() + '</i>';
+  return M[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
 }
 
 function poEvMore(){
@@ -1786,6 +1723,7 @@ function poSave(){
   s('v-acres',  g('i-acres') + '<span class="u">acres</span>');
   s('v-garage', g('i-garage'));
   s('v-market', g('i-market'));
+  s('poTopMarket', poEsc(g('i-market')));
   s('v-testid', g('i-testid'));
   poEdit(false);
 }
@@ -1848,14 +1786,17 @@ function poNew(on){
   document.getElementById('poModal').classList.toggle('open', !!on);
   if(on){ poReset(); document.getElementById('np-type').focus(); }
 }
+function poDefaultJobName(){ return PO_ADDR + ' \u2013 ' + poShortDate(PO_TODAY); }
 function poReset(){
   ['np-type','np-budget','np-name','np-door','np-gate','np-notes','np-template','np-field']
     .forEach(function(id){ document.getElementById(id).value = ''; });
   document.getElementById('np-due').value = PO_TODAY;
   document.getElementById('np-end').value = PO_TODAY;
+  /* Named for the address and the day, ready to keep or type over. */
+  document.getElementById('np-name').value = poDefaultJobName();
   poPicked = ['Aaron Mosny'];
   poChips(); poCount(); poTypeChanged();
-  document.getElementById('npHint').textContent = 'Job type is required.';
+  document.getElementById('npHint').textContent = '';
 }
 function poCreate(){
   var type = document.getElementById('np-type').value;
@@ -1865,7 +1806,7 @@ function poCreate(){
     return;
   }
   var budget = document.getElementById('np-budget').value;
-  var name   = document.getElementById('np-name').value.trim() || (type + ' ' + poFmtDate(PO_TODAY));
+  var name   = document.getElementById('np-name').value.trim() || poDefaultJobName();
   PO_JOBS.unshift({
     name:name, desc:document.getElementById('np-notes').value.trim().slice(0, 60),
     type:type, phase:'Scope', budget:budget === '' ? null : Number(budget),
@@ -1893,47 +1834,61 @@ function poCreate(){
    under the table says it is never money.
    ════════════════════════════════════════════════════════════ */
 var PO_ASSETS = [
-  {name:'Water heater', room:'Garage', brand:'Rheem', model:'XE40M06ST45U1',
-   color:'White', serial:'RH26-4471903', installed:'Mar 2026', warranty:'Mar 2032',
+  {name:'Water heater', category:'Plumbing', room:'Garage', brand:'Rheem', model:'XE40M06ST45U1',
+   color:'White', serial:'RH26-4471903', capacity:'40 gal', fuel:'Natural gas',
+   installed:'Mar 2026', warranty:'Mar 2032', warrantyBy:'Rheem', condition:'Good',
    life:null, plate:'Plate on the upper jacket, left of the gas valve.',
    desc:'40 gal natural gas, replaced under the Unit 2 turn.'},
 
-  {name:'HVAC condenser', room:'Exterior', brand:'Goodman', model:'GSX140361',
-   color:'Beige', serial:'1906284517', installed:'Jun 2019', warranty:'Jun 2029',
+  {name:'HVAC condenser', category:'HVAC', room:'Exterior', brand:'Goodman', model:'GSX140361',
+   color:'Beige', serial:'1906284517', capacity:'3 ton', fuel:'Electric',
+   installed:'Jun 2019', warranty:'Jun 2029', warrantyBy:'Goodman', condition:'Good',
    life:null, plate:'Plate on the north face of the cabinet.',
    desc:'3 ton, 14 SEER. Pad is level; disconnect is on the south wall.'},
 
-  {name:'Refrigerator', room:'Kitchen', brand:'Whirlpool', model:'WRS325SDHZ',
-   color:'Stainless', serial:'K21-8830012', installed:'Aug 2021', warranty:'Expired',
+  {name:'Refrigerator', category:'Appliance', room:'Kitchen', brand:'Whirlpool', model:'WRS325SDHZ',
+   color:'Stainless', serial:'K21-8830012', capacity:'25 cu ft', fuel:'Electric',
+   installed:'Aug 2021', warranty:'Expired', warrantyBy:'', condition:'Fair',
    life:null, plate:'Plate inside the fresh-food door, lower left.',
    desc:'Side-by-side, ice maker plumbed to the cold line under the sink.'},
 
-  {name:'Roof, architectural shingle', room:'Structure', brand:'', model:'',
-   color:'Weathered wood', serial:'', installed:'2009', warranty:'',
+  {name:'Roof, architectural shingle', category:'Roofing', room:'Roof', brand:'', model:'',
+   color:'Weathered wood', serial:'', capacity:'', fuel:'',
+   installed:'2009', warranty:'', warrantyBy:'', condition:'Poor',
    life:'3 yrs of service life', plate:'',
    desc:'Original to the build. Granule loss on the south slope at the last walk.'}
 ];
 
-/* Brand and model are two fields and one answer: the table joins them, and an
-   asset with neither says it was never recorded rather than showing a blank. */
-function poAssetMake(a){
-  var made = [a.brand, a.model].filter(function(x){ return x; }).join(' ');
-  return made || '<span class="dim">Not recorded</span>';
+/* A blank field says it was never recorded rather than showing nothing. */
+function poAssetCell(v){
+  return v ? poEsc(v) : '<span class="dim">&mdash;</span>';
 }
-function poAssetExpired(a){ return /^expired$/i.test((a.warranty || '').trim()); }
+/* Condition is read for what needs attention, so the two states that do are
+   the only ones in the warning hue — the same one an expired warranty wears. */
+function poAssetCond(a){
+  if(!a.condition) return '<span class="dim">&mdash;</span>';
+  return /^(poor|needs replacement)$/i.test(a.condition)
+    ? '<span class="po-warn">' + poEsc(a.condition) + '</span>'
+    : poEsc(a.condition);
+}
+/* No live warranty — either it lapsed ("Expired") or there never was one
+   ("None"). Both are set by the drawer's checkbox and both read as a warning. */
+function poAssetExpired(a){ return /^(expired|none)$/i.test((a.warranty || '').trim()); }
 
 function poAssets(){
   document.getElementById('poAssetRows').innerHTML = PO_ASSETS.map(function(a, i){
     var warranty = poAssetExpired(a)
-      ? '<span class="po-warn">Expired</span>'
+      ? '<span class="po-warn">' + (/^none$/i.test(a.warranty.trim()) ? 'None' : 'Expired') + '</span>'
       : (a.warranty ? poEsc(a.warranty) : '<span class="dim">&mdash;</span>');
     return '<tr class="po-asset-row" onclick="poAssetOpen(' + i + ')">'
       + '<td><span class="po-asset-n">' + poEsc(a.name) + '</span>'
         + (a.life ? '<span class="po-life">' + poEsc(a.life) + '</span>' : '')
         + '</td>'
+      + '<td>' + poAssetCell(a.category) + '</td>'
       + '<td>' + poEsc(a.room) + '</td>'
-      + '<td>' + poAssetMake(a) + '</td>'
-      + '<td>' + poEsc(a.installed) + '</td>'
+      + '<td>' + poAssetCell(a.brand) + '</td>'
+      + '<td>' + poAssetCond(a) + '</td>'
+      + '<td>' + poAssetCell(a.installed) + '</td>'
       + '<td>' + warranty + '</td>'
       + '<td class="num"><button class="po-chev" type="button" aria-label="Open ' + poEsc(a.name) + '">'
         + '<svg viewBox="0 0 12 12"><path d="M4.5 2.5l3.5 3.5-3.5 3.5"/></svg>'
@@ -1948,8 +1903,16 @@ function poAssets(){
    The same drawer the market uses — same chrome, same field treatment, same
    pinned actions — because they are the same gesture: open the thing, change
    its fields, put it back. Only the fields differ. */
-var PO_ASSET_ROOMS   = ['Kitchen', 'Bath 1', 'Bath 2', 'Bath 3', 'Living', 'Garage',
-                        'Exterior', 'Structure', 'Utility'];
+var PO_ASSET_ROOMS   = ['Kitchen', 'Living', 'Dining', 'Bedroom 1', 'Bedroom 2', 'Bedroom 3',
+                        'Bath 1', 'Bath 2', 'Bath 3', 'Laundry', 'Garage', 'Utility',
+                        'Attic', 'Basement', 'Crawl space', 'Roof', 'Exterior', 'Yard',
+                        'Structure'];
+/* What kind of thing it is — the first question anyone sorting a property's
+   assets asks, and the one a replacement schedule is grouped by. */
+var PO_ASSET_CATS    = ['Appliance', 'HVAC', 'Plumbing', 'Electrical', 'Roofing',
+                        'Windows & doors', 'Flooring', 'Exterior', 'Safety', 'Other'];
+var PO_ASSET_FUELS   = ['Natural gas', 'Electric', 'Propane', 'Oil', 'Solar', 'Not applicable'];
+var PO_ASSET_CONDS   = ['New', 'Good', 'Fair', 'Poor', 'Needs replacement'];
 
 var poAstEl = null, poAstScrim = null, poAstIdx = -1;
 /* An asset being created does not exist yet — it is held here until the save,
@@ -1962,58 +1925,80 @@ function poAstField(id, label, val, opt, ph){
     + '<input id="ast-' + id + '" value="' + poEsc(val || '') + '"'
     + (ph ? ' placeholder="' + poEsc(ph) + '"' : '') + '></div>';
 }
-function poAstSelect(id, label, val, list){
+function poAstSelect(id, label, val, list, opt, prompt){
   /* A new asset has no location yet. Defaulting the picker to whatever happens
      to be first would file it in a room nobody chose, so it opens on a prompt
-     instead and the save refuses a blank. */
+     instead. */
   var blank = list.indexOf(val) < 0;
-  return '<div class="mkt-f"><label for="ast-' + id + '">' + poEsc(label) + '</label>'
+  return '<div class="mkt-f"><label for="ast-' + id + '">' + poEsc(label)
+    + (opt ? ' <span class="opt">optional</span>' : '') + '</label>'
     + '<select id="ast-' + id + '">'
-    + (blank ? '<option value="">Choose a location&hellip;</option>' : '')
+    + (blank ? '<option value="">' + (prompt || 'Choose&hellip;') + '</option>' : '')
     + list.map(function(o){
         return '<option' + (o === val ? ' selected' : '') + '>' + poEsc(o) + '</option>';
       }).join('')
     + '</select></div>';
 }
 
+/* The fields a single-family asset record is kept by. Named the way a
+   property manager or an inspector would say them, and sorted into what the
+   thing is, what it is exactly, when and under what cover it went in, how it
+   is holding up, and where to read its plate. Only the name and the location
+   are required — the rest is often unknown on a first walk. */
 function poAstBody(a){
   return '<div class="mkt-sec">'
-      + poAstField('name', 'Asset', a.name)
-      + poAstSelect('room', 'Location', a.room, PO_ASSET_ROOMS)
+      + poAstField('name', 'Asset name', a.name, false, 'Water heater')
+      + '<div class="mkt-pair">'
+        + poAstSelect('category', 'Category', a.category, PO_ASSET_CATS, true, 'Choose a category&hellip;')
+        + poAstSelect('room', 'Location', a.room, PO_ASSET_ROOMS, false, 'Choose a location&hellip;')
+      + '</div>'
       /* What the spec sheet does not say — the condition, the quirk, the thing
          the last person on site would tell the next one. */
-      + '<div class="mkt-f"><label for="ast-desc">Description <span class="opt">optional</span></label>'
+      + '<div class="mkt-f"><label for="ast-desc">Notes <span class="opt">optional</span></label>'
         + '<textarea id="ast-desc" placeholder="What anyone opening this asset should know.">'
         + poEsc(a.desc || '') + '</textarea></div>'
     + '</div>'
+    /* What the thing is, exactly — everything read off its data plate, and
+       where the plate is. */
     + '<div class="mkt-sec">'
-      + '<div class="mkt-sec-h">Make</div>'
+      + '<div class="mkt-sec-h">Specs</div>'
       + '<div class="mkt-pair">'
         + poAstField('brand', 'Brand', a.brand, true, 'Rheem')
-        + poAstField('model', 'Model', a.model, true, 'XE40M06ST45U1')
+        + poAstField('model', 'Model number', a.model, true, 'XE40M06ST45U1')
       + '</div>'
       + '<div class="mkt-pair">'
-        + poAstField('color', 'Color', a.color, true)
         + poAstField('serial', 'Serial number', a.serial, true)
+        + poAstField('color', 'Color / finish', a.color, true, 'Stainless')
       + '</div>'
-    + '</div>'
-    + '<div class="mkt-sec">'
-      + '<div class="mkt-sec-h">Dates</div>'
       + '<div class="mkt-pair">'
-        + poAstField('installed', 'Installed', a.installed, false, 'Mar 2026')
-        + poAstField('warranty', 'Warranty until', a.warranty, true, 'Mar 2032')
+        + poAstField('capacity', 'Size / capacity', a.capacity, true, '40 gal, 3 ton')
+        + poAstSelect('fuel', 'Fuel type', a.fuel, PO_ASSET_FUELS, true, 'Choose a fuel&hellip;')
       + '</div>'
-      /* A forecast, so it is typed as a phrase rather than computed from a
-         date the prototype does not have. The table shows it beside the name
-         and the footnote there says it is never money. */
-      + poAstField('life', 'Service life remaining', a.life, true, '3 yrs of service life')
-      + '<div class="mkt-note">Type <b>Expired</b> in the warranty field to flag a lapsed warranty.</div>'
-    + '</div>'
-    + '<div class="mkt-sec">'
-      + '<div class="mkt-sec-h">Data plate</div>'
-      + '<div class="mkt-f"><label for="ast-plate">Where to find it <span class="opt">optional</span></label>'
+      + '<div class="mkt-f"><label for="ast-plate">Data plate location <span class="opt">optional</span></label>'
         + '<textarea id="ast-plate" placeholder="Plate on the upper jacket, left of the gas valve.">'
         + poEsc(a.plate || '') + '</textarea></div>'
+    + '</div>'
+    /* Where it is in its life: how it is holding up, how long it has left,
+       when it went in, and what still covers it. */
+    + '<div class="mkt-sec">'
+      + '<div class="mkt-sec-h">Lifecycle</div>'
+      + '<div class="mkt-pair">'
+        + poAstSelect('condition', 'Condition', a.condition, PO_ASSET_CONDS, true, 'Choose a condition&hellip;')
+        /* A forecast, so it is typed as a phrase rather than computed from a
+           date the prototype does not have. The table shows it beside the
+           name and the footnote there says it is never money. */
+        + poAstField('life', 'Remaining service life', a.life, true, '3 yrs of service life')
+      + '</div>'
+      + '<div class="mkt-pair">'
+        + poAstField('installed', 'Date installed', a.installed, true, 'Mar 2026')
+        + poAstField('warranty', 'Date warranty expires', poAssetExpired(a) ? '' : a.warranty, true, 'Mar 2032')
+      + '</div>'
+      /* No warranty to date — lapsed, or never had one. Ticked, the date field
+         and who holds the warranty both go, since there is nothing to give. */
+      + '<label class="mkt-check"><input type="checkbox" id="ast-nowarranty"'
+        + (poAssetExpired(a) ? ' checked' : '') + ' onchange="poAstWarrantyToggle()">'
+        + '<span>The warranty has already expired or does not exist</span></label>'
+      + poAstField('warrantyBy', 'Warranty provider', a.warrantyBy, true, 'Manufacturer or home warranty company')
     + '</div>';
 }
 
@@ -2021,46 +2006,56 @@ function poAssetOpen(i){
   var a = PO_ASSETS[i];
   if(!a) return;
   poAstIdx = i; poAstDraft = null;
-  poAstDraw(a, poEsc(a.name), 'Asset &middot; ' + poEsc(a.room), 'Update asset');
+  poAstDraw(a, poEsc(a.name), poEsc(a.room) + ' &middot; ' + poEsc(PO_ADDR), 'Save asset');
 }
 
 /* The same drawer, with nothing in it. */
 function poAssetNew(){
   poAstIdx = -1;
-  poAstDraft = {name:'', room:'', desc:'', brand:'', model:'', color:'', serial:'',
-                installed:'', warranty:'', life:'', plate:''};
-  poAstDraw(poAstDraft, 'New asset', 'Asset', 'Add asset');
+  poAstDraft = {name:'', category:'', room:'', desc:'', brand:'', model:'', color:'', serial:'',
+                capacity:'', fuel:'', installed:'', warranty:'', warrantyBy:'',
+                condition:'', life:'', plate:''};
+  poAstDraw(poAstDraft, 'New asset', poEsc(PO_ADDR) + ', Austin, TX 78754', 'Add asset');
 }
 
-function poAstDraw(a, title, eyebrow, action){
+function poAstDraw(a, title, sub, action){
   if(!poAstEl){
     poAstScrim = document.createElement('div');
+    poAstScrim.className = 'po-scrim';
     poAstScrim.id = 'ast-scrim';
     poAstScrim.onclick = poAssetClose;
-    poAstEl = document.createElement('aside');
-    poAstEl.id = 'ast-drawer';
+    poAstEl = document.createElement('div');
+    poAstEl.className = 'po-modal';
+    poAstEl.id = 'ast-modal';
     poAstEl.setAttribute('role', 'dialog');
     poAstEl.setAttribute('aria-modal', 'true');
-    poAstEl.setAttribute('aria-label', 'Asset');
+    poAstEl.setAttribute('aria-labelledby', 'astTitle');
     document.body.appendChild(poAstScrim);
     document.body.appendChild(poAstEl);
   }
-  poAstEl.innerHTML = '<div class="dw-head"><div class="dw-top"><div>'
-      + '<div class="dw-task">' + eyebrow + '</div>'
-      + '<div class="dw-title" id="astTitle">' + title + '</div></div>'
-      + '<button class="dw-close" onclick="poAssetClose()" aria-label="Close">'
-      + '<svg viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-linecap="round"/></svg>'
-      + '</button></div></div>'
-    + '<div class="dw-body mkt-body">' + poAstBody(a) + '</div>'
-    + '<div class="mkt-acts">'
-      + '<button class="mkt-btn" type="button" onclick="poAssetClose()">Cancel</button>'
-      + '<button class="mkt-btn is-primary" type="button" onclick="poAssetSave()">' + action + '</button>'
+  poAstEl.innerHTML = '<div class="po-m-head"><div class="po-m-head-l">'
+      + '<h2 id="astTitle">' + title + '</h2>'
+      + '<div class="po-m-head-sub">' + sub + '</div></div>'
+      + '<button class="po-m-x" type="button" onclick="poAssetClose()" aria-label="Close">'
+      + '<svg viewBox="0 0 16 16"><path d="M3 3l10 10M13 3L3 13"/></svg></button></div>'
+    + '<div class="po-m-body mkt-body">' + poAstBody(a) + '</div>'
+    + '<div class="po-m-acts">'
+      + '<button class="po-btn" type="button" onclick="poAssetClose()">Cancel</button>'
+      + '<button class="po-btn is-primary" type="button" onclick="poAssetSave()">' + action + '</button>'
     + '</div>';
-  void poAstEl.offsetWidth;
   poAstScrim.classList.add('open');
   poAstEl.classList.add('open');
+  poAstWarrantyToggle();
   var n = document.getElementById('ast-name');
   if(n) n.focus();
+}
+
+function poAstWarrantyToggle(){
+  var box = document.getElementById('ast-nowarranty');
+  var f   = document.getElementById('ast-warranty');
+  var by  = document.getElementById('ast-warrantyBy');
+  if(box && f) f.closest('.mkt-f').hidden = box.checked;
+  if(box && by) by.closest('.mkt-f').hidden = box.checked;
 }
 
 function poAssetClose(){
@@ -2073,13 +2068,19 @@ function poAssetClose(){
 function poAssetSave(){
   var a = poAstDraft || PO_ASSETS[poAstIdx];
   if(!a) return;
-  ['name','room','desc','brand','model','color','serial','installed','warranty','life','plate']
+  var wasExpired = /^expired$/i.test((a.warranty || '').trim());
+  ['name','category','room','desc','brand','model','color','serial','capacity','fuel',
+   'installed','warranty','warrantyBy','condition','life','plate']
     .forEach(function(k){
       var el = document.getElementById('ast-' + k);
       if(el) a[k] = el.value.trim();
     });
   /* An asset with no name is an asset nobody can find again, so a blank one
      keeps what it had rather than becoming a row with nothing in it. */
+  /* The checkbox wins over the date. An asset that was already "Expired"
+     keeps that word; one newly ticked has none on record. */
+  var none = document.getElementById('ast-nowarranty');
+  if(none && none.checked){ a.warranty = wasExpired ? 'Expired' : 'None'; a.warrantyBy = ''; }
   if(!a.name) a.name = 'Untitled asset';
   if(!a.room) a.room = 'Unassigned';
   if(poAstDraft) PO_ASSETS.push(poAstDraft);
@@ -2179,31 +2180,28 @@ var poMktEl = null, poMktScrim = null;
 function poMarketOpen(){
   if(!poMktEl){
     poMktScrim = document.createElement('div');
+    poMktScrim.className = 'po-scrim';
     poMktScrim.id = 'mkt-scrim';
     poMktScrim.onclick = poMarketClose;
-    poMktEl = document.createElement('aside');
-    poMktEl.id = 'mkt-drawer';
+    poMktEl = document.createElement('div');
+    poMktEl.className = 'po-modal';
+    poMktEl.id = 'mkt-modal';
     poMktEl.setAttribute('role', 'dialog');
     poMktEl.setAttribute('aria-modal', 'true');
-    poMktEl.setAttribute('aria-label', 'Market');
+    poMktEl.setAttribute('aria-labelledby', 'mktTitle');
     document.body.appendChild(poMktScrim);
     document.body.appendChild(poMktEl);
   }
-  poMktEl.innerHTML = '<div class="dw-head"><div class="dw-top"><div>'
-      + '<div class="dw-task">Market</div>'
-      + '<div class="dw-title" id="mktTitle">' + poEsc(PO_MARKET.name || '') + '</div></div>'
-      + '<button class="dw-close" onclick="poMarketClose()" aria-label="Close">'
-      + '<svg viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-linecap="round"/></svg>'
-      + '</button></div></div>'
-    + '<div class="dw-body mkt-body">' + poMktBody() + '</div>'
-    + '<div class="mkt-acts">'
-      + '<button class="mkt-btn" type="button" onclick="poMarketClose()">Cancel</button>'
-      + '<button class="mkt-btn is-primary" type="button" onclick="poMarketSave()">Update market</button>'
+  poMktEl.innerHTML = '<div class="po-m-head"><div class="po-m-head-l">'
+      + '<h2 id="mktTitle">' + poEsc(PO_MARKET.name || 'Market') + '</h2>'
+      + '<div class="po-m-head-sub">Market &middot; ' + poEsc((PO_MARKET.zips || []).join(', ')) + '</div></div>'
+      + '<button class="po-m-x" type="button" onclick="poMarketClose()" aria-label="Close">'
+      + '<svg viewBox="0 0 16 16"><path d="M3 3l10 10M13 3L3 13"/></svg></button></div>'
+    + '<div class="po-m-body mkt-body">' + poMktBody() + '</div>'
+    + '<div class="po-m-acts">'
+      + '<button class="po-btn" type="button" onclick="poMarketClose()">Cancel</button>'
+      + '<button class="po-btn is-primary" type="button" onclick="poMarketSave()">Save market</button>'
     + '</div>';
-  /* Reflow, then open, both synchronously — deferring the class to a later
-     frame let the first click land before that frame ran and leave the drawer
-     closed with its content already in it. */
-  void poMktEl.offsetWidth;
   poMktScrim.classList.add('open');
   poMktEl.classList.add('open');
   var n = document.getElementById('mkt-name');
