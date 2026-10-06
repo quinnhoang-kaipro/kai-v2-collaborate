@@ -555,6 +555,10 @@ body.proj-mode-draft .task-check,body.proj-mode-work .task-check,body.proj-mode-
 /* Status and modifier share a line: both say what state the task is in, and
    pairing them keeps every row the same height. */
 .task-mid-status{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+/* A problem on the task, named. Same shape as the modifier chip beside it,
+   in the error colours, so it reads as something to fix rather than a fact
+   about the task. */
+.task-mid-status .task-flagtag{display:inline-flex;align-items:center;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--error);background:var(--error-fill);border:1px solid rgba(192,68,58,.35);padding:2px 5px;line-height:1.3;white-space:nowrap}
 .task-mid-status .task-mod,.task-mid-meta .task-mod{display:inline-flex;align-items:center;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);background:var(--sunken);border:1px solid var(--stroke);padding:2px 5px;line-height:1.3}
 .task-mid-meta .task-gc-line{color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .task-mid-meta .task-gc-line.un{color:var(--t3);font-style:italic}
@@ -1223,6 +1227,45 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 .sec-taskcard-product-row.is-changed{border-color:#9E6B2F;background:rgba(158,107,47,.04)}
 .sec-taskcard-product-row.is-catalog{cursor:pointer;transition:border-color .12s}
 .sec-taskcard-product-row.is-catalog:hover{border-color:var(--ink)}
+/* A product with something to say sits in one frame with its tags and bars.
+   Tags that describe the line ride the top edge; states that want a
+   decision — out of stock, a price change — are bars under the row, each
+   led by its own tag. Out of stock turns the frame red. */
+.prod-frame{border:1px solid var(--midtone)}
+.prod-frame.is-oos{border-color:var(--error)}
+.prod-frame > .sec-taskcard-product-row{border:0}
+/* Greyed: the product is shown so the reader knows what was there, but it
+   is not a choice any more — no hover, no cursor, controls disabled. */
+.prod-frame > .sec-taskcard-product-row.is-oos{background:var(--sunken);cursor:default}
+.prod-frame > .sec-taskcard-product-row.is-oos > *{opacity:.45}
+.prod-frame > .sec-taskcard-product-row.is-oos .sec-taskcard-product-name{text-decoration:line-through;text-decoration-color:var(--t3)}
+.prod-frame > .sec-taskcard-product-row.is-oos button,
+.prod-frame > .sec-taskcard-product-row.is-oos input{cursor:not-allowed}
+.prod-tags{display:flex;flex-wrap:wrap;gap:4px;padding:8px 12px 0;background:var(--white)}
+.prod-frame.is-oos > .prod-tags{background:var(--sunken)}
+.prod-tag{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--t2);background:var(--white);
+  border:1px solid var(--stroke);padding:3px 7px;line-height:1.2}
+.prod-tag.is-override{color:var(--error);border-color:var(--error)}
+.prod-tag.is-instructions{color:var(--white);background:var(--t3);border-color:var(--t3)}
+.prod-tag svg{width:9px;height:9px;stroke:currentColor;stroke-width:1.4;fill:none}
+/* A quantity changed from the default: red, with the default under it. */
+.opt-card-qty-input.is-override{color:var(--error);box-shadow:inset 0 0 0 1px var(--error)}
+.prod-qty-default{display:block;margin-top:3px;font-size:10.5px;color:var(--error);text-align:center}
+.prod-bar{display:flex;align-items:center;gap:12px;padding:8px 12px;border-top:1px solid var(--stroke)}
+.prod-bar.is-oos{background:var(--error-fill);border-top-color:var(--error)}
+.prod-bar.is-price{background:var(--white)}
+.prod-bar-tag{flex-shrink:0;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--white);padding:4px 7px;line-height:1}
+.prod-bar-tag.is-oos{background:var(--error)}
+.prod-bar-tag.is-price{background:var(--ink)}
+.prod-bar-msg{flex:1;min-width:0;font-size:12.5px;color:var(--ink);line-height:1.4}
+.prod-bar-msg b{font-weight:700;font-variant-numeric:tabular-nums}
+.prod-bar-msg s{color:var(--t3)}
+.prod-bar-btn{flex-shrink:0;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--white);background:var(--ink);border:0;padding:7px 12px;cursor:pointer}
+.prod-bar-btn:hover{background:#000}
+.prod-bar-btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .sec-taskcard-product-thumb{width:40px;height:40px;flex-shrink:0;border:1px solid var(--stroke);background:var(--sunken);display:flex;align-items:center;justify-content:center;color:var(--t3);overflow:hidden}
 .sec-taskcard-product-thumb svg{width:18px;height:18px}
 .sec-taskcard-product-thumb img{width:100%;height:100%;object-fit:cover}
@@ -2442,9 +2485,9 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 .hist-doc-wrap{}
 .hist-crumb{background:var(--sunken);gap:10px}
 .hist-paper{border-top:1px solid var(--stroke)}
-.hist-print-btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;border:1px solid var(--stroke);background:var(--white);color:var(--ink);cursor:pointer;transition:background .12s,border-color .12s}
+.hist-print-btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:0 12px;border:1px solid var(--stroke);background:var(--white);color:var(--ink);cursor:pointer;transition:background .12s,border-color .12s}
 .hist-print-btn:hover{border-color:var(--ink);background:var(--white)}
-.hist-print-btn svg{width:13px;height:13px;stroke:currentColor;fill:none;transform:translateY(-1px)}
+.hist-print-btn svg{width:12px;height:12px;stroke:currentColor;fill:none}
 @media print{.hist-crumb,.copy-crumb{display:none}.hist-paper,.copy-paper{border:0}}
 /* Legacy .copy-index* kept for the create/edit modals that reference the
    same visual language — nothing renders these anymore. */
@@ -2494,6 +2537,20 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 .copy-share-btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:7px 12px;border:1px solid var(--ink);background:var(--ink);color:var(--white);cursor:pointer;transition:filter .12s}
 .copy-share-btn:hover{filter:brightness(1.12)}
 .copy-share-btn svg{width:12px;height:12px;stroke:currentColor;stroke-width:1.5;fill:none}
+/* One line through the bar. Every item centres on it, and the text drops its
+   line box to the glyphs (line-height 1) so a 15px name, 10px mono meta and a
+   bordered button all sit on the same middle rather than each on its own
+   leading. The tag and the buttons on the right share one height and one
+   type size, so they read as a set. */
+.copy-crumb{min-height:44px}
+.copy-crumb > *{line-height:1}
+.copy-crumb-back{padding:0;font-size:10px;font-weight:700;letter-spacing:.1em;gap:6px}
+.copy-crumb-back svg{width:6px;height:10px;stroke:currentColor;stroke-width:1.6;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
+.copy-crumb-name{line-height:1}
+.copy-crumb-meta{padding-top:1px}
+.copy-crumb .hist-doc-tag,.copy-crumb .hist-print-btn,.copy-crumb .copy-share-btn{
+  box-sizing:border-box;height:28px;padding:0 12px;font-size:9.5px;letter-spacing:.1em;line-height:1}
 
 /* Filter strip — sunken tan panel that visually attaches to the doc paper.
    No border-radius on top of the paper below; the strip's bottom border
@@ -2698,41 +2755,64 @@ body.art-lb-open #artLightbox{pointer-events:auto}
   .po-thumb{width:120px;flex:0 0 auto}
   .po-right{width:auto;height:45%;border-left:0;border-top:1px solid var(--stroke)}
 }
-.art-head{display:flex;justify-content:space-between;align-items:flex-start;gap:32px;padding:36px 40px 30px;border-bottom:1px solid var(--stroke)}
+.art-head{display:flex;justify-content:space-between;align-items:flex-start;gap:40px;padding:11px 40px 22px;border-bottom:1px solid var(--stroke)}
 .art-head-l{flex:1;min-width:0}
-.art-eyebrow{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);margin-bottom:14px}
+/* The totals, at the top as well as the foot: the figure a reader opens a
+   scope to find shouldn't wait at the bottom of a long document. They stand
+   over the table's own Labor and Amount columns — same widths, same right
+   padding, same order — so each figure lines up with the column it totals
+   and with its twin at the foot. The block runs out through the head's right
+   padding to the paper's edge, where the table's columns end. Labels share a
+   top line; the figures share a baseline. */
+.art-head-totals{display:grid;grid-template-columns:96px 136px;grid-template-rows:auto auto;row-gap:6px;
+  align-items:baseline;flex-shrink:0;margin-right:-40px;text-align:right}
+.art-head-total{display:contents}
+.art-head-total .art-meta-k{grid-row:1;padding-right:12px}
+.art-head-total-v{grid-row:2;padding-right:12px;font-family:var(--display);font-size:16px;font-weight:700;color:var(--ink);line-height:1.1;white-space:nowrap}
+.art-head-total.is-scope .art-meta-k,.art-head-total.is-scope .art-head-total-v{padding-right:14px}
+.art-head-total.is-scope .art-head-total-v{font-size:22px;color:var(--success)}
+.art-head-total:first-child > *{grid-column:1}
+.art-head-total:last-child > *{grid-column:2}
+.art-eyebrow{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);margin-bottom:8px}
 .art-title{font-family:var(--display);font-size:26px;font-weight:700;color:var(--ink);letter-spacing:-.015em;line-height:1.15;word-break:normal;overflow-wrap:normal}
-.art-sub-info{font-size:15px;color:var(--t2);margin-top:6px}
-.art-head-r{display:flex;flex-direction:column;gap:14px;flex-shrink:0;text-align:right;min-width:200px}
+.art-sub-info{font-size:14px;color:var(--t2);margin-top:4px}
 .art-meta-k{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3)}
 .art-meta-v{font-size:15px;color:var(--ink);margin-top:3px}
+/* Artifact · Document ID · Prepared on · Based on · Property ID, one row
+   under the address. */
+.art-head{flex-wrap:wrap;row-gap:0}
+.art-head-meta{flex-basis:100%;display:flex;flex-wrap:wrap;gap:8px 32px;margin-top:16px}
+.art-head-meta .art-meta-v{font-size:13.5px;margin-top:4px}
+.art-head-meta .art-meta-v.is-id{font-family:var(--mono);font-size:12.5px;letter-spacing:.04em}
 .art-meta-v.art-meta-docid{font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--ink);word-break:break-all}
 .art-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:15px}
-.art-table thead th{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);text-align:left;padding:14px 12px;border-bottom:1px solid var(--stroke);background:var(--app-bg);white-space:nowrap}
+/* Rules step down with the hierarchy: the column header carries the one ink
+   rule (it heads the whole table), each group is set off by stroke rules
+   above and below, and tasks keep their hairlines. The scope total's 2px
+   ink rule closes the document. */
+.art-table thead th{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);text-align:left;padding:14px 12px;border-bottom:1px solid var(--ink);background:var(--sunken);white-space:nowrap}
 .art-table thead th.art-col-num,.art-table thead th.art-col-amt{text-align:right}
 .art-col-id{width:96px;padding-left:24px!important}
 .art-col-item{width:auto}
 .art-col-gc{width:132px}
-.art-col-num{width:78px}
-.art-col-amt{width:96px;padding-right:12px!important}
+.art-col-num{width:96px}
+.art-col-amt{width:136px;padding-right:12px!important}
 .art-col-del{width:36px;padding:0!important}
 .art-table tbody tr td{padding:14px 12px;vertical-align:top;border-bottom:1px solid rgba(0,0,0,.05)}
 /* Compact task row: numbers/values align tightly to their columns */
 .art-table tbody tr.art-item-main td{padding-top:16px;padding-bottom:6px;border-bottom:0;vertical-align:middle}
-.art-table tbody tr.art-item-main{cursor:pointer;transition:background .12s}
-.art-table tbody tr.art-item-main:hover td{background:rgba(253,255,134,.10)}
-.art-table tbody tr.art-item-detail{cursor:pointer}
-/* Selected task (matches the sidebar's open task) — subtle lemon left rail */
-.art-table tbody tr.art-selected td{background:rgba(253,255,134,.22)}
-.art-table tbody tr.art-item-main.art-selected td.art-id{position:relative}
-.art-table tbody tr.art-item-main.art-selected td.art-id::before{content:'';position:absolute;left:0;top:2px;bottom:2px;width:3px;background:var(--accent-deep,#B7A82C)}
 /* Detail row: description + product + photos stretch across every column but ID */
 .art-table tbody tr.art-item-detail td{padding-top:0;padding-bottom:18px;border-bottom:1px solid rgba(0,0,0,.05)}
 .art-item-wide{padding-left:12px!important}
 .art-item-wide .art-desc{max-width:none;margin-top:2px;margin-bottom:8px}
 .art-item-wide .art-product{margin-bottom:0}
 .art-item-wide .art-photos{margin-top:10px}
-.art-table tbody tr.art-grp td{padding:22px 12px 10px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);border-bottom:1px solid var(--ink);background:var(--white)}
+.art-table tbody tr.art-grp td{padding:14px 12px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke);background:var(--app-bg);vertical-align:middle}
+/* The group's subtotal on its own header row, in the Amount column so it
+   lines up with every line amount under it and with the totals. The figure
+   reads in the amount type, not the header's mono. */
+.art-table tbody tr.art-grp td.art-grp-amt{font-family:var(--display);font-size:15px;font-weight:700;
+  letter-spacing:0;text-transform:none;text-align:right;vertical-align:middle}
 .art-grp-name{color:var(--ink);padding-left:24px!important;padding-right:24px!important;display:table-cell}
 .art-grp-room{display:inline-block;vertical-align:baseline}
 .art-grp-count-inline{display:inline-block;margin-left:14px;vertical-align:baseline;color:var(--t3);font-weight:700;white-space:nowrap}
@@ -2749,12 +2829,11 @@ body.art-lb-open #artLightbox{pointer-events:auto}
 .art-gc{font-size:15px;color:var(--ink)}
 .art-num{text-align:right;font-family:var(--body);font-size:15px;color:var(--ink);white-space:nowrap}
 .art-amt{text-align:right;font-family:var(--display);font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap;padding-right:14px!important}
-.art-table tbody tr.art-sub td{padding:10px 12px 22px;border-bottom:1px solid var(--stroke)}
-.art-sub-l,.art-sub-a{font-family:var(--display);font-weight:700;color:var(--ink)}
-.art-sub-a{font-size:15px}
-.art-table tfoot tr.art-grand td{padding:20px 12px 6px;border-top:2px solid var(--ink);border-bottom:0}
-.art-grand-a{font-family:var(--display);font-size:22px;font-weight:700;color:var(--success)}
-.art-table tfoot tr.art-grand-lbl td{padding:0 12px 22px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);text-align:right;border:0}
+/* Labels above the figures: the rule sits over the label row, and the
+   figures close the document. */
+.art-table tfoot tr.art-grand-lbl td{padding:18px 12px 6px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);text-align:right;border-top:2px solid var(--ink);border-bottom:0;white-space:nowrap}
+.art-table tfoot tr.art-grand td{padding:0 12px 24px;border:0;vertical-align:baseline}
+.art-grand-a{font-family:var(--display);font-size:22px;font-weight:700;color:var(--success);line-height:1.1}
 
 /* ── annotation note primitive (mob marker for rough/contested spots) ── */
 .anno{position:absolute;background:var(--accent);color:var(--ink);font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.02em;padding:7px 11px;border:1px solid var(--ink);max-width:240px;line-height:1.5;z-index:8;box-shadow:2px 2px 0 rgba(26,26,26,.16)}

@@ -639,7 +639,10 @@ function taskRow(t){
         <div class="task-mid-top">
           ${typeof flagMarkHtml === 'function' ? flagMarkHtml(t, 'task-flag') : ''}<span class="task-name">${t.name}</span>
         </div>
-        <div class="task-mid-status">${taskStatus(t)}${modChipsHtml}</div>
+        <div class="task-mid-status">${taskStatus(t)}${
+          (typeof taskMissingProduct === 'function' && taskMissingProduct(t))
+            ? '<span class="task-flagtag" title="Its product is out of stock — pick another in the Editor">Missing product</span>' : ''
+        }${modChipsHtml}</div>
         ${(() => {
           // Only emitted when there's something in it. It used to always
           // render and lean on :empty to collapse, which never matched —

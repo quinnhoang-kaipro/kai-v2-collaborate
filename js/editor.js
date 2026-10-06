@@ -512,7 +512,20 @@ function _shopEditCardHtml(t){
                   // renders on a picked product, so an unselected option line
                   // has nothing to set.
                   const prodModsHtml = _prodModHtml(t, o, p);
-                  return `<div class="sec-taskcard-product-row${hasSku?' is-catalog':''}${productIsPicked(p)?' is-picked':''}" data-prod="${p.id}" ${hasSku?`onclick="openFly(${t.id},'${esc(p.sku)}',event)" title="View product details"`:''}>
+                  const oos = p.stock === 'out';
+                  // Out of stock: greyed, and nothing in it can be set. The
+                  // in-stock products under it are where the pick goes.
+                  const dis = oos ? ' disabled' : '';
+                  /* A product with something to say — out of stock, a price
+                     change, or tags of its own — sits in a frame with its
+                     bars. Tags that describe the line stay on top; states
+                     that need a decision are bars underneath, each with its
+                     tag at its own start. */
+                  const pc = p.priceChange;
+                  const tags = Array.isArray(p.tags) ? p.tags : [];
+                  const framed = oos || pc || tags.length;
+                  const qtyOver = p.qtyDefault != null && String(p.qty) !== String(p.qtyDefault);
+                  return `${framed ? `<div class="prod-frame${oos ? ' is-oos' : ''}">${_prodTagsHtml(tags)}` : ''}<div class="sec-taskcard-product-row${hasSku?' is-catalog':''}${productIsPicked(p)?' is-picked':''}${oos?' is-oos':''}" data-prod="${p.id}" ${hasSku && !oos?`onclick="openFly(${t.id},'${esc(p.sku)}',event)" title="View product details"`:''}${oos?' aria-disabled="true"':''}>
                     <div class="sec-taskcard-product-thumb">${thumb}</div>
                     <div class="sec-taskcard-product-name-block">
                       ${p.brand ? `<span class="sec-taskcard-product-brand">${esc(p.brand)}</span>` : ''}
@@ -522,29 +535,30 @@ function _shopEditCardHtml(t){
                     <div class="sec-taskcard-product-cell">
                       <span class="sec-taskcard-lbl">Qty</span>
                       <div class="opt-card-qty-stepper" onclick="event.stopPropagation()">
-                        <button class="opt-card-qty-btn" onclick="event.stopPropagation();bumpProductQty(${t.id},'${o.id}','${p.id}',-1)" aria-label="Decrease">
+                        <button class="opt-card-qty-btn"${dis} onclick="event.stopPropagation();bumpProductQty(${t.id},'${o.id}','${p.id}',-1)" aria-label="Decrease">
                           <svg viewBox="0 0 12 12" fill="none"><path d="M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                         </button>
-                        <input class="opt-card-qty-input" value="${esc(p.qty || '')}" onclick="event.stopPropagation()" oninput="commitOptionProduct(${t.id},'${o.id}','${p.id}','qty',this.value);requestSecTaskcardRerender()">
-                        <button class="opt-card-qty-btn" onclick="event.stopPropagation();bumpProductQty(${t.id},'${o.id}','${p.id}',+1)" aria-label="Increase">
+                        <input class="opt-card-qty-input${qtyOver ? ' is-override' : ''}"${dis} value="${esc(p.qty || '')}" onclick="event.stopPropagation()" oninput="commitOptionProduct(${t.id},'${o.id}','${p.id}','qty',this.value);requestSecTaskcardRerender()">
+                        <button class="opt-card-qty-btn"${dis} onclick="event.stopPropagation();bumpProductQty(${t.id},'${o.id}','${p.id}',+1)" aria-label="Increase">
                           <svg viewBox="0 0 12 12" fill="none"><path d="M6 3v6M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                         </button>
                       </div>
+                      ${qtyOver ? `<span class="prod-qty-default">Default ${esc(p.qtyDefault)}</span>` : ''}
                     </div>
                     <div class="sec-taskcard-product-cell" onclick="event.stopPropagation()">
                       <span class="sec-taskcard-lbl">Parts</span>
-                      <input class="sec-taskcard-field" value="${esc(p.parts || '')}" placeholder="$0.00" onclick="event.stopPropagation()" oninput="commitOptionProduct(${t.id},'${o.id}','${p.id}','parts',this.value);requestSecTaskcardRerender()">
+                      <input class="sec-taskcard-field"${dis} value="${esc(p.parts || '')}" placeholder="$0.00" onclick="event.stopPropagation()" oninput="commitOptionProduct(${t.id},'${o.id}','${p.id}','parts',this.value);requestSecTaskcardRerender()">
                     </div>
                     <div class="sec-taskcard-product-cell" onclick="event.stopPropagation()">
                       <span class="sec-taskcard-lbl">Labor</span>
-                      <input class="sec-taskcard-field" value="${esc(p.labor || '')}" placeholder="$0.00" onclick="event.stopPropagation()" oninput="commitOptionProduct(${t.id},'${o.id}','${p.id}','labor',this.value);requestSecTaskcardRerender()">
+                      <input class="sec-taskcard-field"${dis} value="${esc(p.labor || '')}" placeholder="$0.00" onclick="event.stopPropagation()" oninput="commitOptionProduct(${t.id},'${o.id}','${p.id}','labor',this.value);requestSecTaskcardRerender()">
                     </div>
                     <div class="sec-taskcard-product-total">
                       <span class="sec-taskcard-product-amt">${esc(_fmtDollars(productLineTotal(p)))}</span>
                       ${(typeof productLineDelta === 'function' && typeof deltaChipHtml === 'function') ? deltaChipHtml(productLineDelta(t, o, p)) : ''}
                       ${prodModsHtml}
                     </div>
-                  </div>`;
+                  </div>${oos ? _prodOosBarHtml(t, o, p) : ''}${pc ? _prodPriceBarHtml(t, o, p) : ''}${framed ? '</div>' : ''}`;
                 }).join('') || `<div class="sec-taskcard-product-empty">No products for this option.</div>`}
               </div>` : ''}
             </div>
@@ -553,6 +567,65 @@ function _shopEditCardHtml(t){
       </div>
     </div>
   </div>`;
+}
+
+/* Out of stock. One bar under the row says all of it: the state, what the
+   supplier said and when, and where to go instead. It alerts and nothing
+   more — there is no replacement flow yet, so the way out is the in-stock
+   products listed with it. The tag used to sit on the row's top-left corner
+   as a separate flag, which split one message across two places; the row
+   and the bar now share one red frame, so they read as one thing. */
+function _prodOosBarHtml(t, o, p){
+  // The date rides on the tag — when the supplier last said so.
+  const when = p.stockChecked ? `: ${esc(p.stockChecked)}` : '';
+  return `<div class="prod-bar is-oos">
+    <span class="prod-bar-tag is-oos">Out of stock${when}</span>
+    <span class="prod-bar-msg">Unavailable from this supplier. Please make another selection.</span>
+  </div>`;
+}
+/* Price change, the same way: the tag opens its own bar rather than sitting
+   on the row's top edge, and the bar says what moved and what it does to the
+   line, with the one decision it needs. */
+function _prodPriceBarHtml(t, o, p){
+  const pc = p.priceChange;
+  const num = v => (typeof _parseDollars === 'function') ? _parseDollars(v) : (parseFloat(String(v||'0').replace(/[^0-9.-]/g,'')) || 0);
+  const fmt = v => '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const from = num(pc.from), to = num(pc.to);
+  const next = productLineTotal(Object.assign({}, p, {parts: pc.to}));
+  return `<div class="prod-bar is-price">
+    <span class="prod-bar-tag is-price">Price change</span>
+    <span class="prod-bar-msg">Unit price ${to < from ? 'fell' : 'rose'} <s>${fmt(from)}</s> &rarr; <b>${fmt(to)}</b>. Total goes to <b>${fmt(next)}</b>.</span>
+    <button type="button" class="prod-bar-btn" onclick="event.stopPropagation();acceptPriceChange(${t.id},'${o.id}','${p.id}')">Accept</button>
+  </div>`;
+}
+function acceptPriceChange(taskId, optId, prodId){
+  const t = TASKS.find(x => x.id === taskId);
+  const o = t && (t.options || []).find(x => x.id === optId);
+  const p = o && (o.products || []).find(x => x.id === prodId);
+  if(!p || !p.priceChange) return;
+  const to = p.priceChange.to;
+  delete p.priceChange;
+  commitOptionProduct(taskId, optId, prodId, 'parts', to);
+  if(typeof renderAll === 'function') renderAll();
+  if(typeof toast === 'function') toast(`Price updated to ${to}`);
+}
+/* Tags that describe the line rather than ask for anything — they stay on
+   the frame's top edge. Override is the one in the error colour: it marks a
+   value someone changed from the default, which the quantity field below
+   shows in the same red. */
+const PROD_TAGS = {
+  override:     {label:'Override',             cls:'is-override'},
+  instructions: {label:'Instructions',         cls:'is-instructions', icon:true},
+  deferred:     {label:'Deferred',             cls:''},
+  resident:     {label:'Resident responsible', cls:''},
+};
+function _prodTagsHtml(tags){
+  if(!tags.length) return '';
+  return `<div class="prod-tags">${tags.map(k => {
+    const d = PROD_TAGS[k] || {label:k, cls:''};
+    const ico = d.icon ? '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 3.5h8M2 6h8M2 8.5h5"/></svg>' : '';
+    return `<span class="prod-tag ${d.cls}">${ico}${esc(d.label)}</span>`;
+  }).join('')}</div>`;
 }
 
 /* ── Synthesize rich detail content from a product (placeholder copy,

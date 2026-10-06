@@ -1,3 +1,10 @@
+/* Captions for a line's photo strip, in the order the photos were taken: the
+   walk that found the line, then the detail shots. Lost when this file was split
+   out — both this file and progress.js read it, neither defined it, so opening
+   any historical document threw before it rendered. It belongs here, with the
+   paper that shows the strip. */
+const ART_PHOTO_CAPS = ['Initial walk','Detail','Wide','Spec','Context','Angle'];
+
 function renderArtifact(){
   const body = document.getElementById('workBody');
   if(!body) return;
@@ -129,25 +136,32 @@ function _renderHistoricalDoc(v){
     _isHistorical: true,
   };
   const tag = versionTag(v);
-  const isOriginal = v.num === 1;
-  const eyebrow = isOriginal ? 'Original scope' : `Change order ${v.num - 1}`;
   return `<div class="copy-doc-wrap hist-doc-wrap">
     <div class="copy-crumb hist-crumb">
       <button class="copy-crumb-back" onclick="closeHistorical()" title="Back to artifacts">
-        <span aria-hidden="true">‹</span> Back
+        <svg viewBox="0 0 8 12" aria-hidden="true"><path d="M6 1.5L1.5 6 6 10.5"/></svg> Back
       </button>
       <span class="copy-crumb-div"></span>
-      <span class="copy-crumb-name">${esc(versionLabel(v))}</span>
-      <span class="copy-crumb-meta">${esc(eyebrow)} · Approved ${esc(v.at)}${v.budget?` · ${esc(v.budget)}`:''}</span>
+      <span class="copy-crumb-meta">Approved ${esc(v.at)}</span>
       <span class="copy-crumb-sp"></span>
       ${tag.tag ? `<span class="hist-doc-tag hist-tag-${esc(tag.tagCls||'')}">${esc(tag.tag)}</span>` : ''}
       <button class="hist-print-btn" onclick="window.print()" title="Print this artifact">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 5V2h7v3M4.5 12H3V6h10v6h-1.5M4.5 9h7v5h-7z" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Print
       </button>
+      <button class="hist-print-btn" onclick="exportHistorical('${esc(v.id)}')" title="Export this artifact">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M4.5 6.5L8 10l3.5-3.5M2.5 11v2.5h11V11" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Export
+      </button>
     </div>
     <div class="copy-paper hist-paper">${_renderCopyPaper(readOnlyCopy)}</div>
   </div>`;
+}
+/* No export pipeline in the prototype yet, so this says what it would do
+   rather than pretending to hand over a file. */
+function exportHistorical(vid){
+  const v = (typeof VERSIONS !== 'undefined') ? VERSIONS.find(x => x.id === vid) : null;
+  if(typeof toast === 'function') toast(`Exporting ${v ? versionLabel(v) : 'this artifact'} — not wired up in the prototype yet`);
 }
 function _renderCopyIndex(){
   // Legacy alias — used to be the sole index; now delegates to the
@@ -163,6 +177,10 @@ function _copyFilterSummary(copy){
   parts.push(copy.filters.includePhotos !== false ? 'Photos included' : 'Photos hidden');
   return parts;
 }
+
+/* The project's name and the property's ID, as the paper prints them. The
+   prototype has neither anywhere else yet, so they are placeholders here. */
+const ART_PROJECT = {name:'South Main Spring Turn', propertyId:'E123497A'};
 
 function _fmtDate(iso){
   if(!iso) return '';
@@ -197,7 +215,7 @@ function _renderCopyDoc(copy){
   return `<div class="copy-doc-wrap">
     <div class="copy-crumb">
       <button class="copy-crumb-back" onclick="closeCopy()" title="Back to all copies">
-        <span aria-hidden="true">‹</span> Back
+        <svg viewBox="0 0 8 12" aria-hidden="true"><path d="M6 1.5L1.5 6 6 10.5"/></svg> Back
       </button>
       <span class="copy-crumb-div"></span>
       <span class="copy-crumb-name">${esc(copy.name)}</span>
@@ -243,7 +261,6 @@ function _renderCopyPaper(copy){
   const pricingHead = showPricing ? `<th class="art-col-num">Labor</th><th class="art-col-amt">Amount</th>` : '';
   const rows = groups.map(g => {
     const gTotal = g.items.reduce((s,t)=>s+dollars(t.cost), 0);
-    const gLabor = g.items.reduce((s,t)=>s+dollars(t.pcost||'$0'), 0);
     const itemRows = g.items.map(t => {
       const contractor = t.gc || '<span class="art-unassigned">Unassigned</span>';
       const product = t.product && !/not selected/i.test(t.product) ? t.product : '<span class="art-muted">Product not selected</span>';
@@ -263,7 +280,8 @@ function _renderCopyPaper(copy){
       </div>` : '';
       const detailColspan = showPricing ? 5 : 3;
       const hasDetail = (t.desc || t.opt || product || photoStrip);
-      const selCls = (selId && TASKS.find(x=>x.id===selId)?.code===t.code) ? ' art-selected' : '';
+      // No selected-row highlight: the rows are read-only here.
+      const selCls = '';
       const detailRow = hasDetail ? `<tr class="art-item-detail${selCls}" data-row-tid="${t.code}-detail" data-select-code="${t.code}">
         <td class="art-id"></td>
         <td class="art-item-wide" colspan="${detailColspan}">
@@ -281,66 +299,61 @@ function _renderCopyPaper(copy){
       </tr>${detailRow}`;
     }).join('');
     const grpColspan = showPricing ? 6 : 4;
-    const subRow = showPricing ? `<tr class="art-sub">
-        <td colspan="4"></td>
-        <td class="art-num art-sub-l">${money(gLabor)}</td>
-        <td class="art-amt art-sub-a">${money(gTotal)}</td>
-      </tr>` : '';
     return `
       <tr class="art-grp">
-        <td class="art-grp-name" colspan="${grpColspan}"><span class="art-grp-room">${g.room.toUpperCase()}</span><span class="art-grp-count-inline">${g.items.length} ${g.items.length===1?'item':'items'}</span></td>
+        <td class="art-grp-name" colspan="${showPricing ? grpColspan - 1 : grpColspan}"><span class="art-grp-room">${g.room.toUpperCase()}</span><span class="art-grp-count-inline">${g.items.length} ${g.items.length===1?'item':'items'}</span></td>
+        ${showPricing ? `<td class="art-amt art-grp-amt">${money(gTotal)}</td>` : ''}
       </tr>
       ${itemRows}
-      ${subRow}
     `;
   }).join('');
 
   const grandRows = showPricing ? `<tfoot>
-            <tr class="art-grand">
-              <td colspan="4"></td>
-              <td class="art-num">${money(grandLabor)}</td>
-              <td class="art-amt art-grand-a">${money(grandTotal)}</td>
-            </tr>
             <tr class="art-grand-lbl">
               <td colspan="4"></td>
               <td class="art-num">Labor total</td>
               <td class="art-amt">Scope total</td>
+            </tr>
+            <tr class="art-grand">
+              <td colspan="4"></td>
+              <td class="art-num">${money(grandLabor)}</td>
+              <td class="art-amt art-grand-a">${money(grandTotal)}</td>
             </tr>
           </tfoot>` : '';
 
   return `
     <div class="art-head">
       <div class="art-head-l">
-        <div class="art-eyebrow">Scope of work · ${esc(versionLabel(VERSIONS.find(v=>v.id===copy.basedOnVersionId)||{num:1}))}</div>
         <div class="art-title">3484 South Main Street</div>
-        <div class="art-sub-info">Atlanta, GA 30315 · Single-family renovation</div>
+        <div class="art-sub-info">Atlanta, GA 30315 · ${esc(ART_PROJECT.name)}</div>
       </div>
-      <div class="art-head-r">
-        ${copy._isHistorical ? '' : `<div class="art-meta">
-          <div class="art-meta-k">Prepared for</div>
-          <div class="art-meta-v">${esc(copy.name)}</div>
-        </div>
-        <div class="art-meta">
-          <div class="art-meta-k">Prepared</div>
-          <div class="art-meta-v">${_fmtDate(copy.createdAt)}</div>
-        </div>`}
+      ${showPricing ? `<div class="art-head-totals">
+        <div class="art-head-total"><span class="art-meta-k">Labor total</span><span class="art-head-total-v">${money(grandLabor)}</span></div>
+        <div class="art-head-total is-scope"><span class="art-meta-k">Scope total</span><span class="art-head-total-v">${money(grandTotal)}</span></div>
+      </div>` : ''}
         ${(()=>{
-          // "Based on" only makes sense when the doc is derived from an
-          // earlier version — i.e. a change order (v.num > 1) or a copy
-          // that references some version. For the original scope (v1),
-          // there's nothing older to be "based on", so we omit the row.
+          /* The same facts on every document, shared copy or historical, in
+             one row under the address: what it is, its ID, when it was
+             prepared, which version it is built from, and the property it
+             is about. Who it was prepared for is the copy's own business —
+             its name in the index says so — and the paper doesn't repeat it. */
           const v = VERSIONS.find(x => x.id === copy.basedOnVersionId) || {num:1};
-          if(v.num <= 1) return '';
-          return `<div class="art-meta">
-            <div class="art-meta-k">Based on</div>
-            <div class="art-meta-v">${esc(versionLabel(v))}</div>
+          const at = copy.createdAt || '';
+          const prepared = /^\d{4}-\d{2}-\d{2}/.test(at) ? _fmtDate(at) : at;
+          const basedOn = `${versionLabel(v)} ${_sowIdFor(v.id || copy.basedOnVersionId).replace(/^SOW-/, '')}`;
+          const cell = (k, val, cls) => `<div class="art-meta"><div class="art-meta-k">${k}</div><div class="art-meta-v${cls ? ' ' + cls : ''}">${esc(val)}</div></div>`;
+          /* What kind of document this is: the original scope, a change
+             order, or the closeout. */
+          const kind = v.kind === 'closeout' ? 'Closeout' : (v.num > 1 ? versionLabel(v) : 'Scope of Work');
+          const docId = _sowIdFor(copy._isHistorical ? copy.basedOnVersionId : (copy.shareToken || copy.id));
+          return `<div class="art-head-meta">
+            ${cell('Artifact', kind)}
+            ${cell('Document ID', docId, 'is-id')}
+            ${cell('Prepared on', prepared)}
+            ${cell('Based on', basedOn)}
+            ${cell('Property ID', ART_PROJECT.propertyId, 'is-id')}
           </div>`;
         })()}
-        <div class="art-meta">
-          <div class="art-meta-k">Document ID</div>
-          <div class="art-meta-v art-meta-docid">${esc(_sowIdFor(copy._isHistorical ? copy.basedOnVersionId : (copy.shareToken || copy.id)))}</div>
-        </div>
-      </div>
     </div>
     <table class="art-table">
       <thead>

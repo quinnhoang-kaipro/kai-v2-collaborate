@@ -12,6 +12,7 @@ const FLAGS = {
   unassigned:{label:'Unassigned contractor', cls:'c-unassigned'},
   no_gc:     {label:'Unassigned contractor', cls:'c-unassigned'},
   oos:       {label:'Out of stock',          cls:'c-oos'},
+  no_product:{label:'Missing product',       cls:'c-missing'},
   edit_req:  {label:'Edit requests',         cls:'c-editreq'},
   co_open:   {label:'Change orders',         cls:'c-coopen'},
 };
@@ -472,6 +473,53 @@ const TASKS = [
     primary.cost = _fmtDollars(total);
     t.cost = _fmtDollars(t.options.reduce((sum,o) => sum + numFrom(o.cost), 0));
   });
+})();
+
+/* Stock, as the supplier feed reports it. Demo-only: two products are out —
+   the appliance suite this job had picked, which leaves Appliances with no
+   product, and an unpicked cabinet candidate, which leaves Cabinets with
+   its pick intact. `stockChecked` is when the feed last
+   answered. In production both come from the supplier. */
+(function seedOutOfStock(){
+  const numFrom = (str) => parseFloat(String(str||'0').replace(/[^0-9.-]/g,'')) || 0;
+  const mark = (taskId, index, checked) => {
+    const t = TASKS.find(x => x.id === taskId);
+    const o = t && t.options && t.options[0];
+    const p = o && o.products[index];
+    if(!p) return;
+    /* An out-of-stock product cannot be bought, so it stops being the pick:
+       its quantity drops to zero and the option's total with it. Picking
+       one of the in-stock products is what clears the task's Missing
+       product tag. */
+    p.stock = 'out'; p.stockChecked = checked; p.qty = '0';
+    o.cost = _fmtDollars(o.products.reduce((sum, x) => sum + numFrom(x.qty) * (numFrom(x.parts) + numFrom(x.labor)), 0));
+    t.cost = _fmtDollars(t.options.reduce((sum, x) => sum + numFrom(x.cost), 0));
+  };
+  mark(4, 0, '3 Sep');
+  mark(1, 1, '28 Sep');
+})();
+
+/* Demo-only: one product carrying every line state at once, to show how
+   they stack — Master Bed › Flooring. Out of stock and a price change are
+   bars under the row; the override (its quantity is 3 against a default of
+   2), instructions, deferred and resident-responsible are tags on top. It
+   replaces the task's current pick, which drops to zero. */
+(function seedLineStatesShowcase(){
+  const numFrom = (str) => parseFloat(String(str||'0').replace(/[^0-9.-]/g,'')) || 0;
+  const t = TASKS.find(x => x.id === 13);
+  const o = t && t.options && t.options[0];
+  if(!o) return;
+  (o.products || []).forEach(p => { p.qty = '0'; });
+  o.products = [{
+    id: 'prod_boatcarpet', brand: 'SkyShalo',
+    product: 'Boat Carpet, 6 ft. x 13.1 ft. Marine Gray Carpet Polyester Texture Waterproof Black Carpet Full Roll Carpet',
+    sku: '1013320441', qty: '3', qtyDefault: '2', parts: '$110.45', labor: '$0.50',
+    stock: 'out', stockChecked: '2 Oct',
+    priceChange: {from: '$110.45', to: '$105.19'},
+    tags: ['override', 'instructions', 'deferred', 'resident'],
+  }].concat(o.products || []);
+  o.cost = _fmtDollars(o.products.reduce((sum, x) => sum + numFrom(x.qty) * (numFrom(x.parts) + numFrom(x.labor)), 0));
+  t.cost = _fmtDollars(t.options.reduce((sum, x) => sum + numFrom(x.cost), 0));
 })();
 
 /* ── Scope-total override, pushed from the shell via postMessage. Used so the

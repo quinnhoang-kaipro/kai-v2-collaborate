@@ -150,6 +150,19 @@ function _coPillHtml(t){
   return `<span class="co-pill" title="${esc(why)} after approval — waiting on approval">${esc(why === 'Changed' ? 'Change order' : why)}</span>`;
 }
 
+/* A task whose product went out of stock and has not been replaced: some
+   added option carries an out-of-stock product and none of its in-stock
+   products is picked. Only the stock feed raises it — a draft line nobody
+   has chosen a product for yet is the Missing details state, not this. */
+function taskMissingProduct(t){
+  const opts = Array.isArray(t && t.options) ? t.options : [];
+  const picked = p => (typeof productIsPicked === 'function') ? productIsPicked(p) : false;
+  return opts.some(o => {
+    if(typeof optionIsAdded === 'function' && !optionIsAdded(o)) return false;
+    const ps = Array.isArray(o.products) ? o.products : [];
+    return ps.some(p => p.stock === 'out') && !ps.some(p => p.stock !== 'out' && picked(p));
+  });
+}
 function taskKeys(t){
   // Synth keys drive filter matching even when the underlying flag isn't
   // stored on the task explicitly.
@@ -158,6 +171,7 @@ function taskKeys(t){
   //   co_open → task has snapshot-tracked change-order edits not yet submitted
   const synth = [];
   if(!t.gc) synth.push('no_gc');
+  if(taskMissingProduct(t)) synth.push('no_product');
   if(t.editRequested) synth.push('edit_req');
   // Either half: a diverged field, or a staged change (contractor swap,
   // delete). This only asked the first, so a staged change flagged nothing.
@@ -218,7 +232,7 @@ function renderFilter(){
   // wants resolving. Change orders aren't a problem, they're a step in the
   // process, so they sit in their own Workflow band between the flags and
   // the user-created modifiers.
-  const flagOrder=['no_gc','oos'];
+  const flagOrder=['no_gc','no_product','oos'];
   const flowOrder=['co_open'];
   // These filters are meaningful even at count=0 (they're the "state"
   // filters an admin scans for regularly), so always surface them in the
