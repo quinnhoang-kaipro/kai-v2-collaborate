@@ -85,8 +85,9 @@ const OVERVIEW_SEED = {
   ],
   template: {name:'ATL Metro Turn Template 01:09:26', version:'Apr 2, 2026'},
   /* The closeout is the one document the version ladder does not model — it
-     is not a scope, so it has no entry in VER. Its own three dates live here. */
-  closeout: {opened:'May 18, 2026', handed:'May 20, 2026', approved:'May 22, 2026'},
+     is not a scope, so it has no entry in VER. It has no draft, only the day
+     it was approved. */
+  closeout: {approved:'May 22, 2026'},
   dispatch: 'Lockbox is on the side gate, not the front door. Resident works nights — no entry before 10am.',
 };
 
@@ -260,7 +261,7 @@ function _ovTrail(){
     const chain = [{who:author.who, role:author.role, from:opened, fromTime:openedT}];
     signs.forEach((sig, k) => {
       chain[k].to = sig.date; chain[k].toTime = sig.time;
-      chain.push({who:sig.who, role:sig.role, from:sig.date, fromTime:sig.time});
+      chain.push({who:sig.who, role:sig.role, from:sig.date, fromTime:sig.time, taken:!!sig.taken});
     });
     const last = chain[chain.length - 1];
     const isPending = id === pending;
@@ -296,7 +297,11 @@ function _ovTrail(){
       const noteId = `${id}~${k}`;
       _OV_TENURE_NOTES.push({nid:noteId, who:h.who, role:h.role, when:(h.to || h.from),
                              body, level:(m.label || id), hidden:true});
-      const nextHolder = chain[k + 1] ? chain[k + 1].who : null;
+      /* Who they handed it to — unless the next person took it instead. A
+         manager can pick the work up without being handed it, and then
+         nobody handed anything over; the row says nothing rather than
+         saying who took it. */
+      const nextHolder = (chain[k + 1] && !chain[k + 1].taken) ? chain[k + 1].who : null;
       return {
         note: body,
         noteId,
@@ -336,20 +341,23 @@ function _ovTrail(){
               amount:amount, was:was, evs:evs.reverse()});
   });
 
-  /* The closeout, when the project has one. Not a scope, so not in VER. */
-  const st   = (typeof STAGE_ID !== 'undefined') ? STAGE_ID : '';
-  const mode = (typeof PROJ_MODE !== 'undefined') ? PROJ_MODE : '';
-  if(mode === 'closeout' || st === 'closeout' || st === 'closeout-approved'){
+  /* The closeout. Not a scope, so not in VER. It has no draft: it is made at
+     the end, once every task has been marked complete and approved, and it
+     is the job's final document. So it exists only once the job is closed
+     out, as one row — the job manager approving the finished tasks — built
+     with the same fields as every other row so it reads and lines up like
+     them. */
+  const st = (typeof STAGE_ID !== 'undefined') ? STAGE_ID : '';
+  if(st === 'closeout-approved'){
     const C = OVERVIEW_SEED.closeout;
-    const done = st === 'closeout-approved';
-    out.push({name:'Closeout', state: done ? 'Approved' : 'Draft', evs:[
-      {...author, verb:'started', when:C.opened, kind:'start'},
-      {...author, verb:'handed off', to:people.manager, when:C.handed, kind:'handoff'},
-      ...(done
-        ? [{who:people.manager, role:'Job manager', verb:'approved',
-            when:C.approved, kind:'approved'}]
-        : []),
-    ].reverse()});
+    const n = (typeof TASKS !== 'undefined') ? TASKS.length : 0;
+    const what = `Approved ${n} task${n === 1 ? '' : 's'}`;
+    out.push({name:'Closeout', state:'Approved', evs:[{
+      who:people.manager, role:'Job manager', kind:'approved',
+      what, verb:'approved', act:'approved',
+      when:C.approved, at:Date.parse(C.approved) || 0, railDay:null,
+      ver:'closeout~0', settles:true, current:false,
+    }]});
   }
   return out.reverse();   // newest document first, like the activity feed
 }
@@ -1189,18 +1197,17 @@ window.a2CurrentHolder = function(){
   }catch(e){ return null; }
 };
 
-/* The current document's run is what anyone came here to check; everything
-   older is the audit trail, which is a different errand. So the feed is cut
-   at the day the newest document was opened — everything from there on is
-   open, the rest is one click away with its size said up front. */
+/* The latest three entries are always open; everything older is the audit
+   trail, one click away with its size said up front. The feed used to be cut
+   at the day the newest document was opened, which left the table empty —
+   a header and nothing under it — whenever nothing had happened to that
+   document yet. A fixed count always has something to show. */
+const OV_TRAIL_OPEN = 3;
 function _ovTrailHtml(){
   const docs = _ovTrail();
   if(!docs.length) return `<p class="ov-empty">No documents yet.</p>`;
   const entries = _ovFeedEntries(docs);
-  const current = docs[0];
-  const startedAt = Math.min(...current.evs.map(e => Date.parse(e.when) || Infinity));
-  let cut = entries.findIndex(en => en.at < startedAt);
-  if(cut < 0) cut = entries.length;
+  const cut = Math.min(OV_TRAIL_OPEN, entries.length);
   const state = {w:'', m:''};   // week for the timeline, month for the sentences
   const head = _ovFeedHtml(entries.slice(0, cut), state);
   /* No standing line. "Sana P. is working on Change Order 2 since Apr 28" was

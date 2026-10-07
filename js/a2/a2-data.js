@@ -82,7 +82,10 @@ const REVIEWS = [
   {ver:'co1',  who:'D. Reyes',  role:'Designer',     date:'Apr 20, 2026', time:'11:12am'},
   {ver:'co1',  who:'T. Okafor', role:'Job manager',  date:'Apr 21, 2026', time:'2:55pm'},
   {ver:'co2',  who:'S. Patel',  role:'Ops',          date:'Apr 28, 2026', time:'10:30am'},
-  {ver:'co2',  who:'T. Okafor', role:'Job manager',  date:'Apr 29, 2026', time:'5:15pm'},
+  /* `taken`: the job manager picked this one up from S. Patel without being
+     handed it — a manager can take the work at any point. Nobody handed it
+     over, so the row before it doesn't say so. */
+  {ver:'co2',  who:'T. Okafor', role:'Job manager',  date:'Apr 29, 2026', time:'5:15pm', taken:true},
 ];
 // `budget` is stamped onto each version by stampVersionBudgets() — it is the
 // sum of the lines that exist at that point, not a figure kept by hand.
@@ -241,9 +244,9 @@ const SCOPE = [
      mods:[], added:true,
      changes:[
        {ct:'value', ver:'co2', who:'S. Patel', role:'Ops',
-        rows:[{field:'Amount', from:'$520', to:'$700', delta:'+$180'}]},
+        rows:[{field:'Amount', from:'$700', to:'$520', delta:'−$180'}]},
        {ct:'added', ver:'co1', who:'M. Alvarez', role:'Field Agent',
-        rows:[{field:'Line added', add:'Door opener — garage added to the walk', wasAmount:'$520'}]},
+        rows:[{field:'Line added', add:'Door opener — garage added to the walk', wasAmount:'$700'}]},
        {ct:'product', ver:'co2', who:'D. Reyes', role:'Designer',
         rows:[{field:'Product', from:'Chamberlain B750', to:'Chamberlain B970 Smart'}]},
        {ct:'modifier', ver:'co2', who:'S. Patel', role:'Ops',
