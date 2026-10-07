@@ -48,6 +48,12 @@ function buildOrdered(){
 const revealed = ch => !!ch && ch._ord < timeT;
 const findCt = (t,ct) => t.changes.find(c => c.ct === ct);
 function asofVer(){ return timeT === 0 ? 'orig' : ORDERED[timeT-1].ver; }
+/* A line is in the document once its 'added' change has landed. Lines without
+   one were in the original scope and are always present. */
+function lineExistsAt(t, T){
+  if(t.added){ const a = findCt(t,'added'); if(!a || a._ord >= T) return false; }
+  return true;
+}
 function totalAsOf(){ let s = BASE_TOTAL; ORDERED.forEach(ch => { if(ch._ord < timeT) s += ch._budget; }); return s; }
 function findTask(code){
   for(const g of SCOPE) for(const t of g.tasks) if(t.code === code) return t;
