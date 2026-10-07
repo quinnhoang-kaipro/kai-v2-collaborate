@@ -911,6 +911,35 @@ function pickTaskTemplate(groupKey, name, cat){
   if(typeof renderAll === 'function') renderAll();
   if(typeof toast === 'function') toast(`Added ${name}`);
 }
+/* A task taken from the job's template in search. Unlike the picker above it
+   knows its room, and it starts from the template's option and price rather
+   than "To be scoped" — that is what the template is for. The product is
+   still to be chosen, so it carries the missing flag the same way. It opens
+   in the Editor, since the next thing anyone does with a new task is fill
+   it in. */
+function addTemplateTask(tpl){
+  if(!tpl) return;
+  const room = tpl.room;
+  const codePrefix = String(room).replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase() || 'NEW';
+  const code = `${codePrefix}-${Math.random().toString(16).slice(2,6).toUpperCase()}`;
+  const nextId = TASKS.reduce((max,t) => Math.max(max, t.id), 0) + 1;
+  const cost = tpl.cost || '$0';
+  const newTask = {
+    id: nextId, code, room, name: tpl.name,
+    opt: tpl.opt || 'To be scoped',
+    gc: null,
+    product: '(not selected)',
+    qty: '1 ea', rate: cost, cost,
+    photos: 0, flags: ['missing'], mods: [], status: 'not_started',
+    desc: '', pcost: '$0', notes: 0, _tag: 'Template',
+  };
+  TASKS.push(newTask);
+  _coMarkAdded(newTask.id);   // past publish, a new task is a change order
+  if(groupBy === 'room' && collapsedGrps) collapsedGrps.delete(room);
+  if(typeof renderAll === 'function') renderAll();
+  if(typeof selectTask === 'function') selectTask(newTask.id, {toEditor:true});
+  if(typeof toast === 'function') toast(`Added ${tpl.name} to ${room} from the template`);
+}
 // Progress-stage placeholder handlers: attach a photo/note update to the
 // group's or task's construction progress. Real flow (upload photo, add note,
 // optionally tag contractors) can plug into these entry points later.

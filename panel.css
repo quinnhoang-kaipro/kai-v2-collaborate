@@ -401,6 +401,21 @@ body.scope-edit-mode .sb-edit-toggle:hover{background:#000}
 .sbq-name b{font-weight:700;color:var(--ink)}
 .sbq-sub{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sbq-amt{flex-shrink:0;font-family:var(--mono);font-size:12px;color:var(--t2);white-space:nowrap}
+/* Template tasks not in the scope yet. Their own section under a rule, so
+   they never read as part of the scope above them; the plus sits in a
+   dashed box, the mark the sidebar's add rows use, and the right-hand
+   column names the action where a price would be. */
+.sbq-sec{margin:6px 0 2px;padding:10px 16px 4px;border-top:1px solid var(--stroke);
+  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sbq-sec span{color:var(--t3);font-weight:600}
+.sbq-ico.is-add{border:1px dashed var(--t3);width:17px;height:17px}
+.sbq-ico.is-add svg{width:11px;height:11px}
+.sbq-row.is-tpl .sbq-name{color:var(--t2)}
+.sbq-row.is-tpl.on .sbq-name{color:var(--ink)}
+.sbq-add{flex-shrink:0;font-family:var(--body);font-size:12px;font-weight:600;color:var(--t2);
+  white-space:nowrap;border-bottom:1px solid var(--stroke)}
+.sbq-row.is-tpl.on .sbq-add{color:var(--ink);border-bottom-color:var(--ink)}
 .sbq-more{padding:9px 16px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);border-top:1px solid var(--stroke);margin-top:6px}
 
 /* Now that the state bar carries both Cancel + Submit for review, the old

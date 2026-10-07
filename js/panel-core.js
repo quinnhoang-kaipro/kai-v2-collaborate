@@ -297,6 +297,30 @@ function sbSearchResults(){
   return out;
 }
 
+/* The template's tasks that are not in the scope yet, and so can be added
+   from here. A task counts as in the scope when one in the same room carries
+   its name. Nothing is offered once the scope is signed off — the same line
+   the sidebar's "New task" draws. */
+function _sbTemplateMisses(){
+  if(typeof JOB_TEMPLATE === 'undefined') return [];
+  if(typeof PROJ_MODE !== 'undefined' && PROJ_MODE === 'closeout-approved') return [];
+  const key = (room, name) => `${String(room).toLowerCase()}|${String(name).toLowerCase()}`;
+  const have = new Set(TASKS.map(t => key(t.room, t.name)));
+  return JOB_TEMPLATE.tasks.filter(t => !have.has(key(t.room, t.name)));
+}
+/* Template results, after the scope's own. Matched on room and name
+   together, so "kitchen" lists what the template still has for the kitchen
+   and "kitchen paint" finds that one task. Capped on their own, so a broad
+   query that fills the scope's share still shows what could be added. */
+const SBQ_TPL_LIMIT = 8;
+function sbTemplateResults(){
+  const terms = _sbQueryTerms();
+  if(!terms.length) return [];
+  return _sbTemplateMisses()
+    .filter(t => _sbNameHit(`${t.room} ${t.name}`, terms))
+    .map(t => ({kind:'tpl', name:t.name, room:t.room, tpl:t}));
+}
+
 let _sbqRows = [];      // current results, index-aligned with the rendered rows
 let _sbqActive = -1;    // keyboard cursor
 
@@ -379,14 +403,26 @@ function renderSbResults(){
     return;
   }
   const all = sbSearchResults();
-  _sbqRows = all.slice(0, SBQ_LIMIT);
+  const tpl = sbTemplateResults();
+  const inScope = all.slice(0, SBQ_LIMIT);
+  _sbqRows = inScope.concat(tpl.slice(0, SBQ_TPL_LIMIT));
   // Keep the first row armed so Enter always has an obvious target.
   _sbqActive = _sbqRows.length ? 0 : -1;
   if(!_sbqRows.length){
     list.innerHTML = `<div class="sbq-hint">No group or task named &ldquo;${esc(sbQuery.trim())}&rdquo;.</div>`;
     return;
   }
-  const rows = _sbqRows.map((r,i) => r.kind === 'group'
+  const rows = _sbqRows.map((r,i) => r.kind === 'tpl'
+    /* Not in the scope, so it has no price of its own yet; the right-hand
+       column says what taking it does instead. A dashed box with a plus
+       rather than the task icon, the same mark the sidebar's add rows use. */
+    ? `${i === inScope.length ? `<div class="sbq-sec">Not in scope yet <span>· from ${esc(JOB_TEMPLATE.name)}</span></div>` : ''}
+      <button class="sbq-row is-tpl${i===_sbqActive?' on':''}" data-i="${i}" onclick="sbqPick(${i})" onmousemove="sbqHover(${i})">
+        <span class="sbq-ico is-add" aria-hidden="true"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M7 3.5v7M3.5 7h7"/></svg></span>
+        <span class="sbq-txt"><span class="sbq-name">${_sbMark(r.name, terms)}</span><span class="sbq-sub">${esc(r.room)} · not in scope</span></span>
+        <span class="sbq-add">Add task from template</span>
+      </button>`
+    : r.kind === 'group'
     ? `<button class="sbq-row${i===_sbqActive?' on':''}" data-i="${i}" onclick="sbqPick(${i})" onmousemove="sbqHover(${i})">
         <span class="sbq-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="4.5" width="21" height="15"/><path d="M1.5 9.5h21"/></svg></span>
         <span class="sbq-txt"><span class="sbq-name">${_sbMark(r.name, terms)}</span><span class="sbq-sub">Group · ${r.n} ${r.n===1?'task':'tasks'}</span></span>
@@ -397,8 +433,9 @@ function renderSbResults(){
         <span class="sbq-txt"><span class="sbq-name">${_sbMark(r.name, terms)}</span>${r.child ? '' : `<span class="sbq-sub">${esc(r.group)}</span>`}</span>
         <span class="sbq-amt">${esc(r.task.cost || '')}</span>
       </button>`).join('');
-  const more = all.length > _sbqRows.length
-    ? `<div class="sbq-more">${all.length - _sbqRows.length} more — keep typing to narrow</div>` : '';
+  const hidden = (all.length + tpl.length) - _sbqRows.length;
+  const more = hidden > 0
+    ? `<div class="sbq-more">${hidden} more — keep typing to narrow</div>` : '';
   list.innerHTML = rows + more;
 }
 function sbqHover(i){
@@ -439,6 +476,11 @@ function sbqPick(i){
   const r = _sbqRows[i];
   if(!r) return;
   closeSbSearch();
+  // A template task is not in the scope to go to; taking it adds it.
+  if(r.kind === 'tpl'){
+    if(typeof addTemplateTask === 'function') addTemplateTask(r.tpl);
+    return;
+  }
   const cleared = _sbqRevealForPick(r);
   if(r.kind === 'group'){
     if(typeof selectGroup === 'function') selectGroup(r.key);

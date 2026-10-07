@@ -302,6 +302,43 @@ const TASKS = [
   {id:16, code:'GAR-9B10', room:'Garage', name:'Door opener', opt:'Replace', gc:'Stone Bros', product:'Chamberlain B970 Smart', qty:'1 ea', rate:'$520', cost:'$520', photos:1, flags:[], mods:[], status:'in_review', desc:'Replace garage door opener with smart unit. Reuse existing rail if compatible.', pcost:'$420', notes:1},
 ];
 
+/* The template this job was scoped from: every task it offers, room by room.
+   Most are already in the scope — that is where the scope came from — and
+   the rest are the ones nobody has added yet. Search surfaces those so they
+   can be added without leaving it. A template task is "in the scope" when a
+   task in the same room carries its name. `opt` and `cost` are the
+   template's defaults, which the new task starts from. */
+const JOB_TEMPLATE = {
+  name: 'ATL Metro Turn Template 01:09:26',
+  tasks: [
+    {room:'Kitchen',     name:'Cabinets',             opt:'Replace : shaker, white'},
+    {room:'Kitchen',     name:'Countertops',          opt:'Replace : quartz'},
+    {room:'Kitchen',     name:'Appliances',           opt:'Replace : full suite'},
+    {room:'Kitchen',     name:'Sink and faucet',      opt:'Replace : undermount, pull-down faucet', cost:'$640'},
+    {room:'Kitchen',     name:'Kitchen lighting',     opt:'Replace : flush mount LED',             cost:'$380'},
+    {room:'Kitchen',     name:'Paint',                opt:'Full repaint',                          cost:'$540'},
+    {room:'Living Room', name:'Flooring',             opt:'Replace : LVP'},
+    {room:'Living Room', name:'Paint',                opt:'Full repaint'},
+    {room:'Living Room', name:'Ceiling fan',          opt:'Resident install'},
+    {room:'Living Room', name:'Window blinds',        opt:'Replace : 2 inch faux wood',            cost:'$310'},
+    {room:'Living Room', name:'Smoke and CO detectors', opt:'Replace : hardwired combo',           cost:'$180'},
+    {room:'Master Bath', name:'Toilet',               opt:'Replace'},
+    {room:'Master Bath', name:'Exhaust fan',          opt:'Replace : 80 CFM, humidity sensing',    cost:'$290'},
+    {room:'Master Bath', name:'Mirror and lighting',  opt:'Replace : framed mirror, 3-light bar',  cost:'$420'},
+    {room:'Bathroom',    name:'Vanity',               opt:'Reface'},
+    {room:'Bathroom',    name:'Flooring',             opt:'Replace : tile'},
+    {room:'Bathroom',    name:'Toilet',               opt:'Replace',                               cost:'$410'},
+    {room:'Bathroom',    name:'Paint',                opt:'Full repaint',                          cost:'$360'},
+    {room:'Master Bed',  name:'Flooring',             opt:'Replace : carpet'},
+    {room:'Master Bed',  name:'Closet',               opt:'Add shelving'},
+    {room:'Master Bed',  name:'Paint',                opt:'Full repaint',                          cost:'$620'},
+    {room:'Bedroom 2',   name:'Paint',                opt:'Full repaint'},
+    {room:'Bedroom 2',   name:'Flooring',             opt:'Replace : carpet',                      cost:'$1,280'},
+    {room:'Garage',      name:'Door opener',          opt:'Replace'},
+    {room:'Garage',      name:'Garage lighting',      opt:'Replace : LED shop lights',             cost:'$260'},
+  ],
+};
+
 // Migration + seeding for the multi-option model. Each task carries a
 // `t.options` array — one option per sub-item with its own qty, labor,
 // and total. Existing single-option tasks migrate to a one-entry array
