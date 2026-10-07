@@ -206,7 +206,7 @@ function _ovTenureWords(ed, approved, opened, holding){
     : '';
   if(holding) return ed
     ? {what:`Edited ${n} so far`, verb:'has', tail:'open', act:`editing ${n} in`}
-    : {what:'Holding', verb:'has', tail:'open', act:'holding'};
+    : {what:'Reviewing', verb:'has', tail:'open', act:'reviewing'};
   /* Creating the draft and editing it are one stretch of work, not two rows —
      the person who opens a change order is usually the one who fills it in. */
   if(ed && opened)   return {what:`Created draft and edited ${n}`,
@@ -890,10 +890,6 @@ function _ovWeekLabel(ts){
   d.setDate(d.getDate() - d.getDay());          // back to the Sunday
   return `Week of ${_OV_MON[d.getMonth()]} ${d.getDate()}`;
 }
-function _ovOrd(n){
-  const s = ['th','st','nd','rd'], v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-}
 /* "Apr 22 – 28" for a tenure that spans days. The rail is 88px, so the month
    is said once when both ends share it. */
 function _ovRailRange(a, b){
@@ -904,9 +900,10 @@ function _ovRailRange(a, b){
     ? `${_OV_MON[d1.getMonth()]} ${d1.getDate()} – ${d2.getDate()}`
     : `${_OV_MON[d1.getMonth()]} ${d1.getDate()} – ${_OV_MON[d2.getMonth()]} ${d2.getDate()}`;
 }
+/* "May 22", no ordinal: the same form every other date on the page uses. */
 function _ovDayLabel(ts){
   const d = new Date(ts);
-  return isNaN(d.getTime()) ? '' : `${_OV_MON[d.getMonth()]} ${_ovOrd(d.getDate())}`;
+  return isNaN(d.getTime()) ? '' : `${_OV_MON[d.getMonth()]} ${d.getDate()}`;
 }
 /* Day granularity is all the records carry — inventing a clock time to fill
    the rail would be inventing evidence. The year sits under the date instead,
