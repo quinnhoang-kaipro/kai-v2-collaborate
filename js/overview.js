@@ -507,22 +507,6 @@ function ovCrewToggle(btn){
     b.setAttribute('aria-expanded', String(_ovCrewOpen)));
   if(btn) btn.setAttribute('aria-expanded', String(_ovCrewOpen));
 }
-/* The strip is the count of what the cascade cannot reach, so it goes to
-   them: the same flag filter the toolbar carries, switched on, which narrows
-   the sidebar to the tasks with no contractor. The Editor is where one gets
-   assigned, so the scope has to be showing them before the number means
-   anything to act on.
-
-   'no_gc' is the filter key; tasks carry the flag as 'unassigned', and
-   taskKeys() maps one to the other. */
-function ovShowUnassigned(){
-  if(typeof activeFilters === 'undefined') return;
-  activeFilters.clear();
-  activeFilters.add('no_gc');
-  if(typeof _sbExpandForFilter === 'function') _sbExpandForFilter();
-  if(typeof renderAll === 'function') renderAll();
-  if(typeof toast === 'function') toast('Filtered to tasks with no contractor');
-}
 /* Assignments are changed on the work itself, not here — this is the
    readout. Grouping the sidebar by contractor is the surface where that is
    actually done, so Edit goes there rather than opening a second editor. */
@@ -607,20 +591,6 @@ function _ovCrewHtml(){
   const g = S.general || {};
   const n = k => `${k} ${k === 1 ? 'task' : 'tasks'}`;
   const inheriting = (S.trades || []).filter(t => !t.who).length;
-  /* Counted off the scope, not seeded. The strip is a control now — it
-     filters the sidebar to these tasks — so a number that disagreed with what
-     the filter then showed was the strip lying about its own destination. At
-     the stages where every task has a contractor there is nothing to count,
-     and the strip does not appear. */
-  const _none = (typeof TASKS !== 'undefined') ? TASKS.filter(t => !t.gc) : [];
-  const _worth = _none.reduce((k, t) => k + _ovMoney(t.cost), 0);
-  const u = _none.length
-    ? {tasks:_none.length,
-       /* A dash, not $0, when the tasks are not priced yet — the same rule the
-          idle trade row follows, and for the same reason: $0 claims the work
-          is free rather than unpriced. */
-       amount:_worth ? _fmtDollars(_worth) : ''}
-    : null;
   return `<section class="ov-mod ov-crew">
     <div class="ov-crew-hd" onclick="ovCrewHdClick(event)">
       <h3 class="ov-crew-h">Contractor assignments</h3>
@@ -648,14 +618,6 @@ function _ovCrewHtml(){
       <ul class="ov-cw-list" id="ovCrewList"${_ovCrewOpen ? '' : ' hidden'}>
         ${(S.trades || []).map(r => _ovCrewRowHtml(r, g.who)).join('')}
       </ul>
-
-      ${u ? `<button type="button" class="ov-cw-none" onclick="ovShowUnassigned()"
-        title="Filter the scope to tasks with no contractor">
-        ${typeof _flagIconSvg === 'function' ? _flagIconSvg() : ''}
-        <span class="ov-cw-nonek">Unassigned contractors</span>
-        <span class="ov-cw-amt">${u.amount ? esc(u.amount) : '&mdash;'}</span>
-        <span class="ov-cw-n">${esc(n(u.tasks))}</span>
-      </button>` : ''}
     </div>
   </section>`;
 }
