@@ -86,7 +86,6 @@ let coHandoffOpen = false;
 let coHandoffTo    = null;   // id of the chosen person in HANDOFF_PEOPLE
 let coHandoffNote  = '';
 let coHandoffQuery = '';     // what has been typed into the name search
-let coHandoffReady = false;  // "ready for approval" ticked on this hand-off
 
 /* The people on this project, which is not the same list as the roles you can
    switch to in the demo. A hand-off goes to a person, and a real project has one
@@ -167,23 +166,15 @@ function coHandoffRowsHtml(){
   if(!team.length) return `<div class="co-ho-none">No one by that name on this job.</div>`;
   return team.map(p => {
     const on = coHandoffTo === p.id;
-    /* Only the job manager gets a second line, and it is always there rather
-       than appearing on selection. What it says is the reason you might pick this
-       row at all — that the hand-off could end in an approval rather than more
-       work — and a reader cannot act on that if it only shows up after the
-       choice is made.
-
-       Still only this row. Every row carrying a line would spend words confirming
-       the default: "M. Alvarez can only add to the scope" tells you nothing you
-       did not already assume. */
-    const canApprove = p.roleId === 'manager';
+    /* One line per person. The job manager's second line ("can edit and approve
+       this when you hand off to them") is gone: the explanation at the top of the
+       dialogue now says what approving needs, so the row's own label is enough. */
     return `
     <button type="button" class="dsp-row co-ho-row${on ? ' is-on' : ''}"
       onclick="pickCoHandoff('${p.id}')" aria-pressed="${on}">
       <span class="dsp-av">${p.initials}</span>
       <span class="dsp-who"><span class="dsp-name">${p.name}</span><span class="dsp-role">${p.perm}</span></span>
       <span class="co-ho-tick">${ICONS.check}</span>
-      ${canApprove ? `<span class="co-ho-can">${p.name} can edit and approve this when you hand off to them.</span>` : ''}
     </button>`;
   }).join('');
 }
@@ -205,8 +196,7 @@ function openHandoff(cfg){
   coHandoffTo = preferred || (team[0] && team[0].id);
   coHandoffNote  = '';
   coHandoffQuery = '';
-  coHandoffReady = false;
-  handoffRosterOpen = false;
+  handoffHistoryOpen = false;
   coHandoffOpen  = true;
   renderCoHandoff();
 }
@@ -235,8 +225,6 @@ function pickCoHandoff(id){
 function confirmCoHandoff(){
   const ta = document.getElementById('coHandoffNote');
   coHandoffNote = ta ? ta.value.trim() : '';
-  const cb = document.getElementById('coHandoffReady');
-  coHandoffReady = !!(cb && cb.checked);
   const to = coHandoffTeam().find(p => p.id === coHandoffTo);
   const cfg = handoffCfg || {};
   coHandoffOpen = false;
@@ -244,23 +232,61 @@ function confirmCoHandoff(){
   if(to){
     const me = ROLE_PEOPLE[state.role] || {name:'You'};
     const myRole = (ROLES.find(r => r.id === state.role) || {}).name || '';
-    sessionHandoffs.push({when:'Just now', from:me.name, fromRole:myRole, to:to.name,
-      ready:coHandoffReady});
+    sessionHandoffs.push({when:'Just now', from:me.name, fromRole:myRole, to:to.name, doc:handoffNoun()});
   }
   if(typeof cfg.onDone === 'function') cfg.onDone(to, coHandoffNote);
 }
-/* The roster, demoted. It is context for choosing a recipient, not a section of
-   the form — as a full list beside the comment box it read as a peer of the
-   things you fill in, and it arrived after the decision it informs. One line
-   above the picker, expandable when the detail matters.
+/* ── hand-off history ────────────────────────────────────────────────
+   Who made the document and every time it changed hands, newest first. It
+   replaces the "marked as done" roster at the top of the dialogue: before you
+   pass something on, the useful fact is who touched it last and where it has
+   already been, not who has signed it.
 
-   Toggling repaints only this block, so the search box and whatever is typed in
-   the comment survive it. */
-let handoffRosterOpen = false;
-function toggleHandoffRoster(){
-  handoffRosterOpen = !handoffRosterOpen;
-  const host = document.getElementById('coHandoffRoster');
-  if(host) host.innerHTML = handoffRosterHtml();
+   Built from handoffLog(), so a hand-off made in this session, or a turn taken,
+   shows up here the next time the dialogue opens. */
+function handoffHistory(what){
+  const co = inChangeOrder() ? changeOrderInfo() : null;
+  const creator = (ROLE_PEOPLE.field_agent || {}).name || 'The field agent';
+  /* The data has no creation record. The seed scope hand-off is Apr 9, so the
+     draft is dated the day before. A change order is drafted and sent the same
+     day, so it takes its submission date — its `date` is the approval. */
+  const events = [{when: co ? (co.submitted || co.date || '') : 'Apr 8, 2026', actor: creator,
+    html: `<b>${creator}</b> created the ${what}`}];
+  handoffLog().forEach(h => events.push(h.taken
+    ? {when:h.when, actor:h.to,   html:`<b>${h.to}</b> took the ${what}${h.from ? ` from <b>${h.from}</b>` : ''}`}
+    : {when:h.when, actor:h.from, html:`<b>${h.from}</b> handed off the ${what} to <b>${h.to}</b>`}));
+  return events.reverse();
+}
+/* Two rows by default. The link opens the rest in place, and only exists when
+   there is a rest to open. Toggling repaints only this block, so the search box
+   and whatever is typed in the comment survive it. */
+let handoffHistoryOpen = false;
+function toggleHandoffHistory(){
+  handoffHistoryOpen = !handoffHistoryOpen;
+  const host = document.getElementById('coHandoffHistory');
+  if(host) host.innerHTML = handoffHistoryHtml();
+}
+function handoffHistoryHtml(){
+  const what = handoffNoun();
+  const events = handoffHistory(what);
+  if(!events.length) return '';
+  const me = (ROLE_PEOPLE[state.role] || {}).name;
+  const last = events[0].actor;
+  const lead = last === me
+    ? `You were the last person who worked on the ${what}.`
+    : `<b>${last}</b> was the last person who worked on the ${what}.`;
+  const more = events.length > 2;
+  const shown = (handoffHistoryOpen || !more) ? events : events.slice(0, 2);
+  return `<div class="co-ho-hist-head">
+      <span class="co-ho-hist-lead">${lead}</span>
+      ${more ? `<button type="button" class="co-ho-hist-more" onclick="toggleHandoffHistory()"
+        aria-expanded="${handoffHistoryOpen}">${handoffHistoryOpen ? 'Hide hand off history' : 'View hand off history'}</button>` : ''}
+    </div>
+    <div class="co-ho-hist">${shown.map(e => `<div class="co-ho-hist-row">
+        <span class="co-ho-hist-dot">${ICONS.check}</span>
+        <span class="co-ho-hist-what">${e.html}</span>
+        <span class="co-ho-hist-when">${e.when}</span>
+      </div>`).join('')}</div>`;
 }
 /* Who has marked it done, named — and nothing about who has not.
 
@@ -278,16 +304,20 @@ function doneByLine(signed){
   if(n === 2) return `<b>${names[0]}</b> and <b>${names[1]}</b> have marked this as done.`;
   return `<b>${names[0]}</b>, <b>${names[1]}</b>, and ${n - 2} more have marked this as done.`;
 }
-function handoffRosterHtml(){
-  const st = reviewState();
-  if(!st) return '';
-  const signed = st.signed || [];
-  // The link ends the sentence rather than being pushed to the far edge.
-  return `<div class="co-ho-rv-line"><span class="co-ho-rv-txt">${doneByLine(signed)}</span>${
-      signed.length ? `<button type="button" class="co-ho-rv-more" onclick="toggleHandoffRoster()"
-        aria-expanded="${handoffRosterOpen}">${handoffRosterOpen ? 'Hide info' : 'See info'}</button>` : ''
-    }</div>
-    ${handoffRosterOpen && signed.length ? `<div class="rv-list co-ho-rv-open">${reviewRowsHtml(st)}</div>` : ''}`;
+/* The document being handed off, as a bare noun: "scope", "change order",
+   "closeout". A caller can name it; otherwise the stage decides. */
+function handoffNoun(){
+  const cfg = handoffCfg || {};
+  return (cfg.subject || _turnArtifactName()).replace(/^the\s+/, '');
+}
+/* What handing off does, said once at the top. The second sentence is a
+   constraint on the person handing off, so it is only said to roles it binds:
+   the job manager can edit at any time, and telling them otherwise would be
+   wrong. */
+function handoffExplainer(what){
+  const base = `Handing off allows the receiver to edit the ${what}, or approve it if they are a ${rn('manager')}.`;
+  if(state.role === 'manager') return base;
+  return `${base} You can only edit while the ${what} is with you, and you can ask for it back anytime.`;
 }
 
 function renderCoHandoff(){
@@ -295,46 +325,32 @@ function renderCoHandoff(){
   if(!coHandoffOpen){ if(el) el.remove(); return; }
   const cfg = handoffCfg || {};
   if(!el){ el = document.createElement('div'); el.id = 'coHandoffModal'; document.body.appendChild(el); }
-  /* Two columns: who you are passing it to on the left, where the review
-     already stands on the right. Stacked, the dialog ran past the fold — and
-     the two belong side by side anyway, since who has already signed is exactly
-     what tells you who to send it to next. */
+  const what  = handoffNoun();
+  const title = cfg.title || `Hand off the ${what}`;
   el.innerHTML = `<div class="dsp-scrim" onclick="closeCoHandoff()"></div>
-    <div class="dsp-card co-ho-card" role="dialog" aria-modal="true" aria-label="${cfg.title || ('Hand off ' + (cfg.subject || 'the scope'))}">
+    <div class="dsp-card co-ho-card" role="dialog" aria-modal="true" aria-label="${title}">
       <div class="dsp-icon">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3L3 10.5l7 3 3 7L21 3z"/></svg>
       </div>
-      <div class="dsp-title">${cfg.title || `Hand off ${cfg.subject || 'the scope'}`}</div>
+      <div class="dsp-title">${title}</div>
+      <p class="co-ho-explain">${handoffExplainer(what)}</p>
       ${cfg.note ? `<div class="co-ho-note-lead${cfg.noteTitle ? ' is-flagged' : ''}">
         ${cfg.noteTitle ? `<b class="co-ho-note-h">${cfg.noteTitle}</b>` : ''}${cfg.note}
       </div>` : ''}
-      <!-- Who it goes to is the decision this dialogue exists for, so it takes
-           the full width at the top. The comment and the review roster sit
-           together underneath: both are context for that choice, and neither
-           needs a whole row. -->
-      <!-- Roster first: who has already dealt with this is what tells you who to
-           send it to, so it comes before the choice rather than after it. -->
-      <div id="coHandoffRoster">${handoffRosterHtml()}</div>
+      <!-- Where the document has been comes before the choice: who touched it
+           last is what tells you who to send it to next. -->
+      <div id="coHandoffHistory" class="co-ho-history">${handoffHistoryHtml()}</div>
       <div class="co-ho-top">
         <div class="dsp-lbl">Select the person to hand off</div>
         <input id="coHandoffSearch" class="co-ho-search" type="text" autocomplete="off"
-          placeholder="Search by name or role" value="${coHandoffQuery}"
+          placeholder="Search by name" value="${coHandoffQuery}"
           oninput="filterCoHandoff(this.value)" aria-label="Search for a teammate">
         <div class="co-ho-results" id="coHandoffResults"
              onscroll="coHandoffScrolled(this)">${coHandoffRowsHtml()}</div>
       </div>
-      <!-- Full width now that the roster has left this row: the comment is the
-           only thing here you fill in. -->
       <div class="dsp-lbl">Add a comment <span class="co-ho-opt">optional</span></div>
       <textarea id="coHandoffNote" class="co-ho-note" rows="3"
-        placeholder="${cfg.placeholder || 'Anything they should know.'}">${coHandoffNote}</textarea>
-      <!-- Optional, and last: it is the one thing here that says what the hand-off
-           is FOR. Everything above says who it goes to and what about; this says
-           whether you think it is finished. -->
-      <label class="co-ho-ready">
-        <input type="checkbox" id="coHandoffReady" ${coHandoffReady ? 'checked' : ''}>
-        <span>I confirm this is ready for approval</span>
-      </label>
+        placeholder="${cfg.placeholder || 'What have you left open, or what should they look at first?'}">${coHandoffNote}</textarea>
       <div class="dsp-acts">
         <button type="button" class="dsp-btn" onclick="closeCoHandoff()">Cancel</button>
         <button type="button" class="dsp-btn is-primary" onclick="confirmCoHandoff()">${cfg.confirm || 'Hand off'}</button>
@@ -445,7 +461,8 @@ function confirmTakeTurn(){
   turnTaken = {role:state.role, stage:state.projectStage, from:takeTurnFrom};
   /* The same record a hand-off leaves, because that is what this is — one made
      by the person receiving it rather than the person giving it up. */
-  sessionHandoffs.push({when:'just now', from:takeTurnFrom, fromRole:'', to:me, ready:false});
+  sessionHandoffs.push({when:'Just now', from:takeTurnFrom, fromRole:'', to:me, taken:true,
+    doc:_turnArtifactName()});
   const ifr = document.getElementById('iframe');
   try{ if(ifr && ifr.contentWindow) ifr.contentWindow.postMessage({type:'kai-enter-edit'}, '*'); }catch(e){}
   if(typeof toast === 'function'){
@@ -779,6 +796,10 @@ function docLockLine(id, mine){
    other row. */
 let sessionHandoffs = [];
 function handoffLog(){
+  // Each session record names the document it moved, so a scope hand-off does
+  // not turn up in the change order's history.
+  const doc = _turnArtifactName();
+  const session = sessionHandoffs.filter(h => !h.doc || h.doc === doc);
   // Anything past draft got there by being handed off, so the record exists. A
   // change order got there the same way, on its own date — same event, same
   // words, because it is the same act on the same document.
@@ -789,12 +810,12 @@ function handoffLog(){
   if(inChangeOrder()){
     const co = changeOrderInfo();
     return [{when: co.submitted || co.date, from:'M. Alvarez', fromRole:'Field agent', to:reviewer}]
-      .concat(sessionHandoffs);
+      .concat(session);
   }
   const seeded = (state.projectStage === 'edit')
     ? []
     : [{when:'Apr 9, 2026', from:'M. Alvarez', fromRole:'Field agent', to:reviewer}];
-  return seeded.concat(sessionHandoffs);
+  return seeded.concat(session);
 }
 
 /* The scope's dated events, newest first, for the Scope step's card. Same
@@ -809,8 +830,8 @@ function scopeHistoryHtml(){
   const events = handoffLog().map(h => ({
     when: h.when,
     // Shown, because a confirmation nobody can see afterwards is not one.
-    what: `<b>${h.from}</b> handed off to <b>${h.to}</b>`
-      + (h.ready ? `<span class="sh-tag">ready for approval</span>` : '')
+    what: h.taken ? `<b>${h.to}</b> took it from <b>${h.from}</b>`
+                  : `<b>${h.from}</b> handed off to <b>${h.to}</b>`
   })).concat(((st && st.signed) || []).map(p => ({
     when: p.date,
     what: `<b>${p.who}</b> <span class="sh-role">${p.role}</span> marked as done`

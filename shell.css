@@ -606,16 +606,32 @@ body.tb-hidden .tb-reveal{display:inline-flex}
    more than a screen's worth of people, and a grid stops being scannable long
    before a scrolling list does. Full width just means each row is wide. */
 .co-ho-top{margin-bottom:20px;position:relative}
+/* What handing off does, under the title. Read once, so it is quiet. */
+.co-ho-explain{margin:-6px 0 20px;font-size:14px;line-height:1.55;color:var(--midtone,#7D7469)}
+/* ── hand-off history ────────────────────────────────────────────────
+   Read, not filled in: no border, no field. The lead sentence and its link share
+   a line; the events are ruled rows with the date at the far edge. */
+.co-ho-history{margin-bottom:26px}
+.co-ho-hist-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+  margin-bottom:8px;font-size:14px;line-height:1.5;color:var(--ink,#1A1A1A)}
+.co-ho-hist-lead b{font-weight:600}
+.co-ho-hist-more{flex-shrink:0;background:none;border:0;padding:0;cursor:pointer;
+  font:inherit;font-weight:600;color:var(--ink,#1A1A1A);text-decoration:underline;
+  text-underline-offset:3px;text-decoration-color:var(--stroke,#DDD6C8);transition:text-decoration-color .12s}
+.co-ho-hist-more:hover{text-decoration-color:var(--ink,#1A1A1A)}
+.co-ho-hist-row{display:flex;align-items:center;gap:12px;padding:9px 0;
+  border-bottom:1px solid var(--stroke,#DDD6C8);font-size:14px;line-height:1.4;color:var(--ink,#1A1A1A)}
+.co-ho-hist-row:last-child{border-bottom:0}
+.co-ho-hist-dot{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--ink,#1A1A1A);
+  color:var(--white,#fff);display:inline-flex;align-items:center;justify-content:center}
+.co-ho-hist-dot svg{width:11px;height:11px;stroke:currentColor;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.co-ho-hist-what{flex:1;min-width:0}
+.co-ho-hist-what b{font-weight:600}
+.co-ho-hist-when{flex-shrink:0;color:var(--midtone,#7D7469);white-space:nowrap}
 /* One line per person: name left, role right. Two lines each turned three
    people into a third of the dialogue, and the role is a qualifier on the name
    rather than a second fact about them — it belongs on the same line, at the
    far end where it lines up into a readable column. */
-.co-ho-row{padding:10px 14px;flex-wrap:wrap;row-gap:0}
-/* What this recipient can do, on its own line under the name. .dsp-row is a
-   centred flex row, so a fourth child would have sat inline beside the tick —
-   flex-basis 100% is what puts it underneath. */
-.co-ho-can{flex:0 0 100%;margin-top:7px;font-size:11.5px;line-height:1.45;
-  color:var(--t2,#5C5750)}
 .co-ho-row .dsp-who{flex-direction:row;align-items:baseline;justify-content:space-between;gap:14px}
 /* A name in a list is body text, not a heading. At 15px/700 it was the second
    biggest thing in the dialogue after the title and the boldest thing in it,
@@ -631,12 +647,9 @@ body.tb-hidden .tb-reveal{display:inline-flex}
    reads as a soft edge, where the point is to show that a row is being hidden
    and there is somewhere further to go. It clears once you reach the bottom,
    so it never lies about there being more. */
-/* Four rows before it scrolls. Rows are 41px, 8px apart — except the project
-   manager's, which permanently carries a second line and stands at 65px, so the
-   first four come to 65 + 3*41 + 3*8. Sized for that row rather than for four
-   plain ones, since it is always the one at the top. Below it the same box shows
-   five, which is the harmless direction. */
-.co-ho-results{max-height:212px}
+/* Four rows and part of a fifth before it scrolls, so the clipped row says
+   there are more. Rows are 52px, ruled rather than boxed. */
+.co-ho-results{max-height:236px}
 .co-ho-top::after{content:'';position:absolute;left:0;right:0;bottom:0;height:58px;
   pointer-events:none;opacity:1;transition:opacity .15s ease-out;
   background:linear-gradient(to bottom,
@@ -647,26 +660,6 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 .co-ho-top.is-end::after{opacity:0}
 .co-ho-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
 .co-ho-col{min-width:0}
-/* ── the roster, demoted to a line ───────────────────────────────────
-   Deliberately not styled like the fields below it. No border, no mono section
-   label, smaller type: it is something you read, and the things that look like
-   inputs in this dialogue should be the things you fill in. */
-/* One paragraph, with the link at the end of the sentence rather than pinned to
-   the far edge — right-aligned it read as a separate control with its own
-   business, when what it does is expand the thing the sentence just said. */
-.co-ho-rv-line{display:block;margin-bottom:16px;
-  font-size:13.5px;line-height:1.5;color:var(--t2,#5C5750)}
-.co-ho-rv-txt b{font-weight:600;color:var(--ink,#1A1A1A)}
-/* Inherits the sentence it sits in — it used to be 9px uppercase mono, which is
-   the product's label voice and made it read as a control rather than as the
-   last two words of the line. */
-.co-ho-rv-more{display:inline;margin-left:6px;background:none;border:0;padding:0;cursor:pointer;
-  font:inherit;font-weight:600;letter-spacing:0;text-transform:none;
-  color:var(--ink,#1A1A1A);text-decoration:underline;text-underline-offset:2px;
-  text-decoration-color:var(--stroke,#DDD6C8);transition:text-decoration-color .12s}
-.co-ho-rv-more:hover{text-decoration-color:var(--ink,#1A1A1A)}
-.co-ho-rv-open{margin:-8px 0 16px;border-top:0;padding-top:0}
-.co-ho-col-review .rv-list{margin-top:0;border-top:0;padding-top:0}
 .co-ho-search{width:100%;box-sizing:border-box;margin-bottom:8px;padding:9px 11px;
   border:1px solid var(--stroke,#DDD6C8);background:var(--white,#fff);color:var(--ink,#1A1A1A);
   font-family:var(--body);font-size:13.5px}
@@ -680,10 +673,14 @@ body.tb-hidden .tb-reveal{display:inline-flex}
 /* No initials tile in the picker. Every row is a person, so a square of
    initials beside each name is decoration repeating what the name says. */
 .co-ho-row .dsp-av{display:none}
-.co-ho-row{cursor:pointer;transition:border-color .12s,background .12s}
-.co-ho-row + .co-ho-row{margin-top:8px}
-.co-ho-row:hover{border-color:var(--ink,#1A1A1A)}
-.co-ho-row.is-on{border-color:var(--ink,#1A1A1A);background:var(--wash,#FDFDEA)}
+/* A ruled list, not a stack of boxes: the rows are one list of people, and a
+   border round each made twelve separate objects of it. The chosen row takes
+   the accent fill, as the dispatch picker's does. */
+.co-ho-results{border-top:1px solid var(--stroke,#DDD6C8)}
+.co-ho-row{cursor:pointer;padding:16px 20px;border:0;border-bottom:1px solid var(--stroke,#DDD6C8);
+  transition:background .12s}
+.co-ho-row:hover{background:var(--app-bg,#FFFDF8)}
+.co-ho-row.is-on,.co-ho-row.is-on:hover{background:var(--accent,#FDFF86)}
 /* The tick is the selection, so it only exists on the chosen row. */
 .co-ho-tick{flex-shrink:0;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;
   color:var(--ink,#1A1A1A);opacity:0;transition:opacity .12s}
@@ -748,27 +745,3 @@ body{flex-direction:column}
 .sb-opt-seg button:hover{color:var(--ink)}
 .sb-opt-seg button.on{background:var(--ink);color:var(--white)}
 
-/* ── "ready for approval" ────────────────────────────────────────────
-   Optional, and the last thing before the buttons. Everything above it says who
-   the hand-off goes to and what about; this is the only control that says what
-   it is for. Sits on the page's own ground rather than in a bordered field —
-   it is a statement you make, not a value you enter. */
-.co-ho-ready{display:flex;align-items:center;gap:9px;margin:16px 0 0;padding:11px 12px;
-  background:var(--sunken);cursor:pointer;font-size:13.5px;color:var(--t2);
-  transition:color .12s,background .12s}
-.co-ho-ready:hover{background:#EFEADC;color:var(--ink)}
-.co-ho-ready input{appearance:none;-webkit-appearance:none;margin:0;flex-shrink:0;
-  width:16px;height:16px;border:1.5px solid var(--midtone);background:var(--white);
-  cursor:pointer;position:relative;transition:background .12s,border-color .12s}
-.co-ho-ready input:checked{background:var(--ink);border-color:var(--ink)}
-/* The tick is drawn rather than a glyph, so it scales with the box and cannot
-   fall back to a font that does not have it. */
-.co-ho-ready input:checked::after{content:'';position:absolute;left:4px;top:1px;
-  width:6px;height:10px;border:solid var(--accent);border-width:0 2px 2px 0;
-  transform:rotate(45deg)}
-.co-ho-ready input:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-.co-ho-ready:has(input:checked){color:var(--ink);font-weight:500}
-/* The same fact, in the hand-off log on the state card. */
-.sh-tag{display:inline-block;margin-left:6px;font-family:var(--mono);font-size:8px;
-  font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);
-  border:1px solid var(--stroke);padding:1px 5px;vertical-align:1px}
