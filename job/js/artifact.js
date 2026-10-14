@@ -289,7 +289,7 @@ function _poTableHtml(){
         </tr>` : ''}
       </tbody>
     </table>
-    ${held.n ? `<div class="reg-pending-cap po-ord-held">Held back · ${held.n} deferred product${held.n === 1 ? '' : 's'} (${fmt(held.amt)}) wait for a change order</div>` : ''}`;
+    ${held.n ? `<div class="reg-pending-cap po-ord-held">Held back · ${held.n} deferred product${held.n === 1 ? '' : 's'} (${fmt(held.amt)}) wait for a Change Order</div>` : ''}`;
 }
 /* On the Record's index the order is one row, like the documents under
    Historical artifacts: what it is, what it covers, what it comes to. The
@@ -304,7 +304,7 @@ function _renderPurchaseOrderSection(){
     <header class="art-sec-hdr">
       <div class="art-sec-hdr-l">
         <h2 class="art-sec-title">Purchase order</h2>
-        <p class="art-sec-desc">Every product picked in the scope, totalled by item. Parts only — labour is not on the order.</p>
+        <p class="art-sec-desc">Every product picked in the scope, totalled by item. Parts only, labour is not on the order.</p>
       </div>
     </header>
     <div class="reg-table-scroll">
@@ -338,7 +338,7 @@ function _renderPoDoc(){
       </button>
       <span class="copy-crumb-div"></span>
       <span class="copy-crumb-name">Purchase order</span>
-      <span class="copy-crumb-meta">${nLines} item${nLines === 1 ? '' : 's'} · Parts only — labour is not on the order</span>
+      <span class="copy-crumb-meta">${nLines} item${nLines === 1 ? '' : 's'} · Parts only, labour is not on the order</span>
       <span class="copy-crumb-sp"></span>
     </div>
     <div class="copy-paper">
@@ -441,7 +441,7 @@ function _renderRegisterSection(){
     <div class="reg-card">
       <div class="reg-card-lbl">Approved changes</div>
       <div class="reg-card-val">${sgn(approvedChange)}</div>
-      <div class="reg-card-sub">${coCount} change order${coCount===1?'':'s'}</div>
+      <div class="reg-card-sub">${coCount} Change Order${coCount===1?'':'s'}</div>
     </div>
     <div class="reg-card is-current">
       <div class="reg-card-lbl">Current job total</div>
@@ -457,8 +457,8 @@ function _renderRegisterSection(){
     <tbody>
       ${[
         {name:'Ready to order',    chip:'',                      note:'In purchase orders',                  val:jobCls.ready,    n:jobCls.readyN},
-        {name:'Tenant responsible',chip:'Tracked cost',          note:'In purchase orders — reported separately', val:jobCls.tenant, n:jobCls.tenantN, chipCls:'is-quiet'},
-        {name:'Deferred',          chip:'Procure on change order', note:'Held until a change order is approved', val:jobCls.deferred, n:jobCls.deferredN, chipCls:'is-quiet'},
+        {name:'Tenant responsible',chip:'Tracked cost',          note:'In purchase orders, reported separately', val:jobCls.tenant, n:jobCls.tenantN, chipCls:'is-quiet'},
+        {name:'Deferred',          chip:'Procure on Change Order', note:'Held until a Change Order is approved', val:jobCls.deferred, n:jobCls.deferredN, chipCls:'is-quiet'},
       ].filter(r => r.n > 0).map(r => `<tr>
           <th>${esc(r.name)}${r.chip?`<span class="reg-chip ${r.chipCls||''}">${esc(r.chip)}</span>`:''}</th>
           <td class="reg-cls-note">${esc(r.note)}</td>
@@ -479,8 +479,8 @@ function _renderRegisterSection(){
   const fmtc = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
   const clsRows = [
     {name:'Ready to order',    chip:'',                      note:'Materials go on the purchase order; labour is paid to the contractor', val:cls.ready, all:cls.readyAll, n:cls.readyN},
-    {name:'Tenant responsible',chip:'Tracked cost',          note:'On the purchase order, reported separately — materials and labour', val:cls.tenant, all:cls.tenantAll, n:cls.tenantN, chipCls:'is-quiet'},
-    {name:'Deferred',          chip:'Procure on change order', note:'Materials and labour held until a change order is approved', val:cls.deferred, all:cls.deferredAll, n:cls.deferredN, chipCls:'is-quiet'},
+    {name:'Tenant responsible',chip:'Tracked cost',          note:'On the purchase order, reported separately, with materials and labour', val:cls.tenant, all:cls.tenantAll, n:cls.tenantN, chipCls:'is-quiet'},
+    {name:'Deferred',          chip:'Procure on Change Order', note:'Materials and labour held until a Change Order is approved', val:cls.deferred, all:cls.deferredAll, n:cls.deferredN, chipCls:'is-quiet'},
   ].filter(r => r.n > 0).map(r => `<tr>
       <th>${esc(r.name)}${r.chip?`<span class="reg-chip ${r.chipCls||''}">${esc(r.chip)}</span>`:''}</th>
       <td class="reg-cls-note">${esc(r.note)}</td>
