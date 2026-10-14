@@ -142,13 +142,11 @@ function renderProgress(){
   // in the middle, activity feed below.
   const feed = activitiesFor(sel);
   // ── Prev / next task navigation within the sidebar's current group ──
-  const grpTasksArr = TASKS.filter(t => (groupBy === 'contractor')
-    ? (t.gc || 'unassigned') === (sel.gc || 'unassigned')
-    : t.room === sel.room);
+  const grpTasksArr = TASKS.filter(t => taskGroupKey(t) === taskGroupKey(sel));
   const idxInGrp = grpTasksArr.findIndex(t => t.id === sel.id);
   const prevTask = grpTasksArr[idxInGrp - 1] || null;
   const nextTask = grpTasksArr[idxInGrp + 1] || null;
-  const groupLabel = (groupBy === 'contractor') ? (sel.gc || 'Unassigned') : sel.room;
+  const groupLabel = taskGroupLabel(sel);
   // ── Photo strip — task photos + first group photos, horizontal scroll ──
   if(typeof seedPhotos === 'function' && (!PHOTOS || !PHOTOS.length)) seedPhotos();
   const taskPhotos = (PHOTOS || []).filter(p => p.kind === 'task' && p.task === sel.code);

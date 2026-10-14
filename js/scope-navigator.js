@@ -1,8 +1,10 @@
 /* ════════════ SIDEBAR ════════════ */
 function setGroupBy(g){
   groupBy=g; collapsedGrps=null;
+  if(g !== 'dept') selLineKey = null;   // product lines only exist under Departments
   const rBtn=document.getElementById('grpRoom'); if(rBtn) rBtn.classList.toggle('active',g==='room');
   const cBtn=document.getElementById('grpContractor'); if(cBtn) cBtn.classList.toggle('active',g==='contractor');
+  const dBtn=document.getElementById('grpDept'); if(dBtn) dBtn.classList.toggle('active',g==='dept');
   renderAll();
 }
 
@@ -615,7 +617,7 @@ function detailEdit(t){
   </div>`;
 }
 
-function taskRow(t){
+function taskRow(t, opts){
   const isApproved=approved.has(t.id);
   const needs = (typeof needsProduct==='function') && needsProduct(t);
   // "Change order" indicator on a task row lights up when either the legacy
@@ -642,14 +644,15 @@ function taskRow(t){
   }).join('');
   // The contractor is no longer shown here — the task card and the group
   // table's Contractor column both still carry it.
-  const amtHtml = isMissing
-    ? `<span class="task-amt">$--</span>`
-    : `<span class="task-amt">${t.cost}</span>${deltaChipHtml(taskDelta(t))}`;
+  const amtHtml = (opts && opts.amtHtml != null) ? opts.amtHtml
+    : isMissing
+      ? `<span class="task-amt">$--</span>`
+      : `<span class="task-amt">${t.cost}</span>${deltaChipHtml(taskDelta(t))}`;
   return `<div class="task${selId===t.id?' sel':''}${isApproved?' approved':''}${needs?' needs-product':''}${hasCo?' co-pending':''}${(typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id))?' co-removed':''}${isMissing?' is-missing':''}" data-tid="${t.id}">
-    <div class="task-row" onclick="selectTask(${t.id})">
+    <div class="task-row" onclick="${(opts && opts.onRow) || `selectTask(${t.id})`}">
       <div class="task-mid">
         <div class="task-mid-top">
-          ${typeof flagMarkHtml === 'function' ? flagMarkHtml(t, 'task-flag') : ''}<span class="task-name">${t.name}</span>
+          ${typeof flagMarkHtml === 'function' ? flagMarkHtml(t, 'task-flag') : ''}<span class="task-name">${(opts && opts.ctx) ? `<span class="task-ctx">${esc(opts.ctx)} ›</span> ` : ''}${t.name}</span>
         </div>
         <div class="task-mid-status">${taskStatus(t)}${modChipsHtml}</div>
         ${(() => {
@@ -665,6 +668,7 @@ function taskRow(t){
         <span class="task-amt-line">${amtHtml}</span>
       </div>
     </div>
+    ${(opts && opts.after) || ''}
   </div>`;
 }
 function renderSidebar(){
@@ -708,7 +712,12 @@ function renderSidebar(){
   }
   if(collapsedGrps===null) collapsedGrps=new Set(groups.slice(1).map(g=>g.key));
   scroll.innerHTML=groups.map(g=>{
-    const cost=g.items.reduce((s,t)=>s+dollars(t.cost),0);
+    // A department totals what its products cost — it's the shopping view,
+    // and labour on top would make the figure useless for a budget at the
+    // till. Rooms and contractors total the task, as before.
+    const cost = groupBy === 'dept'
+      ? deptLines(g.items).reduce((a, l) => a + deptLineCost(l), 0)
+      : g.items.reduce((s,t)=>s+dollars(t.cost),0);
     const isCollapsed=collapsedGrps.has(g.key);
     const allApproved=g.items.every(t=>approved.has(t.id));
     // In draft mode we surface an "Add task" affordance INSIDE each group
@@ -718,7 +727,9 @@ function renderSidebar(){
     // Every stage but the last can take a new task: drafting, reviewing,
     // and during the work itself, where it lands as a change order. Only
     // closeout-approved is closed to it — that scope is signed off.
-    const _canAddTask = PROJ_MODE !== 'closeout-approved';
+    // Not under a department either: a new task needs a room, and the
+    // department view is for shopping what's already in the scope.
+    const _canAddTask = PROJ_MODE !== 'closeout-approved' && groupBy !== 'dept';
     const draftAddTaskRow = _canAddTask ? `<button class="grp-new-task" onclick="event.stopPropagation();addTaskToGroup('${g.key}')" title="Add a task to ${g.name}">
       <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M7 3v8M3 7h8"/></svg>
       <span>New task</span>
@@ -757,10 +768,409 @@ function renderSidebar(){
           </div>
           <div class="ntp-list" id="ntpList">${_ntpListRowsHtml()}</div>
         </div>` : draftAddTaskRow}
-        ${g.items.map(taskRow).join('')}
+        ${groupBy === 'dept' ? deptLinesHtml(g)
+          : groupBy === 'contractor'
+            // Under a contractor a row unfolds to the task's line items and
+            // the labor on each — what this contractor is being paid for.
+            ? g.items.map(t => taskRow(t, {
+                onRow: `toggleGcTask(${t.id})`,
+                after: gcTaskOpen.has(t.id) ? _gcTaskLaborHtml(t) : '',
+              })).join('')
+            : g.items.map(t => taskRow(t)).join('')}
       </div>
     </div>`;
   }).join('');
+}
+/* ── Department view: product lines ─────────────────────────────────
+   Inside a department each product line is its own block — the kind of
+   product, how many the scope needs and what they cost — with the tasks
+   that need it underneath, labelled by room. The sidebar only navigates:
+   clicking a line opens it in the Editor, which is where its product is
+   picked once for every task in it, the same way a task's product is
+   picked in the Editor and not in its sidebar row. */
+let collapsedLines = new Set();   // line keys the user has folded
+let selLineKey = null;            // product line open in the Editor (department view only)
+// A line key ("Lawn, Garden & Outdoor|Outdoor") made safe to sit inside a
+// single-quoted JS string inside a double-quoted HTML attribute.
+function _lineKeyArg(key){
+  return esc(String(key).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+}
+function allDeptLines(){
+  if(typeof groupTasks !== 'function' || groupBy !== 'dept') return [];
+  return groupTasks(TASKS).flatMap(g => deptLines(g.items));
+}
+function deptLineByKey(key){
+  return allDeptLines().find(l => l.key === key) || null;
+}
+function deptLinesHtml(g){
+  return deptLines(g.items).map(l => {
+    const folded = collapsedLines.has(l.key);
+    const isLabor = l.dept === NO_PRODUCT_DEPT;
+    const k = _lineKeyArg(l.key);
+    return `<div class="dline${folded ? ' collapsed' : ''}${selLineKey === l.key && !selId ? ' is-selline' : ''}" data-line="${esc(l.key)}">
+      <div class="dline-hdr" onclick="selectLine('${k}')">
+        <button class="dline-caret-btn" onclick="event.stopPropagation();toggleDeptLine('${k}')" aria-label="Show or hide the tasks in ${esc(l.name)}" title="Expand / collapse">
+          <svg class="dline-caret" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5l3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <span class="dline-name">${esc(l.name)}</span>
+        <span class="dline-need">${esc(isLabor ? `${l.items.length} ${l.items.length === 1 ? 'task' : 'tasks'}` : deptLineNeed(l.items))}</span>
+        <span class="dline-amt">${isLabor ? '' : money(Math.round(deptLineCost(l)))}</span>
+      </div>
+      <div class="dline-body">${l.items.map(t => {
+        // A task row here can open to show what it's buying from this line —
+        // each product and its cost — under the row's figure, which stays
+        // the whole task's cost.
+        const open = deptTaskOpen.has(`${l.key}|${t.id}`);
+        return taskRow(t, {
+          ctx: t.room,
+          onRow: `toggleDeptTask('${k}',${t.id})`,
+          after: open ? _deptTaskProductsHtml(l, t) : '',
+          amtHtml: isLabor ? null : _deptTaskAmtHtml(l, t),
+        });
+      }).join('')}</div>
+    </div>`;
+  }).join('');
+}
+let gcTaskOpen = new Set();     // task ids showing their line items' labor (Contractor view)
+function toggleGcTask(id){
+  const wasOpen = gcTaskOpen.has(id);
+  if(wasOpen) gcTaskOpen.delete(id); else gcTaskOpen.add(id);
+  if(wasOpen && selId === id){ renderSidebar(); return; }
+  selectTask(id);
+}
+/* The task's line items — every product it has picked, on options that are
+   part of the job — each with its labor: quantity × labor rate. */
+function _gcTaskLaborHtml(t){
+  const items = taskOptions(t).filter(optionIsAdded)
+    .flatMap(o => (o.products || []).filter(productIsPicked));
+  if(!items.length){
+    return `<div class="dtask-prods"><div class="dtask-prod is-none"><span class="dtask-prod-name">No line items yet</span></div></div>`;
+  }
+  return `<div class="dtask-prods">${items.map(p => {
+    const name = [p.brand, p.product].filter(Boolean).join(' ') || 'Untitled item';
+    const labor = _num(p.qty) * _num(p.labor);
+    return `<div class="dtask-prod" title="${esc(name)} · ${esc(String(p.qty))} × ${esc(p.labor || '$0')} labor">
+      <span class="dtask-prod-name">${esc(name)}</span>
+      <span class="dtask-prod-amt${labor ? '' : ' is-zero'}">${labor ? money(Math.round(labor)) : 'No labor'}</span>
+    </div>`;
+  }).join('')}</div>`;
+}
+/* What a task is buying in one product line: its picked rows there (qty ×
+   parts rate). A task with no catalogue rows at all falls back to its own
+   product cost. Every figure in the Departments view is built from this, so
+   task rows add up to their line and lines to their department. */
+function taskLineCost(l, t){
+  const picked = _lineTaskPicked(l, t);
+  if(picked.length) return picked.reduce((a, h) => a + _num(h.p.qty) * _num(h.p.parts), 0);
+  const hasCatalog = taskOptions(t).some(o => (o.products || []).some(p => p.sku));
+  return hasCatalog ? 0 : dollars(t.pcost || 0);
+}
+function deptLineCost(l){
+  return l.items.reduce((a, t) => a + taskLineCost(l, t), 0);
+}
+/* "$1,620 of $3,520": the line's share first, in the row's amount style so
+   it's what adds up to the line, then the whole task's cost, muted, as
+   context. Just the share when it is the whole task; a dash when nothing's
+   picked yet. */
+function _deptTaskAmtHtml(l, t){
+  const part = Math.round(taskLineCost(l, t));
+  const whole = Math.round(dollars(t.cost || 0));
+  const of = (whole && whole !== part) ? `<span class="task-amt-of">of ${money(whole)}</span>` : '';
+  if(!part) return `<span class="task-amt is-none">—</span>${of}`;
+  return `<span class="task-amt">${money(part)}</span>${of}`;
+}
+let deptTaskOpen = new Set();   // `${lineKey}|${taskId}` rows showing their products
+/* Clicking a task under a product line opens the task, as anywhere else,
+   and unfolds its products for the line; clicking it again folds them. */
+function toggleDeptTask(key, id){
+  const k = `${key}|${id}`;
+  const wasOpen = deptTaskOpen.has(k);
+  if(wasOpen) deptTaskOpen.delete(k); else deptTaskOpen.add(k);
+  if(wasOpen && selId === id){ renderSidebar(); return; }
+  selectTask(id);
+}
+function _deptTaskProductsHtml(l, t){
+  if(l.dept === NO_PRODUCT_DEPT){
+    return `<div class="dtask-prods"><div class="dtask-prod is-none"><span class="dtask-prod-name">Nothing to buy for this task</span></div></div>`;
+  }
+  const picked = _lineTaskPicked(l, t);
+  if(!picked.length){
+    return `<div class="dtask-prods"><div class="dtask-prod is-none"><span class="dtask-prod-name">No product picked yet</span></div></div>`;
+  }
+  return `<div class="dtask-prods">${picked.map(h => {
+    const name = [h.p.brand, h.p.product].filter(Boolean).join(' ');
+    const amt = _num(h.p.qty) * _num(h.p.parts);
+    return `<div class="dtask-prod" title="${esc(name)} · ${esc(String(h.p.qty))}">
+      <span class="dtask-prod-name">${esc(name)}</span>
+      <span class="dtask-prod-amt">${money(Math.round(amt))}</span>
+    </div>`;
+  }).join('')}</div>`;
+}
+function selectLine(key){
+  if(selLineKey === key && !selId) return;
+  const l = deptLineByKey(key); if(!l) return;
+  scopeView = false;
+  selId = null;
+  selGroupKey = null;
+  selLineKey = key;
+  openIds.clear();
+  if(collapsedGrps) collapsedGrps.delete(l.dept);
+  collapsedLines.delete(key);
+  workMode = 'shop';
+  document.body.classList.toggle('shop-mode', true);
+  if(typeof renderSidebar === 'function') renderSidebar();
+  if(typeof renderWorkHdr === 'function') renderWorkHdr();
+  if(typeof renderWork === 'function') renderWork();
+}
+/* Read off the product itself rather than needsProduct(), which in draft
+   stays quiet about a task with no option added yet — right for a status
+   tag, wrong here, where the question is only "has a product been chosen". */
+function _taskHasProduct(t){
+  return !!t.product && !/not selected|pending|tbd/i.test(t.product);
+}
+/* What the line's tasks have picked: one product for all of them, a mix,
+   or nothing yet. */
+/* The products a task has actually picked: its catalogue rows with a
+   quantity, on options that are part of the job — what the task Editor shows
+   as picked. A task with no catalogue rows falls back to its summary line. */
+function taskPickedProducts(t){
+  const opts = taskOptions(t);
+  const hasCatalog = opts.some(o => (o.products || []).some(p => p.sku));
+  if(!hasCatalog) return _taskHasProduct(t) ? [t.product] : [];
+  return opts.filter(optionIsAdded)
+    .flatMap(o => (o.products || []).filter(p => p.sku && productIsPicked(p)))
+    .map(p => [p.brand, p.product].filter(Boolean).join(' '));
+}
+function deptLinePicked(l){
+  const per = l.items.map(taskPickedProducts);
+  const picked = per.filter(a => a.length).map(a => a.join(' + '));
+  if(!picked.length) return {state:'none'};
+  const uniq = [...new Set(picked)];
+  if(uniq.length === 1 && picked.length === l.items.length) return {state:'one', product:uniq[0]};
+  return {state:'mixed', n:uniq.length, missing:l.items.length - picked.length};
+}
+/* ── Line products: the task Editor's picker, applied across a line ────
+   A task's products live on its options as catalogue rows — picked once the
+   row has a quantity. The line page shows the same rows, and every edit on
+   one goes to that product on each task in the line: the stepper moves
+   every task's quantity together, a Parts or Labor rate is set on all of
+   them. A task that doesn't carry the product yet gets it added to its
+   first option, so a pick reaches every task in the line. */
+// Which catalogue section a line shops from. A line already knows what kind
+// of product it is, so it asks for that section rather than guessing from
+// its first task's name.
+const _LINE_POOL = {
+  'Cabinets':'cabinet', 'Countertops':'counter', 'Tile':'tile',
+  'Appliance suites':'appliance', 'Vinyl plank (LVP)':'floor', 'Carpet':'floor',
+  'Hardwood':'floor', 'Laminate':'floor', 'Interior paint':'paint',
+  'Vanities':'vanity', 'Toilets':'toilet', 'Garage door openers':'mech',
+  'Closet systems':'storage', 'Door knobs & locks':'hardware', 'Light fixtures':'lighting',
+  'Ceiling fans':'ceilingfan', 'Smoke & CO detectors':'detector', 'Blinds & shades':'blinds',
+  'Exhaust fans':'exhaust',
+};
+function deptLinePool(l){
+  if(!l || !l.items.length) return [];
+  return productPool(l.items[0], _LINE_POOL[l.name] || null);
+}
+const _num = v => parseFloat(String(v == null ? '' : v).replace(/[^0-9.-]/g, '')) || 0;
+// The option a line edit lands on: the first one that's part of the job.
+function _lineOption(t){
+  const opts = taskOptions(t);
+  return opts.find(o => optionIsAdded(o)) || opts[0] || null;
+}
+function _lineProductRow(t, sku){
+  for(const o of taskOptions(t)){
+    const p = (o.products || []).find(x => x.sku === sku);
+    if(p) return {o, p};
+  }
+  return null;
+}
+function _ensureLineProductRow(t, cat){
+  const hit = _lineProductRow(t, cat.sku);
+  if(hit) return hit;
+  const o = _lineOption(t); if(!o) return null;
+  o.products = o.products || [];
+  const p = {id:'prod_' + Math.random().toString(36).slice(2,7), sku:cat.sku, brand:cat.brand,
+             product:cat.name, qty:'0', parts:_fmtDollars(cat.price), labor:''};
+  o.products.push(p);
+  return {o, p};
+}
+// How much of this product the task itself calls for — its own quantity,
+// or one when the task hasn't stated it. Used for the first pick only.
+function _taskNeedQty(t, cat){
+  const n = _num(t.qty);
+  if(!n) return '1';
+  if(cat && cat.coveragePerUnit) return String(Math.max(1, Math.ceil(n / cat.coveragePerUnit)));
+  return String(n);
+}
+// Keep the task's one-line product summary in step with its picked rows,
+// which is what the sidebar, the group table and the line's state read.
+function _syncTaskProduct(t){
+  const picked = taskOptions(t).filter(optionIsAdded)
+    .flatMap(o => (o.products || []).filter(productIsPicked));
+  if(picked.length){
+    t.product = picked.map(p => [p.brand, p.product].filter(Boolean).join(' ')).join(' + ');
+    t.flags = (t.flags || []).filter(f => f !== 'missing');
+  } else if(_taskHasProduct(t) && taskOptions(t).some(o => (o.products || []).some(p => p.sku))){
+    t.product = '(not selected)';
+  }
+}
+function _lineCommit(t, o){
+  recomputeOptionFromProducts(t, o);
+  _syncTaskProduct(t);
+}
+/* ── Applying a product across a line ────────────────────────────────
+   A product row's Apply covers every task in the line; a single task is
+   picked from the dropdown on its own row. Quantity belongs to each task —
+   its own stepper moves only it — so one press never moves three at once. */
+/* The catalogue rows that count as "this task's product" for the line: the
+   line's own section plus the task's default one (a shower task in the Tile
+   line was seeded from shower tile). Applying a product clears the others,
+   so a task holds one product per line rather than piling them up. */
+function _lineSkus(l, t){
+  return new Set([...deptLinePool(l), ...productPool(t)].map(p => p.sku));
+}
+function _lineTaskRows(l, t){
+  const skus = _lineSkus(l, t);
+  return taskOptions(t).flatMap(o => (o.products || []).filter(p => p.sku && skus.has(p.sku)).map(p => ({o, p})));
+}
+function _lineTaskPicked(l, t){
+  return _lineTaskRows(l, t).filter(h => optionIsAdded(h.o) && productIsPicked(h.p));
+}
+// Put one catalogue product on these tasks, replacing what each had in the
+// line. Shared by the per-task dropdown and the product rows' Apply.
+function _applyLineProductTo(l, cat, targets){
+  targets.forEach(t => {
+    const before = _lineTaskPicked(l, t);
+    // A swap keeps the quantity the task already had; a first pick takes
+    // the task's own need.
+    const keepQty = before.length ? before[0].p.qty : null;
+    const touched = new Set();
+    _lineTaskRows(l, t).forEach(h => { if(h.p.sku !== cat.sku && productIsPicked(h.p)){ h.p.qty = '0'; touched.add(h.o); } });
+    const h = _ensureLineProductRow(t, cat); if(!h) return;
+    if(!productIsPicked(h.p)) h.p.qty = keepQty || _taskNeedQty(t, cat);
+    // Picking puts the option in the job — same as "+ Add" on it in the task.
+    if(!optionIsAdded(h.o)) h.o.added = true;
+    touched.add(h.o);
+    touched.forEach(o => recomputeOptionFromProducts(t, o));
+    _syncTaskProduct(t);
+  });
+}
+function _clearLineProductOn(l, targets){
+  targets.forEach(t => {
+    const touched = new Set();
+    _lineTaskPicked(l, t).forEach(h => { h.p.qty = '0'; touched.add(h.o); });
+    touched.forEach(o => recomputeOptionFromProducts(t, o));
+    if(touched.size) t.product = '(not selected)';
+  });
+}
+/* mode: undefined — ask first if it would replace anything; 'all' — the
+   confirm said yes, replace on every task in the line. */
+function applyLineProduct(key, sku, mode){
+  closeLineApplyConfirm();
+  const l = deptLineByKey(key); if(!l) return;
+  const cat = deptLinePool(l).find(x => x.sku === sku); if(!cat) return;
+  const targets = l.items.slice();
+  if(!targets.length) return;
+  // A task that already has a different product would lose it. Say which,
+  // and what they have, before anything changes.
+  const clashes = targets.filter(t => {
+    const pk = _lineTaskPicked(l, t);
+    return pk.length && !pk.some(h => h.p.sku === sku);
+  });
+  if(!mode && clashes.length){ _showLineApplyConfirm(l, cat, targets, clashes); return; }
+  _applyLineProductTo(l, cat, targets);
+  const rooms = [...new Set(targets.map(t => t.room))];
+  toast(targets.length === 1
+    ? `${cat.brand} ${cat.name} → ${targets[0].room} › ${targets[0].name}`
+    : `${cat.brand} ${cat.name} applied to ${targets.length} tasks · ${rooms.join(', ')}`);
+  renderAll();
+}
+/* Built and appended, like the flag-block modal, so the re-render an apply
+   triggers can't take it down mid-decision. */
+function closeLineApplyConfirm(){
+  document.querySelectorAll('.lnp-confirm').forEach(n => n.remove());
+}
+function _showLineApplyConfirm(l, cat, targets, clashes){
+  closeLineApplyConfirm();
+  const k = _lineKeyArg(l.key);
+  const sku = esc(cat.sku);
+  const n = clashes.length;
+  const rows = clashes.map(t => {
+    const cur = _lineTaskPicked(l, t).map(h => [h.p.brand, h.p.product].filter(Boolean).join(' ')).join(' + ');
+    return `<li><span class="pgd-fb-task">${esc(t.room)} › ${esc(t.name)}</span><span class="lnp-cf-cur" title="${esc(cur)}">${esc(cur)}</span></li>`;
+  }).join('');
+  const wrap = document.createElement('div');
+  wrap.className = 'lnp-confirm';
+  wrap.innerHTML = `<div class="se-modal-scrim open" onclick="closeLineApplyConfirm()"></div>
+    <div class="se-modal open lnp-cf-modal" role="dialog" aria-modal="true" aria-label="Replace products">
+      <div class="se-modal-cap">Replace products</div>
+      <div class="se-modal-title">${n === 1 ? '1 task already has' : `${n} tasks already have`} a different product</div>
+      <div class="se-modal-body">
+        Applying <b>${esc(cat.brand)} ${esc(cat.name)}</b> will replace ${n === 1 ? 'it' : 'them'}. This will not affect quantities.
+        <ul class="pgd-fb-list">${rows}</ul>
+      </div>
+      <div class="se-modal-actions">
+        <button class="se-btn se-btn-secondary" onclick="closeLineApplyConfirm()">Cancel</button>
+        <button class="se-btn se-btn-primary" onclick="applyLineProduct('${k}','${sku}','all')">Replace on all tasks</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+}
+/* One task, straight from its row's Product dropdown — no ticking needed.
+   An empty pick clears it. Leaves the selection as it was. */
+function setLineTaskProduct(key, id, sku){
+  document.querySelectorAll('.sec-hdr-dd.open').forEach(d => d.classList.remove('open'));
+  const l = deptLineByKey(key); if(!l) return;
+  const t = l.items.find(x => x.id === id); if(!t) return;
+  if(!sku){
+    _clearLineProductOn(l, [t]);
+    toast(`Product cleared · ${t.room} › ${t.name}`);
+  } else {
+    const cat = deptLinePool(l).find(x => x.sku === sku); if(!cat) return;
+    _applyLineProductTo(l, cat, [t]);
+    toast(`${cat.brand} ${cat.name} → ${t.room} › ${t.name}`);
+  }
+  renderAll();
+}
+function clearLineProduct(key){
+  const l = deptLineByKey(key); if(!l) return;
+  const targets = l.items.slice();
+  _clearLineProductOn(l, targets);
+  toast(`Product cleared from ${targets.length} ${targets.length === 1 ? 'task' : 'tasks'}`);
+  renderAll();
+}
+/* One task's own quantity. On its picked product once it has one; before
+   that, on the task itself, which is what the first apply will use. */
+function bumpLineTaskQty(key, id, dir){
+  const l = deptLineByKey(key); if(!l) return;
+  const t = l.items.find(x => x.id === id); if(!t) return;
+  const picked = _lineTaskPicked(l, t);
+  if(picked.length){
+    const h = picked[0];
+    h.p.qty = String(Math.max(1, _num(h.p.qty) + dir));
+    recomputeOptionFromProducts(t, h.o);
+    renderAll();
+    return;
+  }
+  const unit = String(t.qty || '').replace(/^[\s\d.,-]+/, '').trim();
+  const n = Math.max(1, (_num(t.qty) || (dir > 0 ? 0 : 1)) + dir);
+  t.qty = unit ? `${n} ${unit}` : String(n);
+  renderWork();
+}
+function lineTaskQtyLabel(l, t){
+  const picked = _lineTaskPicked(l, t);
+  return picked.length ? String(picked[0].p.qty) : (t.qty || '');
+}
+// The tasks in a line that have this product picked.
+function lineProductUsers(l, sku){
+  return l.items.filter(t => _lineTaskPicked(l, t).some(h => h.p.sku === sku)).map(t => t.id);
+}
+function toggleDeptLine(key){
+  if(collapsedLines.has(key)) collapsedLines.delete(key); else collapsedLines.add(key);
+  document.querySelectorAll('.dline').forEach(el => {
+    if(el.dataset.line === key) el.classList.toggle('collapsed', collapsedLines.has(key));
+  });
 }
 // Placeholder handlers for the draft-mode add affordances. They toast for now
 // and can be wired to real task/group creation UIs when we build that flow out.
@@ -899,6 +1309,7 @@ function pickTaskTemplate(groupKey, name, cat){
     id: nextId, code, room, name,
     opt: 'To be scoped',
     gc: (groupBy === 'contractor' ? groupKey : null),
+    ...(groupBy === 'dept' ? {dept: groupKey} : {}),
     product: '(not selected)',
     qty: '—', rate: '—', cost: '$0',
     photos: 0, flags: ['missing'], mods: [], status: 'not_started',
@@ -964,6 +1375,7 @@ function toggleGrp(el){
    Clears any task or group selection and routes to the Editor tab, which
    is where the scope overview renders. */
 function selectScope(){
+  selLineKey = null;
   if(!SCOPE_VIEW_ENABLED) return;
   // Clicking the already-selected scope is a no-op — no deselect toggle,
   // same rule selectGroup follows.
@@ -992,6 +1404,7 @@ function onScopeBarKey(e){
 }
 
 function selectGroup(key){
+  selLineKey = null;
   groupApproveConfirmKey = null;   // don't carry a confirm across groups
   // Clicking the already-selected group is a no-op — no deselect toggle.
   // The group stays highlighted and its group page stays open on the
@@ -1421,7 +1834,9 @@ function duplicateGroup(key){
     const clone = (typeof structuredClone === 'function') ? structuredClone(t) : JSON.parse(JSON.stringify(t));
     clone.id = nextId;
     clone.code = `${codePrefix}-${Math.random().toString(16).slice(2,6).toUpperCase()}`;
-    if(isRoom) clone.room = newName; else clone.gc = newName;
+    if(isRoom) clone.room = newName;
+    else if(groupBy === 'dept') clone.dept = newName;
+    else clone.gc = newName;
     return clone;
   });
   TASKS.push(...clones);
@@ -1523,6 +1938,7 @@ function syncApproveBtn(){
    it, so route to the Editor — the same rule selectGroup already follows
    for groups. */
 function selectTask(id, opts){
+  selLineKey = null;
   const toEditor = !!(opts && opts.toEditor) || workMode === 'overview';
   if(selId === id){
     // Re-clicking the selected task is otherwise a no-op, but from a search
@@ -1615,7 +2031,7 @@ function syncScrollToTask(id, target){
   }
   if(target === 'left'){
     // Expand the task's group if it was collapsed so the row is actually visible
-    const gkey = groupBy === 'contractor' ? (t.gc || 'unassigned') : t.room;
+    const gkey = taskGroupKey(t);
     if(collapsedGrps && collapsedGrps.has(gkey)){
       collapsedGrps.delete(gkey);
       renderSidebar();
@@ -1891,7 +2307,10 @@ function bumpProductQty(id, oid, pid, dir){
   const opt = (t.options||[]).find(o => o.id === oid); if(!opt) return;
   const p = (opt.products||[]).find(x => x.id === pid); if(!p) return;
   const cur = parseFloat(String(p.qty || '0').replace(/[^0-9.-]/g,'')) || 0;
-  p.qty = String(Math.max(0, cur + dir));
+  // Keep the unit: stepping "14 LF" gives "15 LF", not a bare 15.
+  const unit = String(p.qty || '').replace(/^[\s\d.,-]+/, '').trim();
+  const next = Math.max(0, cur + dir);
+  p.qty = unit ? `${next} ${unit}` : String(next);
   recomputeOptionFromProducts(t, opt);
   if(typeof renderAll === 'function') renderAll();
 }
@@ -2189,6 +2608,22 @@ function setTaskContractor(id, gc){
   else if(!t.flags.includes('unassigned')) t.flags.push('unassigned');
   toast(`${t.name} · reassigned to ${nextLabel}`);
   renderSidebar();
+  if(workMode==='shop' || workMode==='artifact') renderWork();
+}
+/* Department from the task info fold. An empty value clears the field and
+   hands the task back to the suggestion. Not staged as a change order the
+   way the contractor is: the department sorts the scope, it doesn't change
+   what gets built or what it costs. */
+function setTaskDept(id, dept){
+  const t = TASKS.find(x=>x.id===id); if(!t) return;
+  const prev = taskDept(t);
+  if(dept) t.dept = dept; else delete t.dept;
+  const next = taskDept(t);
+  if(dept) toast(`${t.name} · department set to ${next}`);
+  else toast(`${t.name} · using the suggested department, ${next}`);
+  // The task may have just changed sidebar group, so redraw the sidebar
+  // as well as the card.
+  if(prev !== next || groupBy === 'dept') renderSidebar();
   if(workMode==='shop' || workMode==='artifact') renderWork();
 }
 function saveEdit(id){
@@ -2885,7 +3320,7 @@ const _WORK_MODES_ALL = [
   {id:'shop',     label:'Editor'},
   {id:'floorplan',label:'Measurements'},   // id stays: it's the URL param and dispatch key
   {id:'pano',     label:'Progress'},
-  {id:'artifact', label:'Register'},
+  {id:'artifact', label:'Record'},
   {id:'artifact2',label:'Artifact 2'},   // scope change history — js/a2/*.js
 ];
 const _projModeParam = new URLSearchParams(window.__KAI_QS || window.location.search).get('projMode');
@@ -2915,6 +3350,7 @@ function setWorkMode(m){
   if(m === 'artifact'){
     openCopyId = null;
     openHistoricalId = null;
+    if(typeof openPoDoc !== 'undefined') openPoDoc = false;
   }
   workMode=m;
   document.body.classList.toggle('shop-mode', m==='shop');
@@ -2982,9 +3418,9 @@ function _artToTop(){
   wb.scrollTop = 0;
   requestAnimationFrame(() => { wb.scrollTop = 0; });
 }
-function openCopy(id){ openHistoricalId = null; openCopyId = id; renderArtifact(); _artToTop(); }
+function openCopy(id){ openHistoricalId = null; if(typeof openPoDoc !== 'undefined') openPoDoc = false; openCopyId = id; renderArtifact(); _artToTop(); }
 function closeCopy(){ openCopyId = null; renderArtifact(); _artToTop(); }
-function openHistorical(id){ openCopyId = null; openHistoricalId = id; renderArtifact(); _artToTop(); }
+function openHistorical(id){ openCopyId = null; if(typeof openPoDoc !== 'undefined') openPoDoc = false; openHistoricalId = id; renderArtifact(); _artToTop(); }
 function closeHistorical(){ openHistoricalId = null; renderArtifact(); _artToTop(); }
 function copyById(id){ return SCOPE_COPIES.find(c => c.id === id); }
 function copyIsExpired(c){
@@ -3034,7 +3470,18 @@ function renderWorkHdr(){
     Show scope
     <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5 8 6l-3.5 3.5"/></svg>
   </button>`;
-  document.getElementById('workHdr').innerHTML = `${showScope}<div class="wmode-tabs">${tabs}</div>${scopeTools}`;
+  /* A way to the purchase order from any tab, at the bar's right end — it is
+     the document people come back to most once products are picked. Lit
+     while it is the thing on screen. Only when the Record tab exists and
+     there is a scope to order from. */
+  const poOn = workMode === 'artifact' && typeof openPoDoc !== 'undefined' && openPoDoc;
+  const poLink = (window.__KAI_SHOP && TASKS.length && WORK_MODES.some(m => m.id === 'artifact') && typeof openPurchaseOrder === 'function')
+    ? `<button type="button" class="wmode-po${poOn ? ' is-on' : ''}" onclick="openPurchaseOrder()"${poOn ? ' aria-current="page"' : ''}>
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M3 2.5h8v9l-1.5-1-1.5 1-1-1-1 1-1.5-1-1.5 1z"/><path d="M5 5.5h4M5 7.5h4" stroke-linecap="round"/></svg>
+        Purchase order
+      </button>`
+    : '';
+  document.getElementById('workHdr').innerHTML = `${showScope}<div class="wmode-tabs">${tabs}</div>${scopeTools}${poLink}`;
   // Rebuild the af menu contents now that the button is back in the DOM.
   if(typeof renderFilter === 'function') renderFilter();
 }
@@ -3181,6 +3628,9 @@ function isOverBudget(t, product, qty){
 function categoryOf(t){
   const base=(t.name||'').toLowerCase();
   if(/cabinet/.test(base)) return 'cabinet';
+  // Same order as productPool: a vanity with a quartz top is a vanity.
+  if(/vanity/.test(base)) return 'vanity';
+  if(/shower/.test(base)) return 'shower';
   if(/counter|quartz/.test(base)) return 'counter';
   if(/backsplash|tile/.test(base) && !/floor/.test(base)) return 'tile';
   if(/appliance/.test(base)) return 'appliance';

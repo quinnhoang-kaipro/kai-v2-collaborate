@@ -8,23 +8,34 @@
 
    Pure function of the task, no dependency on TASKS or render state, so
    hoisting it out of scope-navigator.js costs nothing. */
-function productPool(t){
+function productPool(t, catOverride){
   // Generic pool sized to the task; in production this is a real catalog query.
   // Tier order: team (template/manager picks) → similar (matches description+budget) → other.
+  // catOverride lets a caller that already knows the kind of product — the
+  // Departments view's product lines — ask for that section directly.
   const base=(t.name||'').toLowerCase();
-  const cat=
-    /cabinet/.test(base)?'cabinet':
+  // Vanity and shower are tested before countertop and tile: "vanity with
+  // integrated quartz top" is a vanity, and "shower wall and floor tile" is
+  // shower tile, not a kitchen backsplash.
+  const cat= catOverride ||
+    (/cabinet/.test(base)?'cabinet':
+    /vanity/.test(base)?'vanity':
+    /shower/.test(base)?'shower':
     /counter|quartz/.test(base)?'counter':
     /backsplash|tile/.test(base)?'tile':
     /appliance/.test(base)?'appliance':
     /floor|lvp|carpet|hardwood/.test(base)?'floor':
     /paint/.test(base)?'paint':
-    /vanity/.test(base)?'vanity':
-    /shower/.test(base)?'shower':
     /toilet/.test(base)?'toilet':
     /\bopener\b/.test(base)?'mech':
     /closet/.test(base)?'storage':
-    'generic';
+    /door hardware|knob|lever/.test(base)?'hardware':
+    /exhaust fan/.test(base)?'exhaust':
+    /ceiling fan/.test(base)?'ceilingfan':
+    /smoke|detector/.test(base)?'detector':
+    /blind/.test(base)?'blinds':
+    /lighting|light fixture/.test(base)?'lighting':
+    'generic');
   const POOLS={
     cabinet:[
       {tier:'team',brand:'Diamond NOW',name:'Arcadia White Shaker Stock Cabinet',sku:'1003-432-100',unit:'LF',price:344,stock:'in',tags:['Template pick','Approved finish']},
@@ -113,6 +124,39 @@ function productPool(t){
       {tier:'team',brand:'ClosetMaid',name:'ShelfTrack 5-8 ft Closet Kit, White',sku:'CM-ST-58W',unit:'kit',price:460,stock:'in',tags:['Template pick']},
       {tier:'similar',brand:'Rubbermaid',name:'HomeFree 4-8 ft Closet Kit',sku:'RB-HF-48',unit:'kit',price:320,stock:'in',tags:['Under budget']},
       {tier:'other',brand:'Easy Track',name:'Deluxe Starter Closet White',sku:'ET-DSC-W',unit:'kit',price:620,stock:'in'},
+    ],
+    hardware:[
+      {tier:'team',brand:'Kwikset',name:'Tylo Passage Knob, Satin Nickel',sku:'KW-TYLO-PS-SN',unit:'ea',price:18,stock:'in',tags:['Template pick']},
+      {tier:'team',brand:'Kwikset',name:'Tylo Privacy Knob, Satin Nickel',sku:'KW-TYLO-PV-SN',unit:'ea',price:20,stock:'in',tags:['Template pick']},
+      {tier:'similar',brand:'Schlage',name:'Andover Passage Knob, Satin Nickel',sku:'SC-ANDV-PS-SN',unit:'ea',price:27,stock:'in'},
+      {tier:'similar',brand:'Defiant',name:'Brandywine Passage Knob, Satin Nickel',sku:'DF-BRDY-PS',unit:'ea',price:12,stock:'in',tags:['Under budget']},
+      {tier:'other',brand:'Baldwin',name:'Reserve Round Knob, Satin Nickel',sku:'BW-RSV-RK',unit:'ea',price:58,stock:'low'},
+    ],
+    lighting:[
+      {tier:'team',brand:'Hampton Bay',name:'13 in. LED Flush Mount, Brushed Nickel',sku:'HB-13LED-FM',unit:'ea',price:55,stock:'in',tags:['Template pick']},
+      {tier:'team',brand:'Lithonia',name:'4 ft Linkable LED Shop Light',sku:'LI-4FT-SHOP',unit:'ea',price:35,stock:'in',tags:['Manager pick']},
+      {tier:'similar',brand:'Commercial Electric',name:'11 in. Color-Select LED Flush Mount',sku:'CE-11CS-FM',unit:'ea',price:39,stock:'in',tags:['Under budget']},
+      {tier:'other',brand:'Progress Lighting',name:'Gulliver 2-Light Close-to-Ceiling',sku:'PL-GULL-2L',unit:'ea',price:89,stock:'in'},
+    ],
+    ceilingfan:[
+      {tier:'team',brand:'Hunter',name:'Dempsey 52 in. LED Ceiling Fan with Light',sku:'HU-DEMP-52',unit:'ea',price:190,stock:'in',tags:['Template pick']},
+      {tier:'similar',brand:'Hampton Bay',name:'Glendale 52 in. LED Ceiling Fan',sku:'HB-GLND-52',unit:'ea',price:139,stock:'in',tags:['Under budget']},
+      {tier:'other',brand:'Minka-Aire',name:'Light Wave 52 in. Ceiling Fan',sku:'MA-LWAV-52',unit:'ea',price:345,stock:'low'},
+    ],
+    detector:[
+      {tier:'team',brand:'First Alert',name:'SCO5CN Hardwired Smoke + CO Combo',sku:'FA-SCO5CN',unit:'ea',price:35,stock:'in',tags:['Template pick','Code compliant']},
+      {tier:'similar',brand:'Kidde',name:'KN-COSM-IBA Hardwired Combo',sku:'KD-COSM-IBA',unit:'ea',price:39,stock:'in'},
+      {tier:'other',brand:'Google Nest',name:'Protect Wired Smoke + CO',sku:'GN-PROT-W',unit:'ea',price:119,stock:'in'},
+    ],
+    blinds:[
+      {tier:'team',brand:'Bali',name:'2 in. Faux Wood Blind, White',sku:'BA-2FW-WHT',unit:'ea',price:55,stock:'in',tags:['Template pick']},
+      {tier:'similar',brand:'Home Decorators',name:'2 in. Cordless Faux Wood Blind',sku:'HD-2CFW',unit:'ea',price:42,stock:'in',tags:['Under budget']},
+      {tier:'other',brand:'Levolor',name:'2 in. Cordless Wood Blind',sku:'LV-2CW',unit:'ea',price:98,stock:'in'},
+    ],
+    exhaust:[
+      {tier:'team',brand:'Panasonic',name:'WhisperGreen 80 CFM, Humidity Sensing',sku:'PA-WG80-HS',unit:'ea',price:165,stock:'in',tags:['Template pick']},
+      {tier:'similar',brand:'Broan-NuTone',name:'80 CFM Humidity Sensing Fan',sku:'BN-80HS',unit:'ea',price:128,stock:'in',tags:['Under budget']},
+      {tier:'other',brand:'Delta Breez',name:'Signature 80 CFM',sku:'DB-SIG80',unit:'ea',price:142,stock:'low'},
     ],
     generic:[
       {tier:'team',brand:'Vendor A',name:'Template-selected product',sku:'TPL-A-001',unit:t.qty?String(t.qty).replace(/[\d.\s]/g,'').trim()||'ea':'ea',price:Math.round(dollars(t.cost||0)*0.6/Math.max(1,parseFloat(t.qty)||1)),stock:'in',tags:['Template pick']},

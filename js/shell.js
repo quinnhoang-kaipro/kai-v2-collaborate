@@ -26,11 +26,17 @@ function KAI_PANEL_DOC(qs){
      gets the timeline; index-activity.html asks for the sentence feed. */
   const sent = (typeof window.__KAI_ACTIVITY_SENTENCES !== 'undefined')
     && !!window.__KAI_ACTIVITY_SENTENCES;
+  /* And for Shop with Kai: ShopwithKai.html sets it and gets the purchase
+     order — the Record's order document, its classification by materials and
+     labour, and the shortcuts to it. index.html leaves it unset and keeps the
+     Record as it was. */
+  const shop = (typeof window.__KAI_SHOP !== 'undefined') && !!window.__KAI_SHOP;
   const boot =
     '<base href="' + location.href.split('#')[0] + '">' +
     '<scr' + 'ipt>window.__KAI_QS=' + JSON.stringify(qs ? '?' + qs : '')
       + ';window.__KAI_ACTIVITY_FULL=' + (full ? 'true' : 'false')
-      + ';window.__KAI_ACTIVITY_SENTENCES=' + (sent ? 'true' : 'false') + ';<\/script>';
+      + ';window.__KAI_ACTIVITY_SENTENCES=' + (sent ? 'true' : 'false')
+      + ';window.__KAI_SHOP=' + (shop ? 'true' : 'false') + ';<\/script>';
   return KAI_PANEL_RAW.replace(/<head([^>]*)>/i, '<head$1>' + boot);
 }
 
@@ -977,6 +983,7 @@ function renderStatePop(){
       <span class="turn-pop-lock">${id === 'approved' ? LOCK_SVG.shut : LOCK_SVG.open}</span>${(DOC_STATE[id] || {}).label || ''}
     </div>` : ''}
     ${body}
+    <button type="button" class="turn-pop-how" onclick="openTurnIntro(0)">How turns work</button>
   </div>`;
 }
 /* Anywhere else closes it. Registered once — the card is rebuilt, not this. */

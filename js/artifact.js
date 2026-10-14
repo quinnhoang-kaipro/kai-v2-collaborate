@@ -5,9 +5,19 @@
    paper that shows the strip. */
 const ART_PHOTO_CAPS = ['Initial walk','Detail','Wide','Spec','Context','Angle'];
 
+/* Shop with Kai — the purchase order and everything that leads to it. On
+   only when the host page asks (ShopwithKai.html; see KAI_PANEL_DOC in
+   shell.js), so index.html keeps the Record as it was. The root class gates
+   the one stylesheet rule that is not scoped to the order's own markup. */
+const SHOP_WITH_KAI = !!window.__KAI_SHOP;
+document.documentElement.classList.toggle('kai-shop', SHOP_WITH_KAI);
+
 function renderArtifact(){
   const body = document.getElementById('workBody');
   if(!body) return;
+  // The tab bar's purchase-order shortcut is lit only while the order is open.
+  const poBtn = document.querySelector('.wmode-po');
+  if(poBtn) poBtn.classList.toggle('is-on', !!openPoDoc);
   // Priority: historical > copy > index. Guard both drill-in states so a
   // stale id (e.g. a copy that was renamed/removed elsewhere) falls back
   // to the index instead of blanking the tab.
@@ -15,6 +25,10 @@ function renderArtifact(){
     const v = VERSIONS.find(x => x.id === openHistoricalId);
     if(!v){ openHistoricalId = null; body.innerHTML = _renderArtifactIndex(); return; }
     body.innerHTML = _renderHistoricalDoc(v);
+    return;
+  }
+  if(openPoDoc && SHOP_WITH_KAI){
+    body.innerHTML = _renderPoDoc();
     return;
   }
   if(openCopyId){
@@ -28,6 +42,7 @@ function renderArtifact(){
 function _renderArtifactIndex(){
   return `<div class="art-index">
     ${_renderRegisterSection()}
+    ${SHOP_WITH_KAI ? _renderPurchaseOrderSection() : ''}
     ${_renderHistoricalSection()}
     ${_renderCopiesSection()}
   </div>`;
@@ -114,10 +129,11 @@ function _regAddedRevised(v){
   return (added || revised) ? {added, revised} : null;
 }
 
-/* How today's Job Total splits. Precedence rather than overlap: a task held
-   for a change order is Deferred whatever else it carries, so the three
-   buckets partition the total exactly and the rows can be trusted to sum. */
-function _regClassify(){
+/* How today's Job Total splits — the Record as index.html shows it.
+   Precedence rather than overlap: a task held for a change order is Deferred
+   whatever else it carries, so the three buckets partition the total exactly
+   and the rows can be trusted to sum. */
+function _regClassifyJob(){
   const modsOf = t => {
     const pm = (typeof taskProductMods === 'function') ? taskProductMods(t) : [];
     return new Set([...(t.mods || []), ...pm]);
@@ -132,6 +148,238 @@ function _regClassify(){
   out.total = out.ready + out.tenant + out.deferred;
   out.onPos = out.ready + out.tenant;   // deferred is not on a PO yet
   return out;
+}
+
+/* Shop with Kai's version: how the parts being bought split — the same walk the purchase order makes,
+   so "On purchase orders" is the order's own total. Parts only: labour is not
+   bought, and a task's stored total can lag its products until they are next
+   edited, so neither belongs in a figure that names the order. Precedence
+   rather than overlap: a deferred product (or one on a deferred task) is
+   Deferred whatever else it carries, so the buckets partition exactly. */
+function _regClassify(){
+  /* Each bucket twice: the materials alone (what goes on the order) and the
+     materials with the labour to install them (what the bucket costs). */
+  const out = {ready:0, tenant:0, deferred:0, readyN:0, tenantN:0, deferredN:0,
+               readyAll:0, tenantAll:0, deferredAll:0};
+  (typeof TASKS !== 'undefined' ? TASKS : []).forEach(t => {
+    const taskMods = t.mods || [];
+    (t.options || []).forEach(o => {
+      if(o.added === false) return;
+      (o.products || []).forEach(p => {
+        if(!productIsPicked(p)) return;
+        const q = _poQtyNum(p.qty);
+        const amt = q * _poDollars(p.parts);
+        const all = q * (_poDollars(p.parts) + _poDollars(p.labor));
+        const m = new Set([...taskMods, ...(p.mods || [])]);
+        if(m.has('deferred'))   { out.deferred += amt; out.deferredAll += all; out.deferredN++; }
+        else if(m.has('tenant')){ out.tenant   += amt; out.tenantAll   += all; out.tenantN++;   }
+        else                    { out.ready    += amt; out.readyAll    += all; out.readyN++;    }
+      });
+    });
+  });
+  out.total = out.ready + out.tenant + out.deferred;
+  out.onPos = out.ready + out.tenant;   // deferred is not on a PO yet
+  out.onPosAll = out.readyAll + out.tenantAll;
+  return out;
+}
+
+/* ════════════ PURCHASE ORDER ════════════
+   What is being bought: every product picked in the scope — the rows the
+   Departments view writes when a product is applied to a line — totalled by
+   SKU, so a product on six tasks is one line for six of it. Parts only:
+   labour is not bought from a store. Deferred products are held back, as the
+   classification (_regClassify, the same walk) says; tenant-responsible ones are on the order but
+   marked. Read live from TASKS, so it moves the moment a product is applied. */
+function _poQtyNum(q){
+  return (typeof _parseQtyNum === 'function') ? (_parseQtyNum(q) || 0)
+    : (parseFloat(String(q || '0').replace(/[^0-9.-]/g,'')) || 0);
+}
+function _poDollars(d){
+  return (typeof _parseDollars === 'function') ? (_parseDollars(d) || 0) : dollars(d);
+}
+/* The product's picture, where the catalogue has one: on the row itself, or
+   on the catalogue entry its SKU came from. */
+function _poImage(t, p){
+  if(p.image) return p.image;
+  if(!p.sku || typeof productPool !== 'function') return '';
+  const hit = (productPool(t) || []).find(c => c.sku === p.sku);
+  return (hit && hit.image) || '';
+}
+const _PO_THUMB_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 5.5h13l-1 4H5z"/><path d="M4 12h13v6H4z"/><path d="M8 8v4"/></svg>`;
+/* A task code on the order is the way back to the task: it selects and
+   highlights it in the scope list, and the order stays open. */
+function _poTaskLink(code){
+  const sel = (typeof selId !== 'undefined' && selId != null)
+    && (TASKS.find(x => x.id === selId) || {}).code === code;
+  return `<button type="button" class="po-ord-task${sel ? ' is-sel' : ''}"
+    onclick="event.stopPropagation();artClickRow('${esc(code)}')" title="Show ${esc(code)} in the scope">${esc(code)}</button>`;
+}
+function _poItems(){
+  const lines = {}, held = {n:0, amt:0};
+  (typeof TASKS !== 'undefined' ? TASKS : []).forEach(t => {
+    const taskDeferred = (t.mods || []).indexOf('deferred') !== -1;
+    /* A product picked on a task the Departments view files as labour-only is
+       still something being bought, so it goes under Other, not "No products
+       needed". */
+    let dept = (typeof taskLine === 'function') ? taskLine(t).dept : 'Other';
+    if(typeof NO_PRODUCT_DEPT !== 'undefined' && dept === NO_PRODUCT_DEPT) dept = 'Other';
+    (t.options || []).forEach(o => {
+      if(o.added === false) return;
+      (o.products || []).forEach(p => {
+        if(!productIsPicked(p)) return;
+        const qty = _poQtyNum(p.qty), price = _poDollars(p.parts);
+        const mods = p.mods || [];
+        if(taskDeferred || mods.indexOf('deferred') !== -1){ held.n++; held.amt += qty * price; return; }
+        const key = p.sku || ((p.brand || '') + '|' + (p.product || ''));
+        const unit = String(p.qty || '').replace(/[0-9.,\s]/g, '').trim();
+        const L = lines[key] || (lines[key] = {sku:p.sku || '', brand:p.brand || '', product:p.product || '',
+          dept, unit, price, qty:0, amt:0, tasks:[], tenant:false, image:_poImage(t, p)});
+        L.qty += qty;
+        L.amt += qty * price;
+        if(L.tasks.indexOf(t.code) === -1) L.tasks.push(t.code);
+        if(mods.indexOf('tenant') !== -1) L.tenant = true;
+      });
+    });
+  });
+  /* Grouped by department, in the order the Departments view lists them. */
+  const order = (typeof DEPARTMENTS !== 'undefined' ? DEPARTMENTS : []);
+  const byDept = {};
+  Object.keys(lines).forEach(k => { const L = lines[k]; (byDept[L.dept] = byDept[L.dept] || []).push(L); });
+  const depts = Object.keys(byDept).sort((a, b) => {
+    const ia = order.indexOf(a), ib = order.indexOf(b);
+    return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib) || a.localeCompare(b);
+  }).map(d => ({dept:d, lines:byDept[d].sort((a, b) => b.amt - a.amt)}));
+  return {depts, held};
+}
+/* The order as a table — the body of the purchase-order document. */
+function _poTableHtml(){
+  const {depts, held} = _poItems();
+  const fmt = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const qtyTxt = L => (Math.round(L.qty * 100) / 100).toLocaleString('en-US') + (L.unit ? ' ' + L.unit : '');
+  const nLines = depts.reduce((s, d) => s + d.lines.length, 0);
+  const total = depts.reduce((s, d) => s + d.lines.reduce((x, L) => x + L.amt, 0), 0);
+  const body = depts.map(d => {
+    const sub = d.lines.reduce((x, L) => x + L.amt, 0);
+    return `<tr class="po-ord-dept"><td colspan="4">${esc(d.dept)}</td>
+        <td class="reg-num">${fmt(sub)}</td></tr>`
+      + d.lines.map(L => `<tr class="reg-row">
+        <td class="po-ord-thumb"><div class="sec-taskcard-product-thumb">${L.image
+          ? `<img src="${esc(L.image)}" alt="" loading="lazy" onerror="this.replaceWith(document.createRange().createContextualFragment(_PO_THUMB_SVG))">`
+          : _PO_THUMB_SVG}</div></td>
+        <td class="po-ord-item">
+          <span class="po-ord-name">${esc([L.brand, L.product].filter(Boolean).join(' ') || 'Product')}</span>${L.tenant
+            ? '<span class="reg-chip is-quiet">Tenant</span>' : ''}
+          <span class="po-ord-sub">${L.sku ? 'SKU ' + esc(L.sku) + ' \u00b7 ' : ''}${L.tasks.length} task${L.tasks.length === 1 ? '' : 's'} \u00b7 ${L.tasks.map(_poTaskLink).join(', ')}</span>
+        </td>
+        <td class="reg-num">${esc(qtyTxt(L))}</td>
+        <td class="reg-num">${fmt(L.price)}${L.unit ? '<span class="po-ord-per"> / ' + esc(L.unit) + '</span>' : ''}</td>
+        <td class="reg-num reg-total">${fmt(L.amt)}</td>
+      </tr>`).join('');
+  }).join('');
+  return `<table class="reg-table po-ord">
+      <thead><tr>
+        <th class="po-ord-thumb"></th><th>Item</th><th class="reg-num">Qty</th><th class="reg-num">Unit price</th><th class="reg-num">Amount</th>
+      </tr></thead>
+      <tbody>
+        ${body || `<tr><td colspan="5" class="po-ord-empty">No products picked yet. Apply a product to a line in the Departments view and it lands here.</td></tr>`}
+        ${nLines ? `<tr class="reg-row is-grand">
+          <td colspan="2">Order total<span class="po-ord-sub">${nLines} item${nLines === 1 ? '' : 's'}</span></td>
+          <td></td><td></td>
+          <td class="reg-num reg-total">${fmt(total)}</td>
+        </tr>` : ''}
+      </tbody>
+    </table>
+    ${held.n ? `<div class="reg-pending-cap po-ord-held">Held back · ${held.n} deferred product${held.n === 1 ? '' : 's'} (${fmt(held.amt)}) wait for a change order</div>` : ''}`;
+}
+/* On the Record's index the order is one row, like the documents under
+   Historical artifacts: what it is, what it covers, what it comes to. The
+   order itself opens as its own document. */
+function _renderPurchaseOrderSection(){
+  if(typeof TASKS === 'undefined' || !TASKS.length) return '';
+  const {depts} = _poItems();
+  const nLines = depts.reduce((s, d) => s + d.lines.length, 0);
+  const total = depts.reduce((s, d) => s + d.lines.reduce((x, L) => x + L.amt, 0), 0);
+  const fmt = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  return `<section class="art-sec art-po" id="artPo">
+    <header class="art-sec-hdr">
+      <div class="art-sec-hdr-l">
+        <h2 class="art-sec-title">Purchase order</h2>
+        <p class="art-sec-desc">Every product picked in the scope, totalled by item. Parts only — labour is not on the order.</p>
+      </div>
+    </header>
+    <div class="reg-table-scroll">
+      <table class="reg-table art-list">
+        <thead><tr>
+          <th class="reg-doc">Document</th><th class="reg-docid">Document ID</th>
+          <th class="reg-num">Items</th><th class="reg-num">Total</th><th class="reg-act"></th>
+        </tr></thead>
+        <tbody><tr class="reg-row is-openable" onclick="openPoDocView()" title="View the purchase order">
+          <td class="reg-doc"><span class="reg-doc-name">Purchase order</span>
+            <span class="po-ord-depts">${depts.length} department${depts.length === 1 ? '' : 's'}</span></td>
+          <td class="reg-docid">${esc(_poDocId())}</td>
+          <td class="reg-num reg-items">${nLines}</td>
+          <td class="reg-num reg-total">${nLines ? fmt(total) : '—'}</td>
+          <td class="reg-act"><button type="button" class="reg-doc-view is-strong" onclick="event.stopPropagation();openPoDocView()">View</button></td>
+        </tr></tbody>
+      </table>
+    </div>
+  </section>`;
+}
+function _poDocId(){ return 'PO-' + _sowIdFor('purchase-order').slice(4); }
+/* The order on its own page, in the same paper the scope documents use. */
+function _renderPoDoc(){
+  const {depts} = _poItems();
+  const nLines = depts.reduce((s, d) => s + d.lines.length, 0);
+  const today = new Date().toISOString().slice(0, 10);
+  return `<div class="copy-doc-wrap">
+    <div class="copy-crumb">
+      <button class="copy-crumb-back" onclick="closePoDocView()" title="Back to the Register">
+        <span aria-hidden="true">‹</span> Back
+      </button>
+      <span class="copy-crumb-div"></span>
+      <span class="copy-crumb-name">Purchase order</span>
+      <span class="copy-crumb-meta">${nLines} item${nLines === 1 ? '' : 's'} · Parts only — labour is not on the order</span>
+      <span class="copy-crumb-sp"></span>
+    </div>
+    <div class="copy-paper">
+      <div class="art-head">
+        <div class="art-head-l">
+          <div class="art-eyebrow">Purchase order</div>
+          <div class="art-title">3484 South Main Street</div>
+          <div class="art-sub-info">Atlanta, GA 30315 · Single-family renovation</div>
+        </div>
+        <div class="art-head-r">
+          <div class="art-meta">
+            <div class="art-meta-k">Prepared</div>
+            <div class="art-meta-v">${_fmtDate(today)}</div>
+          </div>
+          <div class="art-meta">
+            <div class="art-meta-k">Document ID</div>
+            <div class="art-meta-v art-meta-docid">${esc(_poDocId())}</div>
+          </div>
+        </div>
+      </div>
+      <div class="po-ord-paper">${_poTableHtml()}</div>
+    </div>
+  </div>`;
+}
+let openPoDoc = false;
+function openPoDocView(){
+  openCopyId = null; openHistoricalId = null; openPoDoc = true;
+  renderArtifact();
+  if(typeof renderWorkHdr === 'function') renderWorkHdr();
+  if(typeof _artToTop === 'function') _artToTop();
+}
+function closePoDocView(){
+  openPoDoc = false;
+  renderArtifact();
+  if(typeof renderWorkHdr === 'function') renderWorkHdr();
+  if(typeof _artToTop === 'function') _artToTop();
+}
+/* The Departments line page's link: straight to the order document. */
+function openPurchaseOrder(){
+  if(typeof setWorkMode === 'function') setWorkMode('artifact');
+  openPoDocView();
 }
 
 /* The ledger, oldest first. `total` is each document's Job Total as of its
@@ -202,26 +450,60 @@ function _renderRegisterSection(){
     </div>
   </div>`;
 
-  /* ── Classification. "On Purchase Orders" deliberately excludes Deferred:
-        the whole point of that modifier is that the money is not committed. */
+  /* ── Classification, as index.html has it: the job total, by task. */
+  const jobCls = SHOP_WITH_KAI ? null : _regClassifyJob();
+  const classifyJob = SHOP_WITH_KAI ? '' : `<table class="reg-cls">
+    <caption>How the job total is classified</caption>
+    <tbody>
+      ${[
+        {name:'Ready to order',    chip:'',                      note:'In purchase orders',                  val:jobCls.ready,    n:jobCls.readyN},
+        {name:'Tenant responsible',chip:'Tracked cost',          note:'In purchase orders — reported separately', val:jobCls.tenant, n:jobCls.tenantN, chipCls:'is-quiet'},
+        {name:'Deferred',          chip:'Procure on change order', note:'Held until a change order is approved', val:jobCls.deferred, n:jobCls.deferredN, chipCls:'is-quiet'},
+      ].filter(r => r.n > 0).map(r => `<tr>
+          <th>${esc(r.name)}${r.chip?`<span class="reg-chip ${r.chipCls||''}">${esc(r.chip)}</span>`:''}</th>
+          <td class="reg-cls-note">${esc(r.note)}</td>
+          <td class="reg-num">${fmt(r.val)}</td>
+        </tr>`).join('')}
+      <tr class="is-total">
+        <th>On purchase orders</th>
+        <td class="reg-cls-note">Ready to order plus tracked cost</td>
+        <td class="reg-num">${fmt(jobCls.onPos)}</td>
+      </tr>
+    </tbody>
+  </table>`;
+
+  /* ── Shop with Kai: classification of the parts. "On Purchase Orders" deliberately
+        excludes Deferred: the whole point of that modifier is that the money
+        is not committed. In cents, as the purchase order prints them, so the
+        two totals read the same. */
+  const fmtc = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
   const clsRows = [
-    {name:'Ready to order',    chip:'',                      note:'In purchase orders',                  val:cls.ready,    n:cls.readyN},
-    {name:'Tenant responsible',chip:'Tracked cost',          note:'In purchase orders — reported separately', val:cls.tenant, n:cls.tenantN, chipCls:'is-quiet'},
-    {name:'Deferred',          chip:'Procure on change order', note:'Held until a change order is approved', val:cls.deferred, n:cls.deferredN, chipCls:'is-quiet'},
+    {name:'Ready to order',    chip:'',                      note:'Materials go on the purchase order; labour is paid to the contractor', val:cls.ready, all:cls.readyAll, n:cls.readyN},
+    {name:'Tenant responsible',chip:'Tracked cost',          note:'On the purchase order, reported separately — materials and labour', val:cls.tenant, all:cls.tenantAll, n:cls.tenantN, chipCls:'is-quiet'},
+    {name:'Deferred',          chip:'Procure on change order', note:'Materials and labour held until a change order is approved', val:cls.deferred, all:cls.deferredAll, n:cls.deferredN, chipCls:'is-quiet'},
   ].filter(r => r.n > 0).map(r => `<tr>
       <th>${esc(r.name)}${r.chip?`<span class="reg-chip ${r.chipCls||''}">${esc(r.chip)}</span>`:''}</th>
       <td class="reg-cls-note">${esc(r.note)}</td>
-      <td class="reg-num">${fmt(r.val)}</td>
+      <td class="reg-num">${fmtc(r.val)}</td>
+      <td class="reg-num">${fmtc(r.all)}</td>
     </tr>`).join('');
 
-  const classify = `<table class="reg-cls">
-    <caption>How the job total is classified</caption>
+  /* Two columns rather than two tables: what each bucket puts on the order
+     (materials) and what it costs once it is installed (materials + labour).
+     Only the materials figure is the purchase order's, so only it opens it. */
+  const classify = !SHOP_WITH_KAI ? classifyJob : `<table class="reg-cls">
+    <thead><tr>
+      <th colspan="2">How the scope is classified</th>
+      <th class="reg-num">Materials</th><th class="reg-num">Materials + labour</th>
+    </tr></thead>
     <tbody>
       ${clsRows}
       <tr class="is-total">
         <th>On purchase orders</th>
         <td class="reg-cls-note">Ready to order plus tracked cost</td>
-        <td class="reg-num">${fmt(cls.onPos)}</td>
+        <td class="reg-num is-link"><button type="button" class="reg-cls-link" onclick="openPoDocView()"
+          title="Open the purchase order">${fmtc(cls.onPos)}</button><span class="reg-cls-go" aria-hidden="true">&rsaquo;</span></td>
+        <td class="reg-num">${fmtc(cls.onPosAll)}</td>
       </tr>
     </tbody>
   </table>`;
@@ -243,6 +525,8 @@ function _renderRegisterSection(){
         ${canOpen?`<span class="reg-caret" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`:'<span class="reg-caret is-blank"></span>'}
         <span class="reg-doc-name">${esc(versionLabel(v))}</span>
         ${tag.tag?`<span class="hist-card-tag hist-tag-${esc(tag.tagCls||'')}">${esc(tag.tag)}</span>`:''}
+        <button type="button" class="reg-doc-view" onclick="event.stopPropagation();openHistorical('${v.id}')"
+          aria-label="View ${esc(versionLabel(v))}">View</button>
       </td>
       <td class="reg-num reg-items">${items != null ? items : '—'}</td>
       <td class="reg-num">${r.change == null ? 'Approved' : sgn(r.change)}</td>
@@ -281,8 +565,8 @@ function _renderRegisterSection(){
       return `<div class="reg-sub-g${open ? ' is-open' : ''}">
         <button class="reg-sub-row" aria-expanded="${open}"
           onclick="event.stopPropagation();toggleRegGroup('${esc(gk).replace(/'/g, "\\'")}')"
-          title="${open ? 'Hide' : 'Show'} the lines this changed in ${esc(g.room)}">
-          <span class="reg-sub-name">${esc(g.room)}</span>
+          aria-label="${open ? 'Hide' : 'Show'} the lines this changed in ${esc(g.room)}">
+          <span class="reg-sub-name" data-hv-room="${esc(g.room)}">${esc(g.room)}</span>
           <span class="reg-sub-n">${g.tasks.length} ${g.tasks.length === 1 ? 'task' : 'tasks'}</span>
           <span class="reg-sub-amt">${esc(_regGroupAmount(verKey, g.room))}</span>
           <span class="reg-sub-go" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
@@ -294,7 +578,6 @@ function _renderRegisterSection(){
       ${chips}
       <div class="reg-sub-list">${groups}</div>
       <div class="reg-sub-note">Each group opens onto the lines it changed.</div>
-      <button class="reg-sub-open" onclick="event.stopPropagation();openHistorical('${v.id}')">Open ${esc(versionLabel(v))} →</button>
     </td></tr>`;
   }).reverse().join('');
 
@@ -345,35 +628,27 @@ function _renderRegisterSection(){
   </section>`;
 }
 function _renderHistoricalSection(){
-  // Historical artifacts = the audit trail. Each VERSION renders as a
-  // read-only card. Chronological (oldest → newest) so the story reads
-  // "Original scope → CO1 → CO2" left-to-right.
-  const ordered = VERSIONS.slice().sort((a,b) => a.num - b.num);
-  const cards = ordered.map(v => {
+  // Historical artifacts = the audit trail, one row per version in the
+  // Register's own ledger table, newest first — the same order and the same
+  // tags the ledger above uses, so the two read as one record. A row opens
+  // its read-only document. Rows instead of cards so a job with a dozen
+  // change orders stays a short list.
+  const ordered = VERSIONS.slice().sort((a,b) => b.num - a.num);
+  const rows = ordered.map(v => {
     const label = versionLabel(v);
     const tag = versionTag(v);
     const isCurrent = v.id === currentVersionId;
-    const isOriginal = v.num === 1;
-    // isOriginal is "Approved" only once it's been superseded by a later
-    // version — if it's still the current one (nothing approved it yet),
-    // fall through to versionMeta so an in-review submission reads as such.
-    const meta = (isOriginal && !isCurrent) ? `Approved ${v.at}` : versionMeta(v);
-    // Which visual bucket the card falls into. Original = neutral;
-    // current = ink accent bar; outdated = dimmed. Read from the
-    // computed tag (not the static v.tagCls) so terminal-state overrides
-    // like "everything is Approved" flatten the outdated state.
-    const stateCls = isCurrent ? ' is-current' : (tag.tagCls === 'outdated' ? ' is-outdated' : '');
-    // No eyebrow: the card's own name already says which version it is, so
-    // "Original scope" over "Scope" only restated it.
-    return `<button class="hist-card${stateCls}" onclick="openHistorical('${v.id}')" title="View ${esc(label)}">
-      <div class="hist-card-name">${esc(label)}</div>
-      <div class="hist-card-meta">${esc(meta)}</div>
-      <div class="hist-card-docid">${esc(_sowIdFor(v.id))}</div>
-      <div class="hist-card-foot">
-        <span class="hist-card-budget">${esc(v.budget || '')}</span>
+    const outdated = !isCurrent && tag.tagCls === 'outdated';
+    return `<tr class="reg-row is-openable${outdated ? ' is-dim' : ''}" onclick="openHistorical('${v.id}')" title="View ${esc(label)}">
+      <td class="reg-date">${esc(v.at)}</td>
+      <td class="reg-doc">
+        <span class="reg-doc-name">${esc(label)}</span>
         ${tag.tag ? `<span class="hist-card-tag hist-tag-${esc(tag.tagCls||'')}">${esc(tag.tag)}</span>` : ''}
-      </div>
-    </button>`;
+      </td>
+      <td class="reg-docid">${esc(_sowIdFor(v.id))}</td>
+      <td class="reg-num reg-total">${esc(v.budget || '—')}</td>
+      <td class="reg-act"><button type="button" class="reg-doc-view" onclick="event.stopPropagation();openHistorical('${v.id}')" aria-label="View ${esc(label)}">View</button></td>
+    </tr>`;
   }).join('');
   return `<section class="art-sec">
     <header class="art-sec-hdr">
@@ -382,31 +657,39 @@ function _renderHistoricalSection(){
         <p class="art-sec-desc">Review the original scope and each change-order version for this job.</p>
       </div>
     </header>
-    <div class="hist-grid">${cards}</div>
+    <div class="reg-table-scroll">
+      <table class="reg-table art-list">
+        <thead><tr>
+          <th class="reg-date">Date</th><th class="reg-doc">Document</th>
+          <th class="reg-docid">Document ID</th><th class="reg-num">Total</th><th class="reg-act"></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
   </section>`;
 }
 function _renderCopiesSection(){
-  const cards = SCOPE_COPIES.map(c => {
+  // Same ledger table: what the copy is, what it's cut from, who it's
+  // filtered to, and when its link stops working. Newest first. The filters
+  // are a compact line rather than chips, so a row stays one line tall.
+  const list = SCOPE_COPIES.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  const rows = list.map(c => {
     const expired = copyIsExpired(c);
+    const ver = VERSIONS.find(v => v.id === c.basedOnVersionId) || {num:1};
     const filters = _copyFilterSummary(c);
-    const chips = filters.map(f => `<span class="copy-filter-chip">${esc(f)}</span>`).join('');
-    const metaBits = [
-      `<span>Based on ${esc(versionLabel(VERSIONS.find(v=>v.id===c.basedOnVersionId)||{num:1}))}</span>`,
-      `<span>Created ${_fmtDate(c.createdAt)}</span>`,
-      expired
-        ? `<span class="copy-expired-tag">Expired ${_fmtDate(c.expiresAt)}</span>`
-        : `<span>Expires ${_fmtDate(c.expiresAt)}</span>`,
-    ].join('');
-    return `<button class="copy-card${expired?' is-expired':''}" onclick="openCopy('${c.id}')">
-      <div class="copy-card-name">${esc(c.name)}</div>
-      <div class="copy-card-desc">${esc(c.description||'')}</div>
-      <div class="copy-card-meta">${metaBits}</div>
-      <div class="copy-card-filters">${chips}</div>
-      <div class="copy-card-actions">
-        <span class="copy-card-btn" onclick="event.stopPropagation();openCopyShare('${c.id}')">Share link</span>
-        <span class="copy-card-btn is-primary" onclick="event.stopPropagation();openCopy('${c.id}')">Open</span>
-      </div>
-    </button>`;
+    const n = _copyTasks(c.filters).length;
+    return `<tr class="reg-row is-openable${expired ? ' is-dim' : ''}" onclick="openCopy('${c.id}')" title="Open ${esc(c.name)}">
+      <td class="reg-doc">
+        <span class="reg-doc-name">${esc(c.name)}</span>
+      </td>
+      <td class="reg-ver">${esc(versionLabel(ver))}</td>
+      <td class="reg-filters" title="${esc(filters.join(' · '))}"><span class="reg-filters-n">${n} ${n === 1 ? 'task' : 'tasks'}</span><span class="reg-filters-txt">${esc(filters.join(' · '))}</span></td>
+      <td class="reg-date">${_fmtDate(c.createdAt)}</td>
+      <td class="reg-act">
+        <button type="button" class="reg-doc-view" onclick="event.stopPropagation();copyCopyLink('${c.id}')">Copy link</button>
+        <button type="button" class="reg-doc-view is-strong" onclick="event.stopPropagation();openCopy('${c.id}')">Open</button>
+      </td>
+    </tr>`;
   }).join('');
   const empty = SCOPE_COPIES.length ? '' : `<div class="copy-empty">
     <div class="copy-empty-title">No copies yet</div>
@@ -423,7 +706,15 @@ function _renderCopiesSection(){
         New copy
       </button>
     </header>
-    <div class="copy-grid">${cards}${empty}</div>
+    ${list.length ? `<div class="reg-table-scroll">
+      <table class="reg-table art-list">
+        <thead><tr>
+          <th class="reg-doc">Copy</th><th class="reg-ver">Based on</th><th class="reg-filters">Filters</th>
+          <th class="reg-date">Created</th><th class="reg-act"></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>` : empty}
   </section>`;
 }
 // Deterministic 8-char hex "document ID" derived from any seed string.
@@ -577,12 +868,149 @@ function _renderCopyIndex(){
   return _renderArtifactIndex();
 }
 
+/* ── Copy filters ─────────────────────────────────────────────────────
+   A copy holds the tasks that pass its filters. Four categories, each a set
+   of values: contractor, modifier, status and flag. Values within one
+   category are alternatives (Contractor A or Contractor B); categories narrow
+   each other (Contractor A and Deferred = only A's deferred tasks). An empty
+   category doesn't narrow anything.
+
+   The options mirror the navigator's Filters menu: Flags (missing product,
+   unassigned contractor, out of stock, change order), Task status in two
+   bands — In Draft (Empty, Draft, Approved) and In Construction (Not
+   started, In progress, Rework, Completed) — and Modifiers. Flags and
+   modifiers are the navigator's own keys (taskKeys), plus 'missing' for a
+   task with no product chosen.
+
+   Older copies named one contractor (filters.contractor) and had a
+   resident-only switch (filters.renterOnly); both read as the matching
+   values here. */
+const _COPY_FLAG_KEYS = ['missing', 'no_gc', 'oos', 'co_open'];
+const _COPY_FLAG_LABEL = {missing:'Missing product', no_gc:'Unassigned contractor', oos:'Out of stock', co_open:'Change order'};
+// Modifier names as the Filters menu prints them.
+const _COPY_MOD_LABEL = {tenant:'Tenant Responsible'};
+const _COPY_STATUSES = [
+  {value:'empty',       label:'Empty',       group:'In Draft'},
+  {value:'draft',       label:'Draft',       group:'In Draft'},
+  {value:'approved',    label:'Approved',    group:'In Draft'},
+  {value:'not_started', label:'Not started', group:'In Construction'},
+  {value:'in_progress', label:'In progress', group:'In Construction'},
+  {value:'rework',      label:'Rework',      group:'In Construction'},
+  {value:'completed',   label:'Completed',   group:'In Construction'},
+];
+function _copyContractors(filters){
+  if(!filters) return [];
+  if(Array.isArray(filters.contractors)) return filters.contractors.slice();
+  return filters.contractor ? [filters.contractor] : [];
+}
+function _copyFilterValues(filters, key){
+  filters = filters || {};
+  if(key === 'contractors') return _copyContractors(filters);
+  if(key === 'mods'){
+    if(Array.isArray(filters.mods)) return filters.mods.slice();
+    return filters.renterOnly ? ['tenant'] : [];
+  }
+  return Array.isArray(filters[key]) ? filters[key].slice() : [];
+}
+/* Which of the seven statuses a task is in. Before construction it's how
+   far the task has got — nothing on it yet (Empty), something but not
+   approved (Draft), or approved; once work starts it's the work state the
+   row pill shows. */
+function _copyTaskStatus(t){
+  const mode = (typeof PROJ_MODE !== 'undefined') ? PROJ_MODE : 'draft';
+  if(mode === 'work' || mode === 'closeout' || mode === 'closeout-approved'){
+    const st = (typeof _pgdRowStatusMeta === 'function') ? _pgdRowStatusMeta(t) : null;
+    const lbl = st ? st.label : '';
+    if(/rework/i.test(lbl)) return 'rework';
+    if(/progress/i.test(lbl)) return 'in_progress';
+    if(/complete|approved/i.test(lbl)) return 'completed';
+    return 'not_started';
+  }
+  if(typeof approved !== 'undefined' && approved.has(t.id)) return 'approved';
+  const fill = (typeof _pgdRowCompleteness === 'function') ? _pgdRowCompleteness(t) : 'started';
+  return fill === 'empty' ? 'empty' : 'draft';
+}
+function _copyTaskKeys(t){
+  const keys = (typeof taskKeys === 'function') ? taskKeys(t) : [];
+  // Missing product: no product chosen, the same test the row status uses.
+  const hasProd = (typeof _pgdHasProduct === 'function') ? _pgdHasProduct(t) : !!t.product;
+  if(!hasProd && !keys.includes('missing')) keys.push('missing');
+  // The resident modifier also covers tasks the demo data marks as resident
+  // supplied without tagging them — the same reading the old switch used.
+  if(!keys.includes('tenant') && typeof isTenantTask === 'function' && isTenantTask(t)) keys.push('tenant');
+  return keys;
+}
+function _copyTaskMatches(t, filters){
+  const gcs = _copyFilterValues(filters, 'contractors');
+  if(gcs.length && !gcs.includes(t.gc || '__un')) return false;
+  const keys = _copyTaskKeys(t);
+  const mods = _copyFilterValues(filters, 'mods');
+  if(mods.length && !mods.some(m => keys.includes(m))) return false;
+  const sts = _copyFilterValues(filters, 'statuses');
+  if(sts.length && !sts.includes(_copyTaskStatus(t))) return false;
+  const flags = _copyFilterValues(filters, 'flags');
+  if(flags.length && !flags.some(f => keys.includes(f))) return false;
+  return true;
+}
+function _copyTasks(filters){
+  return TASKS.filter(t => _copyTaskMatches(t, filters));
+}
+/* The options each category offers, with how many tasks carry each one.
+   Contractors are the ones actually on tasks in the scope, plus Unassigned
+   when some tasks have nobody; modifiers are every one the org has, used or
+   not, as in the navigator; statuses are the stage's vocabulary plus any
+   other label a task shows; flags are the navigator's. */
+function _copyFilterOptions(key){
+  const count = fn => TASKS.filter(fn).length;
+  if(key === 'contractors'){
+    const gcs = [...new Set(TASKS.map(t => t.gc).filter(Boolean))].sort();
+    const opts = gcs.map(g => ({value:g, label:g, n:count(t => t.gc === g)}));
+    const un = count(t => !t.gc);
+    if(un) opts.push({value:'__un', label:'Unassigned', n:un});
+    return opts;
+  }
+  if(key === 'mods'){
+    // Deferred first, as the Filters menu lists it.
+    const mods = (typeof PROJECT_MODS !== 'undefined' ? PROJECT_MODS : []).slice()
+      .sort((a, b) => (a.id === 'deferred' ? -1 : b.id === 'deferred' ? 1 : 0));
+    return mods.map(m => ({
+      value:m.id, label:_COPY_MOD_LABEL[m.id] || tagInfo(m.id).label, n:count(t => _copyTaskKeys(t).includes(m.id)),
+    }));
+  }
+  if(key === 'statuses'){
+    const seen = TASKS.map(_copyTaskStatus);
+    return _COPY_STATUSES.map(s => Object.assign({}, s, {n:seen.filter(x => x === s.value).length, mark:'st-' + s.value}));
+  }
+  if(key === 'flags'){
+    return _COPY_FLAG_KEYS.map(k => ({value:k, label:_COPY_FLAG_LABEL[k], n:count(t => _copyTaskKeys(t).includes(k)), mark:'flag'}));
+  }
+  return [];
+}
+const COPY_FILTER_CATS = [
+  {key:'contractors', label:'Contractor',  all:'All contractors', many:'contractors'},
+  {key:'flags',       label:'Flags',       all:'Any flag',        many:'flags'},
+  {key:'statuses',    label:'Task status', all:'Any status',      many:'statuses'},
+  {key:'mods',        label:'Modifiers',   all:'Any modifier',    many:'modifiers'},
+];
+function _copyValueLabel(key, v){
+  const o = _copyFilterOptions(key).find(x => x.value === v);
+  if(o) return o.label;
+  if(key === 'contractors') return v === '__un' ? 'Unassigned' : v;
+  if(key === 'flags') return _COPY_FLAG_LABEL[v] || tagInfo(v).label;
+  if(key === 'mods') return _COPY_MOD_LABEL[v] || tagInfo(v).label;
+  return v;
+}
 function _copyFilterSummary(copy){
+  const f = copy.filters || {};
   const parts = [];
-  parts.push(copy.filters.showAmounts ? 'Prices visible' : 'Prices hidden');
-  parts.push(copy.filters.contractor ? `Only ${copy.filters.contractor}` : 'All contractors');
-  if(copy.filters.renterOnly) parts.push('Resident-responsible only');
-  parts.push(copy.filters.includePhotos !== false ? 'Photos included' : 'Photos hidden');
+  parts.push(f.showAmounts ? 'Prices visible' : 'Prices hidden');
+  COPY_FILTER_CATS.forEach(c => {
+    const vals = _copyFilterValues(f, c.key);
+    if(vals.length) parts.push(vals.map(v => _copyValueLabel(c.key, v)).join(' or '));
+    else if(c.key === 'contractors') parts.push('All contractors');
+  });
+  if(f.photosOnly) parts.push('Photos only');
+  else parts.push(f.includePhotos !== false ? 'Photos included' : 'Photos hidden');
   return parts;
 }
 
@@ -600,15 +1028,45 @@ function _renderCopyDoc(copy){
   // (Edit copy) which opens the create/edit modal. Rendering as plain
   // text (no checkboxes / no dropdown) makes it obvious the doc below
   // reflects a decision that's already been made.
-  const filterItems = _copyFilterSummary(copy)
-    .map(s => `<span class="copy-filter-static">${esc(s)}</span>`).join('');
-  const strip = `<div class="copy-filter-strip is-static">
-    <div class="copy-filter-strip-static">
+  // Live controls, not a summary: the same chips and checklists as the
+  // create modal, and the recipient options as switches. A change saves to
+  // the copy at once and redraws the document below — and the shared link
+  // shows the copy as it now stands, so the strip says so.
+  const f = copy.filters || {};
+  const chips = COPY_FILTER_CATS.map(c => {
+    const vals = _copyFilterValues(f, c.key);
+    const v = !vals.length ? '' : vals.length === 1 ? _copyValueLabel(c.key, vals[0]) : `${vals.length} selected`;
+    const open = _stripOpenKey === c.key;
+    return `<div class="copy-gc copy-chip${open ? ' open' : ''}" id="stripF-${c.key}">
+      <button type="button" class="copy-chip-btn${vals.length ? ' is-set' : ''}" aria-haspopup="listbox" aria-expanded="${open}" onclick="event.stopPropagation();_stripMenu('${c.key}')">
+        <span class="copy-chip-k">${esc(c.label)}</span><span class="copy-chip-v">${esc(v)}</span>
+        <svg class="copy-chip-chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg>
+      </button>
+      <div class="copy-gc-menu" role="listbox" aria-multiselectable="true" onclick="event.stopPropagation()">${_copyPickMenuHtml(c, new Set(vals), '_stripPickSet')}</div>
+    </div>`;
+  }).join('');
+  const sw = (field, label, on) => `<label class="strip-sw" title="${esc(label)}">
+      <span class="copy-switch"><input type="checkbox"${on ? ' checked' : ''} onchange="_stripToggle('${field}', this.checked)"><span class="copy-switch-track" aria-hidden="true"></span></span>
+      <span>${esc(label)}</span>
+    </label>`;
+  const nInc = _copyTasks(f).length;
+  const anySet = COPY_FILTER_CATS.some(c => _copyFilterValues(f, c.key).length);
+  const strip = `<div class="copy-filter-strip is-live" onclick="_stripMenu(null)">
+    <div class="copy-filter-strip-row">
       <span class="copy-filter-strip-cap-t">
         <svg viewBox="0 0 12 12" fill="none"><path d="M2 3h8M3 6h6M4 9h4" stroke-linecap="round"/></svg>
         Filters
       </span>
-      ${filterItems}
+      <div class="copy-fgrid strip-chips">${chips}</div>
+      ${anySet ? `<button type="button" class="copy-fsec-clear" onclick="event.stopPropagation();_stripClearAll()">Clear filters</button>` : ''}
+      <span class="copy-filter-count">Includes <b>${nInc}</b> of ${TASKS.length} tasks</span>
+    </div>
+    <div class="copy-filter-strip-row strip-opts">
+      <span class="copy-filter-strip-cap-t">Recipient sees</span>
+      ${sw('showAmounts', 'Dollar amounts', !!f.showAmounts)}
+      ${sw('includePhotos', 'Photos', f.includePhotos !== false)}
+      ${sw('photosOnly', 'Photos only', !!f.photosOnly)}
+      <span class="strip-live-note">Changes apply to the shared link right away.</span>
     </div>
   </div>`;
   const expiredBanner = expired ? `<div class="copy-expired-banner">
@@ -638,11 +1096,67 @@ function _renderCopyDoc(copy){
   </div>`;
 }
 
+/* ── Editing an open copy from its filter strip ── */
+let _stripOpenKey = null;   // which strip menu is open, kept across the redraw
+function _stripCopy(){ return (typeof openCopyId !== 'undefined' && openCopyId) ? copyById(openCopyId) : null; }
+function _stripMenu(key){
+  const next = (key && _stripOpenKey !== key) ? key : null;
+  if(next === _stripOpenKey) return;
+  _stripOpenKey = next;
+  document.querySelectorAll('.copy-filter-strip .copy-chip').forEach(el => {
+    const on = el.id === 'stripF-' + next;
+    el.classList.toggle('open', on);
+    el.classList.remove('is-flip');
+    if(on){
+      // Open leftward if it would run past the strip's right edge.
+      const menu = el.querySelector('.copy-gc-menu');
+      const strip = el.closest('.copy-filter-strip');
+      if(menu && strip && menu.getBoundingClientRect().right > strip.getBoundingClientRect().right - 8) el.classList.add('is-flip');
+    }
+  });
+}
+function _stripSave(mutate, msg){
+  const c = _stripCopy(); if(!c) return;
+  c.filters = Object.assign({}, c.filters || {});
+  mutate(c.filters);
+  renderArtifact();
+  // Reopen the menu the user was ticking in; the redraw rebuilt it.
+  if(_stripOpenKey){ const k = _stripOpenKey; _stripOpenKey = null; _stripMenu(k); }
+  if(msg) toast(msg);
+}
+function _stripPickSet(key, v){
+  _stripSave(f => {
+    const cur = new Set(_copyFilterValues(f, key));
+    if(!v) cur.clear(); else if(cur.has(v)) cur.delete(v); else cur.add(v);
+    f[key] = [...cur];
+    // Retire the old single-value fields once the list is written.
+    if(key === 'contractors') delete f.contractor;
+    if(key === 'mods') delete f.renterOnly;
+  });
+}
+function _stripClearAll(){
+  _stripOpenKey = null;
+  _stripSave(f => {
+    COPY_FILTER_CATS.forEach(c => { f[c.key] = []; });
+    delete f.contractor; delete f.renterOnly;
+  }, 'Filters cleared');
+}
+// Same pairing as the modal: photos-only needs photos, and no photos means
+// not photos-only.
+function _stripToggle(field, on){
+  _stripOpenKey = null;
+  _stripSave(f => {
+    f[field] = on;
+    if(field === 'photosOnly' && on) f.includePhotos = true;
+    if(field === 'includePhotos' && !on) f.photosOnly = false;
+  }, 'Copy updated');
+}
 function _renderCopyPaper(copy){
   // Filter TASKS per copy's filter recipe. No editing — pure projection.
-  let scopeTasks = TASKS.slice();
-  if(copy.filters.contractor) scopeTasks = scopeTasks.filter(t => t.gc === copy.filters.contractor);
-  if(copy.filters.renterOnly) scopeTasks = scopeTasks.filter(isTenantTask);
+  // Every amount below — line items, room subtotals, the document totals —
+  // is summed from these tasks alone, so a filtered copy prices only what
+  // it shows.
+  const scopeTasks = _copyTasks(copy.filters);
   const showPricing = !!copy.filters.showAmounts;
 
   if(!scopeTasks.length){
@@ -851,6 +1365,23 @@ function openCopyShare(id){
   document.getElementById('copyModalScrim').classList.add('open');
   document.getElementById('copyShareModal').classList.add('open');
 }
+/* Straight to the clipboard from the copies table — no dialog. Same link
+   the Share dialog shows. */
+function copyCopyLink(id){
+  const c = copyById(id); if(!c) return;
+  const val = `https://kaiizen.app/scope/${c.shareToken}`;
+  const done = () => toast(copyIsExpired(c) ? 'Link copied · this link has expired' : 'Link copied');
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = val; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); }catch(_){}
+    ta.remove(); done();
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(val).then(done, fallback);
+  } else fallback();
+}
 function copyLinkToClipboard(){
   const input = document.getElementById('copyShareLink'); if(!input) return;
   const val = input.value;
@@ -873,75 +1404,224 @@ function extendCopyExpiration(id, val){
 }
 
 /* ── New / Edit form ── */
+/* Laid out as the audience-doc form: outlined fields with their label set
+   into the top border, the version as a picker, the four task filters as
+   multi-pick dropdowns with a live count of what they let through, then each
+   recipient option as its own card with a switch. */
 let _copyFormEditingId = null;
+let _copyPick = {};               // category key → Set of ticked values in the open form
 function openNewCopy(){ _openCopyForm(null); }
 function openEditCopy(id){ _openCopyForm(id); }
+const _COPY_TOGGLES = [
+  {id:'copyFormPhotos',     key:'includePhotos', title:'Include photos',      desc:'Include task photos with each scope item.'},
+  {id:'copyFormPhotosOnly', key:'photosOnly',    title:'Photos only',         desc:'Share a gallery of task photos instead of the scope document.'},
+  {id:'copyFormShowAmt',    key:'showAmounts',   title:'Show dollar amounts', desc:'Include rates, line-item amounts, and document totals — recalculated from the included tasks only.'},
+];
+function _copyDefaultName(){
+  return `Audience Doc - ${_fmtDate(_todayIso())}`;
+}
+/* A new copy starts from whatever the navigator is filtering on, so "share
+   what I'm looking at" is one step. The navigator's Filters hold flags and
+   modifiers; contractor and status start open. */
+function _copyFiltersFromNavigator(){
+  const on = (typeof activeFilters !== 'undefined') ? [...activeFilters] : [];
+  const modIds = new Set((typeof PROJECT_MODS !== 'undefined' ? PROJECT_MODS : []).map(m => m.id));
+  return {
+    mods:  on.filter(k => modIds.has(k)),
+    flags: on.filter(k => _COPY_FLAG_KEYS.includes(k)),
+  };
+}
 function _openCopyForm(id){
   _ensureCopyModals();
   _copyFormEditingId = id;
   const existing = id ? copyById(id) : null;
+  const nav = existing ? {} : _copyFiltersFromNavigator();
   const defaults = existing || {
-    name:'', description:'', basedOnVersionId:currentVersionId,
-    filters:{showAmounts:true, contractor:null, renterOnly:false, includePhotos:true},
+    name:_copyDefaultName(), description:'', basedOnVersionId:currentVersionId,
+    filters:{showAmounts:true, contractors:[], mods:nav.mods, statuses:[], flags:nav.flags,
+             includePhotos:true, photosOnly:false},
   };
-  // Migrate older copies that were created before includePhotos was
-  // introduced — default them to true so the checkbox reflects reality.
-  if(defaults.filters && typeof defaults.filters.includePhotos === 'undefined'){
-    defaults.filters.includePhotos = true;
-  }
+  // Older copies predate includePhotos / photosOnly — read them as the
+  // defaults so the switches show what the copy actually does.
+  const f = Object.assign({includePhotos:true, photosOnly:false}, defaults.filters || {});
+  _copyPick = {};
+  COPY_FILTER_CATS.forEach(c => { _copyPick[c.key] = new Set(_copyFilterValues(f, c.key)); });
   document.getElementById('copyFormCap').textContent = existing ? 'Edit copy' : 'New copy';
-  document.getElementById('copyFormTitle').textContent = existing ? 'Edit scope copy' : 'Create a new scope copy';
+  document.getElementById('copyFormTitle').textContent = existing ? 'Edit audience doc copy' : 'Create a new audience doc copy';
   document.getElementById('copyFormSave').textContent = existing ? 'Save changes' : 'Create copy';
-  const verOpts = VERSIONS.map(v => `<option value="${v.id}"${v.id===defaults.basedOnVersionId?' selected':''}>${esc(versionLabel(v))} · ${esc(v.at)}</option>`).join('');
-  const contractorOpts = ['<option value="">All contractors</option>']
-    .concat(CONTRACTORS.map(c => `<option value="${esc(c)}"${c===defaults.filters.contractor?' selected':''}>${esc(c)}</option>`))
-    .join('');
+  const verOpts = VERSIONS.map(v => {
+    // The version being worked on reads as the working copy, as in the
+    // reference; a signed-off closeout has nothing still in progress.
+    const cur = v.id === currentVersionId && PROJ_MODE !== 'closeout-approved';
+    return `<option value="${v.id}"${v.id===defaults.basedOnVersionId?' selected':''}>${esc(versionLabel(v))}${cur ? ' · Working copy · started' : ' ·'} ${esc(v.at)}</option>`;
+  }).join('');
+  const toggles = _COPY_TOGGLES.map(tg => {
+    const on = !!f[tg.key];
+    return `<label class="copy-tgl" for="${tg.id}">
+      <span class="copy-tgl-text">
+        <span class="copy-tgl-title">${esc(tg.title)}</span>
+        <span class="copy-tgl-desc">${esc(tg.desc)}</span>
+      </span>
+      <span class="copy-switch">
+        <input type="checkbox" id="${tg.id}"${on ? ' checked' : ''} onchange="_copyFormToggled('${tg.id}')">
+        <span class="copy-switch-track" aria-hidden="true"></span>
+      </span>
+    </label>`;
+  }).join('');
+  // Compact chips — "Contractor · All" — rather than four boxed fields; each
+  // opens the same checklist under it.
+  const pickers = COPY_FILTER_CATS.map(c => `<div class="copy-gc copy-chip" id="copyF-${c.key}">
+      <button type="button" class="copy-chip-btn" id="copyFBtn-${c.key}" aria-haspopup="listbox" aria-expanded="false" onclick="event.stopPropagation();_copyPickMenu('${c.key}')">
+        <span class="copy-chip-k">${esc(c.label)}</span><span class="copy-chip-v" id="copyFVal-${c.key}">${esc(_copyPickSummary(c))}</span>
+        <svg class="copy-chip-chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg>
+      </button>
+      <div class="copy-gc-menu" id="copyFMenu-${c.key}" role="listbox" aria-multiselectable="true" onclick="event.stopPropagation()">${_copyPickMenuHtml(c)}</div>
+    </div>`).join('');
   document.getElementById('copyFormBody').innerHTML = `
-    <div class="copy-form-row">
-      <span class="copy-form-lbl">Name</span>
-      <input class="copy-form-input" id="copyFormName" placeholder="e.g. Apex Carpentry — kitchen bid" value="${esc(defaults.name)}">
+    <p class="copy-form-intro">Choose the scope version you want to share, including an active draft, then choose what recipients can see in the copy.</p>
+    <label class="copy-fld">
+      <span class="copy-fld-lbl">Name</span>
+      <input class="copy-fld-input" id="copyFormName" placeholder="e.g. Apex Carpentry — kitchen bid" value="${esc(defaults.name)}">
+    </label>
+    <label class="copy-fld copy-fld-sel">
+      <span class="copy-fld-lbl">Based on version</span>
+      <select class="copy-fld-input" id="copyFormVer">${verOpts}</select>
+      <svg class="copy-fld-chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>
+    </label>
+    <p class="copy-form-note">Audience docs are versioned copies, so recipients only see the selected scope snapshot.</p>
+    <div class="copy-fsec">
+      <div class="copy-fsec-hd">
+        <span class="copy-fsec-hd-l">
+          <span class="copy-fsec-title">What to include</span>
+          <span class="copy-fsec-match" id="copyFormMatch">${_copyMatchLine()}</span>
+        </span>
+        <button type="button" class="copy-fsec-clear" id="copyFormClear" onclick="_copyPickClearAll()">Clear filters</button>
+      </div>
+      <div class="copy-fgrid">${pickers}</div>
     </div>
-    <div class="copy-form-row">
-      <span class="copy-form-lbl">Based on version</span>
-      <select class="copy-form-sel" id="copyFormVer">${verOpts}</select>
-    </div>
-    <div class="copy-form-row">
-      <span class="copy-form-lbl">Contractor filter</span>
-      <select class="copy-form-sel" id="copyFormGc">${contractorOpts}</select>
-    </div>
-    <div class="copy-form-row copy-form-row-inline">
-      <label class="copy-filter-chk">
-        <span class="box-halo"><input type="checkbox" id="copyFormShowAmt"${defaults.filters.showAmounts?' checked':''}></span>
-        <span class="copy-filter-chk-lbl">Show dollar amounts</span>
-      </label>
-      <label class="copy-filter-chk">
-        <span class="box-halo"><input type="checkbox" id="copyFormRenter"${defaults.filters.renterOnly?' checked':''}></span>
-        <span class="copy-filter-chk-lbl">Resident-responsible only</span>
-      </label>
-      <label class="copy-filter-chk">
-        <span class="box-halo"><input type="checkbox" id="copyFormPhotos"${defaults.filters.includePhotos?' checked':''}></span>
-        <span class="copy-filter-chk-lbl">Include photos</span>
-      </label>
-    </div>`;
+    <div class="copy-tgls">${toggles}</div>`;
+  _copyPickRefresh();
+  // A click anywhere else in the form closes an open filter menu.
+  document.getElementById('copyFormModal').onclick = () => _copyPickMenu(null, false);
   document.getElementById('copyModalScrim').classList.add('open');
   document.getElementById('copyFormModal').classList.add('open');
   setTimeout(()=>{ const el=document.getElementById('copyFormName'); if(el) el.focus(); }, 20);
 }
+function _copyPickFilters(){
+  const out = {};
+  COPY_FILTER_CATS.forEach(c => { out[c.key] = [...(_copyPick[c.key] || [])]; });
+  return out;
+}
+// The chip already names the category, so its value is short: the one
+// value picked, or how many — and nothing at all until something is.
+function _copyPickSummary(c){
+  const vals = [...(_copyPick[c.key] || [])];
+  if(!vals.length) return '';
+  if(vals.length === 1) return _copyValueLabel(c.key, vals[0]);
+  return `${vals.length} selected`;
+}
+// "Includes 7 of 40 tasks", so the filters' combined effect is visible
+// before the copy exists — including when they cancel each other out.
+function _copyMatchLine(){
+  const n = _copyTasks(_copyPickFilters()).length;
+  if(!n) return `<span class="is-none">No tasks match these filters</span>`;
+  return `Includes <b>${n}</b> of ${TASKS.length} tasks`;
+}
+// Shared by the create modal and the open copy's filter strip: `set` is
+// what's ticked, `pick` the handler each option calls.
+function _copyPickMenuHtml(c, set, pick){
+  set = set || _copyPick[c.key] || new Set();
+  pick = pick || '_copyPickSet';
+  const none = !set.size;
+  const k = c.key;
+  return `<button type="button" class="copy-gc-opt is-all${none ? ' on' : ''}" role="option" aria-selected="${none}" onclick="${pick}('${k}','')">
+      <span class="copy-gc-box">${none ? '&#10003;' : ''}</span><span class="copy-gc-name">${esc(c.all)}</span>
+    </button>
+    ${(() => {
+      let group = '';
+      return _copyFilterOptions(k).map(o => {
+        const on = set.has(o.value);
+        const v = esc(String(o.value)).replace(/'/g, "\\'");
+        // Task status comes in two bands, headed as in the Filters menu.
+        const head = (o.group && o.group !== group) ? `<div class="copy-gc-sub">${esc(group = o.group)}</div>` : '';
+        const mark = o.mark === 'flag'
+          ? `<svg class="copy-gc-mark copy-gc-flag${o.n ? ' is-on' : ''}" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 11V1.5M2.5 1.5h7l-2 2.5 2 2.5h-7"/></svg>`
+          : o.mark ? `<span class="copy-gc-mark copy-gc-dia ${esc(o.mark)}" aria-hidden="true"></span>` : '';
+        return `${head}<button type="button" class="copy-gc-opt${on ? ' on' : ''}${o.n ? '' : ' is-empty'}" role="option" aria-selected="${on}" onclick="${pick}('${k}','${v}')">
+          <span class="copy-gc-box">${on ? '&#10003;' : ''}</span>${mark}<span class="copy-gc-name">${esc(o.label)}</span><span class="copy-gc-n">${o.n}</span>
+        </button>`;
+      }).join('');
+    })()}`;
+}
+// Opens one menu and closes the rest; (null, false) closes them all.
+function _copyPickMenu(key, open){
+  COPY_FILTER_CATS.forEach(c => {
+    const fld = document.getElementById('copyF-' + c.key); if(!fld) return;
+    const next = c.key === key ? ((open === undefined) ? !fld.classList.contains('open') : open) : false;
+    fld.classList.toggle('open', next);
+    const btn = document.getElementById('copyFBtn-' + c.key);
+    if(btn) btn.setAttribute('aria-expanded', String(next));
+    // A menu opens under its chip's left edge; one that would run past the
+    // modal's right edge (Modifiers, at the end of the row) opens leftward
+    // from the chip's right edge instead, so the modal never clips it.
+    fld.classList.remove('is-flip');
+    if(next){
+      const menu = document.getElementById('copyFMenu-' + c.key);
+      const modal = document.getElementById('copyFormModal');
+      if(menu && modal && menu.getBoundingClientRect().right > modal.getBoundingClientRect().right - 12){
+        fld.classList.add('is-flip');
+      }
+    }
+  });
+}
+// Ticking stays open, so several values can be picked in one go; the
+// labels, ticks and the count are patched in place.
+function _copyPickSet(key, v){
+  const set = _copyPick[key] || (_copyPick[key] = new Set());
+  if(!v) set.clear();
+  else if(set.has(v)) set.delete(v);
+  else set.add(v);
+  _copyPickRefresh();
+}
+function _copyPickClearAll(){
+  COPY_FILTER_CATS.forEach(c => (_copyPick[c.key] || new Set()).clear());
+  _copyPickRefresh();
+}
+function _copyPickRefresh(){
+  COPY_FILTER_CATS.forEach(c => {
+    const menu = document.getElementById('copyFMenu-' + c.key);
+    if(menu) menu.innerHTML = _copyPickMenuHtml(c);
+    const val = document.getElementById('copyFVal-' + c.key);
+    if(val) val.textContent = _copyPickSummary(c);
+    const btn = document.getElementById('copyFBtn-' + c.key);
+    if(btn) btn.classList.toggle('is-set', !!(_copyPick[c.key] || new Set()).size);
+  });
+  const m = document.getElementById('copyFormMatch'); if(m) m.innerHTML = _copyMatchLine();
+  const clr = document.getElementById('copyFormClear');
+  if(clr) clr.hidden = !COPY_FILTER_CATS.some(c => (_copyPick[c.key] || new Set()).size);
+}
+// A photos-only copy is made of photos, so it can't also leave them out.
+function _copyFormToggled(id){
+  const only = document.getElementById('copyFormPhotosOnly');
+  const inc  = document.getElementById('copyFormPhotos');
+  if(!only || !inc) return;
+  if(id === 'copyFormPhotosOnly' && only.checked) inc.checked = true;
+  if(id === 'copyFormPhotos' && !inc.checked) only.checked = false;
+}
 function saveCopyForm(){
   const name = document.getElementById('copyFormName').value.trim() || 'Untitled copy';
   const ver  = document.getElementById('copyFormVer').value;
-  const gc   = document.getElementById('copyFormGc').value || null;
-  const showAmt = document.getElementById('copyFormShowAmt').checked;
-  const renter  = document.getElementById('copyFormRenter').checked;
-  const photos  = document.getElementById('copyFormPhotos').checked;
+  const val  = id => !!(document.getElementById(id) || {}).checked;
+  const filters = Object.assign({
+    showAmounts:  val('copyFormShowAmt'),
+    includePhotos:val('copyFormPhotos'),
+    photosOnly:   val('copyFormPhotosOnly'),
+  }, _copyPickFilters());
   // Description field was removed from the form — preserve any existing
   // description on edit, default to empty on new.
   if(_copyFormEditingId){
     const c = copyById(_copyFormEditingId);
-    if(c){
-      c.name = name; c.basedOnVersionId = ver;
-      c.filters = {showAmounts:showAmt, contractor:gc, renterOnly:renter, includePhotos:photos};
-    }
+    if(c){ c.name = name; c.basedOnVersionId = ver; c.filters = filters; }
     closeCopyModals();
     renderArtifact();
     toast('Copy updated');
@@ -951,7 +1631,7 @@ function saveCopyForm(){
       id:newId, name, description:'', basedOnVersionId:ver,
       createdAt:_todayIso(), shareToken:_copyToken(),
       expiresAt:_addDays(_todayIso(), 30),
-      filters:{showAmounts:showAmt, contractor:gc, renterOnly:renter, includePhotos:photos},
+      filters,
     });
     closeCopyModals();
     openCopy(newId);

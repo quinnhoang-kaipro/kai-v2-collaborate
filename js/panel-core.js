@@ -192,6 +192,14 @@ function groupTasks(tasks){
   // The sidebar used to take these in whatever order they arrived, while
   // the right panel banded them by state — so the same task sat in two
   // different places depending on which side you looked at.
+  //
+  // Grouped by department the sidebar nests tasks under product lines, so
+  // the order has to be line first and state within it; otherwise Prev /
+  // Next in the Editor would hop between lines the sidebar shows apart.
+  if(groupBy === 'dept'){
+    return _groupTasksRaw(tasks).map(g => ({...g,
+      items: deptLines(g.items).flatMap(l => _pgdSortTasksForGroup(l.items))}));
+  }
   return _groupTasksRaw(tasks).map(g => ({...g, items: _pgdSortTasksForGroup(g.items)}));
 }
 function _groupTasksRaw(tasks){
@@ -204,12 +212,196 @@ function _groupTasksRaw(tasks){
     if(typeof PROJ_MODE !== 'undefined' && PROJ_MODE === 'draft') return _all;
     return _all.filter(g=>g.items.length);
   }
+  if(groupBy==='dept'){
+    // Store order, not alphabetical — the same aisle sequence every time,
+    // so a department sits in the same place whichever scope you open.
+    return DEPARTMENTS.concat(NO_PRODUCT_DEPT)
+      .map(d=>({key:d, name:d, pinned:false, items:tasks.filter(t=>taskDept(t)===d)}))
+      .filter(g=>g.items.length);
+  }
   const un=tasks.filter(t=>!t.gc);
   const gcs=[...new Set(tasks.filter(t=>t.gc).map(t=>t.gc))].sort();
   const groups=[];
   if(un.length) groups.push({key:'__un',name:'Unassigned',pinned:true,items:un});
   gcs.forEach(g=>groups.push({key:g,name:g,pinned:false,items:tasks.filter(t=>t.gc===g)}));
   return groups;
+}
+
+/* ════════════ DEPARTMENTS ════════════ */
+/* The third way to slice a scope, for the person shopping it. Group says
+   where in the property a task is and Contractor says who does it; Department
+   says what has to be bought for it and where that sits in the catalogue,
+   modelled on Lowe's department list.
+
+   Two levels: department, then product line inside it — Bathroom › Toilets,
+   Flooring › Carpet. A line gathers every task in the scope that needs that
+   kind of product, whichever room it's in, so one product can be picked once
+   and applied to all of them (one toilet model for both bathrooms). Rooms
+   drop to the third level, as context on each task.
+
+   A task's line is read from its name, option and product together, against
+   the rules below in order — the first match wins, so specific rules sit
+   above broad ones (a vanity's "undermount sinks" mustn't make it a sink).
+   Someone can pin the department with t.dept; the line is then the first
+   rule in that department that matches, or that department's catch-all.
+
+   Tasks with nothing to buy — labour only, or the resident supplies the
+   product — go to their own group at the bottom. In a shopping view they
+   are noise, and in a catalogue department they'd be wrong. */
+const DEPARTMENTS = [
+  'Appliances',
+  'Building Supplies & Lumber',
+  'Bathroom',
+  'Electrical',
+  'Flooring',
+  'Hardware',
+  'Heating & Cooling',
+  'Home Decor & Furniture',
+  'Kitchen',
+  'Lawn, Garden & Outdoor',
+  'Lighting & Ceiling Fans',
+  'Moulding & Millwork',
+  'Paint',
+  'Plumbing',
+  'Smart Home & Security',
+  'Storage & Organization',
+  'Tools',
+  'Windows & Doors',
+  'Other',
+];
+const NO_PRODUCT_DEPT = 'No products needed';
+const _LABOR_ONLY = /powerwash|pressure wash|haul away|haul-away|\bcutout\b|resident supplied|resident install|labor only|labour only/;
+// [department, product line, pattern]
+const _PRODUCT_LINES = [
+  // Ahead of smart home: a "smart" garage door opener is still an opener.
+  ['Windows & Doors',           'Garage door openers',        /door opener|garage door/],
+  ['Smart Home & Security',     'Smart home hubs',            /\bsmart\b|wi-?fi|\bhub\b/],
+  ['Smart Home & Security',     'Cameras & alarms',           /camera|alarm|security|doorbell/],
+  ['Electrical',                'Smoke & CO detectors',       /smoke|detector/],
+  ['Appliances',                'Range hoods',                /range hood|hood vent/],
+  ['Appliances',                'Appliance suites',           /appliance|stainless suite/],
+  ['Appliances',                'Refrigerators',              /refrigerator|fridge/],
+  ['Appliances',                'Dishwashers',                /dishwasher/],
+  ['Appliances',                'Washers & dryers',           /washer|dryer/],
+  ['Bathroom',                  'Vanities',                   /vanity/],
+  ['Bathroom',                  'Toilets',                    /toilet/],
+  ['Bathroom',                  'Shower doors',               /shower door|glass door/],
+  ['Bathroom',                  'Tubs',                       /\btub\b|bathtub/],
+  ['Bathroom',                  'Mirrors',                    /mirror/],
+  ['Heating & Cooling',         'Exhaust fans',               /exhaust fan/],
+  ['Heating & Cooling',         'Thermostats',                /thermostat/],
+  ['Heating & Cooling',         'HVAC equipment',             /hvac|furnace|heat pump|air condition/],
+  ['Lighting & Ceiling Fans',   'Ceiling fans',               /ceiling fan/],
+  ['Lighting & Ceiling Fans',   'Light fixtures',             /lighting|light fixture|pendant|sconce|recessed|chandelier|\blamp/],
+  ['Kitchen',                   'Cabinets',                   /cabinet/],
+  ['Kitchen',                   'Countertops',                /countertop|\bcounter\b|quartz|butcher block/],
+  ['Kitchen',                   'Sinks & faucets',            /\bsinks?\b|faucet/],
+  ['Kitchen',                   'Cabinet organizers',         /drawer insert|pull-out/],
+  ['Hardware',                  'Cabinet hinges',             /hinge/],
+  ['Hardware',                  'Door knobs & locks',         /knob|lever|\block|deadbolt|door hardware/],
+  ['Flooring',                  'Tile',                       /\btiles?\b|backsplash|porcelain|ceramic/],
+  ['Flooring',                  'Vinyl plank (LVP)',          /\blvp\b|vinyl plank|luxury vinyl/],
+  ['Flooring',                  'Carpet',                     /carpet/],
+  ['Flooring',                  'Hardwood',                   /hardwood/],
+  ['Flooring',                  'Laminate',                   /laminate/],
+  ['Paint',                     'Interior paint',             /paint|primer|repaint/],
+  ['Moulding & Millwork',       'Interior doors',             /interior door|door slab|prehung|bi-?fold/],
+  ['Moulding & Millwork',       'Baseboard & trim',           /baseboard|\btrim\b|moulding|molding|casing/],
+  ['Windows & Doors',           'Blinds & shades',            /blind|shade/],
+  ['Windows & Doors',           'Windows',                    /window/],
+  ['Windows & Doors',           'Exterior doors',             /storm door|exterior door|\bdoors?\b/],
+  ['Home Decor & Furniture',    'Curtains & rugs',            /curtain|\brug\b|wall art/],
+  ['Storage & Organization',    'Closet systems',             /closet|shelv|shelf|hanging rod/],
+  ['Plumbing',                  'Water heaters',              /water heater/],
+  ['Plumbing',                  'Pipes & fittings',           /plumb|pipe|filtration|sump/],
+  ['Lawn, Garden & Outdoor',    'Outdoor',                    /lawn|garden|landscap|patio|deck|fence|mulch/],
+  ['Building Supplies & Lumber','Drywall',                    /drywall/],
+  ['Building Supplies & Lumber','Insulation',                 /insulation/],
+  ['Building Supplies & Lumber','Lumber & framing',           /framing|plywood|lumber|\bstuds?\b/],
+  ['Building Supplies & Lumber','Roofing',                    /roof/],
+  ['Tools',                     'Tools',                      /\btools?\b|ladder|compressor/],
+];
+function _taskShopText(t){
+  return [t.name, t.opt, t.product].map(s => String(s || '')).join(' · ').toLowerCase();
+}
+// {dept, line} for a task, ignoring anything pinned on it — what the
+// Department field offers as its suggestion.
+function suggestTaskLine(t){
+  if(!t) return {dept:'Other', line:'Other items'};
+  const txt = _taskShopText(t);
+  if(_LABOR_ONLY.test(txt)) return {dept:NO_PRODUCT_DEPT, line:'Labor only'};
+  for(const [dept, line, re] of _PRODUCT_LINES) if(re.test(txt)){
+    // Lowe's shelves sinks under Kitchen, but a bathroom sink is bought in
+    // the Bathroom aisle beside the vanity it drops into.
+    if(line === 'Sinks & faucets' && /bath/i.test(t.room || '')) return {dept:'Bathroom', line};
+    return {dept, line};
+  }
+  return {dept:'Other', line:'Other items'};
+}
+function taskLine(t){
+  if(t && t.dept && DEPARTMENTS.includes(t.dept)){
+    const sug = suggestTaskLine(t);
+    if(sug.dept === t.dept) return sug;
+    const txt = _taskShopText(t);
+    const hit = _PRODUCT_LINES.find(([d, , re]) => d === t.dept && re.test(txt));
+    return {dept:t.dept, line: hit ? hit[1] : `${t.dept} items`};
+  }
+  return suggestTaskLine(t);
+}
+function taskDept(t){ return taskLine(t).dept; }
+function suggestTaskDept(t){ return suggestTaskLine(t).dept; }
+
+/* A department's tasks gathered into product lines, in rule order so a line
+   sits in the same place every time. Each line carries what the shopper
+   scans for: how many are needed, what the products cost, and whether one
+   product covers the lot. */
+function deptLines(items){
+  const order = new Map(_PRODUCT_LINES.map(([d, l], i) => [`${d}|${l}`, i]));
+  const byKey = new Map();
+  items.forEach(t => {
+    const {dept, line} = taskLine(t);
+    const key = `${dept}|${line}`;
+    if(!byKey.has(key)) byKey.set(key, {key, dept, name:line, items:[]});
+    byKey.get(key).items.push(t);
+  });
+  return [...byKey.values()].sort((a, b) =>
+    (order.has(a.key) ? order.get(a.key) : 1e9) - (order.has(b.key) ? order.get(b.key) : 1e9));
+}
+/* "2 needed" when every task counts in each, "410 SF" when they share a
+   unit, and a plain task count when the units don't add up. */
+function deptLineNeed(items){
+  const parsed = items.map(t => {
+    const m = String(t.qty || '').match(/^\s*([\d.,]+)\s*(.*)$/);
+    if(!m) return null;
+    let unit = m[2].trim().toLowerCase();
+    if(unit === 'each' || unit === '') unit = 'ea';
+    return {n: parseFloat(m[1].replace(/,/g, '')) || 0, unit};
+  });
+  if(parsed.some(p => !p) || new Set(parsed.map(p => p.unit)).size !== 1){
+    return `${items.length} ${items.length === 1 ? 'task' : 'tasks'}`;
+  }
+  const n = Math.round(parsed.reduce((s, p) => s + p.n, 0) * 100) / 100;
+  const unit = parsed[0].unit;
+  if(unit === 'ea') return `${n} needed`;
+  if(unit === 'sf' || unit === 'lf') return `${n.toLocaleString('en-US')} ${unit.toUpperCase()}`;
+  // Countable units read as words, so they take a plural: "2 rooms".
+  return `${n.toLocaleString('en-US')} ${unit}${n === 1 || /s$/.test(unit) ? '' : 's'}`;
+}
+/* The key of the sidebar group a task sits in under the current grouping —
+   one answer for every "which group is this in" question, so a third
+   grouping doesn't mean a third branch at every call site. */
+function taskGroupKey(t){
+  if(groupBy === 'contractor') return t.gc || '__un';
+  if(groupBy === 'dept')       return taskDept(t);
+  return t.room;
+}
+function taskGroupLabel(t){
+  if(groupBy === 'contractor') return t.gc || 'Unassigned';
+  if(groupBy === 'dept')       return taskDept(t);
+  return t.room || '—';
+}
+function groupKindNoun(){
+  return groupBy === 'contractor' ? 'contractor' : (groupBy === 'dept' ? 'department' : 'group');
 }
 
 /* ════════════ SCOPE SEARCH (floating palette) ════════════ */
@@ -762,6 +954,7 @@ function renderStateBar(){
   const groupBySeg = `<div class="sb-tools-seg" role="tablist" aria-label="Group scope by">
     <button id="grpRoom" class="${groupBy==='room'?'active':''}" onclick="setGroupBy('room')">Group</button>
     <button id="grpContractor" class="${groupBy==='contractor'?'active':''}" onclick="setGroupBy('contractor')">Contractor</button>
+    <button id="grpDept" class="${groupBy==='dept'?'active':''}" onclick="setGroupBy('dept')">Departments</button>
   </div>`;
   // Settings icon — reveals the per-group duplicate icon (draft stage only).
   // Keeps group rows clean by default; click to toggle the tool on/off.

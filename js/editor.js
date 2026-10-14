@@ -13,6 +13,12 @@ function renderShop(){
     body.innerHTML = _renderScopePageHtml({taskOnClick: 'selectTask'});
     return;
   }
+  // A product line from the Departments view — where its product is picked
+  // once for every task in it.
+  if(!sel && selLineKey && groupBy === 'dept'){
+    body.innerHTML = _renderLinePageHtml();
+    return;
+  }
   if(!sel && !selGroupKey){
     const groups = (typeof groupTasks === 'function')
       ? groupTasks((typeof visibleTasks === 'function') ? visibleTasks() : TASKS)
@@ -66,11 +72,9 @@ function renderShop(){
   // the primary identifier is what you scan first, then room context,
   // then the "N of M" position (tertiary — you know where you are, but
   // you might want to know how far through the group you've gotten).
-  const grpArr = TASKS.filter(t => (groupBy === 'contractor')
-    ? (t.gc || 'unassigned') === (sel.gc || 'unassigned')
-    : t.room === sel.room);
+  const grpArr = TASKS.filter(t => taskGroupKey(t) === taskGroupKey(sel));
   const grpIdx = grpArr.findIndex(t => t.id === sel.id);
-  const grpLbl = (groupBy === 'contractor') ? (sel.gc || 'Unassigned') : sel.room;
+  const grpLbl = taskGroupLabel(sel);
   const progress = `<span class="shop-nav-progress"><b>${esc(sel.name)}</b><span class="shop-nav-sep">·</span>${esc(grpLbl)}<span class="shop-nav-sep">·</span>Task <b>${grpIdx + 1}</b> of <b>${grpArr.length}</b></span>`;
 
   body.innerHTML=`
@@ -112,8 +116,7 @@ function _shopTaskHeaderHtml(t){
   const isApprovedTask = approved.has(t.id);
   // The eyebrow names the group the user actually navigated through, so it
   // follows the sidebar's grouping rather than always reading the room.
-  const grpLbl = (typeof groupBy !== 'undefined' && groupBy === 'contractor')
-    ? (t.gc || 'Unassigned') : (t.room || '—');
+  const grpLbl = (typeof taskGroupLabel === 'function') ? taskGroupLabel(t) : (t.room || '—');
   const descSection = (() => {
     /* Collapsed by default: the description is reference material, not the
        thing you came to this card to do, so it costs a click rather than
@@ -134,6 +137,15 @@ function _shopTaskHeaderHtml(t){
         <span class="sec-taskcard-lbl">Contractor</span>
         ${hdrDdHtml('ddGc-' + t.id, t.gc || '', [{value:'', label:'Unassigned'}].concat(CONTRACTORS.map(c => ({value:c, label:c}))), 'setTaskContractor(' + t.id + ', __V__);requestSecTaskcardRerender()', (t.gc ? '' : 'is-un') + ch('gc', t.gc))}
         ${wGc}
+        <span class="sec-taskcard-lbl sec-taskdesc-lbl2">Department</span>
+        ${(() => {
+          const sug = suggestTaskDept(t);
+          const opts = [{value:'', label:`Suggested · ${sug}`}]
+            .concat(DEPARTMENTS.map(d => ({value:d, label:d})));
+          return hdrDdHtml('ddDept-' + t.id, t.dept || '', opts,
+            'setTaskDept(' + t.id + ', __V__);requestSecTaskcardRerender()',
+            t.dept ? '' : 'is-suggested');
+        })()}
         </div>
         <div class="sec-taskdesc-copy"><span class="sec-taskcard-lbl">Description</span><div class="sec-taskcard-desc">${body}</div>${wDesc}</div>
       </div>` : ''}
@@ -526,6 +538,22 @@ function requestSecTaskcardRerender(){
    product (Browse), contractor, product cost, quantity, labor rate,
    modifiers — live here now. The sidebar is read-only in this variant;
    this card is the single editing surface. */
+/* A product row's quantity, number and unit apart. The box holds only the
+   number; the unit goes up in the Qty label, as on the Departments line
+   page. A row stated without a unit takes the catalogue's (KraftMaid sells
+   by the LF), then its option's. */
+function _prodQtySplit(o, p, t){
+  const raw = String((p && p.qty) || '').trim();
+  const num = (raw.match(/^-?[\d.,]+/) || [''])[0];
+  const cat = (t && p && p.sku && typeof productPool === 'function') ? productPool(t).find(x => x.sku === p.sku) : null;
+  const unit = raw.slice(num.length).trim() || (cat && cat.unit) || String((o && o.qtyUnit) || '').trim();
+  return {num, unit};
+}
+// Put the unit back on what was typed, so editing the number keeps "LF".
+function _prodQtyJoin(v, unit){
+  const n = String(v || '').trim();
+  return n && unit ? `${n} ${unit}` : n;
+}
 function _shopEditCardHtml(t){
   if(!t) return '';
   const productMuted = /not selected|pending/i.test(t.product||'');
@@ -582,6 +610,7 @@ function _shopEditCardHtml(t){
                   // renders on a picked product, so an unselected option line
                   // has nothing to set.
                   const prodModsHtml = _prodModHtml(t, o, p);
+                  const qs = _prodQtySplit(o, p, t);
                   return `<div class="sec-taskcard-product-row${hasSku?' is-catalog':''}${productIsPicked(p)?' is-picked':''}" data-prod="${p.id}" ${hasSku?`onclick="openFly(${t.id},'${esc(p.sku)}',event)" title="View product details"`:''}>
                     <div class="sec-taskcard-product-thumb">${thumb}</div>
                     <div class="sec-taskcard-product-name-block">
@@ -590,12 +619,12 @@ function _shopEditCardHtml(t){
                       ${p.sku ? `<span class="sec-taskcard-product-sku">SKU ${esc(p.sku)}</span>` : ''}
                     </div>
                     <div class="sec-taskcard-product-cell">
-                      <span class="sec-taskcard-lbl">Qty</span>
+                      <span class="sec-taskcard-lbl">Qty${qs.unit ? ` · ${esc(qs.unit)}` : ''}</span>
                       <div class="opt-card-qty-stepper" onclick="event.stopPropagation()">
                         <button class="opt-card-qty-btn" onclick="event.stopPropagation();bumpProductQty(${t.id},'${o.id}','${p.id}',-1)" aria-label="Decrease">
                           <svg viewBox="0 0 12 12" fill="none"><path d="M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                         </button>
-                        <input class="opt-card-qty-input" value="${esc(p.qty || '')}" onclick="event.stopPropagation()" oninput="commitOptionProduct(${t.id},'${o.id}','${p.id}','qty',this.value);requestSecTaskcardRerender()">
+                        <input class="opt-card-qty-input" value="${esc(qs.num)}" inputmode="decimal" onclick="event.stopPropagation()" oninput="commitOptionProduct(${t.id},'${o.id}','${p.id}','qty',_prodQtyJoin(this.value,'${esc(qs.unit)}'));requestSecTaskcardRerender()">
                         <button class="opt-card-qty-btn" onclick="event.stopPropagation();bumpProductQty(${t.id},'${o.id}','${p.id}',+1)" aria-label="Increase">
                           <svg viewBox="0 0 12 12" fill="none"><path d="M6 3v6M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                         </button>
@@ -824,4 +853,174 @@ function gotoTaskFromCart(taskId){
   renderSidebar(); renderWork();
   const row=document.querySelector(`[data-tid="${t.id}"]`);
   if(row) row.scrollIntoView({block:'center', behavior:'smooth'});
+}
+
+/* The header's quantity says it's the line's total — "140 SF total",
+   "8 needed in total" — since each task row below carries its own. A line
+   whose units don't add up falls back to its task count. */
+function _lineHdrNeed(l, isLabor){
+  const n = l.items.length;
+  if(isLabor) return `${n} ${n === 1 ? 'task' : 'tasks'}`;
+  const need = deptLineNeed(l.items);
+  if(/ tasks?$/.test(need)) return need;
+  if(n === 1) return need;
+  return / needed$/.test(need) ? `${need} in total` : `${need} total`;
+}
+/* ── Product line page (Departments view) ───────────────────────────
+   Opened from a product line in the sidebar. The tasks lead, each with its
+   own quantity and a dropdown for its own product. Under them, the line's
+   catalogue section, where Apply puts a product on every task — the common
+   case, one toilet for both bathrooms, is one press; the odd one out is
+   then changed from its row. */
+function _renderLinePageHtml(){
+  const lines = allDeptLines();
+  const idx = lines.findIndex(l => l.key === selLineKey);
+  const l = lines[idx];
+  if(!l) return `<div class="pgd"><div class="pgd-muted" style="padding:24px 0">This product line is no longer in the scope. Pick another from the sidebar.</div></div>`;
+  const prevL = lines[idx - 1] || null;
+  const nextL = lines[idx + 1] || null;
+  const n = l.items.length;
+  const isLabor = l.dept === NO_PRODUCT_DEPT;
+  const k = _lineKeyArg(l.key);
+  const rooms = [...new Set(l.items.map(t => t.room))];
+  const svgMinus = `<svg viewBox="0 0 12 12" fill="none"><path d="M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+  const svgPlus  = `<svg viewBox="0 0 12 12" fill="none"><path d="M6 3v6M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+  const svgTick  = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-11"/></svg>`;
+
+  // Quantity as number and unit apart: the box holds the number, the unit
+  // goes up in the column heading when every task shares it ("Qty · SF"),
+  // and beside each box only when they don't.
+  const qtyOf = t => {
+    const raw = String(lineTaskQtyLabel(l, t) || '');
+    const num = (raw.match(/[\d.,]+/) || [''])[0];
+    const unit = raw.replace(/^[\s\d.,-]+/, '').trim() || String(t.qty || '').replace(/^[\s\d.,-]+/, '').trim();
+    return {num, unit};
+  };
+  const qtys = new Map(l.items.map(t => [t.id, qtyOf(t)]));
+  const unitSet = [...new Set([...qtys.values()].map(q => q.unit).filter(Boolean))];
+  const sharedUnit = unitSet.length <= 1 ? (unitSet[0] || '') : null;
+  const taskHead = isLabor ? '' : `<div class="lnp-task lnp-task-head">
+      <span>Task</span><span>Qty${sharedUnit ? ` · ${esc(sharedUnit)}` : ''}</span><span>Product</span><span class="num">Cost</span>
+    </div>`;
+  /* Total row, under the headings: what the boxes add up to against what
+     the tasks call for. "Needed" is each task's own measured quantity
+     (t.qty) — the boxes are what's being bought for it — so the row shows
+     at a glance whether the line is short, covered or over. Compared only
+     when every task states a need in the same unit; otherwise it just sums. */
+  const fmtN = v => (Math.round(v * 100) / 100).toLocaleString('en-US');
+  const unitOf = str => String(str || '').replace(/^[\s\d.,-]+/, '').trim();
+  const boxSum = l.items.reduce((a, t) => a + (_num(qtys.get(t.id).num) || 0), 0);
+  const notPicked = l.items.filter(t => !_lineTaskPicked(l, t).length).length;
+  const needKnown = sharedUnit !== null && l.items.every(t => _num(t.qty) > 0 && (!unitOf(t.qty) || unitOf(t.qty) === (sharedUnit || unitOf(t.qty))));
+  const needSum = needKnown ? l.items.reduce((a, t) => a + _num(t.qty), 0) : null;
+  const uTxt = sharedUnit && sharedUnit !== 'ea' ? ' ' + sharedUnit : '';
+  let status = '', statusCls = '';
+  if(needSum !== null){
+    const diff = Math.round((boxSum - needSum) * 100) / 100;
+    if(notPicked){ status = `${notPicked} ${notPicked === 1 ? 'task' : 'tasks'} still to pick`; statusCls = 'is-short'; }
+    else if(diff < 0){ status = `${fmtN(-diff)}${uTxt} short`; statusCls = 'is-short'; }
+    else if(diff > 0){ status = `${fmtN(diff)}${uTxt} over`; statusCls = 'is-over'; }
+    else { status = 'Covers what’s needed'; statusCls = 'is-ok'; }
+  } else if(notPicked){
+    status = `${notPicked} ${notPicked === 1 ? 'task' : 'tasks'} still to pick`; statusCls = 'is-short';
+  }
+  const taskTotal = (isLabor || n < 2) ? '' : `<div class="lnp-task lnp-task-total">
+      <span class="lnp-total-lead"><span class="lnp-total-lbl">Total</span>${status ? `<span class="lnp-total-status ${statusCls}">${statusCls === 'is-ok' ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-11"/></svg>' : ''}${esc(status)}</span>` : ''}</span>
+      <span class="lnp-total-qty"><b>${sharedUnit === null ? '—' : fmtN(boxSum)}</b>${needSum !== null ? `<span> of ${fmtN(needSum)} needed</span>` : ''}</span>
+      ${(() => {
+        // The product, when it's one product across the whole line;
+        // nothing when the tasks differ — the rows below already say which.
+        const one = deptLinePicked(l);
+        return one.state === 'one'
+          ? `<span class="lnp-total-prod" title="${esc(one.product)}">${esc(one.product)}</span>`
+          : '<span></span>';
+      })()}
+      <span class="lnp-task-amt">${money(Math.round(deptLineCost(l)))}</span>
+    </div>`;
+  const pool = isLabor ? [] : deptLinePool(l);
+  const taskRows = l.items.map(t => {
+    const pk = taskPickedProducts(t);
+    const q = qtys.get(t.id);
+    return `<div class="lnp-task">
+      <button class="lnp-task-name" onclick="selectTask(${t.id})" title="Open ${esc(t.name)}"><span class="task-ctx">${esc(t.room)} ›</span> ${esc(t.name)}</button>
+      ${isLabor ? '<span></span>' : `<div class="lnp-task-qtycell"><div class="opt-card-qty-stepper lnp-task-qty">
+        <button class="opt-card-qty-btn" onclick="bumpLineTaskQty('${k}',${t.id},-1)" aria-label="One fewer for this task">${svgMinus}</button>
+        <input class="opt-card-qty-input" value="${esc(q.num || '—')}" readonly tabindex="-1" title="This task's quantity${q.unit ? ` (${esc(q.unit)})` : ''}">
+        <button class="opt-card-qty-btn" onclick="bumpLineTaskQty('${k}',${t.id},+1)" aria-label="One more for this task">${svgPlus}</button>
+      </div>${sharedUnit === null && q.unit ? `<span class="lnp-task-unit">${esc(q.unit)}</span>` : ''}</div>`}
+      ${isLabor ? `<span class="lnp-task-prod is-none">Nothing to buy</span>` : (() => {
+        // The task's own pick, straight from its row. Shows the line's
+        // catalogue; a task carrying something from outside it (or two
+        // things) says so in the button until it's re-picked.
+        const picked = _lineTaskPicked(l, t);
+        const cur = picked.length === 1 ? picked[0].p.sku : '';
+        const inPool = cur && pool.some(c => c.sku === cur);
+        const opts = [{value:'', label: pk.length && !inPool ? pk.join(' + ') : 'Not picked'}]
+          .concat(pool.map(c => ({value:c.sku, label:`${c.brand} ${c.name}`})));
+        return `<div class="lnp-task-pick">${hdrDdHtml('ddLnp-' + t.id, inPool ? cur : '', opts,
+          `setLineTaskProduct('${k}',${t.id},__V__)`, 'lnp-task-dd' + (pk.length ? '' : ' is-unset'))}</div>`;
+      })()}
+      <span class="lnp-task-amt">${isLabor ? '' : money(Math.round(taskLineCost(l, t)))}</span>
+    </div>`;
+  }).join('');
+
+  const prodRows = (isLabor ? [] : deptLinePool(l)).map(cat => {
+    const users = lineProductUsers(l, cat.sku);
+    const sku = esc(cat.sku);
+    const allHave = users.length === n;
+    const thumb = cat.image
+      ? `<img src="${esc(cat.image)}" alt="${esc(cat.name)}" loading="lazy">`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 5.5h13l-1 4H5z"/><path d="M4 12h13v6H4z"/><path d="M8 8v4"/></svg>`;
+    const act = allHave
+      ? `<span class="lnp-applied">${svgTick}Applied</span>`
+      : `<button class="lnp-apply" onclick="event.stopPropagation();applyLineProduct('${k}','${sku}')">${n > 1 ? `Apply to all ${n}` : 'Apply'}</button>`;
+    return `<div class="sec-taskcard-product-row is-catalog lnp-prod${users.length ? ' is-picked' : ''}" onclick="openFly(${l.items[0].id},'${sku}',event)" title="View product details">
+      <div class="sec-taskcard-product-thumb">${thumb}</div>
+      <div class="sec-taskcard-product-name-block">
+        <span class="sec-taskcard-product-brand">${esc(cat.brand)}</span>
+        <span class="sec-taskcard-product-name">${esc(cat.name)}</span>
+        <span class="sec-taskcard-product-sku">SKU ${sku}</span>
+      </div>
+      <div class="lnp-prod-price">$${Number(cat.price).toLocaleString('en-US')}<span>/ ${esc(cat.unit)}</span></div>
+      <div class="lnp-prod-use">${users.length ? `On ${users.length} of ${n}` : ''}</div>
+      <div class="lnp-prod-act" onclick="event.stopPropagation()">${act}</div>
+    </div>`;
+  }).join('');
+
+  const anyPicked = l.items.some(t => _lineTaskPicked(l, t).length);
+  return `<div class="pgd lnp">
+    <div class="pgd-hdr-box">
+      <div class="sec-taskcard-hdr">
+        <div class="sec-taskcard-hdr-l">
+          <div class="lnp-eyebrow">${esc(l.dept)}</div>
+          <div class="pgd-title">${esc(l.name)}</div>
+          <div class="pgd-grp-meta">${esc(_lineHdrNeed(l, isLabor))}<span class="sep">&middot;</span>${rooms.length} ${rooms.length === 1 ? 'room' : 'rooms'}</div>
+        </div>
+        <div class="sec-taskcard-hdr-r">
+          ${isLabor ? '' : `<span class="sec-taskcard-amt-line"><span class="sec-taskcard-amt">${money(Math.round(deptLineCost(l)))}</span></span>`}
+          ${isLabor || !window.__KAI_SHOP ? '' : `<button type="button" class="lnp-po-link" onclick="openPurchaseOrder()">View purchase order &rarr;</button>`}
+        </div>
+      </div>
+    </div>
+    <div class="pgd-details-sec">
+      <div class="pgd-sec-hd">
+        <div class="pgd-details-title">Tasks in this line</div>
+        ${isLabor || !anyPicked ? '' : `<div class="pgd-sec-hd-r">
+          <button class="sec-mod-add" onclick="clearLineProduct('${k}')">${n > 1 ? 'Clear all products' : 'Clear product'}</button>
+        </div>`}
+      </div>
+      <div class="lnp-task-list${isLabor ? ' is-labor' : ''}">${taskHead}${taskTotal}${taskRows}</div>
+    </div>
+    ${isLabor ? `<div class="pgd-details-sec">
+      <div class="pgd-details-title">Nothing to buy</div>
+      <div class="pgd-muted">These tasks are labour only, or the resident supplies the product.</div>
+    </div>` : `<div class="pgd-details-sec">
+      <div class="pgd-details-title">Products</div>
+      <div class="sec-taskcard-products lnp-products">${prodRows || '<div class="sec-taskcard-product-empty">No catalogue products for this line yet.</div>'}</div>
+    </div>`}
+    <div class="shop-nav-float">
+      <button class="shop-nav-btn" ${prevL ? '' : 'disabled'} onclick="${prevL ? `selectLine('${_lineKeyArg(prevL.key)}')` : ''}" title="${prevL ? esc(prevL.name) : 'No previous line'}">${svgChevL()} Previous line</button>
+      <button class="shop-nav-btn" ${nextL ? '' : 'disabled'} onclick="${nextL ? `selectLine('${_lineKeyArg(nextL.key)}')` : ''}" title="${nextL ? esc(nextL.name) : 'No next line'}">Next line ${svgChevR()}</button>
+    </div>
+  </div>`;
 }
