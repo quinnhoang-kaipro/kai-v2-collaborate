@@ -27,3 +27,19 @@ function _snapshotOptions(t){
     }))
   }));
 }
+
+/* ════════════ SHARED ICONS ════════════
+   Small line icons used across the app, drawn on a 16px grid in the text
+   colour (currentColor) so they take whatever tone sits next to them.
+     cart    — materials, things bought
+     hardhat — labour, the people doing the work
+   kaiIcon(name, cls) returns the SVG markup; '' for an unknown name. */
+const KAI_ICONS = {
+  cart: '<path d="M1.5 2.5h2l1.6 7.6a1 1 0 0 0 1 .8h5.6a1 1 0 0 0 1-.8l1-4.6H4.3"/><circle cx="6.5" cy="13.2" r="1"/><circle cx="11.5" cy="13.2" r="1"/>',
+  hardhat: '<path d="M2.5 11.5V10a5.5 5.5 0 0 1 11 0v1.5"/><path d="M1.5 11.5h13v1.5h-13z"/><path d="M6.5 5V3.2h3V5"/><path d="M8 3.2v6"/>',
+};
+function kaiIcon(name, cls){
+  const body = KAI_ICONS[name];
+  if(!body) return '';
+  return `<svg class="kai-ic${cls ? ' ' + cls : ''}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+}

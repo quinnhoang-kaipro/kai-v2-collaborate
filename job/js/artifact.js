@@ -15,9 +15,6 @@ document.documentElement.classList.toggle('kai-shop', SHOP_WITH_KAI);
 function renderArtifact(){
   const body = document.getElementById('workBody');
   if(!body) return;
-  // The tab bar's purchase-order shortcut is lit only while the order is open.
-  const poBtn = document.querySelector('.wmode-po');
-  if(poBtn) poBtn.classList.toggle('is-on', !!openPoDoc);
   // Priority: historical > copy > index. Guard both drill-in states so a
   // stale id (e.g. a copy that was renamed/removed elsewhere) falls back
   // to the index instead of blanking the tab.
@@ -28,7 +25,7 @@ function renderArtifact(){
     return;
   }
   if(openPoDoc && SHOP_WITH_KAI){
-    body.innerHTML = _renderPoDoc();
+    body.innerHTML = _renderPoDoc(openPoDoc);
     return;
   }
   if(openCopyId){
@@ -42,8 +39,7 @@ function renderArtifact(){
 function _renderArtifactIndex(){
   return `<div class="art-index">
     ${_renderRegisterSection()}
-    ${SHOP_WITH_KAI ? _renderPurchaseOrderSection() : ''}
-    ${_renderHistoricalSection()}
+    ${SHOP_WITH_KAI ? _renderPurchaseOrderSection() : _renderHistoricalSection()}
     ${_renderCopiesSection()}
   </div>`;
 }
@@ -83,10 +79,33 @@ function _regGroupTasks(verKey, room){
   if(!g) return [];
   return g.tasks
     .filter(t => (t.changes || []).some(ch => ch.ver === verKey))
+    .map(t => {
+      /* Shop with Kai: the line as the scope list has it today, so its code
+         and amount match the sidebar. The change records are a second seed
+         whose codes and figures drifted from TASKS; matched by code, else by
+         room and the name's first word. */
+      const live = (SHOP_WITH_KAI && typeof TASKS !== 'undefined') ? (TASKS.find(x => x.code === t.code)
+        || TASKS.find(x => x.room === room && x.name.toLowerCase().indexOf(t.name.toLowerCase().split(' ')[0]) !== -1)) : null;
+      if(!live) return t;
+      const picked = [];
+      (live.options || []).forEach(o => { if(o.added !== false) (o.products || []).forEach(p => {
+        if(productIsPicked(p) && _poDollars(p.parts) > 0) picked.push(p); }); });
+      const prod = picked.length ? [picked[0].brand, picked[0].product].filter(Boolean).join(' ').trim()
+        + (picked.length > 1 ? ` + ${picked.length - 1} more` : '') : '';
+      return Object.assign({}, t, {code:live.code, amount:live.cost || t.amount,
+        product:prod, qty:picked.length ? String(picked[0].qty || '') : ''});
+    })
     .map(t => ({code:t.code, name:t.name, product:t.product || '',
                 qty:t.qty || '', amount:t.amount || '',
                 added:(t.changes || []).some(ch => ch.ver === verKey
                   && (ch.rows || []).some(r => r.field === 'Line added'))}));
+}
+/* One money format for the whole Record tab: exact, to the cent, so the
+   same amount never reads differently in two places ($38,448.00 in the
+   lead, the ledger and the document alike). */
+function artMoney(n){
+  const v = Number(n) || 0;
+  return (v < 0 ? '−' : '') + '$' + Math.abs(v).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
 /* What the room's lines come to in this version. Summed from the same rows
    the group opens onto, so the figure and the lines under it are one sum. */
@@ -94,7 +113,7 @@ function _regGroupAmount(verKey, room){
   const ts = _regGroupTasks(verKey, room);
   if(!ts.length) return '';
   const n = ts.reduce((k, t) => k + (parseFloat(String(t.amount).replace(/[^0-9.\-]/g, '')) || 0), 0);
-  return n ? '$' + Math.round(n).toLocaleString('en-US') : '';
+  return n ? artMoney(n) : '';
 }
 function toggleRegRow(id){
   _regOpenVer = (_regOpenVer === id) ? null : id;
@@ -233,11 +252,16 @@ function _poItems(){
         const key = p.sku || ((p.brand || '') + '|' + (p.product || ''));
         const unit = String(p.qty || '').replace(/[0-9.,\s]/g, '').trim();
         const L = lines[key] || (lines[key] = {sku:p.sku || '', brand:p.brand || '', product:p.product || '',
-          dept, unit, price, qty:0, amt:0, tasks:[], tenant:false, image:_poImage(t, p)});
+          dept, unit, price, qty:0, amt:0, tasks:[], tenant:false, tenantAmt:0, byTask:{}, image:_poImage(t, p)});
         L.qty += qty;
         L.amt += qty * price;
         if(L.tasks.indexOf(t.code) === -1) L.tasks.push(t.code);
-        if(mods.indexOf('tenant') !== -1) L.tenant = true;
+        const bt = L.byTask[t.code] || (L.byTask[t.code] = {qty:0, tenantAmt:0});
+        bt.qty += qty;
+        if(mods.indexOf('tenant') !== -1 || (t.mods || []).indexOf('tenant') !== -1) bt.tenantAmt += qty * price;
+        // Resident responsible on the task or the product, as the
+        // classification reads it, so the marked lines add up to its figure.
+        if(mods.indexOf('tenant') !== -1 || (t.mods || []).indexOf('tenant') !== -1){ L.tenant = true; L.tenantAmt += qty * price; }
       });
     });
   });
@@ -251,135 +275,295 @@ function _poItems(){
   }).map(d => ({dept:d, lines:byDept[d].sort((a, b) => b.amt - a.amt)}));
   return {depts, held};
 }
-/* The order as a table — the body of the purchase-order document. */
-function _poTableHtml(){
+/* ── Purchase orders ───────────────────────────────────────────────
+   The scope's products as the orders that actually go out: one per supplier
+   per approved document, because an order that has been sent is never edited.
+   A change order adds new orders, and takes something back with a
+   cancellation. Prototype mock: the split of lines into suppliers, sources and
+   statuses is staged here; the lines and their amounts are _poItems()'s own,
+   so every order together still comes to the materials on the bar. */
+const _PO_SHIP_TO = '3484 South Main Street, Atlanta, GA 30315';
+const _PO_CATEGORY = {
+  'Appliances':'Appliances', 'Bathroom':'Plumbing', 'Electrical':'Electrical', 'Flooring':'Flooring',
+  'Hardware':'Hardware', 'Heating & Cooling':'Ventilation', 'Kitchen':'Cabinets & Countertops',
+  'Lighting & Ceiling Fans':'Lighting', 'Paint':'Paint', 'Storage & Organization':'Storage',
+  'Windows & Doors':'Doors & Windows',
+};
+const _PO_CATEGORY_ORDER = ['Appliances','Cabinets & Countertops','Plumbing','Ventilation','Flooring',
+  'Electrical','Lighting','Hardware','Doors & Windows','Paint','Storage','Tools','Other'];
+function _poCategory(L){
+  if(_PO_CATEGORY[L.dept]) return _PO_CATEGORY[L.dept];
+  const n = ((L.brand || '') + ' ' + (L.product || '')).toLowerCase();
+  if(/fan|light|lamp/.test(n)) return 'Lighting';
+  if(/pressure|karcher|washer|drill|saw/.test(n)) return 'Tools';
+  return 'Other';
+}
+// Mock routing: specialists take their categories, the rest goes to Home Depot.
+const _PO_SUPPLIER_BY_CAT = {Flooring:'fd', Plumbing:'fer', Ventilation:'fer'};
+// Mock: what each change order put on an order of its own. Only tasks the
+// change order itself touched (the ledger's own sub-rows), and never more
+// materials than its net change, so the two always read together. `qty` is
+// how much of the line it ordered; null takes the whole line.
+const _PO_CO_LINES = [
+  {task:'GAR-9B10', src:2, qty:null},   // CO1 added the door opener
+  {task:'MBD-A7AE', src:3, qty:null},   // CO2 added the closet
+  {task:'LIV-53D7', src:3, qty:1},      // CO2 revised the living-room fan
+];
+// Mock: CO1 revised the countertops down a slab after the original order
+// was sent. The slab stays on that order (sent orders are never edited) and
+// comes off with a cancellation, so the sum is the scope's own.
+const _PO_CANCEL = {task:'KIT-F362', src:2, qty:1};
+// Mock: what each order has got to.
+const _PO_STATUS = {'hd|1':'Confirmed', 'fer|1':'Delivered', 'fd|1':'Delivered',
+  'hd|2':'Confirmed', 'fer|2':'Confirmed', 'fd|2':'Confirmed', 'hd|3':'Ready to send', 'fer|3':'Ready to send', 'fd|3':'Ready to send'};
+const _PO_SUPPLIER_ORDER = ['hd', 'fer', 'fd', 'low'];
+function _poSourceLabel(num){
+  return num <= 1 ? 'Original scope' : `Change Order ${num - 1}`;
+}
+function _poOrders(){
   const {depts, held} = _poItems();
-  const fmt = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
-  const qtyTxt = L => (Math.round(L.qty * 100) / 100).toLocaleString('en-US') + (L.unit ? ' ' + L.unit : '');
-  const nLines = depts.reduce((s, d) => s + d.lines.length, 0);
-  const total = depts.reduce((s, d) => s + d.lines.reduce((x, L) => x + L.amt, 0), 0);
-  const body = depts.map(d => {
-    const sub = d.lines.reduce((x, L) => x + L.amt, 0);
-    return `<tr class="po-ord-dept"><td colspan="4">${esc(d.dept)}</td>
+  const vers = VERSIONS.slice().sort((a, b) => a.num - b.num);
+  const hasNum = n => vers.some(v => v.num === n);
+  const dateFor = n => (vers.find(v => v.num === n) || vers[0] || {}).at || '';
+  const byKey = {};
+  const orderFor = (sup, src) => {
+    const k = sup + '|' + src;
+    return byKey[k] || (byKey[k] = {id:'po-' + sup + '-' + src, sup, src, cancel:false, lines:[]});
+  };
+  // A piece of a line: `k` of its quantity, for the given tasks, carrying
+  // those tasks' own resident-responsible share.
+  const piece = (L, k, tasks) => Object.assign({}, L, {qty:k, amt:k * L.price, tasks,
+    tenantAmt:tasks.reduce((x, c) => x + (((L.byTask || {})[c] || {}).tenantAmt || 0), 0)});
+  const cancels = [];
+  depts.forEach(d => d.lines.forEach(L => {
+    if(!(L.amt > 0)) return;            // nothing to buy (a labour-only row)
+    const cat = _poCategory(L);
+    const sup = _PO_SUPPLIER_BY_CAT[cat] || 'hd';
+    let rest = Object.assign({}, L, {cat});
+    _PO_CO_LINES.forEach(r => {
+      if(!rest || !hasNum(r.src) || rest.tasks.indexOf(r.task) === -1) return;
+      const whole = r.qty == null || r.qty >= rest.qty;
+      if(whole){ orderFor(sup, r.src).lines.push(rest); rest = null; return; }
+      const pc = piece(rest, r.qty, [r.task]);
+      orderFor(sup, r.src).lines.push(pc);
+      const left = rest.tasks.length > 1 ? rest.tasks.filter(c => c !== r.task) : rest.tasks;
+      rest = piece(rest, rest.qty - r.qty, left);
+      // One task split across two orders: its share is counted once.
+      if(left.indexOf(r.task) !== -1) rest.tenantAmt = Math.max(0, rest.tenantAmt - pc.tenantAmt);
+    });
+    if(!rest) return;
+    if(hasNum(_PO_CANCEL.src) && rest.tasks.indexOf(_PO_CANCEL.task) !== -1){
+      // The original order carried one more; the cancellation takes it off.
+      const extra = _PO_CANCEL.qty;
+      orderFor(sup, 1).lines.push(Object.assign({}, rest, {qty:rest.qty + extra, amt:(rest.qty + extra) * rest.price}));
+      cancels.push({sup, of:'po-' + sup + '-1', line:Object.assign({}, rest, {qty:-extra, amt:-extra * rest.price, tenant:false, tenantAmt:0})});
+      return;
+    }
+    orderFor(sup, 1).lines.push(rest);
+  }));
+  const orders = Object.keys(byKey).map(k => byKey[k]);
+  cancels.forEach((c, i) => orders.push({id:'po-' + c.sup + '-' + _PO_CANCEL.src + '-x' + (i || ''), sup:c.sup,
+    src:_PO_CANCEL.src, cancel:true, of:c.of, lines:[c.line]}));
+  orders.forEach(o => {
+    o.supName = (typeof supplierName === 'function' ? supplierName(o.sup) : '') || o.sup;
+    o.srcLabel = _poSourceLabel(o.src);
+    o.status = o.cancel ? 'Sent' : (_PO_STATUS[o.sup + '|' + o.src] || 'Sent');
+    o.date = dateFor(o.src);
+    o.docId = 'PO-' + _sowIdFor(_sowIdFor(o.id) + '|purchase-order|' + o.id).slice(4);
+    o.amt = o.lines.reduce((s, L) => s + L.amt, 0);
+    o.name = o.supName + ' · ' + o.srcLabel + (o.cancel ? ' · Cancellation' : '');
+  });
+  const supRank = s => { const i = _PO_SUPPLIER_ORDER.indexOf(s); return i < 0 ? 99 : i; };
+  orders.sort((a, b) => supRank(a.sup) - supRank(b.sup) || a.src - b.src || (a.cancel ? 1 : 0) - (b.cancel ? 1 : 0));
+  return {orders, held, total:orders.reduce((s, o) => s + o.amt, 0)};
+}
+function _poOrderById(id){
+  const {orders} = _poOrders();
+  return orders.find(o => o.id === id) || orders[0] || null;
+}
+function _poStatusCls(s){
+  return {'Ready to send':'is-ready', 'Sent':'is-sent', 'Confirmed':'is-confirmed', 'Delivered':'is-delivered'}[s] || '';
+}
+/* One order as a table — the body of its document. Grouped by category, the
+   way a supplier picks it, never by room. */
+function _poTableHtml(order){
+  const fmt = n => artMoney(n);
+  const qtyTxt = L => (Math.round(Math.abs(L.qty) * 100) / 100).toLocaleString('en-US') + (L.unit ? ' ' + L.unit : '');
+  const byCat = {};
+  order.lines.forEach(L => { (byCat[L.cat] = byCat[L.cat] || []).push(L); });
+  const rank = c => { const i = _PO_CATEGORY_ORDER.indexOf(c); return i < 0 ? 99 : i; };
+  const cats = Object.keys(byCat).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+  const nLines = order.lines.length;
+  const body = cats.map(c => {
+    const lines = byCat[c].sort((a, b) => Math.abs(b.amt) - Math.abs(a.amt));
+    const sub = lines.reduce((x, L) => x + L.amt, 0);
+    return `<tr class="po-ord-dept"><td colspan="4">${esc(c)}</td>
         <td class="reg-num">${fmt(sub)}</td></tr>`
-      + d.lines.map(L => `<tr class="reg-row">
+      + lines.map(L => `<tr class="reg-row">
         <td class="po-ord-thumb"><div class="sec-taskcard-product-thumb">${L.image
           ? `<img src="${esc(L.image)}" alt="" loading="lazy" onerror="this.replaceWith(document.createRange().createContextualFragment(_PO_THUMB_SVG))">`
           : _PO_THUMB_SVG}</div></td>
         <td class="po-ord-item">
-          <span class="po-ord-name">${esc([L.brand, L.product].filter(Boolean).join(' ') || 'Product')}</span>${L.tenant
-            ? '<span class="reg-chip is-quiet">Tenant</span>' : ''}
-          <span class="po-ord-sub">${L.sku ? 'SKU ' + esc(L.sku) + ' \u00b7 ' : ''}${L.tasks.length} task${L.tasks.length === 1 ? '' : 's'} \u00b7 ${L.tasks.map(_poTaskLink).join(', ')}</span>
+          <span class="po-ord-name">${esc([L.brand, L.product].filter(Boolean).join(' ') || 'Product')}</span>${L.tenantAmt > 0
+            ? `<span class="reg-chip is-quiet">${L.tenantAmt < L.amt - 0.005 ? artMoney(L.tenantAmt) + ' ' : ''}Resident responsible</span>` : ''}
+          <span class="po-ord-sub">${L.sku ? 'SKU ' + esc(L.sku) + ' · ' : ''}For ${L.tasks.map(_poTaskLink).join(', ')}</span>
         </td>
-        <td class="reg-num">${esc(qtyTxt(L))}</td>
+        <td class="reg-num">${order.cancel ? '−' : ''}${esc(qtyTxt(L))}</td>
         <td class="reg-num">${fmt(L.price)}${L.unit ? '<span class="po-ord-per"> / ' + esc(L.unit) + '</span>' : ''}</td>
         <td class="reg-num reg-total">${fmt(L.amt)}</td>
       </tr>`).join('');
   }).join('');
   return `<table class="reg-table po-ord">
       <thead><tr>
-        <th class="po-ord-thumb"></th><th>Item</th><th class="reg-num">Qty</th><th class="reg-num">Unit price</th><th class="reg-num">Amount</th>
+        <th class="po-ord-itemh" colspan="2">Item</th><th class="reg-num">Qty</th><th class="reg-num">Unit price</th><th class="reg-num">Amount</th>
       </tr></thead>
       <tbody>
-        ${body || `<tr><td colspan="5" class="po-ord-empty">No products picked yet. Apply a product to a line in the Departments view and it lands here.</td></tr>`}
+        ${body || `<tr><td colspan="5" class="po-ord-empty">Nothing on this order.</td></tr>`}
         ${nLines ? `<tr class="reg-row is-grand">
-          <td colspan="2">Order total<span class="po-ord-sub">${nLines} item${nLines === 1 ? '' : 's'}</span></td>
+          <td colspan="2">Order amount<span class="po-ord-sub">${nLines} product${nLines === 1 ? '' : 's'}</span></td>
           <td></td><td></td>
-          <td class="reg-num reg-total">${fmt(total)}</td>
+          <td class="reg-num reg-total">${fmt(order.amt)}</td>
         </tr>` : ''}
       </tbody>
-    </table>
-    ${held.n ? `<div class="reg-pending-cap po-ord-held">Held back · ${held.n} deferred product${held.n === 1 ? '' : 's'} (${fmt(held.amt)}) wait for a Change Order</div>` : ''}`;
+    </table>`;
 }
-/* On the Record's index the order is one row, like the documents under
-   Historical artifacts: what it is, what it covers, what it comes to. The
-   order itself opens as its own document. */
+/* On the Record's index: every order, grouped by supplier. A sent order is
+   never edited, so a change shows up as another row, never as a changed one. */
 function _renderPurchaseOrderSection(){
   if(typeof TASKS === 'undefined' || !TASKS.length) return '';
-  const {depts} = _poItems();
-  const nLines = depts.reduce((s, d) => s + d.lines.length, 0);
-  const total = depts.reduce((s, d) => s + d.lines.reduce((x, L) => x + L.amt, 0), 0);
-  const fmt = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const {orders, held, total} = _poOrders();
+  const regular = orders.filter(o => !o.cancel);
+  const nCancel = orders.length - regular.length;
+  const notSent = orders.filter(o => o.status === 'Ready to send').length;
+  const summary = [
+    `${regular.length} order${regular.length === 1 ? '' : 's'}`,
+    nCancel ? `${nCancel} cancellation${nCancel === 1 ? '' : 's'}` : '',
+    notSent ? `${notSent} not sent yet` : 'all sent',
+  ].filter(Boolean).join(' · ');
+  const sups = [];
+  orders.forEach(o => { if(sups.indexOf(o.sup) === -1) sups.push(o.sup); });
+  const rows = sups.map(s => {
+    const list = orders.filter(o => o.sup === s);
+    return `<tr class="po-sup-row"><td colspan="5">${esc(list[0].supName)}<span class="po-sup-n">${list.length} order${list.length === 1 ? '' : 's'}</span></td></tr>`
+      + list.map(o => `<tr class="reg-row is-openable${o.cancel ? ' is-cancel' : ''}" data-po-src="${o.src}"
+          onclick="openPoDocView('${o.id}')" title="View ${esc(o.name)}">
+        <td class="reg-doc">
+          <span class="reg-doc-name">${esc(o.name)}</span>
+          <button type="button" class="reg-doc-view" onclick="event.stopPropagation();openPoDocView('${o.id}')" aria-label="View ${esc(o.name)}">View</button>
+          <span class="po-row-id">${esc(o.docId)}</span>
+        </td>
+        <td class="po-c-src"><span class="po-src-tag">${esc(o.srcLabel)}</span></td>
+        <td class="po-c-status"><span class="po-status ${_poStatusCls(o.status)}">${esc(o.status)}</span></td>
+        <td class="reg-num po-c-n">${o.lines.length}</td>
+        <td class="reg-num reg-total po-c-amt">${artMoney(o.amt)}</td>
+      </tr>`).join('');
+  }).join('');
   return `<section class="art-sec art-po" id="artPo">
     <header class="art-sec-hdr">
       <div class="art-sec-hdr-l">
-        <h2 class="art-sec-title">Purchase order</h2>
-        <p class="art-sec-desc">Every product picked in the scope, totalled by item. Parts only, labour is not on the order.</p>
+        <h2 class="art-sec-title">Purchase orders</h2>
+        <p class="art-sec-desc">${esc(summary)}</p>
       </div>
     </header>
     <div class="reg-table-scroll">
-      <table class="reg-table art-list">
+      <table class="reg-table art-list po-list">
         <thead><tr>
-          <th class="reg-doc">Document</th><th class="reg-docid">Document ID</th>
-          <th class="reg-num">Items</th><th class="reg-num">Total</th><th class="reg-act"></th>
+          <th class="reg-doc">Order</th><th class="po-c-src">Source</th><th class="po-c-status">Status</th>
+          <th class="reg-num po-c-n">Products</th><th class="reg-num po-c-amt">Order amount</th>
         </tr></thead>
-        <tbody><tr class="reg-row is-openable" onclick="openPoDocView()" title="View the purchase order">
-          <td class="reg-doc"><span class="reg-doc-name">Purchase order</span>
-            <span class="po-ord-depts">${depts.length} department${depts.length === 1 ? '' : 's'}</span></td>
-          <td class="reg-docid">${esc(_poDocId())}</td>
-          <td class="reg-num reg-items">${nLines}</td>
-          <td class="reg-num reg-total">${nLines ? fmt(total) : '—'}</td>
-          <td class="reg-act"><button type="button" class="reg-doc-view is-strong" onclick="event.stopPropagation();openPoDocView()">View</button></td>
-        </tr></tbody>
+        <tbody>
+          ${rows || `<tr><td colspan="5" class="po-ord-empty">No products picked yet.</td></tr>`}
+          ${orders.length ? `<tr class="reg-row is-grand">
+            <td class="reg-doc">All orders<span class="po-ord-sub">The materials on the bar above</span></td>
+            <td></td><td></td><td></td>
+            <td class="reg-num reg-total">${artMoney(total)}</td>
+          </tr>` : ''}
+        </tbody>
       </table>
     </div>
+    <div class="po-list-note">Sent orders are never edited. A change goes out as a new order, or as a cancellation.${held.n
+      ? ` ${held.n} deferred product${held.n === 1 ? '' : 's'} (${artMoney(held.amt)}) wait for a change order.` : ''}</div>
   </section>`;
 }
-function _poDocId(){ return 'PO-' + _sowIdFor('purchase-order').slice(4); }
-/* The order on its own page, in the same paper the scope documents use. */
-function _renderPoDoc(){
-  const {depts} = _poItems();
-  const nLines = depts.reduce((s, d) => s + d.lines.length, 0);
-  const today = new Date().toISOString().slice(0, 10);
+/* One order on its own page: the document that goes to the supplier. */
+function _renderPoDoc(id){
+  const o = _poOrderById(id);
+  if(!o) return _renderArtifactIndex();
+  const orig = o.cancel ? _poOrderById(o.of) : null;
   return `<div class="copy-doc-wrap">
     <div class="copy-crumb">
-      <button class="copy-crumb-back" onclick="closePoDocView()" title="Back to the Register">
+      <button class="copy-crumb-back" onclick="closePoDocView()" title="Back to the Record">
         <span aria-hidden="true">‹</span> Back
       </button>
       <span class="copy-crumb-div"></span>
-      <span class="copy-crumb-name">Purchase order</span>
-      <span class="copy-crumb-meta">${nLines} item${nLines === 1 ? '' : 's'} · Parts only, labour is not on the order</span>
+      <span class="copy-crumb-name">${esc(o.name)}</span>
       <span class="copy-crumb-sp"></span>
     </div>
-    <div class="copy-paper">
+    <div class="copy-paper po-paper${o.cancel ? ' is-cancel' : ''}">
       <div class="art-head">
         <div class="art-head-l">
-          <div class="art-eyebrow">Purchase order</div>
-          <div class="art-title">3484 South Main Street</div>
-          <div class="art-sub-info">Atlanta, GA 30315 · Single-family renovation</div>
+          <div class="art-eyebrow">${o.cancel ? 'Order cancellation' : 'Purchase order'}</div>
+          <div class="art-title">${esc(o.supName)}</div>
+          <div class="art-sub-info">Ship to: ${esc(_PO_SHIP_TO)}</div>
         </div>
-        <div class="art-head-r">
-          <div class="art-meta">
-            <div class="art-meta-k">Prepared</div>
-            <div class="art-meta-v">${_fmtDate(today)}</div>
-          </div>
-          <div class="art-meta">
-            <div class="art-meta-k">Document ID</div>
-            <div class="art-meta-v art-meta-docid">${esc(_poDocId())}</div>
-          </div>
+        <div class="po-head-r">
+          <div class="art-meta"><div class="art-meta-k">Status</div>
+            <div class="art-meta-v"><span class="po-status ${_poStatusCls(o.status)}">${esc(o.status)}</span></div></div>
+          <div class="art-meta"><div class="art-meta-k">Source</div>
+            <div class="art-meta-v">From ${esc(o.srcLabel)}</div></div>
+          <div class="art-meta"><div class="art-meta-k">Prepared</div>
+            <div class="art-meta-v">${esc(o.date)}</div></div>
+          <div class="art-meta"><div class="art-meta-k">Document ID</div>
+            <div class="art-meta-v art-meta-docid">${esc(o.docId)}</div></div>
         </div>
       </div>
-      <div class="po-ord-paper">${_poTableHtml()}</div>
+      <div class="po-doc-notes">
+        ${orig ? `<div class="po-doc-note is-cancel">Cancels part of ${esc(orig.docId)} (${esc(orig.name)}). That order was sent, so it stays as it was.</div>` : ''}
+        <div class="po-doc-note">Materials only. Labour for these tasks is paid to the contractor.</div>
+        <button type="button" class="po-doc-job" onclick="closePoDocView()">Part of the job at 3484 South Main Street<span aria-hidden="true">›</span></button>
+      </div>
+      <div class="po-ord-paper">${_poTableHtml(o)}</div>
     </div>
   </div>`;
 }
-let openPoDoc = false;
-function openPoDocView(){
-  openCopyId = null; openHistoricalId = null; openPoDoc = true;
+let openPoDoc = false;   // the id of the order on screen, or false
+function openPoDocView(id){
+  const o = _poOrderById(id);
+  if(!o) return;
+  openCopyId = null; openHistoricalId = null; openPoDoc = o.id;
   renderArtifact();
-  if(typeof renderWorkHdr === 'function') renderWorkHdr();
   if(typeof _artToTop === 'function') _artToTop();
 }
 function closePoDocView(){
   openPoDoc = false;
   renderArtifact();
-  if(typeof renderWorkHdr === 'function') renderWorkHdr();
   if(typeof _artToTop === 'function') _artToTop();
 }
-/* The Departments line page's link: straight to the order document. */
+/* The bar's Materials label: down to the Purchase orders section. */
+function regGoToPo(){
+  const el = document.getElementById('artPo');
+  if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+/* A ledger row's orders link: down to the orders it produced, lit briefly. */
+function regShowOrders(src){
+  const sec = document.getElementById('artPo');
+  if(!sec) return;
+  const rows = [...sec.querySelectorAll(`tr[data-po-src="${src}"]`)];
+  sec.querySelectorAll('tr.is-flash').forEach(r => r.classList.remove('is-flash'));
+  (rows[0] || sec).scrollIntoView({behavior:'smooth', block:'center'});
+  rows.forEach(r => { r.classList.remove('is-flash'); void r.offsetWidth; r.classList.add('is-flash'); });
+  clearTimeout(regShowOrders._t);
+  regShowOrders._t = setTimeout(() => rows.forEach(r => r.classList.remove('is-flash')), 2600);
+}
+/* The tab bar's and the Departments line page's link: to the orders on the
+   Record tab. */
 function openPurchaseOrder(){
   if(typeof setWorkMode === 'function') setWorkMode('artifact');
-  openPoDocView();
+  if(openPoDoc || openCopyId || openHistoricalId){
+    openPoDoc = false; openCopyId = null; openHistoricalId = null;
+    renderArtifact();
+  }
+  requestAnimationFrame(() => regGoToPo());
 }
 
 /* The ledger, oldest first. `total` is each document's Job Total as of its
@@ -427,8 +611,8 @@ function _renderRegisterSection(){
   const cur = VERSIONS.find(v => v.id === currentVersionId) || rows[rows.length-1].v;
   const curTag = versionTag(cur);
 
-  const fmt = n => '$' + Math.round(n).toLocaleString('en-US') + '.00';
-  const sgn = n => (n > 0 ? '+' : n < 0 ? '−' : '') + '$' + Math.abs(Math.round(n)).toLocaleString('en-US') + '.00';
+  const fmt = n => artMoney(n);
+  const sgn = n => (n > 0 ? '+' : n < 0 ? '−' : '') + artMoney(Math.abs(n));
 
   /* ── Three figures, in the order the question is asked: what was approved,
         what has moved it since, what it is now. */
@@ -508,28 +692,102 @@ function _renderRegisterSection(){
     </tbody>
   </table>`;
 
+  /* ── Shop with Kai: the job total as the whole, and what it's made of.
+        One figure leads; under it, a single bar splits it three ways —
+        materials (on the purchase orders), labour (paid to contractors) and
+        work not yet ordered (deferred). Tenant-responsible money isn't a part
+        of its own: it's marked inside the segments that carry it.
+        Figures are whole dollars and come straight from the classification:
+        materials is the purchase orders' total, not-yet-ordered is deferred
+        materials and labour, and labour is what's left, so the three always
+        add up to the figure above them. */
+  const whole = n => artMoney(n);
+  const leadMat = cls.onPos;
+  const leadLater = cls.deferredAll;
+  // Prototype display choice: labour is the remainder, so the bar always
+  // adds up to the job total above it.
+  const leadLab = Math.max(0, live - leadMat - leadLater);
+  const tenMat = cls.tenant;
+  const tenLab = Math.max(0, cls.tenantAll - cls.tenant);
+  const segs = [
+    {key:'mat', icon:'cart', label:'Materials, ordered through Kai', amt:leadMat, tenant:tenMat, link:true},
+    {key:'lab', icon:'hardhat', label:'Labour, paid to contractors', amt:leadLab, tenant:tenLab},
+    {key:'later', icon:'', label:'Not yet ordered', amt:leadLater, sub:'Waiting on a change order', split:[cls.deferred, Math.max(0, cls.deferredAll - cls.deferred)]},
+  ].filter(sg => sg.amt > 0);
+  // Resident-responsible money, in full words: under each segment that
+  // carries it when there's room, else one line under the whole bar.
+  const resParts = segs.filter(sg => sg.tenant > 0);
+  const resLine = resParts.length
+    ? `<div class="reg-res-line">Includes ${resParts.map(sg => `${whole(sg.tenant)} resident responsible in ${sg.key === 'mat' ? 'materials' : 'labour'}`).join(' and ')}</div>`
+    : '';
+  const totalBar = segs.reduce((a, sg) => a + sg.amt, 0) || 1;
+  const lead = `<div class="reg-lead">
+    <div class="reg-lead-lbl">Current job total</div>
+    <div class="reg-lead-top">
+    <div class="reg-lead-val">${whole(live)}</div>
+    <div class="reg-lead-sub">Started at ${whole(first.total)}<span class="sep">·</span>${coCount} approved change order${coCount === 1 ? '' : 's'}${approvedChange ? ` (${approvedChange > 0 ? '+' : '−'}${whole(Math.abs(approvedChange))})` : ''}</div>
+    </div>
+    <div class="reg-bar" role="img" aria-label="${esc(segs.map(sg => `${sg.label} ${whole(sg.amt)}`).join(', '))}">
+      ${segs.map(sg => `<span class="reg-bar-seg is-${sg.key}" style="flex-grow:${sg.amt}" title="${esc(sg.label)} · ${whole(sg.amt)} · ${Math.round(sg.amt / totalBar * 100)}%"></span>`).join('')}
+    </div>
+    <div class="reg-bar-keys">
+      ${segs.map(sg => `<div class="reg-bar-key is-${sg.key}">
+        <div class="reg-bar-key-lbl"><span class="reg-bar-swatch is-${sg.key}" aria-hidden="true"></span>${sg.link
+          ? `<button type="button" class="reg-bar-link" onclick="regGoToPo()" title="Go to the purchase orders">${esc(sg.label)}<span aria-hidden="true">›</span></button>`
+          : `<span>${esc(sg.label)}</span>`}</div>
+        <div class="reg-bar-key-amt">${whole(sg.amt)}</div>
+        ${sg.tenant ? `<div class="reg-bar-key-note is-res">Includes ${whole(sg.tenant)} resident responsible</div>`
+          : sg.sub ? `<div class="reg-bar-key-note">${esc(sg.sub)}</div>${sg.split ? `<div class="reg-bar-key-note is-split">${whole(sg.split[0])} materials + ${whole(sg.split[1])} labour</div>` : ''}` : ''}
+      </div>`).join('')}
+    </div>
+    ${resLine}
+  </div>`;
+
   /* ── The ledger. One row per approved document, then today's total.
         Built oldest-first, because each row's index is how it knows whether
         it is the original scope, and reversed at the end so the newest
         document is the one the eye lands on. */
+  /* Shop with Kai: each approved document names what it sent out — its
+     orders, as a link down to them — and the status says only whether it is
+     the document in force. */
+  const poBySrc = {};
+  if(SHOP_WITH_KAI) _poOrders().orders.forEach(o => {
+    const b = poBySrc[o.src] || (poBySrc[o.src] = {n:0, cancel:0});
+    if(o.cancel) b.cancel++; else b.n++;
+  });
+  const ordersLink = (v, i) => {
+    const b = poBySrc[v.num];
+    if(!b) return '';
+    const txt = (i ? '+' : '') + `${b.n} order${b.n === 1 ? '' : 's'}` + '';
+    return `<button type="button" class="reg-doc-orders" onclick="event.stopPropagation();regShowOrders(${v.num})"
+      title="Show these orders${b.cancel ? ` and ${b.cancel} cancellation${b.cancel === 1 ? '' : 's'}` : ''}">${txt}</button>`;
+  };
+  const docName = v => (SHOP_WITH_KAI && v.num <= 1) ? 'Original scope' : versionLabel(v);
   const ledgerRows = rows.map((r, i) => {
     const v = r.v;
-    const tag = versionTag(v);
+    const tag = SHOP_WITH_KAI
+      ? (v.id === cur.id ? {tag:'Current', tagCls:''} : {tag:'Outdated', tagCls:'outdated'})
+      : versionTag(v);
     const counts = i ? _regCounts(v) : null;
     const open = _regOpenVer === v.id;
-    const items = i ? (counts ? counts.tasks : null) : TASKS.length;
+    /* The original scope's count is what it was approved with: today's
+       tasks less the ones each later change order added. */
+    const addedLater = SHOP_WITH_KAI && !i
+      ? rows.slice(1).reduce((n, x) => n + ((_regAddedRevised(x.v) || {}).added || 0), 0) : 0;
+    const items = i ? (counts ? counts.tasks : null) : TASKS.length - addedLater;
     const canOpen = !!(counts && counts.detail && counts.detail.length);
     const head = `<tr class="reg-row${open?' is-open':''}${canOpen?' is-openable':''}"${canOpen?` onclick="toggleRegRow('${v.id}')"`:''}>
       <td class="reg-date">${esc(v.at)}</td>
       <td class="reg-doc">
         ${canOpen?`<span class="reg-caret" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`:'<span class="reg-caret is-blank"></span>'}
-        <span class="reg-doc-name">${esc(versionLabel(v))}</span>
-        ${tag.tag?`<span class="hist-card-tag hist-tag-${esc(tag.tagCls||'')}">${esc(tag.tag)}</span>`:''}
+        <span class="reg-doc-name">${esc(docName(v))}</span>
         <button type="button" class="reg-doc-view" onclick="event.stopPropagation();openHistorical('${v.id}')"
-          aria-label="View ${esc(versionLabel(v))}">View</button>
+          aria-label="View ${esc(docName(v))}">View</button>
+        ${SHOP_WITH_KAI ? `<span class="po-row-id">${esc(_sowIdFor(v.id))}${ordersLink(v, i)}</span>` : ''}
       </td>
+      <td class="reg-status">${tag.tag?`<span class="hist-card-tag hist-tag-${esc(tag.tagCls||'')}">${esc(tag.tag)}</span>`:''}</td>
       <td class="reg-num reg-items">${items != null ? items : '—'}</td>
-      <td class="reg-num">${r.change == null ? 'Approved' : sgn(r.change)}</td>
+      <td class="reg-num">${r.change == null ? (SHOP_WITH_KAI ? '—' : 'Approved') : sgn(r.change)}</td>
       <td class="reg-num reg-total">${fmt(r.total)}</td>
     </tr>`;
     if(!open || !canOpen) return head;
@@ -559,7 +817,7 @@ function _renderRegisterSection(){
           </span>
           <span class="reg-task-r">
             <span class="reg-task-qty">${esc(t.qty)}</span>
-            <span class="reg-task-amt">${esc(t.amount)}</span>
+            <span class="reg-task-amt">${t.amount ? artMoney(parseFloat(String(t.amount).replace(/[^0-9.\-]/g, '')) || 0) : ''}</span>
           </span>
         </div>`).join('') : '';
       return `<div class="reg-sub-g${open ? ' is-open' : ''}">
@@ -574,7 +832,7 @@ function _renderRegisterSection(){
         ${open ? `<div class="reg-tasks">${rows}</div>` : ''}
       </div>`;
     }).join('');
-    return head + `<tr class="reg-sub"><td colspan="5">
+    return head + `<tr class="reg-sub"><td colspan="6">
       ${chips}
       <div class="reg-sub-list">${groups}</div>
       <div class="reg-sub-note">Each group opens onto the lines it changed.</div>
@@ -586,12 +844,30 @@ function _renderRegisterSection(){
   let pending = '';
   const staged = (typeof TASKS !== 'undefined' && typeof taskHasOpenChangeOrder === 'function')
     ? TASKS.filter(t => taskHasOpenChangeOrder(t)) : [];
-  if(staged.length){
+  let pendingRow = '';
+  if(staged.length && SHOP_WITH_KAI){
+    /* In the ledger's own grid, so every value sits under its header. */
+    const d = (typeof scopeDelta === 'function') ? scopeDelta() : 0;
+    const t = (typeof _ovTurn === 'function') ? _ovTurn() : null;
+    const who = (t && t.who) || 'Quinn';
+    const draft = {num:VERSIONS.length+1, id:'draft-' + (VERSIONS.length+1)};
+    pendingRow = `<tr class="reg-pending-caprow"><td colspan="6">Not approved · not included in the job total</td></tr>
+      <tr class="reg-row is-draft">
+        <td class="reg-date">—</td>
+        <td class="reg-doc"><span class="reg-caret is-blank"></span><span class="reg-doc-name">${esc(versionLabel(draft))}</span>
+          <span class="po-row-id">${esc(_sowIdFor(draft.id))}</span></td>
+        <td class="reg-status"><span class="reg-draft-tag">Draft · ${esc(who)}'s turn</span></td>
+        <td class="reg-num reg-items">${staged.length}</td>
+        <td class="reg-num">${d ? sgn(d) : '—'}</td>
+        <td class="reg-num reg-total is-quiet">In progress</td>
+      </tr>`;
+  } else if(staged.length){
     const d = (typeof scopeDelta === 'function') ? scopeDelta() : 0;
     pending = `<div class="reg-pending-cap">Not approved · not included in the job total</div>
       <table class="reg-table reg-table-pending"><tbody><tr class="reg-row">
         <td class="reg-date">Draft</td>
         <td class="reg-doc"><span class="reg-caret is-blank"></span><span class="reg-doc-name">${esc(versionLabel({num:VERSIONS.length+1}))}</span></td>
+        <td class="reg-status"></td>
         <td class="reg-num reg-items">${staged.length}</td>
         <td class="reg-num">${d ? sgn(d) : '—'}</td>
         <td class="reg-num reg-total is-quiet">In progress</td>
@@ -605,22 +881,23 @@ function _renderRegisterSection(){
         <p class="art-sec-desc">Every event that changed the job total, and how it is classified today.</p>
       </div>
     </header>
-    ${cards}
-    ${classify}
+    ${SHOP_WITH_KAI ? lead : cards}
+    ${SHOP_WITH_KAI ? '' : classify}
     <div class="reg-table-scroll">
-      <table class="reg-table">
+      <table class="reg-table reg-ledger">
         <thead><tr>
-          <th class="reg-date">Date</th><th class="reg-doc">Document</th>
-          <th class="reg-num">Items</th><th class="reg-num">Change</th><th class="reg-num">Job total</th>
+          <th class="reg-date">Date</th><th class="reg-doc">Document</th><th class="reg-status">Status</th>
+          <th class="reg-num reg-c-items">Line items</th><th class="reg-num reg-c-change">Change</th><th class="reg-num reg-c-total">Job total</th>
         </tr></thead>
         <tbody>
           ${ledgerRows}
           <tr class="reg-row is-grand">
             <td class="reg-date"></td>
             <td class="reg-doc"><span class="reg-caret is-blank"></span><span class="reg-doc-name">Current job total</span></td>
-            <td class="reg-num"></td><td class="reg-num"></td>
+            <td class="reg-status"></td><td class="reg-num reg-items"></td><td class="reg-num"></td>
             <td class="reg-num reg-total">${fmt(live)}</td>
           </tr>
+          ${pendingRow}
         </tbody>
       </table>
       ${pending}
@@ -634,6 +911,10 @@ function _renderHistoricalSection(){
   // its read-only document. Rows instead of cards so a job with a dozen
   // change orders stays a short list.
   const ordered = VERSIONS.slice().sort((a,b) => b.num - a.num);
+  // Each version's total from the Register's own ledger, so the two tables
+  // can never disagree about what a document came to.
+  const ledgerTotal = {};
+  if(typeof TASKS !== 'undefined' && TASKS.length) _regLedger().rows.forEach(r => { ledgerTotal[r.v.id] = r.total; });
   const rows = ordered.map(v => {
     const label = versionLabel(v);
     const tag = versionTag(v);
@@ -643,11 +924,11 @@ function _renderHistoricalSection(){
       <td class="reg-date">${esc(v.at)}</td>
       <td class="reg-doc">
         <span class="reg-doc-name">${esc(label)}</span>
-        ${tag.tag ? `<span class="hist-card-tag hist-tag-${esc(tag.tagCls||'')}">${esc(tag.tag)}</span>` : ''}
+        <button type="button" class="reg-doc-view" onclick="event.stopPropagation();openHistorical('${v.id}')" aria-label="View ${esc(label)}">View</button>
       </td>
+      <td class="reg-status">${tag.tag ? `<span class="hist-card-tag hist-tag-${esc(tag.tagCls||'')}">${esc(tag.tag)}</span>` : ''}</td>
       <td class="reg-docid">${esc(_sowIdFor(v.id))}</td>
-      <td class="reg-num reg-total">${esc(v.budget || '—')}</td>
-      <td class="reg-act"><button type="button" class="reg-doc-view" onclick="event.stopPropagation();openHistorical('${v.id}')" aria-label="View ${esc(label)}">View</button></td>
+      <td class="reg-num reg-total">${ledgerTotal[v.id] != null ? artMoney(ledgerTotal[v.id]) : (v.budget ? artMoney(dollars(v.budget)) : '—')}</td>
     </tr>`;
   }).join('');
   return `<section class="art-sec">
@@ -658,10 +939,10 @@ function _renderHistoricalSection(){
       </div>
     </header>
     <div class="reg-table-scroll">
-      <table class="reg-table art-list">
+      <table class="reg-table art-list hist-list">
         <thead><tr>
-          <th class="reg-date">Date</th><th class="reg-doc">Document</th>
-          <th class="reg-docid">Document ID</th><th class="reg-num">Total</th><th class="reg-act"></th>
+          <th class="reg-date">Date</th><th class="reg-doc">Document</th><th class="reg-status">Status</th>
+          <th class="reg-docid">Document ID</th><th class="reg-num reg-c-total2">Total</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -699,7 +980,7 @@ function _renderCopiesSection(){
     <header class="art-sec-hdr">
       <div class="art-sec-hdr-l">
         <h2 class="art-sec-title">Shareable copies</h2>
-        <p class="art-sec-desc">Create read-only audience-doc copies from any scope version, then copy a public link when you are ready to share.</p>
+        <p class="art-sec-desc">Create and share a filtered, read-only copy of any scope version with a link.</p>
       </div>
       <button class="art-sec-cta" onclick="openNewCopy()">
         <svg viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
@@ -781,24 +1062,6 @@ function _histNoteFor(v){
     .map(r => r.date).sort((a, b) => Date.parse(a) - Date.parse(b));
   return {who:author.who, role:author.role, text, when: sigs[0] || v.at || ''};
 }
-// Local rather than Artifact 2's initials(): this file should not stop working
-// if that one is not on the page.
-function _histInitials(name){
-  return String(name || '').split(/[\s.]+/).filter(Boolean).map(w => w[0]).join('').slice(0,2).toUpperCase();
-}
-function _histNoteHtml(v){
-  const n = _histNoteFor(v);
-  if(!n) return '';
-  return `<div class="hist-note">
-    <div class="hist-note-hdr">
-      <span class="hist-note-av">${esc(_histInitials(n.who))}</span>
-      <span class="hist-note-who"><b>${esc(n.who)}</b>${n.role ? `<span class="hist-note-role">${esc(n.role)}</span>` : ''}${n.when ? `<span class="hist-note-when">${esc(n.when)}</span>` : ''}</span>
-      <span class="hist-note-sp"></span>
-      <span class="hist-note-tag" title="Visible to your team only — not part of the document or any shared copy">Internal note</span>
-    </div>
-    <p class="hist-note-body">${esc(n.text)}</p>
-  </div>`;
-}
 /* The same notes, for the Notes drawer opened from the Scope row. They are
    scope-level internal notes that happen to live on a document, so a reader
    going through the project's notes should find them there too — otherwise the
@@ -841,26 +1104,32 @@ function _renderHistoricalDoc(v){
     _isHistorical: true,
   };
   const tag = versionTag(v);
-  const isOriginal = v.num === 1;
-  const eyebrow = isOriginal ? 'Original scope' : `Change order ${v.num - 1}`;
   return `<div class="copy-doc-wrap hist-doc-wrap">
     <div class="copy-crumb hist-crumb">
       <button class="copy-crumb-back" onclick="closeHistorical()" title="Back to the Register">
-        <span aria-hidden="true">‹</span> Back
+        <svg viewBox="0 0 8 12" aria-hidden="true"><path d="M6 1.5L1.5 6 6 10.5"/></svg> Back
       </button>
       <span class="copy-crumb-div"></span>
-      <span class="copy-crumb-name">${esc(versionLabel(v))}</span>
-      <span class="copy-crumb-meta">${esc(eyebrow)} · Approved ${esc(v.at)}${v.budget?` · ${esc(v.budget)}`:''}</span>
+      <span class="copy-crumb-meta">Approved ${esc(v.at)}</span>
       <span class="copy-crumb-sp"></span>
       ${tag.tag ? `<span class="hist-doc-tag hist-tag-${esc(tag.tagCls||'')}">${esc(tag.tag)}</span>` : ''}
       <button class="hist-print-btn" onclick="window.print()" title="Print this artifact">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 5V2h7v3M4.5 12H3V6h10v6h-1.5M4.5 9h7v5h-7z" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Print
       </button>
+      <button class="hist-print-btn" onclick="exportHistorical('${esc(v.id)}')" title="Export this artifact">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M4.5 6.5L8 10l3.5-3.5M2.5 11v2.5h11V11" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Export
+      </button>
     </div>
-    ${_histNoteHtml(v)}
     <div class="copy-paper hist-paper">${_renderCopyPaper(readOnlyCopy)}</div>
   </div>`;
+}
+/* No export pipeline in the prototype yet, so this says what it would do
+   rather than pretending to hand over a file. */
+function exportHistorical(vid){
+  const v = (typeof VERSIONS !== 'undefined') ? VERSIONS.find(x => x.id === vid) : null;
+  if(typeof toast === 'function') toast(`Exporting ${v ? versionLabel(v) : 'this artifact'} — not wired up in the prototype yet`);
 }
 function _renderCopyIndex(){
   // Legacy alias — used to be the sole index; now delegates to the
@@ -1014,6 +1283,8 @@ function _copyFilterSummary(copy){
   return parts;
 }
 
+const ART_PROJECT = {name:'South Main Spring Turn', propertyId:'E123497A'};
+
 function _fmtDate(iso){
   if(!iso) return '';
   const d = new Date(iso + 'T00:00:00');
@@ -1065,7 +1336,7 @@ function _renderCopyDoc(copy){
       <span class="copy-filter-strip-cap-t">Recipient sees</span>
       ${sw('showAmounts', 'Dollar amounts', !!f.showAmounts)}
       ${sw('includePhotos', 'Photos', f.includePhotos !== false)}
-      ${sw('photosOnly', 'Photos only', !!f.photosOnly)}
+      ${f.includePhotos !== false ? sw('photosOnly', 'Photos only', !!f.photosOnly) : ''}
       <span class="strip-live-note">Changes apply to the shared link right away.</span>
     </div>
   </div>`;
@@ -1077,7 +1348,7 @@ function _renderCopyDoc(copy){
   return `<div class="copy-doc-wrap">
     <div class="copy-crumb">
       <button class="copy-crumb-back" onclick="closeCopy()" title="Back to all copies">
-        <span aria-hidden="true">‹</span> Back
+        <svg viewBox="0 0 8 12" aria-hidden="true"><path d="M6 1.5L1.5 6 6 10.5"/></svg> Back
       </button>
       <span class="copy-crumb-div"></span>
       <span class="copy-crumb-name">${esc(copy.name)}</span>
@@ -1151,6 +1422,17 @@ function _stripToggle(field, on){
     if(field === 'includePhotos' && !on) f.photosOnly = false;
   }, 'Copy updated');
 }
+/* What a task buys: its picked catalogue rows, qty × parts rate, on the
+   options that are part of the job — the same walk the purchase order and
+   the classification make. */
+function _taskMaterials(t){
+  let m = 0;
+  (t.options || []).forEach(o => {
+    if(o.added === false) return;
+    (o.products || []).forEach(p => { if(productIsPicked(p)) m += _poQtyNum(p.qty) * _poDollars(p.parts); });
+  });
+  return m;
+}
 function _renderCopyPaper(copy){
   // Filter TASKS per copy's filter recipe. No editing — pure projection.
   // Every amount below — line items, room subtotals, the document totals —
@@ -1175,17 +1457,21 @@ function _renderCopyPaper(copy){
     groups[seen[t.room]].items.push(t);
   });
   const grandTotal = scopeTasks.reduce((s,t)=>s+dollars(t.cost), 0);
-  const grandLabor = scopeTasks.reduce((s,t)=>s+dollars(t.pcost||'$0'), 0);
+  // Labour per task is what's left of its amount once the materials it buys
+  // are taken out — the same rule the Register's bar uses — so a line's
+  // labour and materials add up to its amount, and the document's labour
+  // total reconciles with the bar.
+  const laborOf = t => Math.max(0, dollars(t.cost) - _taskMaterials(t));
+  const grandLabor = scopeTasks.reduce((s,t)=>s+laborOf(t), 0);
   const pricingHead = showPricing ? `<th class="art-col-num">Labor</th><th class="art-col-amt">Amount</th>` : '';
   const rows = groups.map(g => {
     const gTotal = g.items.reduce((s,t)=>s+dollars(t.cost), 0);
-    const gLabor = g.items.reduce((s,t)=>s+dollars(t.pcost||'$0'), 0);
     const itemRows = g.items.map(t => {
       const contractor = t.gc || '<span class="art-unassigned">Unassigned</span>';
       const product = t.product && !/not selected/i.test(t.product) ? t.product : '<span class="art-muted">Product not selected</span>';
       const priceCells = showPricing
-        ? `<td class="art-num">${t.pcost || '$0'}</td>
-           <td class="art-amt">${t.cost}</td>`
+        ? `<td class="art-num">${artMoney(laborOf(t))}</td>
+           <td class="art-amt">${artMoney(dollars(t.cost))}</td>`
         : '';
       // Photos honor the copy's includePhotos filter — checkbox unchecked
       // suppresses the entire photo strip, matching the "Include photos"
@@ -1199,7 +1485,8 @@ function _renderCopyPaper(copy){
       </div>` : '';
       const detailColspan = showPricing ? 5 : 3;
       const hasDetail = (t.desc || t.opt || product || photoStrip);
-      const selCls = (selId && TASKS.find(x=>x.id===selId)?.code===t.code) ? ' art-selected' : '';
+      // No selected-row highlight: the rows are read-only here.
+      const selCls = '';
       const detailRow = hasDetail ? `<tr class="art-item-detail${selCls}" data-row-tid="${t.code}-detail" data-select-code="${t.code}">
         <td class="art-id"></td>
         <td class="art-item-wide" colspan="${detailColspan}">
@@ -1217,66 +1504,62 @@ function _renderCopyPaper(copy){
       </tr>${detailRow}`;
     }).join('');
     const grpColspan = showPricing ? 6 : 4;
-    const subRow = showPricing ? `<tr class="art-sub">
-        <td colspan="4"></td>
-        <td class="art-num art-sub-l">${money(gLabor)}</td>
-        <td class="art-amt art-sub-a">${money(gTotal)}</td>
-      </tr>` : '';
+    // The room's total sits on its heading row, in the Amount column.
     return `
       <tr class="art-grp">
-        <td class="art-grp-name" colspan="${grpColspan}"><span class="art-grp-room">${g.room.toUpperCase()}</span><span class="art-grp-count-inline">${g.items.length} ${g.items.length===1?'item':'items'}</span></td>
+        <td class="art-grp-name" colspan="${showPricing ? grpColspan - 1 : grpColspan}"><span class="art-grp-room">${g.room.toUpperCase()}</span><span class="art-grp-count-inline">${g.items.length} ${g.items.length===1?'item':'items'}</span></td>
+        ${showPricing ? `<td class="art-amt art-grp-amt">${artMoney(gTotal)}</td>` : ''}
       </tr>
       ${itemRows}
-      ${subRow}
     `;
   }).join('');
 
   const grandRows = showPricing ? `<tfoot>
-            <tr class="art-grand">
-              <td colspan="4"></td>
-              <td class="art-num">${money(grandLabor)}</td>
-              <td class="art-amt art-grand-a">${money(grandTotal)}</td>
-            </tr>
             <tr class="art-grand-lbl">
               <td colspan="4"></td>
               <td class="art-num">Labor total</td>
               <td class="art-amt">Scope total</td>
+            </tr>
+            <tr class="art-grand">
+              <td colspan="4"></td>
+              <td class="art-num">${artMoney(grandLabor)}</td>
+              <td class="art-amt art-grand-a">${artMoney(grandTotal)}</td>
             </tr>
           </tfoot>` : '';
 
   return `
     <div class="art-head">
       <div class="art-head-l">
-        <div class="art-eyebrow">Scope of work · ${esc(versionLabel(VERSIONS.find(v=>v.id===copy.basedOnVersionId)||{num:1}))}</div>
         <div class="art-title">3484 South Main Street</div>
-        <div class="art-sub-info">Atlanta, GA 30315 · Single-family renovation</div>
+        <div class="art-sub-info">Atlanta, GA 30315 · ${esc(ART_PROJECT.name)}</div>
       </div>
-      <div class="art-head-r">
-        ${copy._isHistorical ? '' : `<div class="art-meta">
-          <div class="art-meta-k">Prepared for</div>
-          <div class="art-meta-v">${esc(copy.name)}</div>
-        </div>
-        <div class="art-meta">
-          <div class="art-meta-k">Prepared</div>
-          <div class="art-meta-v">${_fmtDate(copy.createdAt)}</div>
-        </div>`}
+      ${showPricing ? `<div class="art-head-totals">
+        <div class="art-head-total"><span class="art-meta-k">Labor total</span><span class="art-head-total-v">${artMoney(grandLabor)}</span></div>
+        <div class="art-head-total is-scope"><span class="art-meta-k">Scope total</span><span class="art-head-total-v">${artMoney(grandTotal)}</span></div>
+      </div>` : ''}
         ${(()=>{
-          // "Based on" only makes sense when the doc is derived from an
-          // earlier version — i.e. a change order (v.num > 1) or a copy
-          // that references some version. For the original scope (v1),
-          // there's nothing older to be "based on", so we omit the row.
+          /* The same facts on every document, shared copy or historical, in
+             one row under the address: what it is, its ID, when it was
+             prepared, which version it is built from, and the property it
+             is about. Who it was prepared for is the copy's own business —
+             its name in the index says so — and the paper doesn't repeat it. */
           const v = VERSIONS.find(x => x.id === copy.basedOnVersionId) || {num:1};
-          if(v.num <= 1) return '';
-          return `<div class="art-meta">
-            <div class="art-meta-k">Based on</div>
-            <div class="art-meta-v">${esc(versionLabel(v))}</div>
+          const at = copy.createdAt || '';
+          const prepared = /^\d{4}-\d{2}-\d{2}/.test(at) ? _fmtDate(at) : at;
+          const basedOn = `${versionLabel(v)} ${_sowIdFor(v.id || copy.basedOnVersionId).replace(/^SOW-/, '')}`;
+          const cell = (k, val, cls) => `<div class="art-meta"><div class="art-meta-k">${k}</div><div class="art-meta-v${cls ? ' ' + cls : ''}">${esc(val)}</div></div>`;
+          /* What kind of document this is: the original scope, a change
+             order, or the closeout. */
+          const kind = v.kind === 'closeout' ? 'Closeout' : (v.num > 1 ? versionLabel(v) : 'Scope of Work');
+          const docId = _sowIdFor(copy._isHistorical ? copy.basedOnVersionId : (copy.shareToken || copy.id));
+          return `<div class="art-head-meta">
+            ${cell('Artifact', kind)}
+            ${cell('Document ID', docId, 'is-id')}
+            ${cell('Prepared on', prepared)}
+            ${cell('Based on', basedOn)}
+            ${cell('Property ID', ART_PROJECT.propertyId, 'is-id')}
           </div>`;
         })()}
-        <div class="art-meta">
-          <div class="art-meta-k">Document ID</div>
-          <div class="art-meta-v art-meta-docid">${esc(_sowIdFor(copy._isHistorical ? copy.basedOnVersionId : (copy.shareToken || copy.id)))}</div>
-        </div>
-      </div>
     </div>
     <table class="art-table">
       <thead>
@@ -1308,7 +1591,6 @@ function _ensureCopyModals(){
       </div>
     </div>
     <div class="se-modal copy-modal" id="copyFormModal">
-      <div class="se-modal-cap" id="copyFormCap">New copy</div>
       <div class="se-modal-title" id="copyFormTitle">Create a new scope copy</div>
       <div class="copy-form-body" id="copyFormBody"></div>
       <div class="se-modal-actions">
@@ -1414,7 +1696,8 @@ function openNewCopy(){ _openCopyForm(null); }
 function openEditCopy(id){ _openCopyForm(id); }
 const _COPY_TOGGLES = [
   {id:'copyFormPhotos',     key:'includePhotos', title:'Include photos',      desc:'Include task photos with each scope item.'},
-  {id:'copyFormPhotosOnly', key:'photosOnly',    title:'Photos only',         desc:'Share a gallery of task photos instead of the scope document.'},
+  // A sub-option of Include photos: only offered while photos are in.
+  {id:'copyFormPhotosOnly', key:'photosOnly',    title:'Photos only',         desc:'Share a gallery of task photos instead of the scope document.', parent:'copyFormPhotos'},
   {id:'copyFormShowAmt',    key:'showAmounts',   title:'Show dollar amounts', desc:'Include rates, line-item amounts, and document totals — recalculated from the included tasks only.'},
 ];
 function _copyDefaultName(){
@@ -1446,7 +1729,6 @@ function _openCopyForm(id){
   const f = Object.assign({includePhotos:true, photosOnly:false}, defaults.filters || {});
   _copyPick = {};
   COPY_FILTER_CATS.forEach(c => { _copyPick[c.key] = new Set(_copyFilterValues(f, c.key)); });
-  document.getElementById('copyFormCap').textContent = existing ? 'Edit copy' : 'New copy';
   document.getElementById('copyFormTitle').textContent = existing ? 'Edit audience doc copy' : 'Create a new audience doc copy';
   document.getElementById('copyFormSave').textContent = existing ? 'Save changes' : 'Create copy';
   const verOpts = VERSIONS.map(v => {
@@ -1457,7 +1739,8 @@ function _openCopyForm(id){
   }).join('');
   const toggles = _COPY_TOGGLES.map(tg => {
     const on = !!f[tg.key];
-    return `<label class="copy-tgl" for="${tg.id}">
+    const parentOn = !tg.parent || f.includePhotos !== false;
+    return `<label class="copy-tgl${tg.parent ? ' is-nested' : ''}" for="${tg.id}" id="${tg.id}Row"${parentOn ? '' : ' hidden'}>
       <span class="copy-tgl-text">
         <span class="copy-tgl-title">${esc(tg.title)}</span>
         <span class="copy-tgl-desc">${esc(tg.desc)}</span>
@@ -1486,9 +1769,8 @@ function _openCopyForm(id){
     <label class="copy-fld copy-fld-sel">
       <span class="copy-fld-lbl">Based on version</span>
       <select class="copy-fld-input" id="copyFormVer">${verOpts}</select>
-      <svg class="copy-fld-chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>
+      <svg class="copy-fld-chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg>
     </label>
-    <p class="copy-form-note">Audience docs are versioned copies, so recipients only see the selected scope snapshot.</p>
     <div class="copy-fsec">
       <div class="copy-fsec-hd">
         <span class="copy-fsec-hd-l">
@@ -1601,12 +1883,17 @@ function _copyPickRefresh(){
   if(clr) clr.hidden = !COPY_FILTER_CATS.some(c => (_copyPick[c.key] || new Set()).size);
 }
 // A photos-only copy is made of photos, so it can't also leave them out.
+// Photos only lives under Include photos: it shows while photos are in, and
+// turning photos off turns it off too.
 function _copyFormToggled(id){
   const only = document.getElementById('copyFormPhotosOnly');
   const inc  = document.getElementById('copyFormPhotos');
+  const row  = document.getElementById('copyFormPhotosOnlyRow');
   if(!only || !inc) return;
-  if(id === 'copyFormPhotosOnly' && only.checked) inc.checked = true;
-  if(id === 'copyFormPhotos' && !inc.checked) only.checked = false;
+  if(id === 'copyFormPhotos'){
+    if(!inc.checked) only.checked = false;
+    if(row) row.hidden = !inc.checked;
+  }
 }
 function saveCopyForm(){
   const name = document.getElementById('copyFormName').value.trim() || 'Untitled copy';

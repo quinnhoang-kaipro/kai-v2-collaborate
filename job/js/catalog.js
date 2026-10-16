@@ -166,3 +166,102 @@ function productPool(t, catOverride){
   };
   return POOLS[cat]||POOLS.generic;
 }
+
+/* ── The whole catalogue, for search ─────────────────────────────────
+   productPool answers "what fits this task"; search needs "everything we
+   sell". Every section except the generic placeholders, each product once
+   (by SKU), tagged with the section it came from. Built lazily — the pools
+   are plain data, but `dollars` has to be defined before the first call. */
+const CATALOG_SECTIONS = ['cabinet','counter','tile','appliance','floor','paint','vanity','shower','toilet','mech','storage','hardware','lighting','ceilingfan','detector','blinds','exhaust'];
+const CATALOG_SECTION_LABEL = {cabinet:'Cabinets', counter:'Countertops', tile:'Tile', appliance:'Appliances', floor:'Flooring', paint:'Paint', vanity:'Vanities', shower:'Shower tile', toilet:'Toilets', mech:'Garage door openers', storage:'Closet systems', hardware:'Door hardware', lighting:'Light fixtures', ceilingfan:'Ceiling fans', detector:'Smoke & CO detectors', blinds:'Blinds', exhaust:'Exhaust fans'};
+let _catalogAll = null;
+function catalogAll(){
+  if(_catalogAll) return _catalogAll;
+  const seen = new Set();
+  _catalogAll = [];
+  CATALOG_SECTIONS.forEach(cat => {
+    productPool({name:'', cost:'$0', qty:''}, cat).forEach(p => {
+      if(seen.has(p.sku)) return;
+      seen.add(p.sku);
+      _catalogAll.push(Object.assign({}, p, {section:cat}));
+    });
+  });
+  return _catalogAll;
+}
+function catalogFind(sku){
+  return catalogAll().find(p => p.sku === sku) || null;
+}
+/* Every word has to appear in the brand, the name, the SKU or the section,
+   so "white shaker" and "kohler toilet" both land. Recommended products
+   rank first, then similar, then the rest. */
+function catalogSearch(q, limit){
+  const terms = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if(!terms.length) return [];
+  const tierRank = {team:0, similar:1, other:2};
+  return catalogAll()
+    .filter(p => {
+      const hay = `${p.brand} ${p.name} ${p.sku} ${CATALOG_SECTION_LABEL[p.section] || ''}`.toLowerCase();
+      return terms.every(t => hay.includes(t));
+    })
+    .sort((a, b) => (tierRank[a.tier] ?? 3) - (tierRank[b.tier] ?? 3))
+    .slice(0, limit || 8);
+}
+
+/* ── Suppliers ────────────────────────────────────────────────────────
+   One product is one listing — same name, details and quantity — sold by
+   one or more suppliers at their own price and stock. The catalogue here
+   has no supplier feed, so offers are derived from the SKU: stable across
+   reloads, a few percent apart, with a specialist where the trade has one.
+   In production this is the supplier price/stock feed. */
+const SUPPLIERS = {
+  hd:  {id:'hd',  name:'The Home Depot'},
+  low: {id:'low', name:"Lowe's"},
+  fd:  {id:'fd',  name:'Floor & Decor'},
+  fer: {id:'fer', name:'Ferguson'},
+};
+const _SUPPLIER_SPECIALIST = {tile:'fd', floor:'fd', shower:'fd', toilet:'fer', vanity:'fer'};
+function _skuHash(s){
+  let h = 0; s = String(s || '');
+  for(let i = 0; i < s.length; i++){ h = ((h << 5) - h + s.charCodeAt(i)) | 0; }
+  return Math.abs(h);
+}
+/* The offers for a catalogue product, cheapest first. The listed price is
+   The Home Depot's; the others sit within about ±7% of it. */
+function catalogOffers(p){
+  if(!p || !p.sku) return [];
+  if(Array.isArray(p.offers) && p.offers.length) return p.offers.slice().sort((a, b) => a.price - b.price);
+  const h = _skuHash(p.sku);
+  const base = Number(p.price) || 0;
+  // Whole dollars, as every price in the app is shown; never the same as
+  // the listed price, so a second supplier is always a real alternative.
+  const step = pct => { const v = Math.max(1, Math.round(base * (1 + pct))); return v === base ? v + (pct < 0 ? -1 : 1) : v; };
+  const stockOf = k => (k % 7 === 0) ? 'out' : (k % 5 === 0) ? 'low' : 'in';
+  const offers = [{supplier:'hd', price:base, stock:p.stock || 'in'}];
+  if(h % 6 !== 0){
+    const d = ((h % 15) - 7) / 100;                  // −7% … +7%
+    offers.push({supplier:'low', price:step(d || -0.03), stock:stockOf(h >> 3)});
+  }
+  const spec = _SUPPLIER_SPECIALIST[p.section];
+  if(spec && h % 3 !== 0){
+    const d = ((h >> 4) % 13 - 8) / 100;             // −8% … +4%
+    offers.push({supplier:spec, price:step(d || -0.05), stock:stockOf(h >> 6)});
+  }
+  return offers.sort((a, b) => a.price - b.price);
+}
+function supplierName(id){ return (SUPPLIERS[id] || {}).name || id || ''; }
+// Offers for a SKU from anywhere in the catalogue.
+function offersForSku(sku){
+  const p = (typeof catalogFind === 'function') ? catalogFind(sku) : null;
+  return p ? catalogOffers(p) : [];
+}
+/* Which supplier a picked product row is buying from: its own choice if
+   it made one, else the offer its price matches (rows seeded before
+   suppliers existed), else the cheapest. */
+function rowSupplier(row){
+  const offers = offersForSku(row && row.sku);
+  if(!offers.length) return null;
+  if(row.supplier && offers.some(o => o.supplier === row.supplier)) return row.supplier;
+  const n = parseFloat(String(row.parts || '').replace(/[^0-9.-]/g, '')) || 0;
+  const hit = offers.find(o => Math.abs(o.price - n) < 0.01);
+  return (hit || offers[0]).supplier;
+}
