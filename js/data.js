@@ -294,7 +294,7 @@ const TASKS = [
   {id:8, code:'MBA-CD88', room:'Master Bath', name:'Double vanity replacement with integrated quartz top and undermount sinks', opt:'Replace : 48 inch furniture-style double vanity, soft-close drawers, brushed gold hardware (design pending)', gc:'Stone Bros', product:'(design pending : awaiting homeowner selection from the three shortlisted furniture-style vanity options)', qty:'1 ea', rate:'$1,900', cost:'$1,900', photos:2, flags:[], mods:['deferred'], status:'pending', desc:'Remove the existing single vanity and disconnect plumbing. Supply and install a new 48-inch furniture-style double vanity with a single-slab quartz top, two undermount porcelain sinks, and two widespread faucets. Includes new shutoff valves, supply lines, P-traps, and reconnection to existing drain. Final vanity model, finish, and hardware are pending homeowner selection; pricing shown is an allowance and will be trued up once the selection is locked. Confirm rough-in dimensions against the selected unit before ordering.', pcost:'$1,400', notes:4},
   {id:9, code:'MBA-4739', room:'Master Bath', name:'Shower wall and floor tile with waterproofing and linear drain', opt:'Replace : full demo to studs, redgard waterproofing, large-format porcelain wall tile with mosaic floor (design pending)', gc:null, product:'(design pending : large-format porcelain shower wall tile plus coordinating mosaic floor tile, selection in progress)', qty:'60 SF', rate:'$40', cost:'$2,400', photos:3, flags:['unassigned'], mods:['deferred'], status:'pending', desc:'Demolish the existing shower surround down to the studs and subfloor. Frame and slope the shower pan, install a linear drain, and apply a full liquid waterproofing membrane across the pan and walls to 6 inches above the showerhead. Set large-format porcelain wall tile and a coordinating mosaic floor tile per the pending design selection, including a recessed niche, bullnose or metal trim on all exposed edges, and color-matched grout and silicone. Contractor not yet assigned; tile selection still in progress with the homeowner. Confirm waterproofing inspection is scheduled before any tile is set.', pcost:'$1,600', notes:2},
   {id:10, code:'MBA-C0EA', room:'Master Bath', name:'Toilet', opt:'Replace', gc:'Stone Bros', product:'Kohler Cimarron', qty:'1 ea', rate:'$540', cost:'$540', photos:1, flags:[], mods:[], status:'complete', desc:'Remove and reset toilet with new wax ring and supply line.', pcost:'$420', notes:0},
-  {id:11, code:'BTH-3A9B', room:'Bathroom', name:'Vanity', opt:'Reface', gc:'Apex Carpentry', product:'(not selected)', qty:'1 ea', rate:'$760', cost:'$760', photos:2, flags:['missing'], mods:[], status:'pending', desc:'Reface existing vanity cabinet, new door and drawer fronts. Product not yet selected.', pcost:'$300', notes:1},
+  {id:11, code:'BTH-3A9B', room:'Bathroom', name:'Vanity', opt:'Replace', gc:'Apex Carpentry', product:'(not selected)', qty:'1 ea', rate:'$760', cost:'$760', photos:2, flags:['missing'], mods:[], status:'pending', desc:'Reface existing vanity cabinet, new door and drawer fronts. Product not yet selected.', pcost:'$300', notes:1},
   {id:12, code:'BTH-B44C', room:'Bathroom', name:'Flooring', opt:'Replace : tile', gc:'FloorWorks', product:'Daltile Concrete Look 12x24', qty:'48 SF', rate:'$24.6', cost:'$1,180', photos:3, flags:[], mods:[], status:'not_started', desc:'Install porcelain tile flooring with backer board and grout.', pcost:'$760', notes:0},
   {id:13, code:'MBD-2DFD', room:'Master Bed', name:'Flooring', opt:'Replace : carpet', gc:'FloorWorks', product:'Mohawk SmartStrand Silk', qty:'1 room', rate:'$1,540', cost:'$1,540', photos:2, flags:[], mods:[], status:'in_progress', desc:'Remove old carpet, install new carpet and pad in master bedroom.', pcost:'$1,100', notes:2},
   {id:14, code:'MBD-A7AE', room:'Master Bed', name:'Closet', opt:'Add shelving', gc:null, product:'ClosetMaid ShelfTrack', qty:'1 kit', rate:'$460', cost:'$460', photos:1, flags:['unassigned'], mods:[], status:'not_started', desc:'Add wire shelving system to master closet. Contractor not yet assigned.', pcost:'$340', notes:1},
@@ -524,6 +524,15 @@ const JOB_TEMPLATE = {
 // option's total is unchanged. Options with no product yet (pure-labor
 // line items) get a synthetic "Labor" product carrying the old qty/rate,
 // so nothing is lost — every option ends up with at least one product row.
+/* Seed rates keep their cents ($8.60), unlike display totals. */
+function _fmtSeedRate(n){
+  const r = Math.round(n * 100) / 100;
+  return '$' + (r % 1 ? r.toFixed(2) : String(r));
+}
+/* Tasks whose catalogue part costs more than the old all-in price, so
+   labour was floored at $0 rather than going negative. Listed, not hidden:
+   read window.__SEED_LABOR_FLOORED, or see the console at load. */
+window.__SEED_LABOR_FLOORED = [];
 (function seedOptionProducts(){
   const genProdId = () => 'prod_' + Math.random().toString(36).slice(2,7);
   const numFrom = (str) => parseFloat(String(str||'0').replace(/[^0-9.-]/g,'')) || 0;
@@ -542,13 +551,20 @@ const JOB_TEMPLATE = {
           labor: p.rate || '',
         };
       });
-      // Only the FIRST migrated product inherits the option's per-unit
-      // labor rate (it already represents the option's own line item);
-      // additional products (legacy alternates/extras) stay parts-only
-      // unless they already carried their own rate above.
-      if(products[0] && !products[0].labor && rateNum) products[0].labor = opt.rate;
-      const laborCaptured = products.some(p => numFrom(p.labor) > 0);
-      if(!laborCaptured && rateNum > 0){
+      // Only the FIRST migrated product takes labour from the option's rate,
+      // and the rate is the old ALL-IN price per unit (parts and labour
+      // together), so labour is what's left once its parts are taken out —
+      // never below $0. Taking the whole rate as labour counted the parts
+      // twice. Additional products (legacy alternates/extras) stay
+      // parts-only unless they already carried their own rate above.
+      if(products[0] && !products[0].labor && rateNum){
+        const partsNum = numFrom(products[0].parts);
+        products[0].labor = partsNum ? _fmtSeedRate(Math.max(0, rateNum - partsNum)) : opt.rate;
+      }
+      // A synthetic Labor row only for an option with no product at all — a
+      // product whose labour was floored at $0 already accounts for the
+      // option's rate, and a Labor row on top would count it again.
+      if(!products.length && rateNum > 0){
         products.push({ id: genProdId(), product: 'Labor', qty: opt.qty || '1', parts: '', labor: opt.rate || '' });
       }
       opt.products = products;
@@ -582,19 +598,47 @@ const JOB_TEMPLATE = {
     const pool = (typeof productPool === 'function') ? productPool(t).filter(p => p.tier === 'team') : [];
     if(!pool.length) return;
     const prevFirst = (primary.products && primary.products[0]) || {};
+    /* The first catalogue row is the option's product. Its labour comes
+       from the option's own all-in rate, not from the row it replaces (that
+       one had its parts taken out already): what the option cost all in,
+       less what the catalogue part costs, spread over the units bought, and
+       never below $0.
+       A product sold by coverage — a slab that covers 5 SF — is bought in
+       whole units for the task's area: 42 SF is 9 slabs. The task itself
+       keeps its area (42 SF); only the product row counts slabs. */
+    const first = pool[0];
+    const taskQtyNum = numFrom(prevFirst.qty || primary.qty || '1') || 1;
+    const qtyUnit = String(prevFirst.qty || '').replace(/^[\s\d.,-]+/, '').trim();
+    const units = (first && first.coveragePerUnit) ? Math.max(1, Math.ceil(taskQtyNum / first.coveragePerUnit)) : taskQtyNum;
+    const firstQty = (first && first.coveragePerUnit) ? `${units} ${first.unit || 'ea'}` : (prevFirst.qty || '1');
+    const allIn = numFrom(primary.rate) * taskQtyNum;
+    let firstLabor = prevFirst.labor || '';
+    if(first && numFrom(primary.rate) > 0){
+      const perUnit = allIn / units - first.price;
+      if(perUnit < 0){
+        window.__SEED_LABOR_FLOORED.push({task:t.code, name:t.name, option:primary.name,
+          qty:firstQty, allInRate:primary.rate, allIn:_fmtDollars(allIn), partsPerUnit:_fmtDollars(first.price),
+          product:`${first.brand} ${first.name}`});
+      }
+      firstLabor = _fmtSeedRate(Math.max(0, perUnit));
+    }
     primary.products = pool.map((p, i) => ({
       id: genProdId(),
       sku: p.sku,
       brand: p.brand,
       product: p.name,
-      qty: i === 0 ? (prevFirst.qty || '1') : '0',
+      qty: i === 0 ? firstQty : '0',
       parts: _fmtDollars(p.price),
-      labor: i === 0 ? (prevFirst.labor || '') : '',
+      labor: i === 0 ? firstLabor : '',
     }));
     const total = primary.products.reduce((sum, p) => sum + numFrom(p.qty) * (numFrom(p.parts) + numFrom(p.labor)), 0);
     primary.cost = _fmtDollars(total);
     t.cost = _fmtDollars(t.options.reduce((sum,o) => sum + numFrom(o.cost), 0));
   });
+  if(window.__SEED_LABOR_FLOORED.length && typeof console !== 'undefined'){
+    console.info('[seed] labour floored at $0 — catalogue part costs more than the old all-in rate:',
+      window.__SEED_LABOR_FLOORED.map(x => `${x.task} ${x.name} (${x.qty}: all-in ${x.allIn}, parts ${x.partsPerUnit}/unit)`).join('; '));
+  }
 })();
 
 /* ── Scope-total override, pushed from the shell via postMessage. Used so the

@@ -970,7 +970,23 @@ const _LINE_POOL = {
 };
 function deptLinePool(l){
   if(!l || !l.items.length) return [];
-  return productPool(l.items[0], _LINE_POOL[l.name] || null);
+  const base = productPool(l.items[0], _LINE_POOL[l.name] || null);
+  // Anything picked on the line's tasks from elsewhere in the catalogue —
+  // through search — is listed too, so its row (and its "On 2 of 3") shows.
+  const have = new Set(base.map(p => p.sku));
+  const extra = [];
+  l.items.forEach(t => taskOptions(t).forEach(o => (o.products || []).forEach(p => {
+    if(!p.sku || have.has(p.sku) || !productIsPicked(p)) return;
+    const cat = (typeof catalogFind === 'function') ? catalogFind(p.sku) : null;
+    if(cat){ have.add(p.sku); extra.push(cat); }
+  })));
+  return base.concat(extra);
+}
+// A line product by SKU: the line's own section first, then the whole
+// catalogue, so a searched-for product can be applied too.
+function _lineCat(l, sku){
+  return deptLinePool(l).find(x => x.sku === sku)
+    || ((typeof catalogFind === 'function') ? catalogFind(sku) : null);
 }
 const _num = v => parseFloat(String(v == null ? '' : v).replace(/[^0-9.-]/g, '')) || 0;
 // The option a line edit lands on: the first one that's part of the job.
@@ -1028,6 +1044,7 @@ function _lineCommit(t, o){
    line was seeded from shower tile). Applying a product clears the others,
    so a task holds one product per line rather than piling them up. */
 function _lineSkus(l, t){
+  // deptLinePool also carries anything picked on the line from search.
   return new Set([...deptLinePool(l), ...productPool(t)].map(p => p.sku));
 }
 function _lineTaskRows(l, t){
@@ -1039,7 +1056,42 @@ function _lineTaskPicked(l, t){
 }
 // Put one catalogue product on these tasks, replacing what each had in the
 // line. Shared by the per-task dropdown and the product rows' Apply.
+/* The supplier a line buys a product from. Set from the line page's picker;
+   until then, whichever supplier the line's tasks already use for it, or
+   the cheapest. */
+let lineSupplier = {};   // `${lineKey}|${sku}` → supplier id
+function lineSupplierFor(l, sku){
+  const k = `${l.key}|${sku}`;
+  if(lineSupplier[k]) return lineSupplier[k];
+  for(const t of l.items){
+    const h = _lineTaskPicked(l, t).find(x => x.p.sku === sku);
+    if(h) return rowSupplier(h.p);
+  }
+  const offers = offersForSku(sku);
+  return offers.length ? offers[0].supplier : null;
+}
+/* Changing the supplier on a line product moves every task already using
+   it to that supplier's price; quantities stay. */
+function setLineSupplier(key, sku, supplier){
+  const l = deptLineByKey(key); if(!l) return;
+  const offer = offersForSku(sku).find(o => o.supplier === supplier); if(!offer) return;
+  lineSupplier[`${key}|${sku}`] = supplier;
+  let moved = 0;
+  l.items.forEach(t => {
+    _lineTaskPicked(l, t).filter(h => h.p.sku === sku).forEach(h => {
+      h.p.supplier = supplier; h.p.parts = _fmtDollars(offer.price);
+      recomputeOptionFromProducts(t, h.o); moved++;
+    });
+  });
+  toast(moved
+    ? `${moved} ${moved === 1 ? 'task' : 'tasks'} now buying from ${supplierName(supplier)} at ${_fmtDollars(offer.price)}`
+    : `Will buy from ${supplierName(supplier)} at ${_fmtDollars(offer.price)} when applied`);
+  renderAll();
+}
 function _applyLineProductTo(l, cat, targets){
+  // Bought from the line's chosen supplier, at that supplier's price.
+  const sup = lineSupplierFor(l, cat.sku);
+  const offer = offersForSku(cat.sku).find(o => o.supplier === sup);
   targets.forEach(t => {
     const before = _lineTaskPicked(l, t);
     // A swap keeps the quantity the task already had; a first pick takes
@@ -1049,6 +1101,7 @@ function _applyLineProductTo(l, cat, targets){
     _lineTaskRows(l, t).forEach(h => { if(h.p.sku !== cat.sku && productIsPicked(h.p)){ h.p.qty = '0'; touched.add(h.o); } });
     const h = _ensureLineProductRow(t, cat); if(!h) return;
     if(!productIsPicked(h.p)) h.p.qty = keepQty || _taskNeedQty(t, cat);
+    if(offer){ h.p.supplier = offer.supplier; h.p.parts = _fmtDollars(offer.price); }
     // Picking puts the option in the job — same as "+ Add" on it in the task.
     if(!optionIsAdded(h.o)) h.o.added = true;
     touched.add(h.o);
@@ -1069,7 +1122,7 @@ function _clearLineProductOn(l, targets){
 function applyLineProduct(key, sku, mode){
   closeLineApplyConfirm();
   const l = deptLineByKey(key); if(!l) return;
-  const cat = deptLinePool(l).find(x => x.sku === sku); if(!cat) return;
+  const cat = _lineCat(l, sku); if(!cat) return;
   const targets = l.items.slice();
   if(!targets.length) return;
   // A task that already has a different product would lose it. Say which,
@@ -1127,7 +1180,7 @@ function setLineTaskProduct(key, id, sku){
     _clearLineProductOn(l, [t]);
     toast(`Product cleared · ${t.room} › ${t.name}`);
   } else {
-    const cat = deptLinePool(l).find(x => x.sku === sku); if(!cat) return;
+    const cat = _lineCat(l, sku); if(!cat) return;
     _applyLineProductTo(l, cat, [t]);
     toast(`${cat.brand} ${cat.name} → ${t.room} › ${t.name}`);
   }
@@ -3474,11 +3527,10 @@ function renderWorkHdr(){
      the document people come back to most once products are picked. Lit
      while it is the thing on screen. Only when the Record tab exists and
      there is a scope to order from. */
-  const poOn = workMode === 'artifact' && typeof openPoDoc !== 'undefined' && openPoDoc;
   const poLink = (window.__KAI_SHOP && TASKS.length && WORK_MODES.some(m => m.id === 'artifact') && typeof openPurchaseOrder === 'function')
-    ? `<button type="button" class="wmode-po${poOn ? ' is-on' : ''}" onclick="openPurchaseOrder()"${poOn ? ' aria-current="page"' : ''}>
+    ? `<button type="button" class="wmode-po" onclick="openPurchaseOrder()">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M3 2.5h8v9l-1.5-1-1.5 1-1-1-1 1-1.5-1-1.5 1z"/><path d="M5 5.5h4M5 7.5h4" stroke-linecap="round"/></svg>
-        Purchase order
+        Purchase orders
       </button>`
     : '';
   document.getElementById('workHdr').innerHTML = `${showScope}<div class="wmode-tabs">${tabs}</div>${scopeTools}${poLink}`;

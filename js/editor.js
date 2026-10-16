@@ -617,6 +617,7 @@ function _shopEditCardHtml(t){
                       ${p.brand ? `<span class="sec-taskcard-product-brand">${esc(p.brand)}</span>` : ''}
                       <span class="sec-taskcard-product-name">${esc(p.product || 'Untitled product')}</span>
                       ${p.sku ? `<span class="sec-taskcard-product-sku">SKU ${esc(p.sku)}</span>` : ''}
+
                     </div>
                     <div class="sec-taskcard-product-cell">
                       <span class="sec-taskcard-lbl">Qty${qs.unit ? ` · ${esc(qs.unit)}` : ''}</span>
@@ -643,9 +644,12 @@ function _shopEditCardHtml(t){
                       ${(typeof productLineDelta === 'function' && typeof deltaChipHtml === 'function') ? deltaChipHtml(productLineDelta(t, o, p)) : ''}
                       ${prodModsHtml}
                     </div>
+                    ${p.sku ? supplierPickHtml(offersForSku(p.sku), rowSupplier(p),
+                      `setProductSupplier(${t.id},'${o.id}','${p.id}','__S__')`, `row:${p.id}`) : ''}
                   </div>`;
                 }).join('') || `<div class="sec-taskcard-product-empty">No products for this option.</div>`}
-              </div>` : ''}
+              </div>
+              ${prodSearchHtml(`opt:${t.id}:${o.id}`)}` : ''}
             </div>
           </div>`;
         }).join('')}
@@ -856,7 +860,7 @@ function gotoTaskFromCart(taskId){
 }
 
 /* The header's quantity says it's the line's total — "140 SF total",
-   "8 needed in total" — since each task row below carries its own. A line
+   "8 scoped in total" — since each task row below carries its own. A line
    whose units don't add up falls back to its task count. */
 function _lineHdrNeed(l, isLabor){
   const n = l.items.length;
@@ -864,7 +868,7 @@ function _lineHdrNeed(l, isLabor){
   const need = deptLineNeed(l.items);
   if(/ tasks?$/.test(need)) return need;
   if(n === 1) return need;
-  return / needed$/.test(need) ? `${need} in total` : `${need} total`;
+  return / scoped$/.test(need) ? `${need} in total` : `${need} total`;
 }
 /* ── Product line page (Departments view) ───────────────────────────
    Opened from a product line in the sidebar. The tasks lead, each with its
@@ -920,13 +924,15 @@ function _renderLinePageHtml(){
     if(notPicked){ status = `${notPicked} ${notPicked === 1 ? 'task' : 'tasks'} still to pick`; statusCls = 'is-short'; }
     else if(diff < 0){ status = `${fmtN(-diff)}${uTxt} short`; statusCls = 'is-short'; }
     else if(diff > 0){ status = `${fmtN(diff)}${uTxt} over`; statusCls = 'is-over'; }
-    else { status = 'Covers what’s needed'; statusCls = 'is-ok'; }
+    // Covered says nothing the quantity doesn't — "140 of 140 scoped" — so
+    // only a shortfall or an overage gets a word.
+    else { status = ''; statusCls = ''; }
   } else if(notPicked){
     status = `${notPicked} ${notPicked === 1 ? 'task' : 'tasks'} still to pick`; statusCls = 'is-short';
   }
   const taskTotal = (isLabor || n < 2) ? '' : `<div class="lnp-task lnp-task-total">
       <span class="lnp-total-lead"><span class="lnp-total-lbl">Total</span>${status ? `<span class="lnp-total-status ${statusCls}">${statusCls === 'is-ok' ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-11"/></svg>' : ''}${esc(status)}</span>` : ''}</span>
-      <span class="lnp-total-qty"><b>${sharedUnit === null ? '—' : fmtN(boxSum)}</b>${needSum !== null ? `<span> of ${fmtN(needSum)} needed</span>` : ''}</span>
+      <span class="lnp-total-qty"><b>${sharedUnit === null ? '—' : fmtN(boxSum)}</b>${needSum !== null ? `<span> of ${fmtN(needSum)} scoped</span>` : ''}</span>
       ${(() => {
         // The product, when it's one product across the whole line;
         // nothing when the tasks differ — the rows below already say which.
@@ -968,6 +974,10 @@ function _renderLinePageHtml(){
     const users = lineProductUsers(l, cat.sku);
     const sku = esc(cat.sku);
     const allHave = users.length === n;
+    // The supplier this line buys the product from, and that supplier's price.
+    const offers = (typeof catalogOffers === 'function') ? catalogOffers(Object.assign({section: (catalogFind(cat.sku) || {}).section}, cat)) : [];
+    const sup = lineSupplierFor(l, cat.sku);
+    const offer = offers.find(o => o.supplier === sup) || offers[0] || {price: cat.price};
     const thumb = cat.image
       ? `<img src="${esc(cat.image)}" alt="${esc(cat.name)}" loading="lazy">`
       : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 5.5h13l-1 4H5z"/><path d="M4 12h13v6H4z"/><path d="M8 8v4"/></svg>`;
@@ -981,9 +991,10 @@ function _renderLinePageHtml(){
         <span class="sec-taskcard-product-name">${esc(cat.name)}</span>
         <span class="sec-taskcard-product-sku">SKU ${sku}</span>
       </div>
-      <div class="lnp-prod-price">$${Number(cat.price).toLocaleString('en-US')}<span>/ ${esc(cat.unit)}</span></div>
+      <div class="lnp-prod-price">$${Number(offer.price).toLocaleString('en-US')}<span>/ ${esc(cat.unit)}</span></div>
       <div class="lnp-prod-use">${users.length ? `On ${users.length} of ${n}` : ''}</div>
       <div class="lnp-prod-act" onclick="event.stopPropagation()">${act}</div>
+      ${supplierPickHtml(offers, sup, `setLineSupplier('${k}','${sku}','__S__')`, `line:${l.key}|${cat.sku}`)}
     </div>`;
   }).join('');
 
@@ -1016,6 +1027,7 @@ function _renderLinePageHtml(){
       <div class="pgd-muted">These tasks are labour only, or the resident supplies the product.</div>
     </div>` : `<div class="pgd-details-sec">
       <div class="pgd-details-title">Products</div>
+      ${prodSearchHtml('line:' + l.key)}
       <div class="sec-taskcard-products lnp-products">${prodRows || '<div class="sec-taskcard-product-empty">No catalogue products for this line yet.</div>'}</div>
     </div>`}
     <div class="shop-nav-float">
@@ -1023,4 +1035,183 @@ function _renderLinePageHtml(){
       <button class="shop-nav-btn" ${nextL ? '' : 'disabled'} onclick="${nextL ? `selectLine('${_lineKeyArg(nextL.key)}')` : ''}" title="${nextL ? esc(nextL.name) : 'No next line'}">Next line ${svgChevR()}</button>
     </div>
   </div>`;
+}
+
+/* ── Product search (Editor) ─────────────────────────────────────────
+   A search box under the product rows that reaches the whole catalogue,
+   not just the products seeded on the option. Results drop down under the
+   box; each one's action depends on where the box is:
+     opt:<taskId>:<optId>  — add the product to that option (qty 0, so it's
+                             listed and ready to pick, like the others)
+     line:<lineKey>        — apply it to every task in a product line
+   Typing only redraws the result list, so the caret never jumps. */
+let prodSearchCtx = null;   // which box the results belong to
+let prodSearchQ = '';
+function prodSearchHtml(ctx){
+  const open = prodSearchCtx === ctx;
+  const id = 'ps-' + ctx.replace(/[^a-z0-9]/gi, '_');
+  return `<div class="prod-search${open && prodSearchQ ? ' has-results' : ''}" id="${id}" onclick="event.stopPropagation()">
+    <div class="prod-search-box">
+      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <input type="search" class="prod-search-input" placeholder="Search the catalog — brand, product or SKU"
+        value="${open ? esc(prodSearchQ) : ''}" autocomplete="off"
+        onfocus="prodSearchFocus('${esc(ctx).replace(/'/g, "\\'")}', this)"
+        oninput="prodSearchInput('${esc(ctx).replace(/'/g, "\\'")}', this.value)"
+        onkeydown="if(event.key==='Escape'){this.value='';prodSearchInput('${esc(ctx).replace(/'/g, "\\'")}','');this.blur();}">
+    </div>
+    <div class="prod-search-results" role="listbox">${open ? _prodSearchResultsHtml(ctx) : ''}</div>
+  </div>`;
+}
+function _prodSearchEl(ctx){ return document.getElementById('ps-' + ctx.replace(/[^a-z0-9]/gi, '_')); }
+function prodSearchFocus(ctx, el){
+  if(prodSearchCtx !== ctx){ prodSearchCtx = ctx; prodSearchQ = el.value || ''; }
+}
+function prodSearchInput(ctx, v){
+  prodSearchCtx = ctx; prodSearchQ = v;
+  const box = _prodSearchEl(ctx); if(!box) return;
+  box.classList.toggle('has-results', !!v.trim());
+  box.querySelector('.prod-search-results').innerHTML = _prodSearchResultsHtml(ctx);
+}
+function _prodSearchHas(ctx, sku){
+  const [kind, a, b] = ctx.split(':');
+  if(kind === 'opt'){
+    const t = TASKS.find(x => x.id === +a);
+    const o = t && (t.options || []).find(x => x.id === b);
+    return !!(o && (o.products || []).some(p => p.sku === sku));
+  }
+  if(kind === 'line' && typeof deptLineByKey === 'function'){
+    const l = deptLineByKey(ctx.slice(5));
+    return !!(l && lineProductUsers(l, sku).length === l.items.length);
+  }
+  return false;
+}
+function _prodSearchResultsHtml(ctx){
+  const q = (prodSearchQ || '').trim();
+  if(!q) return '';
+  const hits = catalogSearch(q, 8);
+  if(!hits.length) return `<div class="prod-search-empty">No products match “${esc(q)}”.</div>`;
+  const isLine = ctx.startsWith('line:');
+  const line = isLine && typeof deptLineByKey === 'function' ? deptLineByKey(ctx.slice(5)) : null;
+  const n = line ? line.items.length : 0;
+  const c = esc(ctx).replace(/'/g, "\\'");
+  return hits.map(p => {
+    const has = _prodSearchHas(ctx, p.sku);
+    const btn = has
+      ? `<span class="prod-search-added">${isLine ? 'Applied' : 'Added'}</span>`
+      : `<button type="button" class="prod-search-add" onclick="event.stopPropagation();prodSearchPick('${c}','${esc(p.sku)}')">${isLine ? (n > 1 ? `Apply to all ${n}` : 'Apply') : '+ Add'}</button>`;
+    // Same thumbnail as the product rows: the photo when the catalogue has
+    // one, the product glyph otherwise.
+    const thumb = p.image
+      ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy">`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 5.5h13l-1 4H5z"/><path d="M4 12h13v6H4z"/><path d="M8 8v4"/></svg>`;
+    return `<div class="prod-search-row" role="option">
+      <div class="sec-taskcard-product-thumb prod-search-thumb">${thumb}</div>
+      <div class="prod-search-main">
+        <span class="prod-search-brand">${esc(p.brand)}<span class="sep">·</span>${esc(CATALOG_SECTION_LABEL[p.section] || '')}</span>
+        <span class="prod-search-name">${esc(p.name)}</span>
+        <span class="prod-search-sku">SKU ${esc(p.sku)}</span>
+      </div>
+      ${(() => {
+        // Lowest price across the suppliers that carry it, and how many do.
+        const offers = catalogOffers(p);
+        const low = offers.length ? offers[0].price : p.price;
+        return `<span class="prod-search-price">${offers.length > 1 ? '<span class="from">from</span>' : ''}$${Number(low).toLocaleString('en-US')}<span>/ ${esc(p.unit)}</span>${offers.length > 1 ? `<em>${offers.length} suppliers</em>` : offers.length ? `<em>${esc(supplierName(offers[0].supplier))}</em>` : ''}</span>`;
+      })()}
+      ${btn}
+    </div>`;
+  }).join('');
+}
+function prodSearchPick(ctx, sku){
+  const cat = catalogFind(sku); if(!cat) return;
+  const [kind, a, b] = ctx.split(':');
+  if(kind === 'opt'){
+    const t = TASKS.find(x => x.id === +a);
+    const o = t && (t.options || []).find(x => x.id === b);
+    if(!o) return;
+    o.products = o.products || [];
+    if(!o.products.some(p => p.sku === sku)){
+      o.products.push({id:'prod_' + Math.random().toString(36).slice(2,7), sku:cat.sku, brand:cat.brand,
+        product:cat.name, qty:'0', parts:_fmtDollars(cat.price), labor:''});
+    }
+    toast(`${cat.brand} ${cat.name} added to ${t.name} — set a quantity to pick it`);
+  } else if(kind === 'line'){
+    applyLineProduct(ctx.slice(5), sku);
+  }
+  prodSearchCtx = null; prodSearchQ = '';
+  renderAll();
+}
+// Clicking elsewhere closes the results.
+document.addEventListener('click', () => {
+  if(!prodSearchCtx) return;
+  const box = _prodSearchEl(prodSearchCtx);
+  if(box) box.classList.remove('has-results');
+});
+
+/* ── Supplier picker ─────────────────────────────────────────────────
+   One product, several places to buy it. A strip across the bottom of the
+   product row names where it's buying from — supplier, price, stock, how
+   many carry it — and opens to every supplier, one per line, each with its
+   own price and stock and the cheapest marked. Click one to buy from it:
+   that sets the row's Parts rate; quantity and the rest stay as they are.
+   A product only one supplier carries just names it. `pick` is a handler
+   with __S__ for the supplier id; `key` remembers which strips are open. */
+let supOpen = new Set();
+const _supStock = s => s === 'out' ? 'Out of stock' : s === 'low' ? 'Low stock' : 'In stock';
+const _supPrice = n => '$' + Number(n).toLocaleString('en-US');
+function supplierPickHtml(offers, cur, pick, key){
+  if(!offers || !offers.length) return '';
+  const low = offers[0].price;
+  const curOffer = offers.find(o => o.supplier === cur) || offers[0];
+  const stockCls = st => st === 'out' ? ' is-out' : st === 'low' ? ' is-low' : '';
+  const k = esc(key).replace(/'/g, "\\'");
+  if(offers.length === 1){
+    return `<div class="sup-strip is-single" onclick="event.stopPropagation()">
+      <span class="sup-strip-k">Sold by</span><b>${esc(supplierName(curOffer.supplier))}</b>
+      <span class="sup-stock${stockCls(curOffer.stock)}">${_supStock(curOffer.stock)}</span>
+    </div>`;
+  }
+  const open = supOpen.has(key);
+  const list = offers.map(o => {
+    const on = o.supplier === curOffer.supplier;
+    return `<button type="button" class="sup-opt${on ? ' on' : ''}" role="option" aria-selected="${on}"
+        onclick="event.stopPropagation();${on ? '' : pick.replace('__S__', esc(o.supplier))}">
+      <span class="sup-radio" aria-hidden="true"></span>
+      <span class="sup-opt-name">${esc(supplierName(o.supplier))}</span>
+      ${o.price === low ? '<span class="sup-tag">Lowest</span>' : `<span class="sup-diff">+${_supPrice(o.price - low)}</span>`}
+      <span class="sup-stock${stockCls(o.stock)}">${_supStock(o.stock)}</span>
+      <span class="sup-opt-price">${_supPrice(o.price)}</span>
+    </button>`;
+  }).join('');
+  return `<div class="sup-strip${open ? ' open' : ''}" data-sup="${esc(key)}" onclick="event.stopPropagation()">
+    <button type="button" class="sup-strip-hd" aria-expanded="${open}" onclick="event.stopPropagation();toggleSupStrip('${k}')">
+      <span class="sup-strip-k">Buying from</span><b>${esc(supplierName(curOffer.supplier))}</b>
+      <span class="sup-strip-price">${_supPrice(curOffer.price)}</span>
+      <span class="sup-stock${stockCls(curOffer.stock)}">${_supStock(curOffer.stock)}</span>
+      ${curOffer.price === low ? '<span class="sup-tag">Lowest</span>' : ''}
+      <span class="sup-strip-n">${offers.length} suppliers</span>
+      <svg class="sup-strip-chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg>
+    </button>
+    <div class="sup-list" role="listbox">${list}</div>
+  </div>`;
+}
+// Opened and closed in place: a redraw would lose the user's scroll spot.
+function toggleSupStrip(key){
+  if(supOpen.has(key)) supOpen.delete(key); else supOpen.add(key);
+  document.querySelectorAll('.sup-strip').forEach(el => {
+    if(el.dataset.sup === key){
+      el.classList.toggle('open', supOpen.has(key));
+      const hd = el.querySelector('.sup-strip-hd'); if(hd) hd.setAttribute('aria-expanded', String(supOpen.has(key)));
+    }
+  });
+}
+function setProductSupplier(taskId, optId, prodId, supplier){
+  const t = TASKS.find(x => x.id === taskId); if(!t) return;
+  const o = (t.options || []).find(x => x.id === optId); if(!o) return;
+  const p = (o.products || []).find(x => x.id === prodId); if(!p) return;
+  const offer = offersForSku(p.sku).find(x => x.supplier === supplier); if(!offer) return;
+  p.supplier = supplier;
+  p.parts = _fmtDollars(offer.price);
+  recomputeOptionFromProducts(t, o);
+  toast(`${p.product} · buying from ${supplierName(supplier)} at ${_fmtDollars(offer.price)}`);
+  renderAll();
 }

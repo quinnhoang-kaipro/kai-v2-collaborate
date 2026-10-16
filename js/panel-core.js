@@ -367,7 +367,7 @@ function deptLines(items){
   return [...byKey.values()].sort((a, b) =>
     (order.has(a.key) ? order.get(a.key) : 1e9) - (order.has(b.key) ? order.get(b.key) : 1e9));
 }
-/* "2 needed" when every task counts in each, "410 SF" when they share a
+/* "2 scoped" when every task counts in each, "410 SF" when they share a
    unit, and a plain task count when the units don't add up. */
 function deptLineNeed(items){
   const parsed = items.map(t => {
@@ -382,7 +382,7 @@ function deptLineNeed(items){
   }
   const n = Math.round(parsed.reduce((s, p) => s + p.n, 0) * 100) / 100;
   const unit = parsed[0].unit;
-  if(unit === 'ea') return `${n} needed`;
+  if(unit === 'ea') return `${n} scoped`;
   if(unit === 'sf' || unit === 'lf') return `${n.toLocaleString('en-US')} ${unit.toUpperCase()}`;
   // Countable units read as words, so they take a plural: "2 rooms".
   return `${n.toLocaleString('en-US')} ${unit}${n === 1 || /s$/.test(unit) ? '' : 's'}`;
