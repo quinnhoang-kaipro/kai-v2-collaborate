@@ -711,7 +711,7 @@ function renderSidebar(){
     return;
   }
   if(collapsedGrps===null) collapsedGrps=new Set(groups.slice(1).map(g=>g.key));
-  scroll.innerHTML=groups.map(g=>{
+  scroll.innerHTML=_sbPoLinkHtml() + groups.map(g=>{
     // A department totals what its products cost — it's the shopping view,
     // and labour on top would make the figure useless for a budget at the
     // till. Rooms and contractors total the task, as before.
@@ -3465,6 +3465,26 @@ let openHistoricalId = null;
    re-render, including expanding a row in the Register's ledger, and resetting
    there would yank you to the top mid-read. Only navigation resets. rAF so it
    lands after the new content has been laid out. */
+function toggleWorkExpand(){
+  if(document.body.classList.contains('sb-collapsed')) expandSidebar();
+  else collapseSidebar();
+}
+/* Shop with Kai: the way to the purchase orders, at the head of the
+   Departments view — the view products are picked in, so the orders they
+   end up on are one step away. Opens the orders on the Record tab. */
+function _sbPoLinkHtml(){
+  if(!window.__KAI_SHOP || groupBy !== 'dept' || typeof _poOrders !== 'function'
+     || !WORK_MODES.some(m => m.id === 'artifact')) return '';
+  const {orders, total} = _poOrders();
+  if(!orders.length) return '';
+  const n = orders.filter(o => !o.cancel).length;
+  return `<button type="button" class="sb-po-link" onclick="openPurchaseOrder()" title="Open the purchase orders on the Record tab">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M3 2.5h8v9l-1.5-1-1.5 1-1-1-1 1-1.5-1-1.5 1z"/><path d="M5 5.5h4M5 7.5h4" stroke-linecap="round"/></svg>
+    <span class="sb-po-link-t">Purchase orders</span>
+    <span class="sb-po-link-m">${n} order${n === 1 ? '' : 's'} · ${artMoney(total)} at cost</span>
+    <span class="sb-po-link-go" aria-hidden="true">›</span>
+  </button>`;
+}
 function _artToTop(){
   const wb = document.getElementById('workBody');
   if(!wb) return;
@@ -3517,23 +3537,16 @@ function renderWorkHdr(){
     : '';
   // Copies model owns its own Share affordances (per-copy Share button in the
   // doc-view crumb + per-card Share in the index), so the work-hdr is bare.
-  // Sits ahead of the tabs and only shows while the sidebar is collapsed —
-  // CSS-gated on body.sb-collapsed, since collapsing doesn't re-render this.
-  const showScope = `<button class="sb-show-scope" onclick="expandSidebar()" title="Show the scope list" aria-label="Show scope">
-    Show scope
-    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5 8 6l-3.5 3.5"/></svg>
-  </button>`;
-  /* A way to the purchase order from any tab, at the bar's right end — it is
-     the document people come back to most once products are picked. Lit
-     while it is the thing on screen. Only when the Record tab exists and
-     there is a scope to order from. */
-  const poLink = (window.__KAI_SHOP && TASKS.length && WORK_MODES.some(m => m.id === 'artifact') && typeof openPurchaseOrder === 'function')
-    ? `<button type="button" class="wmode-po" onclick="openPurchaseOrder()">
-        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M3 2.5h8v9l-1.5-1-1.5 1-1-1-1 1-1.5-1-1.5 1z"/><path d="M5 5.5h4M5 7.5h4" stroke-linecap="round"/></svg>
-        Purchase orders
-      </button>`
-    : '';
-  document.getElementById('workHdr').innerHTML = `${showScope}<div class="wmode-tabs">${tabs}</div>${scopeTools}${poLink}`;
+  /* Expand / Collapse, at the bar's right end: gives the work surface the
+     whole panel by shutting the scope list, and brings the list back. The
+     label is CSS-gated on body.sb-collapsed, since
+     collapsing doesn't re-render this bar. */
+  const expandBtn = `<button type="button" class="wmode-expand" onclick="toggleWorkExpand()"
+      title="Expand the work surface" aria-label="Expand or collapse the work surface">
+      <span class="wmode-expand-on"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 2.5h3v3M11.5 2.5 8 6M5.5 11.5h-3v-3M2.5 11.5 6 8"/></svg>Expand</span>
+      <span class="wmode-expand-off"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 8.5 5.5M8.5 2.5v3h3M2 12l3.5-3.5M5.5 11.5v-3h-3"/></svg>Collapse</span>
+    </button>`;
+  document.getElementById('workHdr').innerHTML = `<div class="wmode-tabs">${tabs}</div>${scopeTools}${expandBtn}`;
   // Rebuild the af menu contents now that the button is back in the DOM.
   if(typeof renderFilter === 'function') renderFilter();
 }

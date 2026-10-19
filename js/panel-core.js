@@ -986,16 +986,10 @@ function renderStateBar(){
   if(currentVersionId !== 'v3'){
     actions = `<button class="sb-state-bar-btn" onclick="switchVersion('v3')">Return to current</button>`;
   }
-  // Collapses the sidebar entirely — the same end state as dragging the
-  // resize handle past the left edge. "Show scope" in the work-hdr tab bar
-  // brings it back. Defined in panel-init.js's resize block.
-  const hideScope = `<button class="sb-hide-scope" onclick="collapseSidebar()" title="Hide the scope list" aria-label="Hide scope">
-    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 2.5 4 6l3.5 3.5"/></svg>
-    <span>Hide scope</span>
-  </button>`;
   // Gear sits at the far right, aligned with the per-group duplicate icon
   // column it toggles (those sit flush with the sidebar's right edge too).
-  bar.innerHTML = `${groupBySeg}${filterIcon}${searchBtn}<span class="sb-state-bar-sp"></span>${settingsIcon}${actions}${hideScope}`;
+  // Hide scope gave way to Expand in the work surface's tab bar.
+  bar.innerHTML = `${groupBySeg}${filterIcon}${searchBtn}<span class="sb-state-bar-sp"></span>${settingsIcon}${actions}`;
   _sbFitTools();
   // Remember for renderFilter, which fills the menu; reopening here
   // would show it before it has any options in it.

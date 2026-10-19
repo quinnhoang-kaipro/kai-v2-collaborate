@@ -38,8 +38,9 @@ function renderArtifact(){
 }
 function _renderArtifactIndex(){
   return `<div class="art-index">
+    ${SHOP_WITH_KAI ? _regViewAsHtml() : ''}
     ${_renderRegisterSection()}
-    ${SHOP_WITH_KAI ? _renderPurchaseOrderSection() : _renderHistoricalSection()}
+    ${SHOP_WITH_KAI ? (regViewAs === 'shared' ? '' : _renderPurchaseOrderSection()) : _renderHistoricalSection()}
     ${_renderCopiesSection()}
   </div>`;
 }
@@ -420,9 +421,9 @@ function _poTableHtml(order){
       <tbody>
         ${body || `<tr><td colspan="5" class="po-ord-empty">Nothing on this order.</td></tr>`}
         ${nLines ? `<tr class="reg-row is-grand">
-          <td colspan="2">Order amount<span class="po-ord-sub">${nLines} product${nLines === 1 ? '' : 's'}</span></td>
+          <td colspan="2">Order amount<span class="po-ord-sub">${nLines} product${nLines === 1 ? '' : 's'} · at cost, never includes markup</span></td>
           <td></td><td></td>
-          <td class="reg-num reg-total">${fmt(order.amt)}</td>
+          <td class="reg-num reg-total"><span class="po-at-cost">At cost</span>${fmt(order.amt)}</td>
         </tr>` : ''}
       </tbody>
     </table>`;
@@ -455,7 +456,7 @@ function _renderPurchaseOrderSection(){
         <td class="po-c-src"><span class="po-src-tag">${esc(o.srcLabel)}</span></td>
         <td class="po-c-status"><span class="po-status ${_poStatusCls(o.status)}">${esc(o.status)}</span></td>
         <td class="reg-num po-c-n">${o.lines.length}</td>
-        <td class="reg-num reg-total po-c-amt">${artMoney(o.amt)}</td>
+        <td class="reg-num reg-total po-c-amt"><span class="po-at-cost">At cost</span>${artMoney(o.amt)}</td>
       </tr>`).join('');
   }).join('');
   return `<section class="art-sec art-po" id="artPo">
@@ -476,12 +477,12 @@ function _renderPurchaseOrderSection(){
           ${orders.length ? `<tr class="reg-row is-grand">
             <td class="reg-doc">All orders<span class="po-ord-sub">The materials on the bar above</span></td>
             <td></td><td></td><td></td>
-            <td class="reg-num reg-total">${artMoney(total)}</td>
+            <td class="reg-num reg-total"><span class="po-at-cost">At cost</span>${artMoney(total)}</td>
           </tr>` : ''}
         </tbody>
       </table>
     </div>
-    <div class="po-list-note">Sent orders are never edited. A change goes out as a new order, or as a cancellation.${held.n
+    <div class="po-list-note">Order amounts are at cost and never include markup. Sent orders are never edited. A change goes out as a new order, or as a cancellation.${held.n
       ? ` ${held.n} deferred product${held.n === 1 ? '' : 's'} (${artMoney(held.amt)}) wait for a change order.` : ''}</div>
   </section>`;
 }
@@ -597,6 +598,78 @@ function _regLedger(){
   return {rows, live, derived:true};
 }
 
+/* ── Markup ─────────────────────────────────────────────────────────
+   An org setting (overhead + profit), copied into the job at approval and
+   seen only by the org that set it. Prototype mock: one flat rate, applied
+   on top of the job total for display. The demo toggle shows the three
+   people who look at this page: an org that marks up, one that doesn't,
+   and the customer the org shares it with, who sees a price with the
+   markup folded in and never named. */
+const REG_MARKUP = {pct:20, setAt:'approval'};
+let regViewAs = 'markup';          // 'markup' | 'plain' | 'shared'
+function setRegViewAs(v){
+  regViewAs = v; _regLabOpen = false;
+  if(typeof renderArtifact === 'function') renderArtifact();
+}
+function _regViewAsHtml(){
+  const opts = [['markup', 'Org with markup'], ['plain', 'Org without markup'], ['shared', 'Shared with customer']];
+  return `<div class="reg-viewas">
+    <span class="reg-viewas-k">Demo · Viewing as</span>
+    <div class="sb-tools-seg" role="tablist" aria-label="Viewing as">
+      ${opts.map(([k, l]) => `<button type="button" role="tab" aria-selected="${regViewAs === k}"
+        class="${regViewAs === k ? 'active' : ''}" onclick="setRegViewAs('${k}')">${l}</button>`).join('')}
+    </div>
+  </div>`;
+}
+/* An amount on the basis the page is viewed on: with the markup on top in
+   the markup and shared views, as it is otherwise. Cents, never rounded
+   to dollars, so the rows still add up to the figure above them. */
+function _regPriced(n){
+  if(!SHOP_WITH_KAI || regViewAs === 'plain') return n;
+  return Math.round(n * (1 + REG_MARKUP.pct / 100) * 100) / 100;
+}
+/* Labour by contractor: each task's labour (its total less its materials,
+   as the scope document prints it), for the tasks not waiting on a change
+   order. Adds up to the bar's labour segment. */
+let _regLabOpen = false;
+function toggleRegLabour(ev){
+  if(ev) ev.stopPropagation();
+  _regLabOpen = !_regLabOpen;
+  if(typeof renderArtifact === 'function') renderArtifact();
+}
+document.addEventListener('click', e => {
+  if(_regLabOpen && !e.target.closest('.reg-lab-pop')){ _regLabOpen = false; renderArtifact(); }
+});
+document.addEventListener('keydown', e => {
+  if(_regLabOpen && e.key === 'Escape'){ _regLabOpen = false; renderArtifact(); }
+});
+function _regLabourByContractor(){
+  const by = {};
+  (typeof TASKS !== 'undefined' ? TASKS : []).forEach(t => {
+    if((t.mods || []).indexOf('deferred') !== -1) return;
+    const lab = Math.max(0, dollars(t.cost) - _taskMaterials(t));
+    if(!lab) return;
+    const who = t.gc || 'Not yet assigned';
+    const r = by[who] || (by[who] = {who, amt:0, n:0});
+    r.amt += lab; r.n++;
+  });
+  return Object.keys(by).map(k => by[k]).sort((a, b) => (a.who === 'Not yet assigned') - (b.who === 'Not yet assigned') || b.amt - a.amt);
+}
+function _regLabourPopHtml(){
+  const rows = _regLabourByContractor();
+  const tot = rows.reduce((s, r) => s + r.amt, 0);
+  return `<div class="reg-lab-pop" role="dialog" aria-label="Labour by contractor" onclick="event.stopPropagation()">
+    <div class="reg-lab-pop-hd">Labour by contractor
+      <button type="button" class="reg-lab-pop-x" onclick="toggleRegLabour(event)" aria-label="Close">×</button></div>
+    <ul class="reg-lab-pop-list">${rows.map(r => `<li${r.who === 'Not yet assigned' ? ' class="is-none"' : ''}>
+      <span class="reg-lab-pop-who">${esc(r.who)}<span class="reg-lab-pop-n">${r.n} task${r.n === 1 ? '' : 's'}</span></span>
+      <span class="reg-lab-pop-amt">${artMoney(r.amt)}</span></li>`).join('')}
+      <li class="is-total"><span class="reg-lab-pop-who">Labour</span><span class="reg-lab-pop-amt">${artMoney(tot)}</span></li>
+    </ul>
+    <div class="reg-lab-pop-note">Rates from the Cost Book, copied at approval.</div>
+  </div>`;
+}
+
 function _renderRegisterSection(){
   // An empty scope has no job total to account for, and the seeded version
   // ladder describes work that isn't there. The sidebar already says "Empty
@@ -709,11 +782,31 @@ function _renderRegisterSection(){
   const leadLab = Math.max(0, live - leadMat - leadLater);
   const tenMat = cls.tenant;
   const tenLab = Math.max(0, cls.tenantAll - cls.tenant);
+  const view = regViewAs;
+  const shared = view === 'shared';
+  const livePrice = _regPriced(live);
+  const markupAmt = Math.round((livePrice - live) * 100) / 100;
+  /* Shared with the customer: the markup is folded into the materials and
+     labour of every segment, in proportion, and never named. Not yet
+     ordered is materials and labour too, so it carries its share; labour
+     takes the last cent so the three still add up to the price. */
+  let matShown = leadMat, labShown = leadLab, laterShown = leadLater;
+  let laterSplit = [cls.deferred, Math.max(0, cls.deferredAll - cls.deferred)];
+  if(shared && markupAmt){
+    matShown = _regPriced(leadMat);
+    laterShown = _regPriced(leadLater);
+    labShown = Math.round((livePrice - matShown - laterShown) * 100) / 100;
+    const sm = _regPriced(laterSplit[0]);
+    laterSplit = [sm, Math.round((laterShown - sm) * 100) / 100];
+  }
   const segs = [
-    {key:'mat', icon:'cart', label:'Materials, ordered through Kai', amt:leadMat, tenant:tenMat, link:true},
-    {key:'lab', icon:'hardhat', label:'Labour, paid to contractors', amt:leadLab, tenant:tenLab},
-    {key:'later', icon:'', label:'Not yet ordered', amt:leadLater, sub:'Waiting on a change order', split:[cls.deferred, Math.max(0, cls.deferredAll - cls.deferred)]},
-  ].filter(sg => sg.amt > 0);
+    {key:'mat', icon:'cart', label:'Materials, ordered through Kai', amt:matShown, tenant:shared ? 0 : tenMat, link:shared ? '' : 'regGoToPo()'},
+    {key:'lab', icon:'hardhat', label:'Labour, paid to contractors', amt:labShown, tenant:shared ? 0 : tenLab, link:shared ? '' : 'toggleRegLabour(event)', pop:true},
+    {key:'later', icon:'', label:'Not yet ordered', amt:laterShown, sub:'Waiting on a change order', split:laterSplit},
+    view === 'markup' ? {key:'mk', icon:'', label:'Your markup', amt:markupAmt, sub:'Seen only by your org'} : null,
+  ].filter(sg => sg && sg.amt > 0);
+  const leadLbl = view === 'markup' ? 'Price to customer' : shared ? 'Price' : 'Current job total';
+  const firstShown = _regPriced(first.total), changeShown = _regPriced(approvedChange);
   // Resident-responsible money, in full words: under each segment that
   // carries it when there's room, else one line under the whole bar.
   const resParts = segs.filter(sg => sg.tenant > 0);
@@ -722,10 +815,10 @@ function _renderRegisterSection(){
     : '';
   const totalBar = segs.reduce((a, sg) => a + sg.amt, 0) || 1;
   const lead = `<div class="reg-lead">
-    <div class="reg-lead-lbl">Current job total</div>
+    <div class="reg-lead-lbl">${leadLbl}</div>
     <div class="reg-lead-top">
-    <div class="reg-lead-val">${whole(live)}</div>
-    <div class="reg-lead-sub">Started at ${whole(first.total)}<span class="sep">·</span>${coCount} approved change order${coCount === 1 ? '' : 's'}${approvedChange ? ` (${approvedChange > 0 ? '+' : '−'}${whole(Math.abs(approvedChange))})` : ''}</div>
+    <div class="reg-lead-val">${whole(livePrice)}</div>
+    <div class="reg-lead-sub">Started at ${whole(firstShown)}<span class="sep">·</span>${coCount} approved change order${coCount === 1 ? '' : 's'}${changeShown ? ` (${changeShown > 0 ? '+' : '−'}${whole(Math.abs(changeShown))})` : ''}</div>
     </div>
     <div class="reg-bar" role="img" aria-label="${esc(segs.map(sg => `${sg.label} ${whole(sg.amt)}`).join(', '))}">
       ${segs.map(sg => `<span class="reg-bar-seg is-${sg.key}" style="flex-grow:${sg.amt}" title="${esc(sg.label)} · ${whole(sg.amt)} · ${Math.round(sg.amt / totalBar * 100)}%"></span>`).join('')}
@@ -733,14 +826,16 @@ function _renderRegisterSection(){
     <div class="reg-bar-keys">
       ${segs.map(sg => `<div class="reg-bar-key is-${sg.key}">
         <div class="reg-bar-key-lbl"><span class="reg-bar-swatch is-${sg.key}" aria-hidden="true"></span>${sg.link
-          ? `<button type="button" class="reg-bar-link" onclick="regGoToPo()" title="Go to the purchase orders">${esc(sg.label)}<span aria-hidden="true">›</span></button>`
-          : `<span>${esc(sg.label)}</span>`}</div>
+          ? `<button type="button" class="reg-bar-link" onclick="${sg.link}"${sg.pop ? ` aria-expanded="${_regLabOpen}"` : ''}
+              title="${sg.pop ? 'See who is paid for the labour' : 'Go to the purchase orders'}">${esc(sg.label)}<span aria-hidden="true">›</span></button>`
+          : `<span>${esc(sg.label)}</span>`}${sg.pop && sg.link && _regLabOpen ? _regLabourPopHtml() : ''}</div>
         <div class="reg-bar-key-amt">${whole(sg.amt)}</div>
         ${sg.tenant ? `<div class="reg-bar-key-note is-res">Includes ${whole(sg.tenant)} resident responsible</div>`
           : sg.sub ? `<div class="reg-bar-key-note">${esc(sg.sub)}</div>${sg.split ? `<div class="reg-bar-key-note is-split">${whole(sg.split[0])} materials + ${whole(sg.split[1])} labour</div>` : ''}` : ''}
       </div>`).join('')}
     </div>
-    ${resLine}
+    ${resParts.length ? resLine : ''}
+    ${view === 'markup' ? `<div class="reg-mk-line">Markup ${REG_MARKUP.pct}% · set at ${esc(REG_MARKUP.setAt)}</div>` : ''}
   </div>`;
 
   /* ── The ledger. One row per approved document, then today's total.
@@ -783,12 +878,12 @@ function _renderRegisterSection(){
         <span class="reg-doc-name">${esc(docName(v))}</span>
         <button type="button" class="reg-doc-view" onclick="event.stopPropagation();openHistorical('${v.id}')"
           aria-label="View ${esc(docName(v))}">View</button>
-        ${SHOP_WITH_KAI ? `<span class="po-row-id">${esc(_sowIdFor(v.id))}${ordersLink(v, i)}</span>` : ''}
+        ${SHOP_WITH_KAI ? `<span class="po-row-id">${esc(_sowIdFor(v.id))}${regViewAs === 'shared' ? '' : ordersLink(v, i)}</span>` : ''}
       </td>
       <td class="reg-status">${tag.tag?`<span class="hist-card-tag hist-tag-${esc(tag.tagCls||'')}">${esc(tag.tag)}</span>`:''}</td>
       <td class="reg-num reg-items">${items != null ? items : '—'}</td>
-      <td class="reg-num">${r.change == null ? (SHOP_WITH_KAI ? '—' : 'Approved') : sgn(r.change)}</td>
-      <td class="reg-num reg-total">${fmt(r.total)}</td>
+      <td class="reg-num">${r.change == null ? (SHOP_WITH_KAI ? '—' : 'Approved') : sgn(_regPriced(r.change))}</td>
+      <td class="reg-num reg-total">${fmt(_regPriced(r.total))}</td>
     </tr>`;
     if(!open || !canOpen) return head;
     const ar = _regAddedRevised(v);
@@ -858,7 +953,7 @@ function _renderRegisterSection(){
           <span class="po-row-id">${esc(_sowIdFor(draft.id))}</span></td>
         <td class="reg-status"><span class="reg-draft-tag">Draft · ${esc(who)}'s turn</span></td>
         <td class="reg-num reg-items">${staged.length}</td>
-        <td class="reg-num">${d ? sgn(d) : '—'}</td>
+        <td class="reg-num">${d ? sgn(_regPriced(d)) : '—'}</td>
         <td class="reg-num reg-total is-quiet">In progress</td>
       </tr>`;
   } else if(staged.length){
@@ -887,15 +982,15 @@ function _renderRegisterSection(){
       <table class="reg-table reg-ledger">
         <thead><tr>
           <th class="reg-date">Date</th><th class="reg-doc">Document</th><th class="reg-status">Status</th>
-          <th class="reg-num reg-c-items">Line items</th><th class="reg-num reg-c-change">Change</th><th class="reg-num reg-c-total">Job total</th>
+          <th class="reg-num reg-c-items">Line items</th><th class="reg-num reg-c-change">Change</th><th class="reg-num reg-c-total">${!SHOP_WITH_KAI || regViewAs === 'plain' ? 'Job total' : regViewAs === 'shared' ? 'Price' : 'Price to customer'}</th>
         </tr></thead>
         <tbody>
           ${ledgerRows}
           <tr class="reg-row is-grand">
             <td class="reg-date"></td>
-            <td class="reg-doc"><span class="reg-caret is-blank"></span><span class="reg-doc-name">Current job total</span></td>
+            <td class="reg-doc"><span class="reg-caret is-blank"></span><span class="reg-doc-name">${!SHOP_WITH_KAI || regViewAs === 'plain' ? 'Current job total' : regViewAs === 'shared' ? 'Current price' : 'Current price to customer'}</span></td>
             <td class="reg-status"></td><td class="reg-num reg-items"></td><td class="reg-num"></td>
-            <td class="reg-num reg-total">${fmt(live)}</td>
+            <td class="reg-num reg-total">${fmt(_regPriced(live))}</td>
           </tr>
           ${pendingRow}
         </tbody>
