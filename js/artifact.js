@@ -1304,6 +1304,46 @@ function _renderCopyDoc(copy){
   // the copy at once and redraws the document below — and the shared link
   // shows the copy as it now stands, so the strip says so.
   const f = copy.filters || {};
+  const nSet = COPY_FILTER_CATS.filter(c => _copyFilterValues(f, c.key).length).length;
+  const expiredBanner = expired ? `<div class="copy-expired-banner">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="M7 4v3.5l2 1.2"/></svg>
+    <span><b>This share link expired</b> on ${_fmtDate(copy.expiresAt)}. Recipients can no longer view this copy — edit the expiration below to renew it.</span>
+  </div>` : '';
+  const paper = _renderCopyPaper(copy);
+  return `<div class="copy-doc-wrap">
+    <div class="copy-crumb">
+      <button class="copy-crumb-back" onclick="closeCopy()" title="Back to all copies">
+        <svg viewBox="0 0 8 12" aria-hidden="true"><path d="M6 1.5L1.5 6 6 10.5"/></svg> Back
+      </button>
+      <span class="copy-crumb-div"></span>
+      <span class="copy-crumb-name" title="${esc(copy.name)}">${esc(copy.name)}</span>
+      <button class="copy-crumb-edit" onclick="openEditCopy('${copy.id}')" title="Rename or change filters" aria-label="Edit copy">
+        <svg viewBox="0 0 14 14"><path d="M9 2.5l2.5 2.5-6 6H3v-2.5l6-6z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <span class="copy-crumb-meta" title="Based on ${esc(versionLabel(ver))} · ${expired?'Expired':'Expires'} ${_fmtDate(copy.expiresAt)}">Based on ${esc(versionLabel(ver))} · ${expired?'Expired':'Expires'} ${_fmtDate(copy.expiresAt)}</span>
+      <span class="copy-crumb-sp"></span>
+      <button class="copy-filters-btn${nSet ? ' is-set' : ''}" onclick="openCopyFilters()" title="Change what this copy shows">
+        <svg viewBox="-2 0.5 24 24" fill="none"><path d="M19.5 3.5L11.5 13V23.5L8.5 21.5V13L0.5 3.5V1.5H19.5V3.5Z" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        Filters${nSet ? `<span class="copy-filters-n">${nSet}</span>` : ''}
+      </button>
+      <button class="copy-share-btn" onclick="openCopyShare('${copy.id}')">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M14.5 1.5L7 9M14.5 1.5L10 14.5L7 9L1.5 6L14.5 1.5Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Share
+      </button>
+    </div>
+    <div class="copy-paper">${expiredBanner}${paper}</div>
+  </div>`;
+}
+
+/* ── Editing an open copy from its Filters modal ──
+   Live controls, not a form: the same chips and checklists as the create
+   modal, and a change saves to the copy at once and redraws the document
+   behind — the shared link shows the copy as it now stands, so the modal
+   says so and closes with Done rather than Save. */
+let _stripOpenKey = null;   // which menu is open, kept across the redraw
+function _stripCopy(){ return (typeof openCopyId !== 'undefined' && openCopyId) ? copyById(openCopyId) : null; }
+function _copyFiltersBodyHtml(copy){
+  const f = copy.filters || {};
   const chips = COPY_FILTER_CATS.map(c => {
     const vals = _copyFilterValues(f, c.key);
     const v = !vals.length ? '' : vals.length === 1 ? _copyValueLabel(c.key, vals[0]) : `${vals.length} selected`;
@@ -1316,73 +1356,59 @@ function _renderCopyDoc(copy){
       <div class="copy-gc-menu" role="listbox" aria-multiselectable="true" onclick="event.stopPropagation()">${_copyPickMenuHtml(c, new Set(vals), '_stripPickSet')}</div>
     </div>`;
   }).join('');
-  const sw = (field, label, on) => `<label class="strip-sw" title="${esc(label)}">
-      <span class="copy-switch"><input type="checkbox"${on ? ' checked' : ''} onchange="_stripToggle('${field}', this.checked)"><span class="copy-switch-track" aria-hidden="true"></span></span>
-      <span>${esc(label)}</span>
-    </label>`;
   const nInc = _copyTasks(f).length;
   const anySet = COPY_FILTER_CATS.some(c => _copyFilterValues(f, c.key).length);
-  const strip = `<div class="copy-filter-strip is-live" onclick="_stripMenu(null)">
-    <div class="copy-filter-strip-row">
-      <span class="copy-filter-strip-cap-t">
-        <svg viewBox="0 0 12 12" fill="none"><path d="M2 3h8M3 6h6M4 9h4" stroke-linecap="round"/></svg>
-        Filters
+  const photosOn = f.includePhotos !== false;
+  const toggles = _COPY_TOGGLES.map(tg => {
+    const on = tg.key === 'includePhotos' ? photosOn : !!f[tg.key];
+    if(tg.parent && !photosOn) return '';
+    return `<label class="copy-tgl${tg.parent ? ' is-nested' : ''}">
+      <input type="checkbox" class="copy-cb"${on ? ' checked' : ''} onchange="_stripToggle('${tg.key}', this.checked)">
+      <span class="copy-tgl-text">
+        <span class="copy-tgl-title">${esc(tg.title)}</span>
+        <span class="copy-tgl-desc">${esc(tg.desc)}</span>
       </span>
-      <div class="copy-fgrid strip-chips">${chips}</div>
-      ${anySet ? `<button type="button" class="copy-fsec-clear" onclick="event.stopPropagation();_stripClearAll()">Clear filters</button>` : ''}
-      <span class="copy-filter-count">Includes <b>${nInc}</b> of ${TASKS.length} tasks</span>
+    </label>`;
+  }).join('');
+  return `<p class="copy-form-intro">Changes apply to the shared link right away.</p>
+    <div class="copy-fsec">
+      <div class="copy-fsec-hd">
+        <span class="copy-fsec-title">What to include</span>
+        <span class="copy-fsec-hd-r">
+          ${anySet ? `<button type="button" class="copy-fsec-clear" onclick="event.stopPropagation();_stripClearAll()">Clear filters</button>` : ''}
+          <span class="copy-fsec-match">${nInc ? `<b>${nInc}</b> of ${TASKS.length} tasks` : `<span class="is-none">No tasks match these filters</span>`}</span>
+        </span>
+      </div>
+      <div class="copy-fgrid">${chips}</div>
     </div>
-    <div class="copy-filter-strip-row strip-opts">
-      <span class="copy-filter-strip-cap-t">Recipient sees</span>
-      ${sw('showAmounts', 'Dollar amounts', !!f.showAmounts)}
-      ${sw('includePhotos', 'Photos', f.includePhotos !== false)}
-      ${f.includePhotos !== false ? sw('photosOnly', 'Photos only', !!f.photosOnly) : ''}
-      <span class="strip-live-note">Changes apply to the shared link right away.</span>
-    </div>
-  </div>`;
-  const expiredBanner = expired ? `<div class="copy-expired-banner">
-    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="M7 4v3.5l2 1.2"/></svg>
-    <span><b>This share link expired</b> on ${_fmtDate(copy.expiresAt)}. Recipients can no longer view this copy — edit the expiration below to renew it.</span>
-  </div>` : '';
-  const paper = _renderCopyPaper(copy);
-  return `<div class="copy-doc-wrap">
-    <div class="copy-crumb">
-      <button class="copy-crumb-back" onclick="closeCopy()" title="Back to all copies">
-        <svg viewBox="0 0 8 12" aria-hidden="true"><path d="M6 1.5L1.5 6 6 10.5"/></svg> Back
-      </button>
-      <span class="copy-crumb-div"></span>
-      <span class="copy-crumb-name">${esc(copy.name)}</span>
-      <button class="copy-crumb-edit" onclick="openEditCopy('${copy.id}')" title="Rename or change filters" aria-label="Edit copy">
-        <svg viewBox="0 0 14 14"><path d="M9 2.5l2.5 2.5-6 6H3v-2.5l6-6z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <span class="copy-crumb-meta">Based on ${esc(versionLabel(ver))} · ${expired?'Expired':'Expires'} ${_fmtDate(copy.expiresAt)}</span>
-      <span class="copy-crumb-sp"></span>
-      <button class="copy-share-btn" onclick="openCopyShare('${copy.id}')">
-        <svg viewBox="0 0 16 16" fill="none"><path d="M14.5 1.5L7 9M14.5 1.5L10 14.5L7 9L1.5 6L14.5 1.5Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Share
-      </button>
-    </div>
-    ${strip}
-    <div class="copy-paper">${expiredBanner}${paper}</div>
-  </div>`;
+    <div class="copy-tgls">${toggles}</div>`;
 }
-
-/* ── Editing an open copy from its filter strip ── */
-let _stripOpenKey = null;   // which strip menu is open, kept across the redraw
-function _stripCopy(){ return (typeof openCopyId !== 'undefined' && openCopyId) ? copyById(openCopyId) : null; }
+function _copyFiltersRefresh(){
+  const body = document.getElementById('copyFiltersBody');
+  const c = _stripCopy();
+  if(body && c) body.innerHTML = _copyFiltersBodyHtml(c);
+}
+function openCopyFilters(){
+  if(!_stripCopy()) return;
+  _ensureCopyModals();
+  _stripOpenKey = null;
+  _copyFiltersRefresh();
+  document.getElementById('copyModalScrim').classList.add('open');
+  document.getElementById('copyFiltersModal').classList.add('open');
+}
 function _stripMenu(key){
   const next = (key && _stripOpenKey !== key) ? key : null;
   if(next === _stripOpenKey) return;
   _stripOpenKey = next;
-  document.querySelectorAll('.copy-filter-strip .copy-chip').forEach(el => {
+  document.querySelectorAll('#copyFiltersBody .copy-chip').forEach(el => {
     const on = el.id === 'stripF-' + next;
     el.classList.toggle('open', on);
     el.classList.remove('is-flip');
     if(on){
-      // Open leftward if it would run past the strip's right edge.
+      // Open leftward if it would run past the modal's right edge.
       const menu = el.querySelector('.copy-gc-menu');
-      const strip = el.closest('.copy-filter-strip');
-      if(menu && strip && menu.getBoundingClientRect().right > strip.getBoundingClientRect().right - 8) el.classList.add('is-flip');
+      const box = el.closest('.se-modal');
+      if(menu && box && menu.getBoundingClientRect().right > box.getBoundingClientRect().right - 8) el.classList.add('is-flip');
     }
   });
 }
@@ -1391,6 +1417,7 @@ function _stripSave(mutate, msg){
   c.filters = Object.assign({}, c.filters || {});
   mutate(c.filters);
   renderArtifact();
+  _copyFiltersRefresh();
   // Reopen the menu the user was ticking in; the redraw rebuilt it.
   if(_stripOpenKey){ const k = _stripOpenKey; _stripOpenKey = null; _stripMenu(k); }
   if(msg) toast(msg);
@@ -1590,6 +1617,13 @@ function _ensureCopyModals(){
         <button class="se-btn se-btn-secondary" onclick="closeCopyModals()">Close</button>
       </div>
     </div>
+    <div class="se-modal copy-modal" id="copyFiltersModal">
+      <div class="se-modal-title">Filters</div>
+      <div class="copy-form-body" id="copyFiltersBody" onclick="_stripMenu(null)"></div>
+      <div class="se-modal-actions">
+        <button class="se-btn se-btn-primary" onclick="closeCopyModals()">Done</button>
+      </div>
+    </div>
     <div class="se-modal copy-modal" id="copyFormModal">
       <div class="se-modal-title" id="copyFormTitle">Create a new scope copy</div>
       <div class="copy-form-body" id="copyFormBody"></div>
@@ -1607,6 +1641,9 @@ function closeCopyModals(){
   if(s) s.classList.remove('open');
   if(sh) sh.classList.remove('open');
   if(fm) fm.classList.remove('open');
+  const fl = document.getElementById('copyFiltersModal');
+  if(fl) fl.classList.remove('open');
+  _stripOpenKey = null;
   _copyFormEditingId = null;
 }
 function openCopyShare(id){
@@ -1695,10 +1732,10 @@ let _copyPick = {};               // category key → Set of ticked values in th
 function openNewCopy(){ _openCopyForm(null); }
 function openEditCopy(id){ _openCopyForm(id); }
 const _COPY_TOGGLES = [
-  {id:'copyFormPhotos',     key:'includePhotos', title:'Include photos',      desc:'Include task photos with each scope item.'},
+  {id:'copyFormPhotos',     key:'includePhotos', title:'Show photos',         desc:'Include task photos with each scope item.'},
   // A sub-option of Include photos: only offered while photos are in.
-  {id:'copyFormPhotosOnly', key:'photosOnly',    title:'Photos only',         desc:'Share a gallery of task photos instead of the scope document.', parent:'copyFormPhotos'},
-  {id:'copyFormShowAmt',    key:'showAmounts',   title:'Show dollar amounts', desc:'Include rates, line-item amounts, and document totals — recalculated from the included tasks only.'},
+  {id:'copyFormPhotosOnly', key:'photosOnly',    title:'Only show photos',    desc:'Share a gallery of task photos instead of the scope document.', parent:'copyFormPhotos'},
+  {id:'copyFormShowAmt',    key:'showAmounts',   title:'Show price',          desc:'Include rates, line-item amounts, and document totals — recalculated from the included tasks only.'},
 ];
 function _copyDefaultName(){
   return `Audience Doc - ${_fmtDate(_todayIso())}`;
@@ -1741,13 +1778,10 @@ function _openCopyForm(id){
     const on = !!f[tg.key];
     const parentOn = !tg.parent || f.includePhotos !== false;
     return `<label class="copy-tgl${tg.parent ? ' is-nested' : ''}" for="${tg.id}" id="${tg.id}Row"${parentOn ? '' : ' hidden'}>
+      <input type="checkbox" class="copy-cb" id="${tg.id}"${on ? ' checked' : ''} onchange="_copyFormToggled('${tg.id}')">
       <span class="copy-tgl-text">
         <span class="copy-tgl-title">${esc(tg.title)}</span>
         <span class="copy-tgl-desc">${esc(tg.desc)}</span>
-      </span>
-      <span class="copy-switch">
-        <input type="checkbox" id="${tg.id}"${on ? ' checked' : ''} onchange="_copyFormToggled('${tg.id}')">
-        <span class="copy-switch-track" aria-hidden="true"></span>
       </span>
     </label>`;
   }).join('');
@@ -1773,11 +1807,11 @@ function _openCopyForm(id){
     </label>
     <div class="copy-fsec">
       <div class="copy-fsec-hd">
-        <span class="copy-fsec-hd-l">
-          <span class="copy-fsec-title">What to include</span>
+        <span class="copy-fsec-title">What to include</span>
+        <span class="copy-fsec-hd-r">
+          <button type="button" class="copy-fsec-clear" id="copyFormClear" onclick="_copyPickClearAll()">Clear filters</button>
           <span class="copy-fsec-match" id="copyFormMatch">${_copyMatchLine()}</span>
         </span>
-        <button type="button" class="copy-fsec-clear" id="copyFormClear" onclick="_copyPickClearAll()">Clear filters</button>
       </div>
       <div class="copy-fgrid">${pickers}</div>
     </div>
@@ -1807,7 +1841,7 @@ function _copyPickSummary(c){
 function _copyMatchLine(){
   const n = _copyTasks(_copyPickFilters()).length;
   if(!n) return `<span class="is-none">No tasks match these filters</span>`;
-  return `Includes <b>${n}</b> of ${TASKS.length} tasks`;
+  return `<b>${n}</b> of ${TASKS.length} tasks`;
 }
 // Shared by the create modal and the open copy's filter strip: `set` is
 // what's ticked, `pick` the handler each option calls.

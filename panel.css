@@ -2898,6 +2898,12 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 .copy-crumb-sp{flex:1}
 .copy-share-btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:7px 12px;border:1px solid var(--ink);background:var(--ink);color:var(--white);cursor:pointer;transition:filter .12s}
 .copy-share-btn:hover{filter:brightness(1.12)}
+/* Beside Share: the same shape, outlined rather than filled, with a count of
+   the filter groups in force so a narrowed copy says so before it is opened. */
+.copy-filters-btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:7px 12px;border:1px solid var(--stroke);background:var(--white);color:var(--ink);cursor:pointer}
+.copy-filters-btn:hover,.copy-filters-btn.is-set{border-color:var(--ink)}
+.copy-filters-btn svg{width:12px;height:12px;stroke:currentColor;stroke-width:1.7;fill:none}
+.copy-filters-n{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;background:var(--ink);color:var(--white);font-size:10px;letter-spacing:0}
 .copy-share-btn svg{width:12px;height:12px;stroke:currentColor;stroke-width:1.5;fill:none}
 
 /* Filter strip — sunken tan panel that visually attaches to the doc paper.
@@ -2985,33 +2991,30 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 #copyFormModal{width:560px;padding:22px 24px 22px;max-height:calc(100vh - 40px);overflow-y:auto}
 #copyFormModal .se-modal-title{font-family:var(--body);font-size:24px;font-weight:600;letter-spacing:-.01em}
 #copyFormModal .copy-form-body{gap:10px;margin:6px 0 18px}
-.copy-form-intro{margin:0 0 10px;font-family:var(--body);font-size:15px;line-height:1.5;color:var(--t2)}
+.copy-form-intro{margin:0 0 10px;font-family:var(--body);font-size:14px;line-height:1.5;color:var(--t2)}
 .copy-fld{position:relative;display:block;border:1px solid var(--stroke);background:var(--white);padding:16px 14px 12px;margin-top:6px;transition:border-color .12s}
 .copy-fld:focus-within{border-color:var(--ink)}
-.copy-fld-lbl{position:absolute;top:-7px;left:10px;padding:0 6px;background:var(--white);font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);line-height:1.3}
+.copy-fld-lbl{position:absolute;top:-7px;left:10px;padding:0 6px;background:var(--white);font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);line-height:1.3}
 .copy-fld-input{display:block;width:100%;border:0;outline:none;background:transparent;padding:0;font-family:var(--body);font-size:14px;color:var(--ink);text-overflow:ellipsis}
-.copy-fld-sel .copy-fld-input{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:26px;font-size:15px}
+.copy-fld-sel .copy-fld-input{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:26px;font-size:14px}
 .copy-fld-chev{position:absolute;right:14px;top:50%;width:14px;height:14px;transform:translateY(-50%);fill:none;stroke:var(--t2);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
 .copy-form-note{margin:0 0 6px;font-family:var(--body);font-size:12.5px;color:var(--t2);line-height:1.45}
 /* Recipient options: plain rows, text and switch, split by hairlines. */
-.copy-tgls{display:flex;flex-direction:column;margin-top:10px;border-top:1px solid var(--stroke)}
-.copy-tgl{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:11px 0;border-bottom:1px solid var(--stroke);cursor:pointer}
-.copy-tgl-text{display:flex;flex-direction:column;gap:3px;min-width:0}
-/* Photos only, tucked under Include photos: on the same left edge, a step
-   smaller, with no divider between it and its parent, so it reads as part
-   of it. */
+.copy-tgls{display:flex;flex-direction:column;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--stroke)}
+.copy-tgl{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.copy-tgl .copy-cb{margin-top:2px}
+.copy-tgl-text{display:flex;flex-direction:column;gap:2px;min-width:0}
 .copy-tgl[hidden]{display:none}
-.copy-tgl.is-nested{padding:0 0 11px 0}
-.copy-tgl.is-nested .copy-tgl-title{font-size:13.5px;font-weight:500}
-.copy-tgl.is-nested .copy-switch{transform:scale(.9);transform-origin:right center}
-/* A lighter, dashed rule between the parent and its sub-option: enough to
-   separate the two, quieter than the full rules between option groups. */
-.copy-tgl:has(+ .copy-tgl.is-nested:not([hidden])){border-bottom:1px dashed var(--stroke)}
-.copy-tgl.is-nested{padding-top:11px}
-/* The actions sit below the last option; no rule between them. */
-.copy-tgls .copy-tgl:last-child{border-bottom:0}
+/* Only show photos depends on Show photos (it hides when photos are off),
+   but sits on the same left edge as the other options. */
+.copy-tgl.is-nested{margin:0}
+.copy-tgl.is-nested .copy-tgl-title{font-weight:500}
 .copy-tgl-title{font-family:var(--body);font-size:14px;font-weight:600;color:var(--ink)}
-.copy-tgl-desc{font-family:var(--body);font-size:12.5px;color:var(--t2);line-height:1.4}
+.copy-tgl-desc{font-family:var(--body);font-size:12px;color:var(--t2);line-height:1.4}
+/* The same box the filter menus tick, as a real input. */
+.copy-cb{appearance:none;-webkit-appearance:none;width:16px;height:16px;flex-shrink:0;margin:0;border:1.5px solid var(--midtone,#9B9285);background:var(--white) center/10px 10px no-repeat;cursor:pointer}
+.copy-cb:checked{background-color:var(--ink);border-color:var(--ink);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1.8 5.2l2.1 2.1 4.3-4.6'/%3E%3C/svg%3E")}
+.copy-cb:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .copy-switch{position:relative;flex-shrink:0;width:40px;height:22px}
 .copy-switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
 .copy-switch-track{position:absolute;inset:0;border-radius:11px;background:#C9C0B2;transition:background .15s}
@@ -3030,7 +3033,7 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 .copy-gc-opt{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;background:transparent;border:0;cursor:pointer;text-align:left;font-family:var(--body);font-size:14px;color:var(--ink)}
 .copy-gc-opt:hover{background:var(--sunken)}
 .copy-gc-opt.is-all{border-bottom:1px solid var(--stroke);margin-bottom:2px}
-.copy-gc-box{width:16px;height:16px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid var(--midtone,#9B9285);background:var(--white);font-size:11px;line-height:1;color:var(--white)}
+.copy-gc-box{width:16px;height:16px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid var(--midtone,#9B9285);background:var(--white);font-size:10px;line-height:1;color:var(--white)}
 .copy-gc-opt.on .copy-gc-box{background:var(--ink);border-color:var(--ink)}
 .copy-gc-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .copy-gc-n{flex-shrink:0;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
@@ -3038,16 +3041,16 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
    under them. */
 .copy-fsec{margin-top:8px;padding:0}
 .copy-fsec-hd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px}
-.copy-fsec-title{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
-.copy-fsec-clear{border:0;background:none;padding:0;font-family:var(--body);font-size:12.5px;color:var(--t2);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.copy-fsec-title{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
+.copy-fsec-clear{border:0;background:none;padding:0;font-family:var(--body);font-size:12px;color:var(--t2);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .copy-fsec-clear:hover{color:var(--ink)}
 .copy-fgrid{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 /* Filter chips: one thin-bordered row each, key muted, value in ink once set. */
 .copy-chip{position:relative}
-.copy-chip-btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;background:var(--white);border:1px solid var(--stroke);cursor:pointer;font-family:var(--body);font-size:13px;color:var(--ink);white-space:nowrap;max-width:240px}
+.copy-chip-btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;background:var(--white);border:1px solid var(--stroke);cursor:pointer;font-family:var(--body);font-size:14px;color:var(--ink);white-space:nowrap;max-width:240px}
 .copy-chip-btn:hover{border-color:var(--midtone,#9B9285)}
 .copy-chip.open .copy-chip-btn{border-color:var(--ink)}
-.copy-chip-btn.is-set{background:var(--sunken);border-color:var(--ink)}
+.copy-chip-btn.is-set{background:var(--white);border-color:var(--ink)}
 .copy-chip-k{color:var(--t2)}
 .copy-chip-v{font-weight:600;overflow:hidden;text-overflow:ellipsis}
 .copy-chip-v:empty{display:none}
@@ -3060,7 +3063,7 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 /* The Filters menu's marks: a flag (red when anything carries it) and the
    status diamonds — outline for not yet, half for under way, solid for
    done, in the stage's colour. */
-.copy-gc-sub{padding:8px 10px 2px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.copy-gc-sub{padding:8px 10px 2px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
 .copy-gc-mark{flex-shrink:0}
 .copy-gc-flag{width:12px;height:12px;fill:var(--midtone,#9B9285);stroke:var(--midtone,#9B9285);stroke-width:1.2;stroke-linejoin:round}
 .copy-gc-flag.is-on{fill:#C0443A;stroke:#C0443A}
@@ -3073,14 +3076,14 @@ body.sb-collapsed .sb-show-scope:hover{background:var(--sunken);color:var(--ink)
 .copy-gc-dia.st-rework{border-color:#C9786F}
 .copy-gc-dia.st-completed{background:#3F7A4F;border-color:#3F7A4F}
 .copy-gc-opt.is-empty .copy-gc-mark{opacity:.45}
-.copy-fsec-hd-l{display:inline-flex;align-items:baseline;gap:10px}
-.copy-fsec-match{margin-top:0;font-size:12px !important;font-family:var(--body);font-size:13px;color:var(--t2)}
+.copy-fsec-hd-r{display:inline-flex;align-items:baseline;gap:12px}
+.copy-fsec-match{margin-top:0;font-family:var(--body);font-size:12px;color:var(--t2)}
 .copy-fsec-match b{color:var(--ink)}
 .copy-fsec-match .is-none{color:var(--error)}
 #copyFormModal .se-modal-actions .se-btn{height:40px;padding:0 20px}
 #copyFormModal .se-btn-secondary{background:var(--white);border:1px solid var(--stroke);color:var(--ink)}
-#copyFormModal .se-btn-primary{background:var(--ink);border-color:var(--ink);color:var(--white)}
-#copyFormModal .se-btn-primary:hover{filter:none;background:#000}
+#copyFormModal .se-btn-primary,#copyFiltersModal .se-btn-primary{background:var(--ink);border-color:var(--ink);color:var(--white)}
+#copyFormModal .se-btn-primary:hover,#copyFiltersModal .se-btn-primary:hover{filter:none;background:#000}
 
 /* Task photo thumbnail strip (bottom of each task in the artifact) */
 .art-photos{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
@@ -5620,17 +5623,16 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
    count at the right, then what the recipient sees as small switches. */
 .copy-filter-strip.is-live{gap:10px}
 .copy-filter-strip-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px}
-.copy-filter-strip.is-live .copy-filter-strip-cap-t{display:inline-flex;align-items:center;gap:6px;min-width:96px}
+.copy-filter-strip.is-live .copy-filter-strip-cap-t{display:inline-flex;align-items:center;gap:6px;margin-right:4px}
 .copy-filter-strip.is-live .copy-filter-strip-cap-t svg{width:11px;height:11px;stroke:var(--ink);stroke-width:1.7;fill:none}
 .strip-chips{margin-top:0}
 .strip-chips .copy-chip-btn{height:30px}
-.strip-opts{padding-top:10px;border-top:1px solid var(--stroke)}
-.strip-sw{display:inline-flex;align-items:center;gap:8px;font-family:var(--body);font-size:13px;color:var(--ink);cursor:pointer;margin-right:8px}
-.strip-sw .copy-switch{width:32px;height:18px}
-.strip-sw .copy-switch-track{border-radius:9px}
-.strip-sw .copy-switch-track::after{width:14px;height:14px}
-.strip-sw .copy-switch input:checked + .copy-switch-track::after{transform:translateX(14px)}
-.strip-live-note{margin-left:auto;font-family:var(--body);font-size:12px;color:var(--t3);font-style:italic}
+/* Filters and what the recipient sees share one line: chips, the
+   boxes, and the count pushed to the end. */
+.strip-opts{display:inline-flex;align-items:center;gap:12px;margin-left:8px}
+.strip-sw{display:inline-flex;align-items:center;gap:7px;font-family:var(--body);font-size:13px;color:var(--ink);cursor:pointer;white-space:nowrap}
+.strip-count{margin-left:auto;display:inline-flex;align-items:baseline;gap:12px}
+.strip-count .copy-filter-count{margin-left:0}
 
 /* ── Purchase order (Record tab) ── */
 .po-ord .po-ord-item{width:99%}
@@ -5699,10 +5701,18 @@ body.sbopt-c .grp.is-selgrp .grp-hdr{background:#EDE9DE!important}
 .copy-crumb-back{padding:0;font-size:10px;font-weight:700;letter-spacing:.1em;gap:6px}
 .copy-crumb-name{line-height:1}
 .copy-crumb-meta{padding-top:1px}
+/* One line, always. The controls keep their size; the text gives way —
+   the meta first, then the name — and ends in an ellipsis. */
+.copy-crumb{flex-wrap:nowrap}
+.copy-crumb > *{flex-shrink:0}
+.copy-crumb .copy-crumb-name,.copy-crumb .copy-crumb-meta{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.copy-crumb .copy-crumb-name{flex-shrink:1}
+.copy-crumb .copy-crumb-meta{flex-shrink:10000}
+.copy-crumb .copy-crumb-sp{min-width:0}
 .copy-crumb > *{line-height:1}
 .copy-crumb-back svg{width:6px;height:10px;stroke:currentColor;stroke-width:1.6;fill:none;
   stroke-linecap:round;stroke-linejoin:round}
-.copy-crumb .hist-doc-tag,.copy-crumb .hist-print-btn,.copy-crumb .copy-share-btn{
+.copy-crumb .hist-doc-tag,.copy-crumb .hist-print-btn,.copy-crumb .copy-share-btn,.copy-crumb .copy-filters-btn{
   box-sizing:border-box;height:28px;padding:0 12px;font-size:9.5px;letter-spacing:.1em;line-height:1}
 .art-head{flex-wrap:wrap;row-gap:0}
 .art-head-totals{display:grid;grid-template-columns:96px 136px;grid-template-rows:auto auto;row-gap:6px;
