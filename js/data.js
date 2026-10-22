@@ -12,7 +12,6 @@ const FLAGS = {
   unassigned:{label:'Unassigned contractor', cls:'c-unassigned'},
   no_gc:     {label:'Unassigned contractor', cls:'c-unassigned'},
   oos:       {label:'Out of stock',          cls:'c-oos'},
-  no_product:{label:'Missing product',       cls:'c-missing'},
   edit_req:  {label:'Edit requests',         cls:'c-editreq'},
   co_open:   {label:'Change orders',         cls:'c-coopen'},
 };
@@ -28,7 +27,7 @@ const STATUS = {
   in_review:   {label:'In review',      cls:'s-inreview'},
   complete:    {label:'Completed',      cls:'s-complete'},
   needs_rework:{label:'Rework',         cls:'s-rework'},
-  missing:     {label:'Missing details',cls:'s-missing'},
+  missing:     {label:'Missing info',cls:'s-missing'},
   approved:    {label:'Approved',       cls:'s-complete'},   // relabelled per stage — see approveDoneLabel
   edit_req:    {label:'Edit Requested', cls:'s-inreview'},
 };
@@ -102,7 +101,7 @@ const ROOMS = ['Kitchen','Living Room','Master Bath','Bathroom','Master Bed','Be
 const PHOTO_PEOPLE = [
   {who:'J. Chen',    role:'Field Agent'},
   {who:'M. Alvarez', role:'Field Agent'},
-  {who:'T. Okafor',  role:'Manager'},
+  {who:'T. Okafor',  role:'Job manager'},
   {who:'S. Patel',   role:'Ops'},
   {who:'R. Brooks',  role:'Field Agent'},
 ];
@@ -121,12 +120,27 @@ let _pid = 1;
 // Each photo belongs to a "walk" — a scheduled site visit that captured
 // evidence. Users filter Pano/Gallery by walk to see how conditions
 // evolved: Initial → Progress → Change order → Progress → Closeout.
+/* Dates sit inside the project's own chronology rather than beside it. The
+   scope opens Apr 2 (VER.orig.opened in js/a2/a2-data.js) and is approved
+   Apr 12; Change Order 1 lands Apr 22 and Change Order 2 Apr 30. Each walk is
+   placed against those boundaries so "the latest photo as of this date" is a
+   real question with a changing answer:
+
+     initial      Apr 2   the scan the scope was built from
+     progress_1   Apr 14  first visit after the scope was approved
+     change_order Apr 21  the visit that surfaced Change Order 1
+     progress_2   Apr 27  between the two change orders
+     close_out    May 18  after the change history ends — construction done
+
+   These used to run Jan 8 – Mar 15, entirely before the scope existed, which
+   made every date-based lookup return the same photo no matter where the
+   playhead sat. Keep them ordered and inside the project's timeline. */
 const WALKS = [
-  {id:'initial',    label:'Initial walk',      short:'Initial',     date:'Jan 8, 2026',  conductor:'Sarah M.',   color:'#555555'},
-  {id:'progress_1', label:'Progress walk 1',   short:'Progress 1',  date:'Feb 3, 2026',  conductor:'Marcus W.',  color:'#567DA3'},
-  {id:'change_order',label:'Change order walk',short:'Change order',date:'Feb 17, 2026', conductor:'Diana R.',   color:'#B3643E'},
-  {id:'progress_2', label:'Progress walk 2',   short:'Progress 2',  date:'Feb 24, 2026', conductor:'Marcus W.',  color:'#5BAED4'},
-  {id:'close_out',  label:'Closeout walk',     short:'Closeout',    date:'Mar 15, 2026', conductor:'Sarah M.',   color:'#60926C'},
+  {id:'initial',    label:'Initial walk',      short:'Initial',     date:'Apr 2, 2026',  conductor:'Sarah M.',   color:'#555555'},
+  {id:'progress_1', label:'Progress walk 1',   short:'Progress 1',  date:'Apr 14, 2026', conductor:'Marcus W.',  color:'#567DA3'},
+  {id:'change_order',label:'Change order walk',short:'Change order',date:'Apr 21, 2026', conductor:'Diana R.',   color:'#B3643E'},
+  {id:'progress_2', label:'Progress walk 2',   short:'Progress 2',  date:'Apr 27, 2026', conductor:'Marcus W.',  color:'#5BAED4'},
+  {id:'close_out',  label:'Closeout walk',     short:'Closeout',    date:'May 18, 2026', conductor:'Sarah M.',   color:'#60926C'},
 ];
 // ── Room-color palette ────────────────────────────────────────────
 // Each room gets a signature color that shows up as a 2px outline on
@@ -184,15 +198,49 @@ function seedPhotos(){
   const walkIds = WALKS.map(w => w.id);
   let walkIdx = 0;
   const pickWalk = () => walkIds[walkIdx++ % walkIds.length];
+  /* Everything after a task's first shot comes from a later visit — and the
+     progress walks come first in that queue, ahead of the change-order and
+     closeout walks. In date order the change-order walk sits between the two
+     progress walks, so filling the queue in date order put a line's second shot
+     there and left Progress 2 — the default second date row — with nothing in it
+     at all. A routine progress photo belongs to a progress visit; the other two
+     walks exist for their own reasons. */
+  const laterWalks = ['progress_1', 'progress_2', 'change_order', 'close_out']
+    .filter(id => walkIds.includes(id))
+    .concat(walkIds.slice(1).filter(id => !['progress_1','progress_2','change_order','close_out'].includes(id)));
   ROOMS.forEach((room,ri)=>{
     const base=ri*13, gn=gCounts[ri]||2;
     for(let i=0;i<gn;i++) PHOTOS.push({id:_pid++, seed:base+i, room, kind:'group', task:null, walk:pickWalk()});
     let s=ri*13+50;
     TASKS.filter(t=>t.room===room).forEach(t=>{
-      for(let k=0;k<(t.photos||0);k++) PHOTOS.push({id:_pid++, seed:s++, room, kind:'task', task:t.code, walk:pickWalk()});
+      for(let k=0;k<(t.photos||0);k++){
+        // A task's FIRST shot is always the initial walk — that scan is what
+        // the task was scoped from, so every scoped line has evidence dated
+        // day one. Later shots come from the visits that followed. Without
+        // this, round-robin left most lines with nothing dated before the
+        // scope was even approved, and any "latest photo as of <date>" lookup
+        // came up empty for them through the whole draft and review phase.
+        /* And they come in order: shot two is the next visit, shot three the one
+           after. A global round-robin scattered a single task's shots across
+           unrelated walks, which left most walks holding a photo of one task per
+           room — so Progress, filtered to tasks with photos, showed a room and
+           then jumped straight to the next room. A task's photos are a sequence
+           in time; numbering them like one is both truer and denser per walk. */
+        /* One shot per later visit, except that a line photographed four or more
+           times got a pair on its last — a wide and a detail of finished work.
+           Pairing on the FIRST later visit instead emptied every walk after it,
+           since no task here has enough shots to cover five walks and double up
+           early as well. */
+        const n = t.photos || 0;
+        const later = (n >= 4 && k === n - 1) ? k - 2 : k - 1;
+        const walk = (k === 0)
+          ? walkIds[0]
+          : (laterWalks.length ? laterWalks[Math.min(later, laterWalks.length - 1)] : walkIds[0]);
+        PHOTOS.push({id:_pid++, seed:s++, room, kind:'task', task:t.code, walk});
+      }
     });
   });
-  for(let i=0;i<9;i++) PHOTOS.push({id:_pid++, seed:900+i, room:'Project', kind:'unsorted', task:null, walk:pickWalk()});
+  for(let i=0;i<9;i++) PHOTOS.push({id:_pid++, seed:900+i, room:'Job', kind:'unsorted', task:null, walk:pickWalk()});
   // One pass at the end rather than threading it through each push.
   PHOTOS.forEach((ph, n) => Object.assign(ph, _seedPhotoProvenance(ph.walk, n)));
   _seedCurbsidePhotos();
@@ -221,6 +269,18 @@ const OPTIONS = ['Replace','Install','Reface','Repair','Remove','Full repaint','
    the one thing distinguishing step 5 from step 6. */
 const WORK_TRACK = new URLSearchParams(window.__KAI_QS || window.location.search).get('track') || '';
 const IS_CONTRACTOR = new URLSearchParams(window.__KAI_QS || window.location.search).get('role') === 'contractor';
+/* Which role is looking. The shell passes this for every role now, not just the
+   contractor — surfaces inside the panel that offer a role-specific action read
+   it. Defaults to the project manager so a panel opened without a query string behaves as it
+   always did. */
+const USER_ROLE = new URLSearchParams(window.__KAI_QS || window.location.search).get('role') || 'manager';
+/* Document lock state, from the shell's one mapping: 'draft' | 'locked' |
+   'approved'. Mirrored onto <body> as lock-<state> so styling can respond
+   without every surface re-deriving it from the stage. */
+const DOC_LOCK = new URLSearchParams(window.__KAI_QS || window.location.search).get('lock') || 'draft';
+document.addEventListener('DOMContentLoaded', () => {
+  document.body.classList.add('lock-' + DOC_LOCK);
+});
 const MY_CONTRACTOR = 'Apex Carpentry';
 
 const TASKS = [
@@ -234,13 +294,75 @@ const TASKS = [
   {id:8, code:'MBA-CD88', room:'Master Bath', name:'Double vanity replacement with integrated quartz top and undermount sinks', opt:'Replace : 48 inch furniture-style double vanity, soft-close drawers, brushed gold hardware (design pending)', gc:'Stone Bros', product:'(design pending : awaiting homeowner selection from the three shortlisted furniture-style vanity options)', qty:'1 ea', rate:'$1,900', cost:'$1,900', photos:2, flags:[], mods:['deferred'], status:'pending', desc:'Remove the existing single vanity and disconnect plumbing. Supply and install a new 48-inch furniture-style double vanity with a single-slab quartz top, two undermount porcelain sinks, and two widespread faucets. Includes new shutoff valves, supply lines, P-traps, and reconnection to existing drain. Final vanity model, finish, and hardware are pending homeowner selection; pricing shown is an allowance and will be trued up once the selection is locked. Confirm rough-in dimensions against the selected unit before ordering.', pcost:'$1,400', notes:4},
   {id:9, code:'MBA-4739', room:'Master Bath', name:'Shower wall and floor tile with waterproofing and linear drain', opt:'Replace : full demo to studs, redgard waterproofing, large-format porcelain wall tile with mosaic floor (design pending)', gc:null, product:'(design pending : large-format porcelain shower wall tile plus coordinating mosaic floor tile, selection in progress)', qty:'60 SF', rate:'$40', cost:'$2,400', photos:3, flags:['unassigned'], mods:['deferred'], status:'pending', desc:'Demolish the existing shower surround down to the studs and subfloor. Frame and slope the shower pan, install a linear drain, and apply a full liquid waterproofing membrane across the pan and walls to 6 inches above the showerhead. Set large-format porcelain wall tile and a coordinating mosaic floor tile per the pending design selection, including a recessed niche, bullnose or metal trim on all exposed edges, and color-matched grout and silicone. Contractor not yet assigned; tile selection still in progress with the homeowner. Confirm waterproofing inspection is scheduled before any tile is set.', pcost:'$1,600', notes:2},
   {id:10, code:'MBA-C0EA', room:'Master Bath', name:'Toilet', opt:'Replace', gc:'Stone Bros', product:'Kohler Cimarron', qty:'1 ea', rate:'$540', cost:'$540', photos:1, flags:[], mods:[], status:'complete', desc:'Remove and reset toilet with new wax ring and supply line.', pcost:'$420', notes:0},
-  {id:11, code:'BTH-3A9B', room:'Bathroom', name:'Vanity', opt:'Reface', gc:'Apex Carpentry', product:'(not selected)', qty:'1 ea', rate:'$760', cost:'$760', photos:2, flags:['missing'], mods:[], status:'pending', desc:'Reface existing vanity cabinet, new door and drawer fronts. Product not yet selected.', pcost:'$300', notes:1},
+  {id:11, code:'BTH-3A9B', room:'Bathroom', name:'Vanity', opt:'Replace', gc:'Apex Carpentry', product:'(not selected)', qty:'1 ea', rate:'$760', cost:'$760', photos:2, flags:['missing'], mods:[], status:'pending', desc:'Reface existing vanity cabinet, new door and drawer fronts. Product not yet selected.', pcost:'$300', notes:1},
   {id:12, code:'BTH-B44C', room:'Bathroom', name:'Flooring', opt:'Replace : tile', gc:'FloorWorks', product:'Daltile Concrete Look 12x24', qty:'48 SF', rate:'$24.6', cost:'$1,180', photos:3, flags:[], mods:[], status:'not_started', desc:'Install porcelain tile flooring with backer board and grout.', pcost:'$760', notes:0},
   {id:13, code:'MBD-2DFD', room:'Master Bed', name:'Flooring', opt:'Replace : carpet', gc:'FloorWorks', product:'Mohawk SmartStrand Silk', qty:'1 room', rate:'$1,540', cost:'$1,540', photos:2, flags:[], mods:[], status:'in_progress', desc:'Remove old carpet, install new carpet and pad in master bedroom.', pcost:'$1,100', notes:2},
   {id:14, code:'MBD-A7AE', room:'Master Bed', name:'Closet', opt:'Add shelving', gc:null, product:'ClosetMaid ShelfTrack', qty:'1 kit', rate:'$460', cost:'$460', photos:1, flags:['unassigned'], mods:[], status:'not_started', desc:'Add wire shelving system to master closet. Contractor not yet assigned.', pcost:'$340', notes:1},
   {id:15, code:'BD2-215F', room:'Bedroom 2', name:'Paint', opt:'Full repaint', gc:'FloorWorks', product:'SW Pure White 7005', qty:'1 room', rate:'$620', cost:'$620', photos:2, flags:[], mods:['tenant'], status:'complete', desc:'Repaint bedroom walls and trim, two coats. Resident electing this color; resident pays.', pcost:'$180', notes:0},
   {id:16, code:'GAR-9B10', room:'Garage', name:'Door opener', opt:'Replace', gc:'Stone Bros', product:'Chamberlain B970 Smart', qty:'1 ea', rate:'$520', cost:'$520', photos:1, flags:[], mods:[], status:'in_review', desc:'Replace garage door opener with smart unit. Reuse existing rail if compatible.', pcost:'$420', notes:1},
+  // Shared across rooms on purpose, so the Departments view has lines with
+  // several tasks in them: door hardware in four rooms, a second toilet,
+  // paint, carpet, lighting, fans, detectors, blinds and exhaust fans.
+  {id:17, code:'BTH-7C21', room:'Bathroom', name:'Toilet', opt:'Replace', gc:'Stone Bros', product:'Kohler Cimarron', qty:'1 ea', rate:'$410', cost:'$410', photos:1, flags:[], mods:[], status:'not_started', desc:'Remove and reset toilet with new wax ring, closet bolts and supply line. Match the Master Bath model.', pcost:'$320', notes:0},
+  {id:18, code:'MBD-5E40', room:'Master Bed', name:'Paint', opt:'Full repaint', gc:'FloorWorks', product:'SW Agreeable Gray 7029', qty:'1 room', rate:'$620', cost:'$620', photos:1, flags:[], mods:[], status:'pending', desc:'Patch, prime and repaint walls and ceiling. Two coats, same colour as the living room.', pcost:'$180', notes:0},
+  {id:19, code:'BTH-1D8A', room:'Bathroom', name:'Paint', opt:'Full repaint', gc:'FloorWorks', product:'SW Agreeable Gray 7029', qty:'1 room', rate:'$360', cost:'$360', photos:1, flags:[], mods:[], status:'not_started', desc:'Repaint walls and ceiling in a moisture-resistant finish.', pcost:'$90', notes:0},
+  {id:20, code:'KIT-3F02', room:'Kitchen', name:'Paint', opt:'Full repaint', gc:'FloorWorks', product:'SW Agreeable Gray 7029', qty:'1 room', rate:'$540', cost:'$540', photos:1, flags:[], mods:[], status:'pending', desc:'Repaint walls and ceiling after cabinets and backsplash are in.', pcost:'$140', notes:0},
+  {id:21, code:'BD2-8A3C', room:'Bedroom 2', name:'Flooring', opt:'Replace : carpet', gc:'FloorWorks', product:'Mohawk SmartStrand Silk', qty:'1 room', rate:'$1,280', cost:'$1,280', photos:2, flags:[], mods:[], status:'not_started', desc:'Remove old carpet, install new carpet and pad. Match the master bedroom.', pcost:'$920', notes:0},
+  {id:22, code:'KIT-L1A7', room:'Kitchen', name:'Kitchen lighting', opt:'Replace : flush mount LED', gc:'BrightElectric', product:'Hampton Bay 13 in. LED Flush Mount', qty:'3 ea', rate:'$127', cost:'$380', photos:1, flags:[], mods:[], status:'pending', desc:'Replace three ceiling fixtures with flush-mount LED. Reuse existing boxes.', pcost:'$165', notes:0},
+  {id:23, code:'GAR-L2B4', room:'Garage', name:'Garage lighting', opt:'Replace : LED shop lights', gc:'BrightElectric', product:'Lithonia 4 ft LED Shop Light', qty:'4 ea', rate:'$65', cost:'$260', photos:1, flags:[], mods:[], status:'not_started', desc:'Replace fluorescent tubes with linkable LED shop lights.', pcost:'$140', notes:0},
+  {id:24, code:'BD2-L3C9', room:'Bedroom 2', name:'Ceiling light fixture', opt:'Replace : flush mount LED', gc:'BrightElectric', product:'Hampton Bay 13 in. LED Flush Mount', qty:'1 ea', rate:'$140', cost:'$140', photos:1, flags:[], mods:[], status:'not_started', desc:'Replace the dome light with a flush-mount LED fixture.', pcost:'$55', notes:0},
+  {id:25, code:'MBD-F4D1', room:'Master Bed', name:'Ceiling fan', opt:'Replace : 52 inch with light kit', gc:'BrightElectric', product:'Hunter Dempsey 44"', qty:'1 ea', rate:'$320', cost:'$320', photos:1, flags:[], mods:[], status:'not_started', desc:'Replace existing fan. Confirm the box is fan-rated before hanging.', pcost:'$190', notes:0},
+  {id:26, code:'BD2-F5E2', room:'Bedroom 2', name:'Ceiling fan', opt:'Replace : 52 inch with light kit', gc:'BrightElectric', product:'Hunter Dempsey 44"', qty:'1 ea', rate:'$320', cost:'$320', photos:1, flags:[], mods:[], status:'not_started', desc:'Replace existing fan. Same model as the master bedroom.', pcost:'$190', notes:0},
+  {id:27, code:'LIV-S6A3', room:'Living Room', name:'Smoke and CO detectors', opt:'Replace : hardwired combo', gc:'BrightElectric', product:'First Alert SCO5CN Combo', qty:'2 ea', rate:'$90', cost:'$180', photos:1, flags:[], mods:[], status:'pending', desc:'Replace expired detectors with hardwired smoke and CO combos.', pcost:'$70', notes:0},
+  {id:28, code:'MBD-S7B4', room:'Master Bed', name:'Smoke and CO detectors', opt:'Replace : hardwired combo', gc:'BrightElectric', product:'First Alert SCO5CN Combo', qty:'1 ea', rate:'$90', cost:'$90', photos:1, flags:[], mods:[], status:'not_started', desc:'Replace the bedroom detector with a hardwired combo unit.', pcost:'$35', notes:0},
+  {id:29, code:'BD2-S8C5', room:'Bedroom 2', name:'Smoke and CO detectors', opt:'Replace : hardwired combo', gc:'BrightElectric', product:'First Alert SCO5CN Combo', qty:'1 ea', rate:'$90', cost:'$90', photos:1, flags:[], mods:[], status:'not_started', desc:'Replace the bedroom detector with a hardwired combo unit.', pcost:'$35', notes:0},
+  {id:30, code:'LIV-B9D6', room:'Living Room', name:'Window blinds', opt:'Replace : 2 inch faux wood', gc:'Apex Carpentry', product:'Bali 2 in. Faux Wood Blind, White', qty:'3 ea', rate:'$103', cost:'$310', photos:1, flags:[], mods:[], status:'pending', desc:'Measure and replace three window blinds. Inside mount.', pcost:'$165', notes:0},
+  {id:31, code:'MBD-BAE7', room:'Master Bed', name:'Window blinds', opt:'Replace : 2 inch faux wood', gc:'Apex Carpentry', product:'Bali 2 in. Faux Wood Blind, White', qty:'2 ea', rate:'$103', cost:'$206', photos:1, flags:[], mods:[], status:'not_started', desc:'Measure and replace two window blinds. Inside mount.', pcost:'$110', notes:0},
+  {id:32, code:'BD2-BBF8', room:'Bedroom 2', name:'Window blinds', opt:'Replace : 2 inch faux wood', gc:'Apex Carpentry', product:'Bali 2 in. Faux Wood Blind, White', qty:'2 ea', rate:'$103', cost:'$206', photos:1, flags:[], mods:[], status:'not_started', desc:'Measure and replace two window blinds. Inside mount.', pcost:'$110', notes:0},
+  {id:33, code:'MBA-E1A9', room:'Master Bath', name:'Exhaust fan', opt:'Replace : 80 CFM, humidity sensing', gc:'BrightElectric', product:'Panasonic WhisperGreen 80 CFM', qty:'1 ea', rate:'$290', cost:'$290', photos:1, flags:[], mods:[], status:'not_started', desc:'Replace the exhaust fan with a humidity-sensing unit. Duct to exterior.', pcost:'$165', notes:0},
+  {id:34, code:'BTH-E2B1', room:'Bathroom', name:'Exhaust fan', opt:'Replace : 80 CFM, humidity sensing', gc:'BrightElectric', product:'Panasonic WhisperGreen 80 CFM', qty:'1 ea', rate:'$290', cost:'$290', photos:1, flags:[], mods:[], status:'not_started', desc:'Replace the exhaust fan with a humidity-sensing unit. Duct to exterior.', pcost:'$165', notes:0},
+  {id:35, code:'MBD-H3C2', room:'Master Bed', name:'Door hardware', opt:'Replace : passage knobs, satin nickel', gc:'Apex Carpentry', product:'Kwikset Tylo Passage Knob, Satin Nickel', qty:'2 ea', rate:'$25', cost:'$50', photos:1, flags:[], mods:[], status:'not_started', desc:'Replace passage knobs on the bedroom and closet doors.', pcost:'$36', notes:0},
+  {id:36, code:'BD2-H4D3', room:'Bedroom 2', name:'Door hardware', opt:'Replace : passage knobs, satin nickel', gc:'Apex Carpentry', product:'Kwikset Tylo Passage Knob, Satin Nickel', qty:'2 ea', rate:'$25', cost:'$50', photos:1, flags:[], mods:[], status:'not_started', desc:'Replace passage knobs on the bedroom and closet doors.', pcost:'$36', notes:0},
+  {id:37, code:'BTH-H5E4', room:'Bathroom', name:'Door hardware', opt:'Replace : privacy knob, satin nickel', gc:'Apex Carpentry', product:'Kwikset Tylo Privacy Knob, Satin Nickel', qty:'1 ea', rate:'$25', cost:'$25', photos:1, flags:[], mods:[], status:'not_started', desc:'Replace the bathroom door knob with a privacy knob.', pcost:'$20', notes:0},
+  {id:38, code:'MBA-H6F5', room:'Master Bath', name:'Door hardware', opt:'Replace : privacy knob, satin nickel', gc:'Apex Carpentry', product:'Kwikset Tylo Privacy Knob, Satin Nickel', qty:'1 ea', rate:'$25', cost:'$25', photos:1, flags:[], mods:[], status:'not_started', desc:'Replace the bathroom door knob with a privacy knob.', pcost:'$20', notes:0},
 ];
+
+/* The template this job was scoped from: every task it offers, room by room.
+   Most are already in the scope — that is where the scope came from — and
+   the rest are the ones nobody has added yet. Search surfaces those so they
+   can be added without leaving it. A template task is "in the scope" when a
+   task in the same room carries its name. `opt` and `cost` are the
+   template's defaults, which the new task starts from. */
+const JOB_TEMPLATE = {
+  name: 'ATL Metro Turn Template 01:09:26',
+  tasks: [
+    {room:'Kitchen',     name:'Cabinets',             opt:'Replace : shaker, white'},
+    {room:'Kitchen',     name:'Countertops',          opt:'Replace : quartz'},
+    {room:'Kitchen',     name:'Appliances',           opt:'Replace : full suite'},
+    {room:'Kitchen',     name:'Sink and faucet',      opt:'Replace : undermount, pull-down faucet', cost:'$640'},
+    {room:'Kitchen',     name:'Kitchen lighting',     opt:'Replace : flush mount LED',             cost:'$380'},
+    {room:'Kitchen',     name:'Paint',                opt:'Full repaint',                          cost:'$540'},
+    {room:'Living Room', name:'Flooring',             opt:'Replace : LVP'},
+    {room:'Living Room', name:'Paint',                opt:'Full repaint'},
+    {room:'Living Room', name:'Ceiling fan',          opt:'Resident install'},
+    {room:'Living Room', name:'Window blinds',        opt:'Replace : 2 inch faux wood',            cost:'$310'},
+    {room:'Living Room', name:'Smoke and CO detectors', opt:'Replace : hardwired combo',           cost:'$180'},
+    {room:'Master Bath', name:'Toilet',               opt:'Replace'},
+    {room:'Master Bath', name:'Exhaust fan',          opt:'Replace : 80 CFM, humidity sensing',    cost:'$290'},
+    {room:'Master Bath', name:'Mirror and lighting',  opt:'Replace : framed mirror, 3-light bar',  cost:'$420'},
+    {room:'Bathroom',    name:'Vanity',               opt:'Reface'},
+    {room:'Bathroom',    name:'Flooring',             opt:'Replace : tile'},
+    {room:'Bathroom',    name:'Toilet',               opt:'Replace',                               cost:'$410'},
+    {room:'Bathroom',    name:'Paint',                opt:'Full repaint',                          cost:'$360'},
+    {room:'Master Bed',  name:'Flooring',             opt:'Replace : carpet'},
+    {room:'Master Bed',  name:'Closet',               opt:'Add shelving'},
+    {room:'Master Bed',  name:'Paint',                opt:'Full repaint',                          cost:'$620'},
+    {room:'Bedroom 2',   name:'Paint',                opt:'Full repaint'},
+    {room:'Bedroom 2',   name:'Flooring',             opt:'Replace : carpet',                      cost:'$1,280'},
+    {room:'Garage',      name:'Door opener',          opt:'Replace'},
+    {room:'Garage',      name:'Garage lighting',      opt:'Replace : LED shop lights',             cost:'$260'},
+  ],
+};
 
 // Migration + seeding for the multi-option model. Each task carries a
 // `t.options` array — one option per sub-item with its own qty, labor,
@@ -402,6 +524,15 @@ const TASKS = [
 // option's total is unchanged. Options with no product yet (pure-labor
 // line items) get a synthetic "Labor" product carrying the old qty/rate,
 // so nothing is lost — every option ends up with at least one product row.
+/* Seed rates keep their cents ($8.60), unlike display totals. */
+function _fmtSeedRate(n){
+  const r = Math.round(n * 100) / 100;
+  return '$' + (r % 1 ? r.toFixed(2) : String(r));
+}
+/* Tasks whose catalogue part costs more than the old all-in price, so
+   labour was floored at $0 rather than going negative. Listed, not hidden:
+   read window.__SEED_LABOR_FLOORED, or see the console at load. */
+window.__SEED_LABOR_FLOORED = [];
 (function seedOptionProducts(){
   const genProdId = () => 'prod_' + Math.random().toString(36).slice(2,7);
   const numFrom = (str) => parseFloat(String(str||'0').replace(/[^0-9.-]/g,'')) || 0;
@@ -420,13 +551,20 @@ const TASKS = [
           labor: p.rate || '',
         };
       });
-      // Only the FIRST migrated product inherits the option's per-unit
-      // labor rate (it already represents the option's own line item);
-      // additional products (legacy alternates/extras) stay parts-only
-      // unless they already carried their own rate above.
-      if(products[0] && !products[0].labor && rateNum) products[0].labor = opt.rate;
-      const laborCaptured = products.some(p => numFrom(p.labor) > 0);
-      if(!laborCaptured && rateNum > 0){
+      // Only the FIRST migrated product takes labour from the option's rate,
+      // and the rate is the old ALL-IN price per unit (parts and labour
+      // together), so labour is what's left once its parts are taken out —
+      // never below $0. Taking the whole rate as labour counted the parts
+      // twice. Additional products (legacy alternates/extras) stay
+      // parts-only unless they already carried their own rate above.
+      if(products[0] && !products[0].labor && rateNum){
+        const partsNum = numFrom(products[0].parts);
+        products[0].labor = partsNum ? _fmtSeedRate(Math.max(0, rateNum - partsNum)) : opt.rate;
+      }
+      // A synthetic Labor row only for an option with no product at all — a
+      // product whose labour was floored at $0 already accounts for the
+      // option's rate, and a Labor row on top would count it again.
+      if(!products.length && rateNum > 0){
         products.push({ id: genProdId(), product: 'Labor', qty: opt.qty || '1', parts: '', labor: opt.rate || '' });
       }
       opt.products = products;
@@ -460,66 +598,47 @@ const TASKS = [
     const pool = (typeof productPool === 'function') ? productPool(t).filter(p => p.tier === 'team') : [];
     if(!pool.length) return;
     const prevFirst = (primary.products && primary.products[0]) || {};
+    /* The first catalogue row is the option's product. Its labour comes
+       from the option's own all-in rate, not from the row it replaces (that
+       one had its parts taken out already): what the option cost all in,
+       less what the catalogue part costs, spread over the units bought, and
+       never below $0.
+       A product sold by coverage — a slab that covers 5 SF — is bought in
+       whole units for the task's area: 42 SF is 9 slabs. The task itself
+       keeps its area (42 SF); only the product row counts slabs. */
+    const first = pool[0];
+    const taskQtyNum = numFrom(prevFirst.qty || primary.qty || '1') || 1;
+    const qtyUnit = String(prevFirst.qty || '').replace(/^[\s\d.,-]+/, '').trim();
+    const units = (first && first.coveragePerUnit) ? Math.max(1, Math.ceil(taskQtyNum / first.coveragePerUnit)) : taskQtyNum;
+    const firstQty = (first && first.coveragePerUnit) ? `${units} ${first.unit || 'ea'}` : (prevFirst.qty || '1');
+    const allIn = numFrom(primary.rate) * taskQtyNum;
+    let firstLabor = prevFirst.labor || '';
+    if(first && numFrom(primary.rate) > 0){
+      const perUnit = allIn / units - first.price;
+      if(perUnit < 0){
+        window.__SEED_LABOR_FLOORED.push({task:t.code, name:t.name, option:primary.name,
+          qty:firstQty, allInRate:primary.rate, allIn:_fmtDollars(allIn), partsPerUnit:_fmtDollars(first.price),
+          product:`${first.brand} ${first.name}`});
+      }
+      firstLabor = _fmtSeedRate(Math.max(0, perUnit));
+    }
     primary.products = pool.map((p, i) => ({
       id: genProdId(),
       sku: p.sku,
       brand: p.brand,
       product: p.name,
-      qty: i === 0 ? (prevFirst.qty || '1') : '0',
+      qty: i === 0 ? firstQty : '0',
       parts: _fmtDollars(p.price),
-      labor: i === 0 ? (prevFirst.labor || '') : '',
+      labor: i === 0 ? firstLabor : '',
     }));
     const total = primary.products.reduce((sum, p) => sum + numFrom(p.qty) * (numFrom(p.parts) + numFrom(p.labor)), 0);
     primary.cost = _fmtDollars(total);
     t.cost = _fmtDollars(t.options.reduce((sum,o) => sum + numFrom(o.cost), 0));
   });
-})();
-
-/* Stock, as the supplier feed reports it. Demo-only: two products are out —
-   the appliance suite this job had picked, which leaves Appliances with no
-   product, and an unpicked cabinet candidate, which leaves Cabinets with
-   its pick intact. `stockChecked` is when the feed last
-   answered. In production both come from the supplier. */
-(function seedOutOfStock(){
-  const numFrom = (str) => parseFloat(String(str||'0').replace(/[^0-9.-]/g,'')) || 0;
-  const mark = (taskId, index, checked) => {
-    const t = TASKS.find(x => x.id === taskId);
-    const o = t && t.options && t.options[0];
-    const p = o && o.products[index];
-    if(!p) return;
-    /* An out-of-stock product cannot be bought, so it stops being the pick:
-       its quantity drops to zero and the option's total with it. Picking
-       one of the in-stock products is what clears the task's Missing
-       product tag. */
-    p.stock = 'out'; p.stockChecked = checked; p.qty = '0';
-    o.cost = _fmtDollars(o.products.reduce((sum, x) => sum + numFrom(x.qty) * (numFrom(x.parts) + numFrom(x.labor)), 0));
-    t.cost = _fmtDollars(t.options.reduce((sum, x) => sum + numFrom(x.cost), 0));
-  };
-  mark(4, 0, '3 Sep');
-  mark(1, 1, '28 Sep');
-})();
-
-/* Demo-only: one product carrying every line state at once, to show how
-   they stack — Master Bed › Flooring. Out of stock and a price change are
-   bars under the row; the override (its quantity is 3 against a default of
-   2), instructions, deferred and resident-responsible are tags on top. It
-   replaces the task's current pick, which drops to zero. */
-(function seedLineStatesShowcase(){
-  const numFrom = (str) => parseFloat(String(str||'0').replace(/[^0-9.-]/g,'')) || 0;
-  const t = TASKS.find(x => x.id === 13);
-  const o = t && t.options && t.options[0];
-  if(!o) return;
-  (o.products || []).forEach(p => { p.qty = '0'; });
-  o.products = [{
-    id: 'prod_boatcarpet', brand: 'SkyShalo',
-    product: 'Boat Carpet, 6 ft. x 13.1 ft. Marine Gray Carpet Polyester Texture Waterproof Black Carpet Full Roll Carpet',
-    sku: '1013320441', qty: '3', qtyDefault: '2', parts: '$110.45', labor: '$0.50',
-    stock: 'out', stockChecked: '2 Oct',
-    priceChange: {from: '$110.45', to: '$105.19'},
-    tags: ['override', 'instructions', 'deferred', 'resident'],
-  }].concat(o.products || []);
-  o.cost = _fmtDollars(o.products.reduce((sum, x) => sum + numFrom(x.qty) * (numFrom(x.parts) + numFrom(x.labor)), 0));
-  t.cost = _fmtDollars(t.options.reduce((sum, x) => sum + numFrom(x.cost), 0));
+  if(window.__SEED_LABOR_FLOORED.length && typeof console !== 'undefined'){
+    console.info('[seed] labour floored at $0 — catalogue part costs more than the old all-in rate:',
+      window.__SEED_LABOR_FLOORED.map(x => `${x.task} ${x.name} (${x.qty}: all-in ${x.allIn}, parts ${x.partsPerUnit}/unit)`).join('; '));
+  }
 })();
 
 /* ── Scope-total override, pushed from the shell via postMessage. Used so the
@@ -565,8 +684,8 @@ if(IS_DRAFT_STAGE){
 if(IS_DRAFT_STAGE && !IS_EMPTY_SEED){
   // Populated draft: keep tasks but strip contractor / cost / status so the
   // scope reads like an in-progress build.
-  const draftKeepCount = Math.min(TASKS.length, 10);
-  TASKS.length = draftKeepCount;
+  // Every task stays: the draft used to keep only the first ten, which cut
+  // the Departments view down to lines of one and hid the shared ones.
   // Split each room three ways so the completeness column has something to
   // say. Stripping every task made every row identical.
   const _draftBuckets = {};
@@ -636,6 +755,16 @@ if(IS_DRAFT_STAGE && !IS_EMPTY_SEED){
   // Approved-scope mode: any task without a contractor (nulls in the demo data) gets
   // assigned so the scope reads as a fully-baked approved plan. Unassigned rows only
   // appear during the draft/build phase (Step 1 · Empty draft / Populated draft).
+  /* ── except while the work is running ──
+     A job under way is not a finished plan: a couple of tasks are always
+     still waiting on a trade, and the Overview's unassigned strip and the
+     no_gc filter both exist for exactly that. Staffing every task the moment
+     the scope is approved left those two surfaces with nothing to show from
+     Step 5 onward.
+
+     Only in 'work'. At closeout every task is complete, and a task cannot be
+     finished by nobody. */
+  const _LATE = (PROJ_MODE === 'work') ? new Set(['MBA-4739', 'MBD-A7AE']) : new Set();
   const _fallbackGcByTrade = t => {
     const n = (t.name||'').toLowerCase();
     if(/cabinet|counter|backsplash|appliance|closet|shelving/.test(n)) return 'Apex Carpentry';
@@ -645,6 +774,11 @@ if(IS_DRAFT_STAGE && !IS_EMPTY_SEED){
     return 'Apex Carpentry';
   };
   TASKS.forEach(t => {
+    if(_LATE.has(t.code)){
+      // Left unstaffed on purpose — keep the flag so the sidebar marks it.
+      if(!(t.flags||[]).includes('unassigned')) t.flags = [...(t.flags||[]), 'unassigned'];
+      return;
+    }
     if(!t.gc){
       t.gc = _fallbackGcByTrade(t);
       t.flags = (t.flags||[]).filter(a => a !== 'unassigned');
@@ -699,6 +833,31 @@ if(PROJ_MODE === 'work' && WORK_TRACK === 'labor'){
     t.status = 'not_started';
     t.editRequested = false;
     t.flags = [];
+  });
+}
+/* Work under way. The statuses that came off the TASKS literal are the ones the
+   scope carried through review — 'pending', 'in_review' — which say nothing
+   about whether the work has been done. On a live job the only four answers are
+   not started, in progress, complete, and rework, so they get assigned here.
+
+   The pattern is fixed rather than random so the demo is the same every time,
+   and ordered so earlier rooms read as further along — which is how a job
+   actually progresses, one space at a time. Every one of the four appears. */
+/* Also the change-order-review step: work is under way there too, so the same
+   four live-job statuses apply. Only the labour track above forces a clean
+   not-started board. */
+if(PROJ_MODE === 'work' && (WORK_TRACK === 'materials' || WORK_TRACK === 'change_order')){
+  const RUN = ['complete','complete','in_progress','needs_rework',
+               'in_progress','complete','not_started','in_progress',
+               'needs_rework','not_started'];
+  TASKS.forEach((t, i) => {
+    t.status = RUN[i % RUN.length];
+    t.editRequested = false;
+    // A task that is finished or being redone has no outstanding scoping gaps —
+    // 'missing details' or 'unassigned' alongside 'complete' contradicts itself.
+    if(t.status === 'complete' || t.status === 'needs_rework'){
+      t.flags = (t.flags || []).filter(f => f !== 'missing' && f !== 'unassigned');
+    }
   });
 }
 if(IS_CONTRACTOR){
@@ -781,7 +940,7 @@ function coSubmit(){
   const n = drafts.length || pendingChanges.length;
   if(!n){ toast('No pending changes to submit'); return; }
   drafts.forEach(t => __CO_SUBMITTED.add(t.id));
-  toast(`Change order submitted · ${n} change${n===1?'':'s'} sent to admin for review`);
+  toast(`Change order submitted · ${n} change${n===1?'':'s'} sent for review`);
   pendingChanges = [];
   renderChangeOrderBar();
   if(typeof renderAll === 'function') renderAll(); else renderSidebar();

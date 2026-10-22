@@ -4,12 +4,9 @@ function renderPanoCloseout(){
   if(typeof seedPhotos === 'function' && (!PHOTOS || !PHOTOS.length)) seedPhotos();
   const slots = _pcBuildSlots();
   const idx = __pcState.currentIdx;
-  const slotsLen = slots.length;
-  const head = `<div class="tl-head">
-    ${_pcHeadColHtml(slots[idx-1] || null, false, 'left',  idx, slotsLen)}
-    ${_pcHeadColHtml(slots[idx]   || null, true,  null,    idx, slotsLen)}
-    ${_pcHeadColHtml(slots[idx+1] || null, false, 'right', idx, slotsLen)}
-  </div>`;
+  // Two tiers now — a bar for the group, nested bars for the tasks in it. See
+  // _pcHeadHtml.
+  const head = _pcHeadHtml(slots, idx);
   const bandA = _pcBandHtml('A', slots);
   // Scope-review stage has nothing to compare against — only the initial
   // walk exists, so we hide the "+ Add date" affordance entirely.
@@ -20,10 +17,19 @@ function renderPanoCloseout(){
   // "Only show tasks with photos" now lives in the tabs row (see
   // renderWorkHdr's scopeTools), not as a standalone bar here.
   body.innerHTML = `<div class="tl-root">
+    <div class="tl-hilite" id="tlHilite"></div>
     ${head}
     <div class="tl-body">${bandA}${bandB}</div>
     ${_pcSliderHtml(slots)}
   </div>`;
+  // The column count is a function of width, and the width can move without
+  // anything re-rendering this tab. _pcWatchSize explains why it is a poll.
+  if(typeof _pcWatchSize === 'function') _pcWatchSize();
+  /* Straight away, not on a frame callback. Reading a rect forces layout, so the
+     measurement is correct the moment the markup is in — and requestAnimationFrame
+     does not reliably fire for this iframe anyway, the same way ResizeObserver
+     does not. */
+  if(typeof _pcPlaceHilite === 'function') _pcPlaceHilite();
 }
 
 function renderPano(){
@@ -97,7 +103,7 @@ const PROGRESS_PEOPLE = [
   {who:'R. Garcia',  role:'Contractor'},
   {who:'M. Alvarez', role:'Field agent'},
   {who:'Eric L.',    role:'Field agent'},
-  {who:'T. Okafor',  role:'Project manager'},
+  {who:'T. Okafor',  role:'Job manager'},
 ];
 // User-posted updates land at the top of the appropriate feed. Empty by
 // default — the Progress tab's activitiesFor / activitiesForGroup guard on
@@ -190,7 +196,7 @@ function postProjectUpdate(){
     photoCount,
     status: 'in_progress',
   };
-  let targetLabel = 'the project';
+  let targetLabel = 'the job';
   if(target === 'scope'){
     // Scope-level → stack at the top of the Project activity timeline
     PROJECT_UPDATES.unshift({
@@ -262,7 +268,7 @@ function _projUpdateRowHtml(u){
     <div class="tlx-card">
       <div class="tlx-hd">
         <div class="tlx-hd-l">
-          <span class="tlx-task">Project</span>
+          <span class="tlx-task">Job</span>
           <span class="tlx-who"><b>${esc(u.who)}</b><span class="tlx-verb">posted an update</span></span>
         </div>
         <div class="tlx-hd-r">
@@ -537,7 +543,7 @@ function actSearchMatches(groupKey){
     ? TASKS
     : (groupKey === '__un'
         ? TASKS.filter(t => !t.gc)
-        : (groupBy === 'contractor' ? TASKS.filter(t => t.gc === groupKey) : TASKS.filter(t => t.room === groupKey)));
+        : TASKS.filter(t => taskGroupKey(t) === groupKey));
   return pool.filter(t =>
     (t.name||'').toLowerCase().includes(q) ||
     (t.gc||'').toLowerCase().includes(q) ||
@@ -688,12 +694,12 @@ document.addEventListener('click', () => {
    who : the person who triggered it (lifecycle events are user-driven;
          completion thresholds are system-detected — see _sys) */
 const SCOPE_MILESTONES = [
-  {daysAgo:186, ms:'created',    label:'Project created',        who:'Or Ben-David', role:'Admin',
+  {daysAgo:186, ms:'created',    label:'Job created',        who:'Or Ben-David', role:'Admin',
    sub:'Single-family renovation · 3484 South Main Street. Origination from Invitation Homes.'},
   {daysAgo:180, ms:'scope',      label:'Scope created',          who:'Sarah M.', role:'Field agent',
    sub:'Initial walk completed. 14 tasks captured across 6 groups.'},
   {daysAgo:171, ms:'pending',    label:'Scope pending review',   who:'Sarah M.', role:'Field agent',
-   sub:'Submitted to admin for pricing and approval.'},
+   sub:'Submitted to the job manager for pricing and approval.'},
   {daysAgo:164, ms:'approved',   label:'Scope approved',         who:'Or Ben-David', role:'Admin',
    sub:'v1 approved at $24,180. Distributed to 4 contractors.'},
   {daysAgo:146, ms:'co',         label:'Change order created',   who:'Diana R.', role:'Field agent',
@@ -705,17 +711,17 @@ const SCOPE_MILESTONES = [
   {daysAgo:112, ms:'started',    label:'Construction started',   who:'Kai', role:'System', _sys:true,
    sub:'First task moved to In progress. 4 contractors mobilized on site.'},
   {daysAgo:64,  ms:'half',       label:'Halfway — 50% of tasks complete', who:'Kai', role:'System', _sys:true,
-   sub:'8 of 16 tasks marked complete. Project tracking on schedule.'},
+   sub:'8 of 16 tasks marked complete. Job tracking on schedule.'},
   {daysAgo:22,  ms:'walk',       label:'Closeout walk completed', who:'Sarah M.', role:'Field agent',
    sub:'All groups walked. Punch list captured for the remaining items.'},
   {daysAgo:9,   ms:'close',      label:'Closeout created',       who:'Sarah M.', role:'Field agent',
    sub:'Closeout walk completed. Punch list captured for remaining items.'},
   {daysAgo:4,   ms:'close_pending', label:'Closeout pending review', who:'Sarah M.', role:'Field agent',
-   sub:'Submitted to admin for final sign-off.'},
+   sub:'Submitted to the job manager for final sign-off.'},
 ];
 // Milestone tag copy per kind.
 const MS_TAG = {
-  created:'Project', scope:'Scope', pending:'Review', approved:'Approved',
+  created:'Job', scope:'Scope', pending:'Review', approved:'Approved',
   co:'Change order', co_pending:'Review', co_approved:'Approved',
   close:'Closeout', close_pending:'Review', close_approved:'Approved',
   started:'Construction', half:'Progress', walk:'Walkthrough',
@@ -889,7 +895,7 @@ function tlxRowHtml(a, i, total, seedBase){
 function activitiesForGroup(groupKey){
   const tasks = groupKey === '__un'
     ? TASKS.filter(t => !t.gc)
-    : (groupBy === 'contractor' ? TASKS.filter(t => t.gc === groupKey) : TASKS.filter(t => t.room === groupKey));
+    : TASKS.filter(t => taskGroupKey(t) === groupKey);
   const groupSeed = groupKey.length + (tasks[0]?.id || 1);
   // Updates the user posted to this group land at the top of its feed.
   const mine = (typeof USER_GROUP_EVENTS !== 'undefined' && USER_GROUP_EVENTS[groupKey]) || [];
@@ -933,7 +939,7 @@ function photosForGroupInProgress(groupKey){
   if(typeof PHOTOS === 'undefined' || !PHOTOS.length) return [];
   const tasks = groupKey === '__un'
     ? TASKS.filter(t => !t.gc)
-    : (groupBy === 'contractor' ? TASKS.filter(t => t.gc === groupKey) : TASKS.filter(t => t.room === groupKey));
+    : TASKS.filter(t => taskGroupKey(t) === groupKey);
   const taskCodes = new Set(tasks.map(t=>t.code));
   // Group photos for that room (only when grouping by room), plus any task
   // photos whose task code lands in this group.
@@ -1401,7 +1407,7 @@ function pmApplySelectionTo(target){
   if(!chosen.length) return;
   const stamp = p => {
     p.kind = target.kind;
-    p.room = target.kind === 'unsorted' ? 'Project' : target.room;
+    p.room = target.kind === 'unsorted' ? 'Job' : target.room;
     p.task = target.kind === 'task' ? target.task : null;
   };
   if(pmMoveMode === 'copy'){
@@ -1664,7 +1670,7 @@ function goToProgressPhotos(){
    is credited to someone who appears elsewhere in the product rather than to
    a name invented for this one surface. */
 function _pmMe(){
-  let r = 'admin';
+  let r = 'manager';
   try{
     const st = JSON.parse(localStorage.getItem('kai_comp_state') || '{}');
     if(st && st.role) r = String(st.role).toLowerCase();
@@ -1992,7 +1998,7 @@ function _pgdPhotoFigHtml(p, i, labelName, hideTag){
   const clip = (str) => String(str).length > 18 ? String(str).slice(0, 17) + '…' : String(str);
   const tag = p.kind === 'group' ? (p.room || 'Group')
             : p.kind === 'task'  ? clip(taskName || 'Task')
-            : 'Project';
+            : 'Job';
   const tagChip = (hideTag && (tag === hideTag || taskName === hideTag))
     ? ''
     : `<span class="pgd-photo-groupbadge">${esc(tag)}</span>`;
@@ -2032,9 +2038,16 @@ function _pgdPhotoFigHtml(p, i, labelName, hideTag){
     walk ? esc(walk.label) : '',
     p.by ? `${isUploaded ? 'Uploaded' : 'Captured on site'} by ${esc(p.by)}` : '',
   ].filter(Boolean).join(' · ');
+  /* The date sits on the photo and the name under it: the name is what you
+     read to know what a tile shows, so it gets the caption's room (not cut at
+     18 characters), and the date becomes the small tag in the corner. A tile
+     whose name would only repeat the page keeps an empty caption line, so the
+     strip's tiles stay one height. */
+  const dateTxt = walk && walk.date ? walk.date : _added;
+  const nameTxt = tagChip ? (p.kind === 'task' ? (taskName || 'Task') : tag) : '';
   return `<figure class="pgd-photo-fig">
-          <button class="pgd-photo${kindCls}" style="background:${bg}" onclick="openGalleryPhoto(${p.id||0})" aria-label="${tip}">${tagChip}${metaOverlay}</button>
-          ${dateLbl}
+          <button class="pgd-photo${kindCls}" style="background:${bg}" onclick="openGalleryPhoto(${p.id||0})" aria-label="${tip}">${dateTxt ? `<span class="pgd-photo-groupbadge is-date">${esc(dateTxt)}</span>` : ''}${metaOverlay}</button>
+          <span class="pgd-photo-date pgd-photo-name" title="${esc(nameTxt)}">${nameTxt ? esc(nameTxt) : '&nbsp;'}</span>
         </figure>`;
 }
 
@@ -2057,6 +2070,14 @@ function scopeNotesPool(){
   if(typeof USER_NOTES !== 'undefined'){
     Object.keys(USER_NOTES).forEach(k => out.push(...(USER_NOTES[k] || [])));
   }
+  /* Ahead of the room and task notes: these are about the document as a whole,
+     which is the level this drawer is opened at, and the newest of them is the
+     most recent note in the project. */
+  if(typeof _histSubmissionNotes === 'function') out.push(..._histSubmissionNotes());
+  /* The Activity's notes are entries in their own right — one per person who
+     held a document — so the drawer lists them and a click in the feed has
+     somewhere to land. */
+  if(typeof ovTenureNotes === 'function') out.push(...ovTenureNotes());
   const rooms = [...new Set((typeof TASKS !== 'undefined' ? TASKS : []).map(t => t.room))];
   rooms.forEach(r => {
     if(typeof roomNotes === 'function') out.push(...(roomNotes(r) || []));
@@ -2110,6 +2131,36 @@ function _pgdScopeActivity(){
     })
     .map(x => x.r);
 }
+/* The scope and group feeds, drawn as the task feed's dated timeline: month
+   rules, day in the left column, the mark on the rail, then what happened,
+   its kind, and — for these roll-ups — which tasks or groups it covered.
+   They used to emit a card layout whose styles no longer exist here, which
+   squeezed every row into a column a word wide. */
+function _actTimelineHtml(rows, namesFn){
+  let month = '';
+  const out = [];
+  rows.forEach(r => {
+    const w = (typeof _taskActWhen === 'function') ? _taskActWhen(r.when) : {key:'', month:'', day:r.when || '', ord:''};
+    // A date range ("Apr 29 – 30") doesn't parse to a month; it sits under
+    // the last month rule rather than starting an empty one.
+    if(w.month && w.key !== month){
+      month = w.key;
+      out.push(`<li class="sec-taskact-month"><span>${esc(w.month)}</span></li>`);
+    }
+    const tone = (typeof _taskActTone === 'function') ? _taskActTone(r) : (r.tone || 'event');
+    out.push(`<li class="sec-taskact-row is-${tone}">
+      <div class="sec-taskact-date">${esc(w.day)}${w.ord ? `<sup>${w.ord}</sup>` : ''}</div>
+      <span class="sec-taskact-mark"></span>
+      <div class="sec-taskact-body">
+        <div class="sec-taskact-title">${r.label}</div>
+        <div class="sec-taskact-sub">${esc(r.type)}</div>
+        ${namesFn ? namesFn(r) : ''}
+      </div>
+      <div class="sec-taskact-who">${esc(r.who)}</div>
+    </li>`);
+  });
+  return `<ol class="sec-taskact-list">${out.join('')}</ol>`;
+}
 function _pgdScopeActivityHtml(){
   const rows = _pgdScopeActivity().slice().reverse();
   if(!rows.length){
@@ -2120,25 +2171,10 @@ function _pgdScopeActivityHtml(){
   }
   const cap = 8;
   const shown = pgdActAllOpen ? rows : rows.slice(0, cap);
-  const card = r => {
+  // Same dated timeline as the task feed, with a line naming the groups.
+  const names = r => {
     const g = r.groups || [];
-    const names = g.length
-      ? `<div class="sec-taskact-tasks">${g.length > 1 ? `<span class="sec-taskact-n">${g.length} groups</span>` : ''}${esc(g.join(', '))}</div>`
-      : '';
-    return `<li class="sec-taskact-row${r.tone ? ' is-' + r.tone : ''}">
-      <span class="sec-taskact-mark"></span>
-      <div class="sec-taskact-card">
-        <div class="sec-taskact-main">
-          <div class="sec-taskact-kind">${esc(r.type)}</div>
-          <div class="sec-taskact-label">${r.label}</div>
-          ${names}
-        </div>
-        <div class="sec-taskact-meta">
-          <div class="sec-taskact-when">${esc(r.when)}</div>
-          <div class="sec-taskact-who">${esc(r.who)}</div>
-        </div>
-      </div>
-    </li>`;
+    return g.length ? `<div class="sec-taskact-tasks">${g.length > 1 ? `<span class="sec-taskact-n">${g.length} groups</span>` : ''}${esc(g.join(', '))}</div>` : '';
   };
   const more = rows.length > cap
     ? `<button class="sec-mod-add pgd-act-more" onclick="event.stopPropagation();pgdActToggleAll()">${
@@ -2149,7 +2185,7 @@ function _pgdScopeActivityHtml(){
       <div class="pgd-details-title">Scope activity</div>
       <div class="pgd-sec-hd-r">${more}</div>
     </div>
-    <ol class="sec-taskact-list">${shown.map(card).join('')}</ol>
+    ${_actTimelineHtml(shown, names)}
   </div>`;
 }
 /* The notes module, scope-scoped. Same shape as the group's — a preview of
@@ -2192,7 +2228,6 @@ function _renderScopePageHtml(opts){
       ${TASKS.length ? 'No tasks match the current filter.' : 'Nothing in this scope yet.'}
     </div></div>`;
   }
-  const byContractor = groupBy === 'contractor';
   const total       = tasks.reduce((s,t) => s + dollars(t.cost), 0);
   const contractors = new Set(tasks.map(t => t.gc).filter(Boolean));
   const rooms       = new Set(tasks.map(t => t.room).filter(Boolean));
@@ -2218,7 +2253,7 @@ function _renderScopePageHtml(opts){
     ...(PHOTOS || []).filter(p => p.kind === 'unsorted'),
   ];
   const photoStripHtml = scopePhotos.length
-    ? `<div class="pgd-photos">${scopePhotos.map((p,i) => _pgdPhotoFigHtml(p, i, p.room || 'Project')).join('')}</div>`
+    ? `<div class="pgd-photos">${scopePhotos.map((p,i) => _pgdPhotoFigHtml(p, i, p.room || 'Job')).join('')}</div>`
     : `<div class="pgd-photos-empty">No photos yet in this scope</div>`;
 
   const sections = groups.map(g => {
@@ -2243,15 +2278,16 @@ function _renderScopePageHtml(opts){
       <div class="sec-taskcard-hdr">
         <div class="sec-taskcard-hdr-l">
           <div class="pgd-title">Scope</div>
-          <div class="pgd-grp-meta">${tasks.length} task${tasks.length === 1 ? '' : 's'}<span class="sep">&middot;</span>${groups.length} ${byContractor ? 'contractor' : 'group'}${groups.length === 1 ? '' : 's'}${PROJ_MODE === 'review' ? `<span class="sep">&middot;</span>${nApproved} approved` : ''}</div>
+          <div class="pgd-grp-meta">${tasks.length} task${tasks.length === 1 ? '' : 's'}<span class="sep">&middot;</span>${groups.length} ${groupKindNoun()}${groups.length === 1 ? '' : 's'}${PROJ_MODE === 'review' ? `<span class="sep">&middot;</span>${nApproved} approved` : ''}</div>
         </div>
         <div class="sec-taskcard-hdr-r">
           <span class="sec-taskcard-amt-line"><span class="sec-taskcard-amt">${totalDisplay}</span></span>
         </div>
       </div>
     </div>
-    <div class="pgd-details-sec">
+    <div class="pgd-details-sec pgd-mediasec is-sticky">
       <div class="pgd-sec-hd">
+        <div class="pgd-media-ctx" aria-hidden="true"><span class="pgd-media-ctx-name">All scope</span><span class="pgd-media-ctx-amt">${totalDisplay}</span><span class="pgd-media-ctx-n">${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}</span></div>
         <div class="pgd-details-title">Group and Task Photos${scopePhotos.length ? ` <span class="sec-mod-count is-static">&bull; ${scopePhotos.length} total ${scopePhotos.length === 1 ? 'photo' : 'photos'}</span>` : ''}</div>
         <div class="pgd-sec-hd-r">
           <button class="sec-mod-add" onclick="event.stopPropagation();goToProgressPhotos()" title="View every photo in Progress and add more">View all &amp; add</button>
@@ -2287,7 +2323,7 @@ function _groupNotesPool(room, tasks){
   return [...mine, ...seeded];
 }
 function _groupNotesAll(g){
-  const room = (typeof groupBy !== 'undefined' && groupBy === 'contractor') ? null : (g && g.key);
+  const room = (typeof groupBy === 'undefined' || groupBy === 'room') ? (g && g.key) : null;
   return _groupNotesPool(room, (g && g.items) ? g.items : []);
 }
 /* The drawer opens on a room rather than a group object, so it rebuilds the
@@ -2307,7 +2343,7 @@ function _groupNotesHtml(g){
   // openGroupDrawer keys off a room, which only holds when that's what we're
   // grouping by — grouped by contractor it would open an empty drawer, so the
   // control says so rather than misfiring.
-  const canOpen = (typeof groupBy === 'undefined' || groupBy !== 'contractor');
+  const canOpen = (typeof groupBy === 'undefined' || groupBy === 'room');
   const open = canOpen
     ? `openGroupDrawer('${String(g.key).replace(/'/g, "\\'")}','notes')`
     : `toast('Group notes open from a room group')`;
@@ -2317,6 +2353,12 @@ function _groupNotesHtml(g){
     : '';
   const title = `Notes${latest ? countSuffix : ''}`;
   const addBtn = `<button class="sec-mod-add" onclick="event.stopPropagation();${open}" title="${latest ? 'View every note and add one' : 'Add the first note'}">${latest ? 'View all &amp; add' : 'Add'}</button>`;
+  if(!latest) return `<div class="pgd-hdr-box sec-tasknotes pgd-groupnotes is-empty">
+    <div class="pgd-sec-hd">
+      <div class="pgd-details-title">Notes<span class="sec-notes-none">No notes yet</span></div>
+      <div class="pgd-sec-hd-r">${addBtn}</div>
+    </div>
+  </div>`;
   const body = latest
     ? `<div class="shop-notes-card">
         <div class="shop-notes-head">
@@ -2428,25 +2470,10 @@ function _pgdGroupActivityHtml(g){
   }
   const cap = 8;
   const shown = pgdActAllOpen ? rows : rows.slice(0, cap);
-  const card = r => {
+  // Same dated timeline as the task feed, with a line naming the tasks.
+  const names = r => {
     const n = (r.tasks || []).length;
-    const names = n
-      ? `<div class="sec-taskact-tasks">${n > 1 ? `<span class="sec-taskact-n">${n} tasks</span>` : ''}${esc(r.tasks.join(', '))}</div>`
-      : '';
-    return `<li class="sec-taskact-row${r.tone ? ' is-' + r.tone : ''}">
-      <span class="sec-taskact-mark"></span>
-      <div class="sec-taskact-card">
-        <div class="sec-taskact-main">
-          <div class="sec-taskact-kind">${esc(r.type)}</div>
-          <div class="sec-taskact-label">${r.label}</div>
-          ${names}
-        </div>
-        <div class="sec-taskact-meta">
-          <div class="sec-taskact-when">${esc(r.when)}</div>
-          <div class="sec-taskact-who">${esc(r.who)}</div>
-        </div>
-      </div>
-    </li>`;
+    return n ? `<div class="sec-taskact-tasks">${n > 1 ? `<span class="sec-taskact-n">${n} tasks</span>` : ''}${esc(r.tasks.join(', '))}</div>` : '';
   };
   const more = rows.length > cap
     ? `<button class="sec-mod-add pgd-act-more" onclick="event.stopPropagation();pgdActToggleAll()">${
@@ -2457,7 +2484,7 @@ function _pgdGroupActivityHtml(g){
       <div class="pgd-details-title">Group activity</div>
       <div class="pgd-sec-hd-r">${more}</div>
     </div>
-    <ol class="sec-taskact-list">${shown.map(card).join('')}</ol>
+    ${_actTimelineHtml(shown, names)}
   </div>`;
 }
 let pgdActAllOpen = false;
@@ -2532,7 +2559,7 @@ function _renderGroupPageHtml(opts){
                ${groupLabels[g.key] ? `<span class="pgd-label-chip" onclick="event.stopPropagation();openGroupLabelEdit('${g.key}')" title="Edit label">${esc(groupLabels[g.key])}</span>` : ''}`
           }
           </div>
-          <div class="pgd-grp-meta">Group ${gIdx + 1} of ${groups.length}<span class="sep">&middot;</span>${g.items.length} ${g.items.length === 1 ? 'task' : 'tasks'}</div>
+          <div class="pgd-grp-meta">${(() => { const k = groupKindNoun(), K = k.charAt(0).toUpperCase() + k.slice(1); return window.__KAI_SHOP_LAYOUT ? `<span class="page-kind">${K}</span>` : K + ' '; })()}${gIdx + 1} of ${groups.length}<span class="sep">&middot;</span>${g.items.length} ${g.items.length === 1 ? 'task' : 'tasks'}</div>
         </div>
         <div class="sec-taskcard-hdr-r">
           <span class="sec-taskcard-amt-line">
@@ -2541,19 +2568,20 @@ function _renderGroupPageHtml(opts){
         </div>
       </div>
     </div>
-    <div class="pgd-details-sec">
+    <div class="pgd-details-sec pgd-mediasec is-sticky">
       <div class="pgd-sec-hd">
+        <div class="pgd-media-ctx" aria-hidden="true"><span class="pgd-media-ctx-name">${esc(g.name)}</span><span class="pgd-media-ctx-amt">${money(gCost)}</span><span class="pgd-media-ctx-n">${g.items.length} ${g.items.length === 1 ? 'task' : 'tasks'}</span></div>
         <div class="pgd-details-title">Group and Task Photos${allGroupPhotos.length ? ` <span class="sec-mod-count is-static">&bull; ${allGroupPhotos.length} total ${allGroupPhotos.length === 1 ? 'photo' : 'photos'}</span>` : ''}</div>
         <div class="pgd-sec-hd-r">
           <button class="sec-mod-add" onclick="event.stopPropagation();goToProgressPhotos()" title="View every photo in Progress and add more">View all &amp; add</button>
-          <button class="sec-mod-gear" onclick="event.stopPropagation();${(typeof groupBy === 'undefined' || groupBy !== 'contractor') ? `openPhotoManager('group','${String(g.key).replace(/'/g, "\\'")}')` : `toast('Group photos open from a room group')`}" title="Manage photos" aria-label="Manage photos"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82A1.65 1.65 0 0 0 3 13.09H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+          <button class="sec-mod-gear" onclick="event.stopPropagation();${(typeof groupBy === 'undefined' || groupBy === 'room') ? `openPhotoManager('group','${String(g.key).replace(/'/g, "\\'")}')` : `toast('Group photos open from a room group')`}" title="Manage photos" aria-label="Manage photos"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82A1.65 1.65 0 0 0 3 13.09H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
         </div>
       </div>
       ${photoStripHtml}
     </div>
     ${_groupNotesHtml(g)}
     <div class="pgd-details-sec">
-      <div class="pgd-details-title">Tasks in this ${groupBy === 'contractor' ? 'contractor' : 'group'}</div>
+      <div class="pgd-details-title">Tasks in this ${groupKindNoun()}</div>
       <div class="pgd-tk-list">${_pgdTaskHeadHtml()}${taskRowsHtml || '<div class="pgd-muted" style="padding:14px 0">No tasks in this group yet.</div>'}</div>
     </div>
     ${activitySectionHtml}

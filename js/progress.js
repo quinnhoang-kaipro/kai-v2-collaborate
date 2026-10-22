@@ -122,7 +122,7 @@ function renderProgress(){
       ${actCtrlBarHtml(rows.length)}
       ${scopeHdr}
       <div class="pgd-details-sec">
-        <div class="pgd-details-title">Project activity</div>
+        <div class="pgd-details-title">Job activity</div>
         ${_projComposerHtml()}
         <div class="tlx">${userUpdatesHtml}${timelineHtml || (userUpdatesHtml ? '' : `<div class="pgd-muted" style="padding:16px 0">No activity matches the current filter.</div>`)}</div>
       </div>
@@ -142,13 +142,11 @@ function renderProgress(){
   // in the middle, activity feed below.
   const feed = activitiesFor(sel);
   // ── Prev / next task navigation within the sidebar's current group ──
-  const grpTasksArr = TASKS.filter(t => (groupBy === 'contractor')
-    ? (t.gc || 'unassigned') === (sel.gc || 'unassigned')
-    : t.room === sel.room);
+  const grpTasksArr = TASKS.filter(t => taskGroupKey(t) === taskGroupKey(sel));
   const idxInGrp = grpTasksArr.findIndex(t => t.id === sel.id);
   const prevTask = grpTasksArr[idxInGrp - 1] || null;
   const nextTask = grpTasksArr[idxInGrp + 1] || null;
-  const groupLabel = (groupBy === 'contractor') ? (sel.gc || 'Unassigned') : sel.room;
+  const groupLabel = taskGroupLabel(sel);
   // ── Photo strip — task photos + first group photos, horizontal scroll ──
   if(typeof seedPhotos === 'function' && (!PHOTOS || !PHOTOS.length)) seedPhotos();
   const taskPhotos = (PHOTOS || []).filter(p => p.kind === 'task' && p.task === sel.code);

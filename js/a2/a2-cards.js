@@ -9,12 +9,92 @@
    the panel — no IIFE, so any module can call any other.
    ════════════════════════════════════════════════════════════════════ */
 /* ── one margin card ── */
+/* ── collapsed / expanded ────────────────────────────────────────────
+   With every change revealed there are two dozen cards against a dozen rows,
+   and layoutCards has to push them down to stop them overlapping — so a card
+   ends up nowhere near the line it annotates and stops reading as attached to
+   it. Collapsed, a card is one line tall, so the stack fits beside the rows it
+   belongs to and the leader lines land where they should.
+
+   Accordion rather than free toggling: one card open at a time is what keeps
+   the stack short enough for the rest to stay attached. */
+let a2CardOpen = null;   // ch._ord of the expanded card, or null
+
+/* ── per-line approval ───────────────────────────────────────────────
+   A change order arrives as a set of lines, and the admin reviewing it does not
+   have to take or leave the whole thing — each card carries its own approve.
+   Only on the order that is actually awaiting a decision (A2_PENDING_VER, set
+   by a2-stage.js at the change-order step) and only for the project manager, who is the
+   one holding that decision. Everywhere else the cards stay read-only.
+
+   Approved ords live in a Set rather than on the change, so buildCards can run
+   as often as it likes without losing them. */
+const a2LineApproved = new Set();
+function a2CanApproveLine(ch){
+  return !!ch && typeof A2_PENDING_VER !== 'undefined' && A2_PENDING_VER === ch.ver
+      && typeof USER_ROLE !== 'undefined' && USER_ROLE === 'manager';
+}
+function a2ApproveLine(ord, ev){
+  if(ev) ev.stopPropagation();   // approving is not opening the card
+  a2LineApproved.add(ord);
+  const ch = ORDERED[ord];
+  if(typeof toast === 'function' && ch){
+    toast(`Line approved · ${ch._task.name}`);
+  }
+  buildCards();
+  requestAnimationFrame(layoutCards);
+}
+
+function a2ToggleCard(ord){
+  a2CardOpen = (a2CardOpen === ord) ? null : ord;
+  applyCardOpen();
+  requestAnimationFrame(layoutCards);
+}
+function applyCardOpen(){
+  CARDS.forEach(c => c.el.classList.toggle('is-collapsed', a2CardOpen !== c.ch._ord));
+}
+
+/* The single line a collapsed card shows: the first field that moved, with a
+   count of any others. Enough to scan the lane without opening anything. */
+function cardPeek(ch){
+  const r = (ch.rows && ch.rows[0]);
+  if(!r) return '';
+  const clip = (v, n) => { v = String(v == null ? '' : v); return v.length > n ? v.slice(0, n - 1) + '\u2026' : v; };
+  const more = (ch.rows.length > 1) ? `<span class="a2-mc-peek-n">+${ch.rows.length - 1}</span>` : '';
+  let txt;
+  if(r.add !== undefined){
+    txt = `<span class="a2-mc-add">${a2Esc(clip(r.add, 40))}</span>`;
+  } else if(r.remove !== undefined){
+    txt = `<span class="a2-strike">${a2Esc(clip(r.remove, 40))}</span>`;
+  } else {
+    txt = `<span class="a2-mc-peek-f">${a2Esc(clip(r.field, 12))}</span>`
+        + `<span class="a2-mc-arrow">\u2192</span><b>${a2Esc(clip(r.to, 22))}</b>`
+        + (r.delta ? ` <span class="a2-mc-new is-pos">(${a2Esc(r.delta)})</span>` : '');
+  }
+  return txt + more;
+}
+
+/* The approve control, or the state it leaves behind. Sits at the foot of the
+   expanded body: it is the last thing you do after reading the change, not a
+   thing to press past on the way in. */
+function a2LineApproveHtml(ch){
+  if(!a2CanApproveLine(ch)) return '';
+  if(a2LineApproved.has(ch._ord)){
+    return `<div class="a2-mc-appr"><span class="a2-mc-appr-tick">
+      <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7"/></svg>
+    </span>Line approved</div>`;
+  }
+  return `<button class="a2-mc-apprbtn" type="button"
+    onclick="a2ApproveLine(${ch._ord},event)">Approve change order line</button>`;
+}
+
 function cardHtml(t, ch){
   const ct = CT[ch.ct], ver = VER[ch.ver];
   const rowsHtml = ch.rows.map(r=>{
     if(r.add !== undefined){
       if(r.field === 'Line added'){
-        return `<div class="a2-mc-change"><span class="a2-mc-add"><span class="a2-mc-badge is-added">Added</span>${a2Esc(r.add)}${r.wasAmount?` · <b>${a2Esc(r.wasAmount)}</b>`:''}</span></div>`;
+        // No "Added" pill: the card's head already reads LINE ADDED.
+        return `<div class="a2-mc-change"><span class="a2-mc-add">${a2Esc(r.add)}${r.wasAmount?` · <b>${a2Esc(r.wasAmount)}</b>`:''}</span></div>`;
       }
       return `<div class="a2-mc-change"><span class="a2-mc-field">${a2Esc(r.field)}</span><span class="a2-mc-add">${a2Esc(r.add)}</span></div>`;
     }
@@ -28,11 +108,23 @@ function cardHtml(t, ch){
   return `
     <div class="a2-mc-head">
       <span class="a2-mc-ct"><span class="a2-swatch"></span>${ct.label}</span>
-      <span class="a2-mc-when">${a2Esc(ver.date)}</span>
+      <span class="a2-mc-when">${a2Esc(a2When(ch))}</span>
     </div>
     <div class="a2-mc-task"><b>${a2Esc(t.name)}</b> <span class="a2-tid">· ${a2Esc(t.code)}</span></div>
-    ${rowsHtml}
-    <div class="a2-mc-who"><span class="a2-mc-av">${initials(ch.who)}</span><b>${a2Esc(ch.who)}</b> · ${a2Esc(ver.label)}<span class="a2-role">${a2Esc(ch.role)}</span></div>`;
+    <!-- Collapsed head: the type swatch, the line, and the date on one row, so
+         a collapsed card is two lines rather than three. Every 20px of card
+         height is 20px of drift away from the row it points at. -->
+    <div class="a2-mc-chead">
+      <span class="a2-swatch"></span>
+      <b>${a2Esc(t.name)}</b>
+      <span class="a2-mc-cwhen">${a2Esc(a2When(ch).replace(/,? \d{4}$/, ''))}</span>
+    </div>
+    <div class="a2-mc-peek">${cardPeek(ch)}</div>
+    <div class="a2-mc-body">
+      ${rowsHtml}
+      <div class="a2-mc-who"><span class="a2-mc-av">${initials(ch.who)}</span><b>${a2Esc(ch.who)}</b> · ${a2Esc(ver.label)}<span class="a2-role">${a2Esc(ch.role)}</span></div>
+      ${a2LineApproveHtml(ch)}
+    </div>`;
 }
 function buildCards(){
   const lane = document.getElementById('a2Margin');
@@ -48,8 +140,10 @@ function buildCards(){
     CARDS.push({el, code:t.code, ch});
     el.addEventListener('mouseenter', ()=>spotRow(t.code, true, el));
     el.addEventListener('mouseleave', ()=>spotRow(t.code, false, el));
+    el.addEventListener('click', ()=>a2ToggleCard(ch._ord));
   });
   applyCardVisibility();
+  applyCardOpen();   // buildCards runs on every re-render; keep the open one open
 }
 /* A card shows once the playhead has passed its change; a changed line dims
    until then. */
@@ -87,9 +181,6 @@ function layoutCards(){
   // The lane is absolutely-positioned children only, so it has no height of
   // its own — give it one so a long card stack can't spill past the page.
   lane.style.minHeight = cursor ? cursor + 'px' : '';
-  // EXPERIMENT (a2-expand.js): the photo lane is measured the same way, so it
-  // has to settle whenever the card lane does.
-  if(typeof layoutPhotos === 'function') layoutPhotos();
 }
 
 /* ── highlight the row a card points to, and vice versa ── */

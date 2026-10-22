@@ -1,8 +1,26 @@
 /* ════════════ SIDEBAR ════════════ */
+let _carryTaskId = null;   // the task a product line was reached from (layout file)
 function setGroupBy(g){
+  /* ShopwithKai_layout.html: the Editor shows what is selected, and the
+     selection follows the grouping across — a task becomes its product line
+     under Departments, and a product line goes back to the task last open
+     in it. The tab never changes; only what it shows. */
+  if(window.__KAI_SHOP_LAYOUT && g !== groupBy){
+    if(g === 'dept' && selId != null){
+      const t = TASKS.find(x => x.id === selId);
+      if(t){ const tl = taskLine(t); _carryTaskId = t.id; selId = null; openIds.clear(); selGroupKey = null; selLineKey = `${tl.dept}|${tl.line}`; }
+    } else if(g !== 'dept' && selLineKey){
+      const back = TASKS.find(x => x.id === _carryTaskId && `${taskLine(x).dept}|${taskLine(x).line}` === selLineKey)
+        || TASKS.find(x => `${taskLine(x).dept}|${taskLine(x).line}` === selLineKey);
+      selLineKey = null;
+      if(back){ selId = back.id; openIds = new Set([back.id]); selGroupKey = null; scopeView = false; }
+    }
+  }
   groupBy=g; collapsedGrps=null;
+  if(g !== 'dept') selLineKey = null;   // product lines only exist under Departments
   const rBtn=document.getElementById('grpRoom'); if(rBtn) rBtn.classList.toggle('active',g==='room');
   const cBtn=document.getElementById('grpContractor'); if(cBtn) cBtn.classList.toggle('active',g==='contractor');
+  const dBtn=document.getElementById('grpDept'); if(dBtn) dBtn.classList.toggle('active',g==='dept');
   renderAll();
 }
 
@@ -244,8 +262,20 @@ window.addEventListener('message', e => {
   // directly. Same downstream behavior as clicking Create draft & edit in the
   // (now-bypassed) modal — enterEditMode(true) also posts kai-edit-mode back
   // to the shell so the bar swaps to the Editing state automatically.
+  /* Bulk review from the shell's CTA. Routed through apApproveScope() rather
+     than looping tasks here, so the cascade, the toast wording and the
+     progress report back to the shell all behave exactly as they do when the
+     scope-level control is used in the sidebar. */
+  if(e.data.type === 'kai-review-all'){
+    if(typeof apApproveScope === 'function') apApproveScope();
+  }
   if(e.data.type === 'kai-duplicate-edit'){
     if(typeof confirmEditFromApproved === 'function') confirmEditFromApproved();
+  }
+  /* The shell's take-the-turn dialogue was confirmed. Straight into edit mode:
+     the confirm was the gate, so toggleScopeEdit's own gating would ask twice. */
+  if(e.data.type === 'kai-enter-edit'){
+    if(typeof enterEditMode === 'function') enterEditMode(true);
   }
   // Shell-triggered version switch (Return to current button, outdated-lock
   // modal). Route through switchVersion so all the local state updates + the
@@ -267,7 +297,7 @@ function submitScopeChanges(){
     const label = btn.querySelector('span');
     if(label) label.textContent = 'Edit';
   }
-  if(typeof toast === 'function') toast('Scope changes submitted for review');
+  if(typeof toast === 'function') toast('Scope changes handed off for review');
 }
 function attDots(t){
   const keys=taskKeys(t);
@@ -603,7 +633,7 @@ function detailEdit(t){
   </div>`;
 }
 
-function taskRow(t){
+function taskRow(t, opts){
   const isApproved=approved.has(t.id);
   const needs = (typeof needsProduct==='function') && needsProduct(t);
   // "Change order" indicator on a task row lights up when either the legacy
@@ -630,19 +660,17 @@ function taskRow(t){
   }).join('');
   // The contractor is no longer shown here — the task card and the group
   // table's Contractor column both still carry it.
-  const amtHtml = isMissing
-    ? `<span class="task-amt">$--</span>`
-    : `<span class="task-amt">${t.cost}</span>${deltaChipHtml(taskDelta(t))}`;
+  const amtHtml = (opts && opts.amtHtml != null) ? opts.amtHtml
+    : isMissing
+      ? `<span class="task-amt">$--</span>`
+      : `<span class="task-amt">${t.cost}</span>${deltaChipHtml(taskDelta(t))}`;
   return `<div class="task${selId===t.id?' sel':''}${isApproved?' approved':''}${needs?' needs-product':''}${hasCo?' co-pending':''}${(typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id))?' co-removed':''}${isMissing?' is-missing':''}" data-tid="${t.id}">
-    <div class="task-row" onclick="selectTask(${t.id})">
+    <div class="task-row" onclick="${(opts && opts.onRow) || `selectTask(${t.id})`}">
       <div class="task-mid">
         <div class="task-mid-top">
-          ${typeof flagMarkHtml === 'function' ? flagMarkHtml(t, 'task-flag') : ''}<span class="task-name">${t.name}</span>
+          ${typeof flagMarkHtml === 'function' ? flagMarkHtml(t, 'task-flag') : ''}<span class="task-name">${(opts && opts.ctx) ? `<span class="task-ctx">${esc(opts.ctx)} ›</span> ` : ''}${t.name}</span>
         </div>
-        <div class="task-mid-status">${taskStatus(t)}${
-          (typeof taskMissingProduct === 'function' && taskMissingProduct(t))
-            ? '<span class="task-flagtag" title="Its product is out of stock — pick another in the Editor">Missing product</span>' : ''
-        }${modChipsHtml}</div>
+        <div class="task-mid-status">${taskStatus(t)}${modChipsHtml}</div>
         ${(() => {
           // Only emitted when there's something in it. It used to always
           // render and lean on :empty to collapse, which never matched —
@@ -656,6 +684,7 @@ function taskRow(t){
         <span class="task-amt-line">${amtHtml}</span>
       </div>
     </div>
+    ${(opts && opts.after) || ''}
   </div>`;
 }
 function renderSidebar(){
@@ -681,8 +710,22 @@ function renderSidebar(){
   // The count sits left of the title now; the rollup keeps the money.
   const _hc = document.getElementById('sbHdrCount');
   if(_hc) _hc.textContent = `${ruCount} ${ruCount===1?'task':'tasks'}`;
-  document.getElementById('sbRollup').innerHTML=
-    `<span class="total">${totalDisplay}</span>${scopeDeltaChip}`;
+  /* The bar names what the view adds up: the whole scope by room, or one
+     side of it — the labour paid to contractors, the materials ordered —
+     each the same figure the Record tab's bar shows for that segment, so
+     the two never disagree. */
+  const _ht = document.querySelector('#sbHdr .sb-hdr-title');
+  const _cls = (groupBy !== 'room' && typeof _regClassify === 'function') ? _regClassify() : null;
+  let _sideTotal = null;
+  if(_cls && groupBy === 'dept') _sideTotal = _cls.onPos;
+  else if(_cls && groupBy === 'contractor'){
+    const live = TASKS.reduce((a, t) => a + dollars(t.cost), 0);
+    _sideTotal = Math.max(0, live - _cls.onPos - _cls.deferredAll);
+  }
+  if(_ht) _ht.textContent = _sideTotal == null ? 'All scope' : (groupBy === 'dept' ? 'All materials' : 'All labor');
+  document.getElementById('sbRollup').innerHTML = _sideTotal == null
+    ? `<span class="total">${totalDisplay}</span>${scopeDeltaChip}`
+    : `<span class="total">${money(Math.round(_sideTotal))}</span>`;
   if(!groups.length){
     // Distinguish "the whole scope is empty" (Step 1 · Empty draft — offer
     // an add-your-first-group CTA) from "you filtered everything out"
@@ -698,8 +741,19 @@ function renderSidebar(){
     return;
   }
   if(collapsedGrps===null) collapsedGrps=new Set(groups.slice(1).map(g=>g.key));
-  scroll.innerHTML=groups.map(g=>{
-    const cost=g.items.reduce((s,t)=>s+dollars(t.cost),0);
+  scroll.innerHTML=_sbPoLinkHtml() + groups.map(g=>{
+    // A department totals what its products cost — it's the shopping view,
+    // and labour on top would make the figure useless for a budget at the
+    // till. Rooms and contractors total the task, as before.
+    /* Materials and Labour total only their side of each task, and only
+       what is on the job now: deferred work waits for a change order, as
+       the Record's bar keeps it apart. So the groups add up to the header
+       above them, and the header to the Record's bar. Room totals the task. */
+    const cost = groupBy === 'dept'
+      ? g.items.reduce((a, t) => a + _taskMatSplit(t).now, 0)
+      : groupBy === 'contractor'
+        ? g.items.reduce((a, t) => a + (_taskIsDeferred(t) ? 0 : _taskLabor(t)), 0)
+        : g.items.reduce((s,t)=>s+dollars(t.cost),0);
     const isCollapsed=collapsedGrps.has(g.key);
     const allApproved=g.items.every(t=>approved.has(t.id));
     // In draft mode we surface an "Add task" affordance INSIDE each group
@@ -709,7 +763,9 @@ function renderSidebar(){
     // Every stage but the last can take a new task: drafting, reviewing,
     // and during the work itself, where it lands as a change order. Only
     // closeout-approved is closed to it — that scope is signed off.
-    const _canAddTask = PROJ_MODE !== 'closeout-approved';
+    // Not under a department either: a new task needs a room, and the
+    // department view is for shopping what's already in the scope.
+    const _canAddTask = PROJ_MODE !== 'closeout-approved' && groupBy !== 'dept';
     const draftAddTaskRow = _canAddTask ? `<button class="grp-new-task" onclick="event.stopPropagation();addTaskToGroup('${g.key}')" title="Add a task to ${g.name}">
       <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M7 3v8M3 7h8"/></svg>
       <span>New task</span>
@@ -748,10 +804,490 @@ function renderSidebar(){
           </div>
           <div class="ntp-list" id="ntpList">${_ntpListRowsHtml()}</div>
         </div>` : draftAddTaskRow}
-        ${g.items.map(taskRow).join('')}
+        ${groupBy === 'dept' ? deptLinesHtml(g)
+          : groupBy === 'contractor'
+            // Under a contractor a row unfolds to the task's line items and
+            // the labor on each — what this contractor is being paid for.
+            ? g.items.map(t => taskRow(t, {
+                onRow: `toggleGcTask(${t.id})`,
+                after: gcTaskOpen.has(t.id) ? _gcTaskLaborHtml(t) : '',
+                amtHtml: _sbSideAmtHtml(t, _taskLabor(t), _taskIsDeferred(t) ? _taskLabor(t) : 0),
+              })).join('')
+            : g.items.map(t => taskRow(t)).join('')}
       </div>
     </div>`;
   }).join('');
+}
+/* ── Department view: product lines ─────────────────────────────────
+   Inside a department each product line is its own block — the kind of
+   product, how many the scope needs and what they cost — with the tasks
+   that need it underneath, labelled by room. The sidebar only navigates:
+   clicking a line opens it in the Editor, which is where its product is
+   picked once for every task in it, the same way a task's product is
+   picked in the Editor and not in its sidebar row. */
+let collapsedLines = new Set();   // line keys the user has folded
+let selLineKey = null;            // product line open in the Editor (department view only)
+// A line key ("Lawn, Garden & Outdoor|Outdoor") made safe to sit inside a
+// single-quoted JS string inside a double-quoted HTML attribute.
+function _lineKeyArg(key){
+  return esc(String(key).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+}
+function allDeptLines(){
+  if(typeof groupTasks !== 'function' || groupBy !== 'dept') return [];
+  return groupTasks(TASKS).flatMap(g => deptLines(g.items));
+}
+function deptLineByKey(key){
+  return allDeptLines().find(l => l.key === key) || null;
+}
+function deptLinesHtml(g){
+  return deptLines(g.items).map(l => {
+    const folded = collapsedLines.has(l.key);
+    const isLabor = l.dept === NO_PRODUCT_DEPT;
+    const k = _lineKeyArg(l.key);
+    return `<div class="dline${folded ? ' collapsed' : ''}${selLineKey === l.key && !selId ? ' is-selline' : ''}" data-line="${esc(l.key)}">
+      <div class="dline-hdr" onclick="selectLine('${k}')">
+        <button class="dline-caret-btn" onclick="event.stopPropagation();toggleDeptLine('${k}')" aria-label="Show or hide the tasks in ${esc(l.name)}" title="Expand / collapse">
+          <svg class="dline-caret" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5l3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <span class="dline-name">${esc(l.name)}</span>
+        <span class="dline-need">${esc(isLabor ? `${l.items.length} ${l.items.length === 1 ? 'task' : 'tasks'}` : deptLineNeed(l.items))}</span>
+        ${(() => {
+          // What the line puts on the orders now; what waits for a change
+          // order is said beside it, not added in.
+          const now = l.items.reduce((a, t) => a + _taskMatSplit(t).now, 0);
+          const later = l.items.reduce((a, t) => a + _taskMatSplit(t).later, 0);
+          return `<span class="dline-amt">${now ? money(Math.round(now)) : (later ? '—' : (isLabor ? '' : '$0'))}</span>`
+            + (later ? `<span class="dline-later" title="Waiting on a change order">+${money(Math.round(later))} deferred</span>` : '');
+        })()}
+      </div>
+      <div class="dline-body">${l.items.map(t => {
+        // A task row here can open to show what it's buying from this line —
+        // each product and its cost — under the row's figure, which stays
+        // the whole task's cost.
+        const open = deptTaskOpen.has(`${l.key}|${t.id}`);
+        return taskRow(t, {
+          ctx: t.room,
+          onRow: `toggleDeptTask('${k}',${t.id})`,
+          after: open ? _deptTaskProductsHtml(l, t) : '',
+          amtHtml: (() => { const sp = _taskMatSplit(t); return (isLabor && !sp.now && !sp.later) ? null : _sbSideAmtHtml(t, sp.now + sp.later, sp.later); })(),
+        });
+      }).join('')}</div>
+    </div>`;
+  }).join('');
+}
+let gcTaskOpen = new Set();     // task ids showing their line items' labor (Contractor view)
+function toggleGcTask(id){
+  const wasOpen = gcTaskOpen.has(id);
+  if(wasOpen) gcTaskOpen.delete(id); else gcTaskOpen.add(id);
+  if(wasOpen && selId === id){ renderSidebar(); return; }
+  selectTask(id);
+}
+/* The task's line items — every product it has picked, on options that are
+   part of the job — each with its labor: quantity × labor rate. */
+function _gcTaskLaborHtml(t){
+  const items = taskOptions(t).filter(optionIsAdded)
+    .flatMap(o => (o.products || []).filter(productIsPicked));
+  if(!items.length){
+    return `<div class="dtask-prods"><div class="dtask-prod is-none"><span class="dtask-prod-name">No line items yet</span></div></div>`;
+  }
+  return `<div class="dtask-prods">${items.map(p => {
+    const name = [p.brand, p.product].filter(Boolean).join(' ') || 'Untitled item';
+    const labor = _num(p.qty) * _num(p.labor);
+    return `<div class="dtask-prod" title="${esc(name)} · ${esc(String(p.qty))} × ${esc(p.labor || '$0')} labor">
+      <span class="dtask-prod-name">${esc(name)}</span>
+      <span class="dtask-prod-amt${labor ? '' : ' is-zero'}">${labor ? money(Math.round(labor)) : 'No labor'}</span>
+    </div>`;
+  }).join('')}</div>`;
+}
+/* What a task is buying in one product line: its picked rows there (qty ×
+   parts rate). A task with no catalogue rows at all falls back to its own
+   product cost. Every figure in the Departments view is built from this, so
+   task rows add up to their line and lines to their department. */
+/* A task's two sides, as the Record's bar splits the job: the materials it
+   has picked (on options in the job), apart into what is on the orders now
+   and what is deferred — the task's or the row's Deferred modifier — and the
+   labour, which is the rest of the task. Summed over the scope these are the
+   bar's Materials and Labour exactly. */
+function _taskMatSplit(t){
+  let now = 0, later = 0;
+  const td = (t.mods || []).indexOf('deferred') !== -1;
+  taskOptions(t).forEach(o => {
+    if(!optionIsAdded(o)) return;
+    (o.products || []).forEach(p => {
+      if(!productIsPicked(p)) return;
+      const a = _num(p.qty) * _num(p.parts);
+      if(td || (p.mods || []).indexOf('deferred') !== -1) later += a; else now += a;
+    });
+  });
+  return {now, later};
+}
+function _taskIsDeferred(t){ return (t.mods || []).indexOf('deferred') !== -1; }
+function _taskLabor(t){ const sp = _taskMatSplit(t); return Math.max(0, dollars(t.cost) - sp.now - sp.later); }
+/* A task's figure in the Materials or Labour view: its side ("$1,620"),
+   then the whole task muted ("of $3,520"); what is deferred says so instead
+   of counting. */
+function _sbSideAmtHtml(t, side, later){
+  const whole = Math.round(dollars(t.cost || 0));
+  const part = Math.round(side), wait = Math.round(later || 0);
+  const of = (whole && whole !== part) ? `<span class="task-amt-of">of ${money(whole)}</span>` : '';
+  if(wait && wait >= part) return `<span class="task-amt is-later">${money(part)}</span><span class="task-amt-of">deferred</span>`;
+  if(!part) return `<span class="task-amt is-none">—</span>${of}`;
+  return `<span class="task-amt">${money(part - wait)}</span>${wait ? `<span class="task-amt-of">+${money(wait)} deferred</span>` : of}`;
+}
+function taskLineCost(l, t){
+  const picked = _lineTaskPicked(l, t);
+  if(picked.length) return picked.reduce((a, h) => a + _num(h.p.qty) * _num(h.p.parts), 0);
+  const hasCatalog = taskOptions(t).some(o => (o.products || []).some(p => p.sku));
+  return hasCatalog ? 0 : dollars(t.pcost || 0);
+}
+function deptLineCost(l){
+  return l.items.reduce((a, t) => a + taskLineCost(l, t), 0);
+}
+let deptTaskOpen = new Set();   // `${lineKey}|${taskId}` rows showing their products
+/* Clicking a task under a product line opens the task, as anywhere else,
+   and unfolds its products for the line; clicking it again folds them. */
+function toggleDeptTask(key, id){
+  const k = `${key}|${id}`;
+  const wasOpen = deptTaskOpen.has(k);
+  if(wasOpen) deptTaskOpen.delete(k); else deptTaskOpen.add(k);
+  if(wasOpen && selId === id){ renderSidebar(); return; }
+  selectTask(id);
+}
+function _deptTaskProductsHtml(l, t){
+  if(l.dept === NO_PRODUCT_DEPT){
+    return `<div class="dtask-prods"><div class="dtask-prod is-none"><span class="dtask-prod-name">Nothing to buy for this task</span></div></div>`;
+  }
+  const picked = _lineTaskPicked(l, t);
+  if(!picked.length){
+    return `<div class="dtask-prods"><div class="dtask-prod is-none"><span class="dtask-prod-name">No product picked yet</span></div></div>`;
+  }
+  return `<div class="dtask-prods">${picked.map(h => {
+    const name = [h.p.brand, h.p.product].filter(Boolean).join(' ');
+    const amt = _num(h.p.qty) * _num(h.p.parts);
+    return `<div class="dtask-prod" title="${esc(name)} · ${esc(String(h.p.qty))}">
+      <span class="dtask-prod-name">${esc(name)}</span>
+      <span class="dtask-prod-amt">${money(Math.round(amt))}</span>
+    </div>`;
+  }).join('')}</div>`;
+}
+function selectLine(key){
+  if(selLineKey === key && !selId) return;
+  const l = deptLineByKey(key); if(!l) return;
+  scopeView = false;
+  selId = null;
+  selGroupKey = null;
+  selLineKey = key;
+  openIds.clear();
+  if(collapsedGrps) collapsedGrps.delete(l.dept);
+  collapsedLines.delete(key);
+  workMode = 'shop';
+  document.body.classList.toggle('shop-mode', true);
+  if(typeof renderSidebar === 'function') renderSidebar();
+  if(typeof renderWorkHdr === 'function') renderWorkHdr();
+  if(typeof renderWork === 'function') renderWork();
+}
+/* Read off the product itself rather than needsProduct(), which in draft
+   stays quiet about a task with no option added yet — right for a status
+   tag, wrong here, where the question is only "has a product been chosen". */
+function _taskHasProduct(t){
+  return !!t.product && !/not selected|pending|tbd/i.test(t.product);
+}
+/* What the line's tasks have picked: one product for all of them, a mix,
+   or nothing yet. */
+/* The products a task has actually picked: its catalogue rows with a
+   quantity, on options that are part of the job — what the task Editor shows
+   as picked. A task with no catalogue rows falls back to its summary line. */
+function taskPickedProducts(t){
+  const opts = taskOptions(t);
+  const hasCatalog = opts.some(o => (o.products || []).some(p => p.sku));
+  if(!hasCatalog) return _taskHasProduct(t) ? [t.product] : [];
+  return opts.filter(optionIsAdded)
+    .flatMap(o => (o.products || []).filter(p => p.sku && productIsPicked(p)))
+    .map(p => [p.brand, p.product].filter(Boolean).join(' '));
+}
+function deptLinePicked(l){
+  const per = l.items.map(taskPickedProducts);
+  const picked = per.filter(a => a.length).map(a => a.join(' + '));
+  if(!picked.length) return {state:'none'};
+  const uniq = [...new Set(picked)];
+  if(uniq.length === 1 && picked.length === l.items.length) return {state:'one', product:uniq[0]};
+  return {state:'mixed', n:uniq.length, missing:l.items.length - picked.length};
+}
+/* ── Line products: the task Editor's picker, applied across a line ────
+   A task's products live on its options as catalogue rows — picked once the
+   row has a quantity. The line page shows the same rows, and every edit on
+   one goes to that product on each task in the line: the stepper moves
+   every task's quantity together, a Parts or Labor rate is set on all of
+   them. A task that doesn't carry the product yet gets it added to its
+   first option, so a pick reaches every task in the line. */
+// Which catalogue section a line shops from. A line already knows what kind
+// of product it is, so it asks for that section rather than guessing from
+// its first task's name.
+const _LINE_POOL = {
+  'Cabinets':'cabinet', 'Countertops':'counter', 'Tile':'tile',
+  'Appliance suites':'appliance', 'Vinyl plank (LVP)':'floor', 'Carpet':'floor',
+  'Hardwood':'floor', 'Laminate':'floor', 'Interior paint':'paint',
+  'Vanities':'vanity', 'Toilets':'toilet', 'Garage door openers':'mech',
+  'Closet systems':'storage', 'Door knobs & locks':'hardware', 'Light fixtures':'lighting',
+  'Ceiling fans':'ceilingfan', 'Smoke & CO detectors':'detector', 'Blinds & shades':'blinds',
+  'Exhaust fans':'exhaust',
+};
+function deptLinePool(l){
+  if(!l || !l.items.length) return [];
+  const base = productPool(l.items[0], _LINE_POOL[l.name] || null);
+  // Anything picked on the line's tasks from elsewhere in the catalogue —
+  // through search — is listed too, so its row (and its "On 2 of 3") shows.
+  const have = new Set(base.map(p => p.sku));
+  const extra = [];
+  l.items.forEach(t => taskOptions(t).forEach(o => (o.products || []).forEach(p => {
+    if(!p.sku || have.has(p.sku) || !productIsPicked(p)) return;
+    const cat = (typeof catalogFind === 'function') ? catalogFind(p.sku) : null;
+    if(cat){ have.add(p.sku); extra.push(cat); }
+  })));
+  return base.concat(extra);
+}
+// A line product by SKU: the line's own section first, then the whole
+// catalogue, so a searched-for product can be applied too.
+function _lineCat(l, sku){
+  return deptLinePool(l).find(x => x.sku === sku)
+    || ((typeof catalogFind === 'function') ? catalogFind(sku) : null);
+}
+const _num = v => parseFloat(String(v == null ? '' : v).replace(/[^0-9.-]/g, '')) || 0;
+// The option a line edit lands on: the first one that's part of the job.
+function _lineOption(t){
+  const opts = taskOptions(t);
+  return opts.find(o => optionIsAdded(o)) || opts[0] || null;
+}
+function _lineProductRow(t, sku){
+  for(const o of taskOptions(t)){
+    const p = (o.products || []).find(x => x.sku === sku);
+    if(p) return {o, p};
+  }
+  return null;
+}
+function _ensureLineProductRow(t, cat){
+  const hit = _lineProductRow(t, cat.sku);
+  if(hit) return hit;
+  const o = _lineOption(t); if(!o) return null;
+  o.products = o.products || [];
+  const p = {id:'prod_' + Math.random().toString(36).slice(2,7), sku:cat.sku, brand:cat.brand,
+             product:cat.name, qty:'0', parts:_fmtDollars(cat.price), labor:''};
+  o.products.push(p);
+  return {o, p};
+}
+// How much of this product the task itself calls for — its own quantity,
+// or one when the task hasn't stated it. Used for the first pick only.
+function _taskNeedQty(t, cat){
+  const n = _num(t.qty);
+  if(!n) return '1';
+  if(cat && cat.coveragePerUnit) return String(Math.max(1, Math.ceil(n / cat.coveragePerUnit)));
+  return String(n);
+}
+// Keep the task's one-line product summary in step with its picked rows,
+// which is what the sidebar, the group table and the line's state read.
+function _syncTaskProduct(t){
+  const picked = taskOptions(t).filter(optionIsAdded)
+    .flatMap(o => (o.products || []).filter(productIsPicked));
+  if(picked.length){
+    t.product = picked.map(p => [p.brand, p.product].filter(Boolean).join(' ')).join(' + ');
+    t.flags = (t.flags || []).filter(f => f !== 'missing');
+  } else if(_taskHasProduct(t) && taskOptions(t).some(o => (o.products || []).some(p => p.sku))){
+    t.product = '(not selected)';
+  }
+}
+function _lineCommit(t, o){
+  recomputeOptionFromProducts(t, o);
+  _syncTaskProduct(t);
+}
+/* ── Applying a product across a line ────────────────────────────────
+   A product row's Apply covers every task in the line; a single task is
+   picked from the dropdown on its own row. Quantity belongs to each task —
+   its own stepper moves only it — so one press never moves three at once. */
+/* The catalogue rows that count as "this task's product" for the line: the
+   line's own section plus the task's default one (a shower task in the Tile
+   line was seeded from shower tile). Applying a product clears the others,
+   so a task holds one product per line rather than piling them up. */
+function _lineSkus(l, t){
+  // deptLinePool also carries anything picked on the line from search.
+  return new Set([...deptLinePool(l), ...productPool(t)].map(p => p.sku));
+}
+function _lineTaskRows(l, t){
+  const skus = _lineSkus(l, t);
+  return taskOptions(t).flatMap(o => (o.products || []).filter(p => p.sku && skus.has(p.sku)).map(p => ({o, p})));
+}
+function _lineTaskPicked(l, t){
+  return _lineTaskRows(l, t).filter(h => optionIsAdded(h.o) && productIsPicked(h.p));
+}
+// Put one catalogue product on these tasks, replacing what each had in the
+// line. Shared by the per-task dropdown and the product rows' Apply.
+/* The supplier a line buys a product from. Set from the line page's picker;
+   until then, whichever supplier the line's tasks already use for it, or
+   the cheapest. */
+let lineSupplier = {};   // `${lineKey}|${sku}` → supplier id
+function lineSupplierFor(l, sku){
+  const k = `${l.key}|${sku}`;
+  if(lineSupplier[k]) return lineSupplier[k];
+  for(const t of l.items){
+    const h = _lineTaskPicked(l, t).find(x => x.p.sku === sku);
+    if(h) return rowSupplier(h.p);
+  }
+  const offers = offersForSku(sku);
+  return offers.length ? offers[0].supplier : null;
+}
+/* Changing the supplier on a line product moves every task already using
+   it to that supplier's price; quantities stay. */
+function setLineSupplier(key, sku, supplier){
+  const l = deptLineByKey(key); if(!l) return;
+  const offer = offersForSku(sku).find(o => o.supplier === supplier); if(!offer) return;
+  lineSupplier[`${key}|${sku}`] = supplier;
+  let moved = 0;
+  l.items.forEach(t => {
+    _lineTaskPicked(l, t).filter(h => h.p.sku === sku).forEach(h => {
+      h.p.supplier = supplier; h.p.parts = _fmtDollars(offer.price);
+      recomputeOptionFromProducts(t, h.o); moved++;
+    });
+  });
+  toast(moved
+    ? `${moved} ${moved === 1 ? 'task' : 'tasks'} now buying from ${supplierName(supplier)} at ${_fmtDollars(offer.price)}`
+    : `Will buy from ${supplierName(supplier)} at ${_fmtDollars(offer.price)} when applied`);
+  renderAll();
+}
+function _applyLineProductTo(l, cat, targets){
+  // Bought from the line's chosen supplier, at that supplier's price.
+  const sup = lineSupplierFor(l, cat.sku);
+  const offer = offersForSku(cat.sku).find(o => o.supplier === sup);
+  targets.forEach(t => {
+    const before = _lineTaskPicked(l, t);
+    // A swap keeps the quantity the task already had; a first pick takes
+    // the task's own need.
+    const keepQty = before.length ? before[0].p.qty : null;
+    const touched = new Set();
+    _lineTaskRows(l, t).forEach(h => { if(h.p.sku !== cat.sku && productIsPicked(h.p)){ h.p.qty = '0'; touched.add(h.o); } });
+    const h = _ensureLineProductRow(t, cat); if(!h) return;
+    if(!productIsPicked(h.p)) h.p.qty = keepQty || _taskNeedQty(t, cat);
+    if(offer){ h.p.supplier = offer.supplier; h.p.parts = _fmtDollars(offer.price); }
+    // Picking puts the option in the job — same as "+ Add" on it in the task.
+    if(!optionIsAdded(h.o)) h.o.added = true;
+    touched.add(h.o);
+    touched.forEach(o => recomputeOptionFromProducts(t, o));
+    _syncTaskProduct(t);
+  });
+}
+function _clearLineProductOn(l, targets){
+  targets.forEach(t => {
+    const touched = new Set();
+    _lineTaskPicked(l, t).forEach(h => { h.p.qty = '0'; touched.add(h.o); });
+    touched.forEach(o => recomputeOptionFromProducts(t, o));
+    if(touched.size) t.product = '(not selected)';
+  });
+}
+/* mode: undefined — ask first if it would replace anything; 'all' — the
+   confirm said yes, replace on every task in the line. */
+function applyLineProduct(key, sku, mode){
+  closeLineApplyConfirm();
+  const l = deptLineByKey(key); if(!l) return;
+  const cat = _lineCat(l, sku); if(!cat) return;
+  const targets = l.items.slice();
+  if(!targets.length) return;
+  // A task that already has a different product would lose it. Say which,
+  // and what they have, before anything changes.
+  const clashes = targets.filter(t => {
+    const pk = _lineTaskPicked(l, t);
+    return pk.length && !pk.some(h => h.p.sku === sku);
+  });
+  if(!mode && clashes.length){ _showLineApplyConfirm(l, cat, targets, clashes); return; }
+  _applyLineProductTo(l, cat, targets);
+  const rooms = [...new Set(targets.map(t => t.room))];
+  toast(targets.length === 1
+    ? `${cat.brand} ${cat.name} → ${targets[0].room} › ${targets[0].name}`
+    : `${cat.brand} ${cat.name} applied to ${targets.length} tasks · ${rooms.join(', ')}`);
+  renderAll();
+}
+/* Built and appended, like the flag-block modal, so the re-render an apply
+   triggers can't take it down mid-decision. */
+function closeLineApplyConfirm(){
+  document.querySelectorAll('.lnp-confirm').forEach(n => n.remove());
+}
+function _showLineApplyConfirm(l, cat, targets, clashes){
+  closeLineApplyConfirm();
+  const k = _lineKeyArg(l.key);
+  const sku = esc(cat.sku);
+  const n = clashes.length;
+  const rows = clashes.map(t => {
+    const cur = _lineTaskPicked(l, t).map(h => [h.p.brand, h.p.product].filter(Boolean).join(' ')).join(' + ');
+    return `<li><span class="pgd-fb-task">${esc(t.room)} › ${esc(t.name)}</span><span class="lnp-cf-cur" title="${esc(cur)}">${esc(cur)}</span></li>`;
+  }).join('');
+  const wrap = document.createElement('div');
+  wrap.className = 'lnp-confirm';
+  wrap.innerHTML = `<div class="se-modal-scrim open" onclick="closeLineApplyConfirm()"></div>
+    <div class="se-modal open lnp-cf-modal" role="dialog" aria-modal="true" aria-label="Replace products">
+      <div class="se-modal-cap">Replace products</div>
+      <div class="se-modal-title">${n === 1 ? '1 task already has' : `${n} tasks already have`} a different product</div>
+      <div class="se-modal-body">
+        Applying <b>${esc(cat.brand)} ${esc(cat.name)}</b> will replace ${n === 1 ? 'it' : 'them'}. This will not affect quantities.
+        <ul class="pgd-fb-list">${rows}</ul>
+      </div>
+      <div class="se-modal-actions">
+        <button class="se-btn se-btn-secondary" onclick="closeLineApplyConfirm()">Cancel</button>
+        <button class="se-btn se-btn-primary" onclick="applyLineProduct('${k}','${sku}','all')">Replace on all tasks</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+}
+/* One task, straight from its row's Product dropdown — no ticking needed.
+   An empty pick clears it. Leaves the selection as it was. */
+function setLineTaskProduct(key, id, sku){
+  document.querySelectorAll('.sec-hdr-dd.open').forEach(d => d.classList.remove('open'));
+  const l = deptLineByKey(key); if(!l) return;
+  const t = l.items.find(x => x.id === id); if(!t) return;
+  if(!sku){
+    _clearLineProductOn(l, [t]);
+    toast(`Product cleared · ${t.room} › ${t.name}`);
+  } else {
+    const cat = _lineCat(l, sku); if(!cat) return;
+    _applyLineProductTo(l, cat, [t]);
+    toast(`${cat.brand} ${cat.name} → ${t.room} › ${t.name}`);
+  }
+  renderAll();
+}
+function clearLineProduct(key){
+  const l = deptLineByKey(key); if(!l) return;
+  const targets = l.items.slice();
+  _clearLineProductOn(l, targets);
+  toast(`Product cleared from ${targets.length} ${targets.length === 1 ? 'task' : 'tasks'}`);
+  renderAll();
+}
+/* One task's own quantity. On its picked product once it has one; before
+   that, on the task itself, which is what the first apply will use. */
+function bumpLineTaskQty(key, id, dir){
+  const l = deptLineByKey(key); if(!l) return;
+  const t = l.items.find(x => x.id === id); if(!t) return;
+  const picked = _lineTaskPicked(l, t);
+  if(picked.length){
+    const h = picked[0];
+    h.p.qty = String(Math.max(1, _num(h.p.qty) + dir));
+    recomputeOptionFromProducts(t, h.o);
+    renderAll();
+    return;
+  }
+  const unit = String(t.qty || '').replace(/^[\s\d.,-]+/, '').trim();
+  const n = Math.max(1, (_num(t.qty) || (dir > 0 ? 0 : 1)) + dir);
+  t.qty = unit ? `${n} ${unit}` : String(n);
+  renderWork();
+}
+function lineTaskQtyLabel(l, t){
+  const picked = _lineTaskPicked(l, t);
+  return picked.length ? String(picked[0].p.qty) : (t.qty || '');
+}
+// The tasks in a line that have this product picked.
+function lineProductUsers(l, sku){
+  return l.items.filter(t => _lineTaskPicked(l, t).some(h => h.p.sku === sku)).map(t => t.id);
+}
+function toggleDeptLine(key){
+  if(collapsedLines.has(key)) collapsedLines.delete(key); else collapsedLines.add(key);
+  document.querySelectorAll('.dline').forEach(el => {
+    if(el.dataset.line === key) el.classList.toggle('collapsed', collapsedLines.has(key));
+  });
 }
 // Placeholder handlers for the draft-mode add affordances. They toast for now
 // and can be wired to real task/group creation UIs when we build that flow out.
@@ -890,6 +1426,7 @@ function pickTaskTemplate(groupKey, name, cat){
     id: nextId, code, room, name,
     opt: 'To be scoped',
     gc: (groupBy === 'contractor' ? groupKey : null),
+    ...(groupBy === 'dept' ? {dept: groupKey} : {}),
     product: '(not selected)',
     qty: '—', rate: '—', cost: '$0',
     photos: 0, flags: ['missing'], mods: [], status: 'not_started',
@@ -901,6 +1438,35 @@ function pickTaskTemplate(groupKey, name, cat){
   addTaskSearch = '';
   if(typeof renderAll === 'function') renderAll();
   if(typeof toast === 'function') toast(`Added ${name}`);
+}
+/* A task taken from the job's template in search. Unlike the picker above it
+   knows its room, and it starts from the template's option and price rather
+   than "To be scoped" — that is what the template is for. The product is
+   still to be chosen, so it carries the missing flag the same way. It opens
+   in the Editor, since the next thing anyone does with a new task is fill
+   it in. */
+function addTemplateTask(tpl){
+  if(!tpl) return;
+  const room = tpl.room;
+  const codePrefix = String(room).replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase() || 'NEW';
+  const code = `${codePrefix}-${Math.random().toString(16).slice(2,6).toUpperCase()}`;
+  const nextId = TASKS.reduce((max,t) => Math.max(max, t.id), 0) + 1;
+  const cost = tpl.cost || '$0';
+  const newTask = {
+    id: nextId, code, room, name: tpl.name,
+    opt: tpl.opt || 'To be scoped',
+    gc: null,
+    product: '(not selected)',
+    qty: '1 ea', rate: cost, cost,
+    photos: 0, flags: ['missing'], mods: [], status: 'not_started',
+    desc: '', pcost: '$0', notes: 0, _tag: 'Template',
+  };
+  TASKS.push(newTask);
+  _coMarkAdded(newTask.id);   // past publish, a new task is a change order
+  if(groupBy === 'room' && collapsedGrps) collapsedGrps.delete(room);
+  if(typeof renderAll === 'function') renderAll();
+  if(typeof selectTask === 'function') selectTask(newTask.id, {toEditor:true});
+  if(typeof toast === 'function') toast(`Added ${tpl.name} to ${room} from the template`);
 }
 // Progress-stage placeholder handlers: attach a photo/note update to the
 // group's or task's construction progress. Real flow (upload photo, add note,
@@ -926,6 +1492,7 @@ function toggleGrp(el){
    Clears any task or group selection and routes to the Editor tab, which
    is where the scope overview renders. */
 function selectScope(){
+  selLineKey = null;
   if(!SCOPE_VIEW_ENABLED) return;
   // Clicking the already-selected scope is a no-op — no deselect toggle,
   // same rule selectGroup follows.
@@ -954,6 +1521,7 @@ function onScopeBarKey(e){
 }
 
 function selectGroup(key){
+  selLineKey = null;
   groupApproveConfirmKey = null;   // don't carry a confirm across groups
   // Clicking the already-selected group is a no-op — no deselect toggle.
   // The group stays highlighted and its group page stays open on the
@@ -1024,7 +1592,16 @@ function _isDecisionStage(){
 function _decisionVerb(){
   const st = (typeof STAGE_ID !== 'undefined') ? STAGE_ID : '';
   const mode = (typeof PROJ_MODE !== 'undefined') ? PROJ_MODE : '';
-  return (st === 'awaiting-pub' || mode === 'closeout') ? 'approve' : 'review';
+  if(st === 'awaiting-pub' || mode === 'closeout') return 'approve';
+  /* The verb follows the viewer as well as the stage. A project manager approves
+     wherever they are — it is the right they hold at any time — so a row offering
+     them "Review" named somebody else's act. The manager who actually reviews
+     still sees Review; they review and hand on, and cannot approve.
+
+     USER_ROLE is the ?role= the shell passes in. Id note: 'manager' is the
+     Project manager — see ROLES in shell.js. */
+  if((typeof USER_ROLE !== 'undefined') && USER_ROLE === 'manager') return 'approve';
+  return 'review';
 }
 /* Step 7 (closeout sign-off) drops the confirm/with-note menu: the approve
    control is a single button that commits on click, and a success modal
@@ -1306,7 +1883,7 @@ function deleteTask(id){
   const t=TASKS.find(x=>x.id===id); if(!t) return;
   // Change-order mode: stage a removal request instead of deleting the task.
   if(IS_CHANGE_ORDER){
-    if(!confirm(`Propose removing "${t.name}"? This is staged as a change order — admin has to approve before the task actually goes away.`)) return;
+    if(!confirm(`Propose removing "${t.name}"? This is staged as a change order — the job manager has to approve before the task actually goes away.`)) return;
     coAddChange({
       type: 'delete',
       taskId: t.id,
@@ -1374,7 +1951,9 @@ function duplicateGroup(key){
     const clone = (typeof structuredClone === 'function') ? structuredClone(t) : JSON.parse(JSON.stringify(t));
     clone.id = nextId;
     clone.code = `${codePrefix}-${Math.random().toString(16).slice(2,6).toUpperCase()}`;
-    if(isRoom) clone.room = newName; else clone.gc = newName;
+    if(isRoom) clone.room = newName;
+    else if(groupBy === 'dept') clone.dept = newName;
+    else clone.gc = newName;
     return clone;
   });
   TASKS.push(...clones);
@@ -1464,9 +2043,28 @@ function syncApproveBtn(){
 // expanded detail. Clicking a task row just selects it (the Editor card
 // on the right owns task detail). openIds is kept in sync as a Set-of-one
 // so downstream code that reads openIds still resolves to the active task.
-function selectTask(id){
-  if(selId === id) return;
+/* opts.toEditor — route the right panel to the Editor as part of the
+   selection. Passed by the search palette: a result is a destination, not a
+   highlight, so landing on it beats leaving the user on whatever tab they
+   searched from. Ordinary sidebar clicks don't pass it and keep their
+   existing "select in place" behavior.
+
+   Overview is the exception: it's the project's front page and renders
+   nothing per task, so selecting one there left the sidebar highlighted
+   against a pane that hadn't changed. Picking a task is a request to see
+   it, so route to the Editor — the same rule selectGroup already follows
+   for groups. */
+function selectTask(id, opts){
+  selLineKey = null;
+  const toEditor = !!(opts && opts.toEditor) || workMode === 'overview';
+  if(selId === id){
+    // Re-clicking the selected task is otherwise a no-op, but from a search
+    // result the click still means "show me this" — so honor the routing.
+    if(toEditor && workMode !== 'shop' && typeof setWorkMode === 'function') setWorkMode('shop');
+    return;
+  }
   scopeView = false;   // drilling into a task leaves the scope view
+  _carryTaskId = id;   // where a product line goes back to (layout file)
   // Any pending approve-confirm state belongs to the previously selected
   // task — clear it so switching tasks doesn't carry a stale confirm.
   taskApproveConfirmId = null;
@@ -1475,7 +2073,20 @@ function selectTask(id){
   // "which task is currently active in the right panel".
   openIds = new Set([id]);
   selGroupKey = null;
+  // Switch before rendering so one pass paints the new tab and the new
+  // selection together. Mirrors setWorkMode's own stale-content guard —
+  // calling it outright would render the work surface twice.
+  const _switching = toEditor && workMode !== 'shop';
+  if(_switching){
+    workMode = 'shop';
+    document.body.classList.toggle('shop-mode', true);
+    const _wb = document.getElementById('workBody');
+    if(_wb) _wb.innerHTML = '';
+  }
   if(typeof renderAll === 'function') renderAll();
+  // renderAll leaves the tab bar alone, so the Editor tab wouldn't show as
+  // active without this.
+  if(_switching && typeof renderWorkHdr === 'function') renderWorkHdr();
   // Open at the top of the module stack. There's nothing to scroll *to*
   // when the pane renders a single task, and the old target (.sec-taskcard)
   // is the options module now, so aligning it to the top skipped the three
@@ -1538,7 +2149,7 @@ function syncScrollToTask(id, target){
   }
   if(target === 'left'){
     // Expand the task's group if it was collapsed so the row is actually visible
-    const gkey = groupBy === 'contractor' ? (t.gc || 'unassigned') : t.room;
+    const gkey = taskGroupKey(t);
     if(collapsedGrps && collapsedGrps.has(gkey)){
       collapsedGrps.delete(gkey);
       renderSidebar();
@@ -1658,6 +2269,15 @@ function browseProductForTask(id){
 let editRequestFor = null;   // task id whose popover is open (null = closed)
 let ereqDraft = '';           // note-in-progress
 function openEditRequest(id){
+  /* The field agent without the baton does not request — they take the turn.
+     Their CTA reads "Request to edit" wherever it appears, and every one of
+     them opens the shell's take-the-turn dialogue, which names whoever is
+     holding the document. Asked of the shell because that is where the turn
+     model and the modal live. */
+  if(typeof USER_ROLE !== 'undefined' && USER_ROLE === 'field_agent_nr'){
+    try{ window.parent.postMessage({type:'kai-take-turn'}, '*'); }catch(e){}
+    return;
+  }
   // Mark the task as edit-requested (so the sidebar chip + card button
   // reflect the state) and open the Notes drawer so the user can drop
   // context on what needs to change. The old inline ereq popover is
@@ -1805,7 +2425,10 @@ function bumpProductQty(id, oid, pid, dir){
   const opt = (t.options||[]).find(o => o.id === oid); if(!opt) return;
   const p = (opt.products||[]).find(x => x.id === pid); if(!p) return;
   const cur = parseFloat(String(p.qty || '0').replace(/[^0-9.-]/g,'')) || 0;
-  p.qty = String(Math.max(0, cur + dir));
+  // Keep the unit: stepping "14 LF" gives "15 LF", not a bare 15.
+  const unit = String(p.qty || '').replace(/^[\s\d.,-]+/, '').trim();
+  const next = Math.max(0, cur + dir);
+  p.qty = unit ? `${next} ${unit}` : String(next);
   recomputeOptionFromProducts(t, opt);
   if(typeof renderAll === 'function') renderAll();
 }
@@ -2105,6 +2728,22 @@ function setTaskContractor(id, gc){
   renderSidebar();
   if(workMode==='shop' || workMode==='artifact') renderWork();
 }
+/* Department from the task info fold. An empty value clears the field and
+   hands the task back to the suggestion. Not staged as a change order the
+   way the contractor is: the department sorts the scope, it doesn't change
+   what gets built or what it costs. */
+function setTaskDept(id, dept){
+  const t = TASKS.find(x=>x.id===id); if(!t) return;
+  const prev = taskDept(t);
+  if(dept) t.dept = dept; else delete t.dept;
+  const next = taskDept(t);
+  if(dept) toast(`${t.name} · department set to ${next}`);
+  else toast(`${t.name} · using the suggested department, ${next}`);
+  // The task may have just changed sidebar group, so redraw the sidebar
+  // as well as the card.
+  if(prev !== next || groupBy === 'dept') renderSidebar();
+  if(workMode==='shop' || workMode==='artifact') renderWork();
+}
 function saveEdit(id){
   const t=TASKS.find(x=>x.id===id); if(!t||!editDraft) return;
   t.status=editDraft.status;
@@ -2170,8 +2809,8 @@ function openModAdd(id,btn){
   pop.innerHTML=`<div class="mod-pop-head">Add modifier</div>`+
     (avail.length?avail.map(m=>`<button class="mod-pop-opt" onclick="addMod(${id},'${m.id}')">
         ${m.label}<span class="mk">${m.kind==='financial'?'Financial':'Display'}</span></button>`).join('')
-      :`<div class="mod-pop-empty">All project modifiers applied</div>`)+
-    `<div class="mod-pop-foot">${(PROJECT_MODS.length)}/5 project modifiers</div>`;
+      :`<div class="mod-pop-empty">All job modifiers applied</div>`)+
+    `<div class="mod-pop-foot">${(PROJECT_MODS.length)}/5 job modifiers</div>`;
   document.body.appendChild(pop);
   const r=btn.getBoundingClientRect();
   pop.style.top=(r.bottom+6)+'px';
@@ -2371,7 +3010,7 @@ function dwPhotos(){
   // hideTag drops the chip that would only repeat the drawer's own title.
   const hideTag = t ? t.name : dwCtx.room;
   const cells = photos.map((p, i) => {
-    const label = (p.kind === 'group') ? (p.room || 'Project')
+    const label = (p.kind === 'group') ? (p.room || 'Job')
                 : (t ? t.name : ((TASKS.find(x => x.code === p.task) || {}).name || p.room));
     return _pgdPhotoFigHtml(p, i, label, hideTag);
   }).join('');
@@ -2409,6 +3048,13 @@ function dwNoteLevelsFor(){
 
 function dwNoteLevelLabel(){
   return (DW_NOTE_LEVELS.find(l => l.id === dwNoteLevel) || DW_NOTE_LEVELS[2]).label;
+}
+
+/* Notes name people the way the Activity does — "Marisol A.", not "M. Alvarez".
+   The roster is the same one the trail reads, so the two surfaces agree; a name
+   the roster does not carry (a contractor, a resident) is left as written. */
+function dwWhoShort(who){
+  return (typeof _ovWhoShort === 'function') ? (_ovWhoShort(who) || who) : who;
 }
 
 /* ── Note edit / delete ──────────────────────────────────────────────
@@ -2565,7 +3211,7 @@ function dwNoteSetHidden(v){
   });
   const hint = document.getElementById('dwNoteHint');
   if(hint) hint.textContent = dwNoteHidden
-    ? 'Internal — visible to the project team only.'
+    ? 'Internal — visible to the job team only.'
     : 'External — the assigned contractor can see this note.';
 }
 
@@ -2621,7 +3267,7 @@ function dwNotes(notes, opts){
     const isMine = i < mineCount;
     const isSelf = IS_CONTRACTOR && n.who === MY_CONTRACTOR;
     const badge = IS_CONTRACTOR && !isSelf
-      ? `<span class="dw-note-ext" title="Sent to you by the project team">External · Request</span>`
+      ? `<span class="dw-note-ext" title="Sent to you by the job team">External · Request</span>`
       : '';
     const role = n.role ? `<span class="dw-note-role">${n.role}</span>` : '';
     // Level and visibility only exist on notes written through this
@@ -2645,7 +3291,7 @@ function dwNotes(notes, opts){
     if(isMine && dwNoteEditIdx === i){
       return `<div class="dw-note is-editing${n.hidden?' is-internal':''}${isApproval?' is-approval':''}">
         <div class="dw-note-meta">
-          ${apTick}<span class="dw-note-who">${n.who}</span>${role}${lvl}
+          ${apTick}<span class="dw-note-who">${dwWhoShort(n.who)}</span>${role}${lvl}
           <span class="dw-note-when">${n.when}</span>${edited}
         </div>
         <textarea class="dw-note-edit-input" oninput="dwNoteEditSetDraft(this.value)"
@@ -2680,9 +3326,10 @@ function dwNotes(notes, opts){
       <button type="button" class="dw-note-act is-confirm" onclick="event.stopPropagation();dwNoteDelete(${i})">Confirm delete</button>
       <button type="button" class="dw-note-act" onclick="event.stopPropagation();dwNoteDeleteCancel()">Keep</button>
     </div>` : '';
-    return `<div class="dw-note${IS_CONTRACTOR && !isSelf?' external':''}${n.hidden?' is-internal':''}${isApproval?' is-approval':''}${isMine?' has-menu':''}">
+    return `<div class="dw-note${IS_CONTRACTOR && !isSelf?' external':''}${n.hidden?' is-internal':''}${isApproval?' is-approval':''}${isMine?' has-menu':''}"${
+      n.nid ? ` data-nid="${esc(n.nid)}"` : ''}>
       <div class="dw-note-meta">
-        ${apTick}<span class="dw-note-who">${n.who}</span>${role}${lvl}${intBadge}
+        ${apTick}<span class="dw-note-who">${dwWhoShort(n.who)}</span>${role}${lvl}${intBadge}
         <span class="dw-note-when">${n.when}</span>${edited}
         ${badge}
       </div>
@@ -2718,7 +3365,7 @@ function dwNotes(notes, opts){
       </div>
     </div>
     <div class="dw-note-hint" id="dwNoteHint">${dwNoteHidden
-      ? 'Internal — visible to the project team only.'
+      ? 'Internal — visible to the job team only.'
       : 'External — the assigned contractor can see this note.'}</div>
     <textarea class="dw-note-input" placeholder="Add a note about this task…" oninput="dwNoteSetDraft(this.value)">${esc(dwNoteDraft||'')}</textarea>
     <div class="dw-note-composer-actions">
@@ -2732,8 +3379,8 @@ function dwNotes(notes, opts){
 function taskNotes(t){
   const pool=[
     {who:'Greg Han', role:'Field agent', when:'Apr 18 · 9:42a', body:'Captured during initial scan. Existing condition worse than listing photos suggested — see the wide shot for context. Please confirm you can work around the plumbing stub on the east wall.'},
-    {who:'Ada Novak', role:'Project manager', when:'Apr 21 · 2:15p', body:'Flagged this line for you to confirm before we lock scope. Send back any concerns or a revised estimate and we\'ll adjust before publish.'},
-    {who:'Or Weiss', role:'Project manager', when:'Apr 22 · 8:30a', body:'Homeowner has approved the allowance shown. You\'re clear to proceed once the product SKU is picked. Ping me if the pricing runs long.'},
+    {who:'Ada Novak', role:'Manager', when:'Apr 21 · 2:15p', body:'Flagged this line for you to confirm before we lock scope. Send back any concerns or a revised estimate and we\'ll adjust before publish.'},
+    {who:'Or Weiss', role:'Job manager', when:'Apr 22 · 8:30a', body:'Homeowner has approved the allowance shown. You\'re clear to proceed once the product SKU is picked. Ping me if the pricing runs long.'},
     {who:'Apex Carpentry', role:'Contractor · you', when:'Apr 24 · 1:12p', body:'Measured on site. Will need an extra day for the return panel.'},
   ];
   return pool.slice(0, t.notes||0);
@@ -2743,7 +3390,7 @@ function roomNotes(room){
   // room-level notes are about the space as a whole
   const base=[
     {who:'Greg Han', role:'Field agent', when:'Apr 18 · 9:40a', body:`Whole-room scan of the ${room.toLowerCase()}. Walkthrough video shows access, plumbing, and existing conditions — please review before you start on any line items in here.`},
-    {who:'Ada Novak', role:'Project manager', when:'Apr 21 · 2:05p', body:'General notes about the space: nothing structural to flag, but please protect adjacent surfaces during work. Let us know if you need a dumpster staged.'},
+    {who:'Ada Novak', role:'Manager', when:'Apr 21 · 2:05p', body:'General notes about the space: nothing structural to flag, but please protect adjacent surfaces during work. Let us know if you need a dumpster staged.'},
   ];
   return base;
 }
@@ -2769,7 +3416,11 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDrawer(); });
 
 /* ════════════ WORK SURFACE ════════════ */
 const _urlTab = new URLSearchParams(window.__KAI_QS || window.location.search).get('tab');
-let workMode = ['gallery','floorplan','shop','artifact','artifact2','progress','pano'].includes(_urlTab) ? _urlTab : 'shop';   // 'gallery' | 'floorplan' | 'shop' | 'artifact' | 'artifact2' | 'progress' | 'pano'
+/* Overview is the default: it is the only tab that says what this project is
+   before you have selected anything, which is what you want on arrival. Every
+   other tab answers a question you have to bring with you. ?tab= still wins,
+   so a link into the Editor or an artifact lands where it says. */
+let workMode = ['overview','gallery','floorplan','shop','artifact','artifact2','progress','pano'].includes(_urlTab) ? _urlTab : 'overview';
 // Tab ids intentionally kept as 'pano' / 'progress' (URL routing, body
 // classes, and postMessage payloads all key off them). Only the display
 // labels changed: Pano → "Progress" (compare-walks timeline is what the
@@ -2783,16 +3434,30 @@ let workMode = ['gallery','floorplan','shop','artifact','artifact2','progress','
    branches stay in place but are no longer reachable from the tab bar;
    photo tiles open the overlay directly rather than a gallery tab. */
 const _WORK_MODES_ALL = [
+  {id:'overview', label:'Overview'},   // the project's front page — js/overview.js
   {id:'shop',     label:'Editor'},
   {id:'floorplan',label:'Measurements'},   // id stays: it's the URL param and dispatch key
   {id:'pano',     label:'Progress'},
-  {id:'artifact', label:'Artifact'},
-  {id:'artifact2',label:'Artifact 2'},   // scope change history — js/artifact2.js
+  {id:'artifact', label:'Record'},
+  {id:'artifact2',label:'Artifact 2'},   // scope change history — js/a2/*.js
 ];
 const _projModeParam = new URLSearchParams(window.__KAI_QS || window.location.search).get('projMode');
-const WORK_MODES = _projModeParam === 'closeout-approved'
-  ? _WORK_MODES_ALL.filter(m => m.id !== 'shop')
-  : _WORK_MODES_ALL;
+/* ?only=<id> — a host page that exists for one surface (see
+   Artifact-Change-Order-View) keeps that tab and drops the rest, so the bar
+   names where you are without offering seven places you did not come for. */
+const _onlyTab = new URLSearchParams(window.__KAI_QS || window.location.search).get('only');
+/* Artifact 2 is parked, not removed: the tab and everything behind it still
+   build, they are just not offered. Flip to true to put it back. ?tab= and
+   ?only= still reach it, so a link into it keeps working. */
+const SHOW_ARTIFACT2 = false;
+const _WORK_MODES_OFFERED = SHOW_ARTIFACT2
+  ? _WORK_MODES_ALL
+  : _WORK_MODES_ALL.filter(m => m.id !== 'artifact2');
+const WORK_MODES = _onlyTab
+  ? _WORK_MODES_ALL.filter(m => m.id === _onlyTab)
+  : (_projModeParam === 'closeout-approved'
+      ? _WORK_MODES_OFFERED.filter(m => m.id !== 'shop')
+      : _WORK_MODES_OFFERED);
 // If the URL asked for the shop tab but the mode strips it out, fall
 // back to Artifact (the natural "read the finished doc" surface).
 if(_projModeParam === 'closeout-approved' && workMode === 'shop') workMode = 'artifact';
@@ -2803,6 +3468,7 @@ function setWorkMode(m){
   if(m === 'artifact'){
     openCopyId = null;
     openHistoricalId = null;
+    if(typeof openPoDoc !== 'undefined') openPoDoc = false;
   }
   workMode=m;
   document.body.classList.toggle('shop-mode', m==='shop');
@@ -2820,6 +3486,10 @@ function setWorkMode(m){
     if(wb) wb.innerHTML = '<div class="shop-empty"><span class="shop-empty-title">'+m+'</span><span class="shop-empty-desc">Something went wrong rendering this view.</span></div>';
   }
   if(m==='shop') renderSidebar();   // re-render to apply needs-product highlights
+  // Leaving the Record leaves its order document: the turn buttons go back.
+  if(typeof _poSyncFocus === 'function') _poSyncFocus();
+  // The order beside it lights whichever of its rows this tab is showing.
+  if(typeof _renderPoSide === 'function') _renderPoSide();
 }
 
 /* ── Scope copies model ─────────────────────────────────────────────────
@@ -2855,10 +3525,55 @@ let SCOPE_COPIES = PROJ_MODE === 'review' ? [] : [
 // Both null → the two-section index (historical artifacts + shareable copies).
 let openCopyId = null;
 let openHistoricalId = null;
-function openCopy(id){ openHistoricalId = null; openCopyId = id; renderArtifact(); }
-function closeCopy(){ openCopyId = null; renderArtifact(); }
-function openHistorical(id){ openCopyId = null; openHistoricalId = id; renderArtifact(); }
-function closeHistorical(){ openHistoricalId = null; renderArtifact(); }
+/* Opening a document is arriving somewhere new, so it starts at the top.
+   #workBody keeps its scroll position across an innerHTML swap, which landed
+   you partway down a scope you had never seen — at whatever depth you had
+   scrolled the Register to.
+
+   The reset lives here rather than in renderArtifact: that runs again on every
+   re-render, including expanding a row in the Register's ledger, and resetting
+   there would yank you to the top mid-read. Only navigation resets. rAF so it
+   lands after the new content has been laid out. */
+function toggleWorkExpand(){
+  if(document.body.classList.contains('sb-collapsed')) expandSidebar();
+  else collapseSidebar();
+}
+/* Shop with Kai: the way to the purchase orders, at the head of the
+   Departments view — the view products are picked in, so the orders they
+   end up on are one step away. Opens the orders on the Record tab. */
+function _sbPoLinkHtml(){
+  // A demo setting, off by default (Demo menu → Shop with Kai).
+  let shown = false;
+  try{ shown = !!(window.parent && window.parent !== window && window.parent.kaiShowPoLink && window.parent.kaiShowPoLink()); }catch(e){}
+  if(!shown) return '';
+  if(!window.__KAI_SHOP || groupBy !== 'dept' || typeof _poOrders !== 'function'
+     || !WORK_MODES.some(m => m.id === 'artifact')) return '';
+  const {orders, total} = _poOrders();
+  if(!orders.length) return '';
+  const n = orders.filter(o => !o.cancel).length;
+  const layout = typeof SHOP_LAYOUT !== 'undefined' && SHOP_LAYOUT;
+  // The layout file opens only the current order, so the link names it.
+  const cur = layout ? _poOrderById(_poFocusOrderId()) : null;
+  const meta = cur
+    ? `${cur.draft ? 'Draft · ' + _poTurnTxt(cur) : 'Approved'} · ${artMoney(cur.amt)}`
+    : `${n} order${n === 1 ? '' : 's'} · ${artMoney(total)} at cost`;
+  return `<button type="button" class="sb-po-link" onclick="${layout ? 'openPoSide()' : 'openPurchaseOrder()'}" title="Open the purchase order${layout ? '' : 's'}">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M3 2.5h8v9l-1.5-1-1.5 1-1-1-1 1-1.5-1-1.5 1z"/><path d="M5 5.5h4M5 7.5h4" stroke-linecap="round"/></svg>
+    <span class="sb-po-link-t">${cur ? 'Purchase order' : 'Purchase orders'}</span>
+    <span class="sb-po-link-m">${esc(meta)}</span>
+    <span class="sb-po-link-go" aria-hidden="true">›</span>
+  </button>`;
+}
+function _artToTop(){
+  const wb = document.getElementById('workBody');
+  if(!wb) return;
+  wb.scrollTop = 0;
+  requestAnimationFrame(() => { wb.scrollTop = 0; });
+}
+function openCopy(id){ openHistoricalId = null; if(typeof openPoDoc !== 'undefined') openPoDoc = false; openCopyId = id; renderArtifact(); _artToTop(); }
+function closeCopy(){ openCopyId = null; renderArtifact(); _artToTop(); }
+function openHistorical(id){ openCopyId = null; if(typeof openPoDoc !== 'undefined') openPoDoc = false; openHistoricalId = id; renderArtifact(); _artToTop(); }
+function closeHistorical(){ openHistoricalId = null; renderArtifact(); _artToTop(); }
 function copyById(id){ return SCOPE_COPIES.find(c => c.id === id); }
 function copyIsExpired(c){
   if(!c || !c.expiresAt) return false;
@@ -2890,16 +3605,27 @@ function renderWorkHdr(){
         <span class="box-halo"><input type="checkbox" ${panoOnlyWithPhotos?'checked':''} onchange="setPanoOnlyWithPhotos(this.checked)"></span>
         <span class="copy-filter-chk-lbl">Only show tasks with photos</span>
       </label>`
+    /* Artifact 2 gets its own filter in the same slot. DECOY — wired to
+       nothing on purpose: it is here to see whether a reviewer working through
+       a long change order reaches for it, before the hiding logic is built. */
+    : (workMode === 'artifact2')
+    ? `<label class="copy-filter-chk wmode-tool" title="Not wired up yet">
+        <span class="box-halo"><input type="checkbox"></span>
+        <span class="copy-filter-chk-lbl">Hide approved changes</span>
+      </label>`
     : '';
   // Copies model owns its own Share affordances (per-copy Share button in the
   // doc-view crumb + per-card Share in the index), so the work-hdr is bare.
-  // Sits ahead of the tabs and only shows while the sidebar is collapsed —
-  // CSS-gated on body.sb-collapsed, since collapsing doesn't re-render this.
-  const showScope = `<button class="sb-show-scope" onclick="expandSidebar()" title="Show the scope list" aria-label="Show scope">
-    Show scope
-    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5 8 6l-3.5 3.5"/></svg>
-  </button>`;
-  document.getElementById('workHdr').innerHTML = `${showScope}<div class="wmode-tabs">${tabs}</div>${scopeTools}`;
+  /* Expand / Collapse, at the bar's right end: gives the work surface the
+     whole panel by shutting the scope list, and brings the list back. The
+     label is CSS-gated on body.sb-collapsed, since
+     collapsing doesn't re-render this bar. */
+  const expandBtn = `<button type="button" class="wmode-expand" onclick="toggleWorkExpand()"
+      title="Expand the work surface" aria-label="Expand or collapse the work surface">
+      <span class="wmode-expand-on"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 2.5h3v3M11.5 2.5 8 6M5.5 11.5h-3v-3M2.5 11.5 6 8"/></svg>Expand</span>
+      <span class="wmode-expand-off"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 8.5 5.5M8.5 2.5v3h3M2 12l3.5-3.5M5.5 11.5v-3h-3"/></svg>Collapse</span>
+    </button>`;
+  document.getElementById('workHdr').innerHTML = `<div class="wmode-tabs">${tabs}</div>${scopeTools}${expandBtn}`;
   // Rebuild the af menu contents now that the button is back in the DOM.
   if(typeof renderFilter === 'function') renderFilter();
 }
@@ -3046,6 +3772,9 @@ function isOverBudget(t, product, qty){
 function categoryOf(t){
   const base=(t.name||'').toLowerCase();
   if(/cabinet/.test(base)) return 'cabinet';
+  // Same order as productPool: a vanity with a quartz top is a vanity.
+  if(/vanity/.test(base)) return 'vanity';
+  if(/shower/.test(base)) return 'shower';
   if(/counter|quartz/.test(base)) return 'counter';
   if(/backsplash|tile/.test(base) && !/floor/.test(base)) return 'tile';
   if(/appliance/.test(base)) return 'appliance';

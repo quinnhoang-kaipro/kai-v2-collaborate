@@ -16,19 +16,6 @@ function shellHtml(){
     <div class="a2-scroll" id="a2Scroll">
       <div class="a2-page">
 
-        <div class="hist-grid" id="a2Vers">${VER_ORDER.map(k=>{
-          const v = VER[k];
-          return `<button class="hist-card${v.stateCls}" type="button" data-ver="${k}" onclick="a2JumpVer('${k}')" title="Scrub to ${a2Esc(v.label)}">
-            <div class="hist-card-name">${a2Esc(v.label)}</div>
-            <div class="hist-card-meta">Approved ${a2Esc(v.date)}</div>
-            <div class="hist-card-docid">${a2Esc(v.sow)}</div>
-            <div class="hist-card-foot">
-              <span class="hist-card-budget">${a2Esc(fmtMoney(v.budget))}</span>
-              <span class="hist-card-tag${v.tagCls?` hist-tag-${v.tagCls}`:''}">${a2Esc(v.tag)}</span>
-            </div>
-          </button>`;
-        }).join('')}</div>
-
         <div class="a2-stage">
           <!-- Lane order is cards | paper | photos. The card lane leads so a
                change reads before the line it changed; the photo trails as
@@ -42,9 +29,14 @@ function shellHtml(){
                 <div class="a2-doc-sub">Atlanta, GA 30315 · Single-family renovation</div>
               </div>
               <div class="a2-head-r">
-                <div><div class="a2-meta-k">Compared</div><div class="a2-meta-v">Original → Change Order 2</div></div>
+                <!-- Derived, not stated: before anything is approved there is only
+                     one version, and claiming a comparison against a change
+                     order that does not exist would be a lie on the document. -->
+                <div><div class="a2-meta-k">Compared</div><div class="a2-meta-v">${VER_ORDER.length > 1
+                  ? `${a2Esc(VER[VER_ORDER[0]].label)} → ${a2Esc(VER[VER_ORDER[VER_ORDER.length-1]].label)}`
+                  : `${a2Esc(VER[VER_ORDER[0]].label)} &middot; no changes yet`}</div></div>
                 <div><div class="a2-meta-k">Prepared by</div><div class="a2-meta-v">Kaiizen Engineering</div></div>
-                <div><div class="a2-meta-k">Project</div><div class="a2-meta-v">KAI-2241</div></div>
+                <div><div class="a2-meta-k">Job</div><div class="a2-meta-v">KAI-2241</div></div>
               </div>
             </div>
             <table class="a2-table">
@@ -55,18 +47,16 @@ function shellHtml(){
                   <th class="a2-c-num a2-r">Qty</th>
                   <th class="a2-c-num a2-r">Labor</th>
                   <th class="a2-c-amt a2-r">Amount</th>
-                  <th class="a2-c-media"><span class="a2-sr">Photos &amp; notes</span></th>
+                  <!-- Named only in the wide state: while the scope list is showing
+                       this column is 28px of photo icon, which "Latest photo"
+                       would not fit. The screen-reader label covers that case. -->
+                  <th class="a2-c-media"><span class="a2-sr">Photos &amp; notes</span><span class="a2-c-media-lbl">Latest photo</span></th>
                 </tr>
               </thead>
               <tbody id="a2Body"></tbody>
               <tfoot id="a2Foot"></tfoot>
             </table>
           </div>
-          <!-- EXPERIMENT (a2-expand.js): photo rail. Furthest right so it never
-               disturbs the card lane's measured stacking. CSS-gated on
-               body.sb-collapsed — it only exists when hiding the scope list
-               freed up the width to spend on it. -->
-          <div class="a2-photorail" id="a2PhotoRail"></div>
         </div>
 
       </div>
@@ -106,14 +96,21 @@ function renderDoc(){
       const qtyv = valueAsOf(t,'Qty', t.qty);
       const labv = valueAsOf(t,'Labor', t.labor);
       const amtv = valueAsOf(t,'Amount', t.amount);
-      const gcHtml = gcv.val ? a2Esc(gcv.val) : `<span class="a2-gc-none">Unassigned</span>`;
+      // A contractor assigned during scoping rolls back to the literal
+      // 'Unassigned' before its change lands, so both spellings of "nobody
+      // yet" get the same treatment.
+      const gcHtml = (gcv.val && gcv.val !== 'Unassigned')
+        ? a2Esc(gcv.val)
+        : `<span class="a2-gc-none">Unassigned</span>`;
       // EXPERIMENT (a2-expand.js): the opened line and its detail row keep full
       // opacity while the rest of the document fades back.
       const isOpen = (typeof a2Expanded !== 'undefined') && a2Expanded === t.code;
       const cls = ['a2-row', isGone?'is-removed':'', isOpen?'is-open':''].filter(Boolean).join(' ');
-      const badge  = t.added ? '<span class="a2-badge is-added">New line</span>' : '';
+      // No "New line" pill on the row — the change card in the margin is where
+      // that story is told, and the pill repeated it inside the document.
+      const badge  = '';
       const rbadge = isGone  ? '<span class="a2-badge is-removed">Removed</span>' : '';
-      out.push(`<tr class="${cls}" data-a2-code="${a2Esc(t.code)}" onclick="a2Select('${a2Esc(t.code)}')">
+      out.push(`<tr class="${cls}" data-a2-code="${a2Esc(t.code)}" onclick="a2RowClick('${a2Esc(t.code)}',event)">
         <td class="a2-item">
           <div class="a2-id">${a2Esc(t.code)}</div>
           <div class="a2-name">${a2NameHtml(t)}${badge}${rbadge}</div>
@@ -123,14 +120,20 @@ function renderDoc(){
         <td class="a2-num">${a2Esc(qtyv.val)}</td>
         <td class="a2-num">${a2Esc(labv.val)}</td>
         <td class="a2-amt">${a2Esc(amtv.val)}</td>
-        <td class="a2-media-cell">${a2MediaBtn('task', t.code, a2TaskPhotoCount(t.code))}</td>
+        <!-- rowspan 2: the photo is taller than the name/option lines, and left in
+             this row alone it stretched the row and pushed the description row
+             down — the description floated a photo's height away from the name
+             it belongs to. Spanning both rows lets the photo occupy the line's
+             whole block while the text keeps its own rhythm. The detail row's
+             td is colspan 5 to match. -->
+        <td class="a2-media-cell" rowspan="2">${(typeof a2MediaCellHtml === 'function') ? a2MediaCellHtml(t) : a2MediaBtn('task', t.code, a2TaskPhotoCount(t.code))}</td>
       </tr>`);
       const prodv = valueAsOf(t,'Product', t.product);
       const mods = modsAsOf(t);
       const modsHtml = mods.length
         ? `<div class="a2-mods">${mods.map(x=>`<span class="a2-mod ${x.isNew?'is-new':''}">${a2Esc(x.m)}</span>`).join('')}</div>` : '';
-      out.push(`<tr class="a2-row a2-detail${isOpen?' is-open':''}" data-a2-detail="${a2Esc(t.code)}" onclick="a2Select('${a2Esc(t.code)}')">
-        <td colspan="6">
+      out.push(`<tr class="a2-row a2-detail${isOpen?' is-open':''}" data-a2-detail="${a2Esc(t.code)}" onclick="a2RowClick('${a2Esc(t.code)}',event)">
+        <td colspan="5">
           <div class="a2-desc">${a2Esc(t.desc)}</div>
           <div class="a2-prod"><span class="a2-lbl">Product</span> <span>${a2Esc(prodv.val)}</span></div>
           ${modsHtml}
@@ -143,7 +146,6 @@ function renderDoc(){
   const bodyEl = document.getElementById('a2Body');
   bodyEl.innerHTML = out.join('');
   bodyEl.classList.toggle('is-expanded', !!(typeof a2Expanded !== 'undefined' && a2Expanded));
-  if(typeof renderA2Photo === 'function') renderA2Photo();   // EXPERIMENT
   renderTotal(roomCount);
   applySelection();   // the rows were just replaced; re-mark the selected line
 }
@@ -165,7 +167,6 @@ function selectRow(code){
 function renderTotal(rooms){
   const foot = document.getElementById('a2Foot');
   if(!foot) return;
-  const ver = VER[asofVer()];
   foot.innerHTML = `
     <tr class="a2-total">
       <td class="a2-total-k" colspan="2">${rooms} ${rooms===1?'room':'rooms'}</td>
@@ -174,6 +175,6 @@ function renderTotal(rooms){
       <td></td>
     </tr>
     <tr class="a2-total-lbl">
-      <td colspan="6">Total as of ${a2Esc(ver.date)}</td>
+      <td colspan="6">Total as of ${a2Esc(a2AsOfDate())}</td>
     </tr>`;
 }

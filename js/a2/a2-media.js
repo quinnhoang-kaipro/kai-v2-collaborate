@@ -38,9 +38,9 @@ function a2MediaBtn(kind, key, n){
 /* ── doorway to the Editor ───────────────────────────────────────────
    The line NAME is the link. It's the biggest target on the row, it's the
    thing a person points at when they mean "that task", and it's already the
-   first thing the eye lands on — so no new control is needed. Nothing is
-   added at rest: the underline and the chevron appear on hover only, so the
-   document reads exactly as it did before.
+   first thing the eye lands on. The whole row opens the line now, so this is
+   the affordance rather than the only target: nothing is added at rest, and
+   the underline and chevron appear on hover to say the line opens.
 
    Note this crosses from a historical document to the live present — the
    Editor shows the task as it is NOW, not as of the playhead. The tooltip
@@ -53,5 +53,5 @@ function a2NameHtml(t){
   // window.a2OpenInEditor still exists if we want the jump back.
   const open = (typeof a2Expanded !== 'undefined') && a2Expanded === t.code;
   return `<button class="a2-name-txt a2-open${open?' is-open':''}" type="button" title="${open?'Collapse':'Show this task from the Editor, inline'}"
-    onclick="event.stopPropagation();a2ToggleExpand('${a2Esc(t.code)}',event)">${a2Esc(t.name)}<svg class="a2-open-chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2.5l4 3.5-4 3.5"/></svg></button>`;
+    onclick="event.stopPropagation();a2RowClick('${a2Esc(t.code)}',event)">${a2Esc(t.name)}<svg class="a2-open-chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2.5l4 3.5-4 3.5"/></svg></button>`;
 }

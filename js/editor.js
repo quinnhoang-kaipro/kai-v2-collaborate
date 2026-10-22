@@ -13,6 +13,12 @@ function renderShop(){
     body.innerHTML = _renderScopePageHtml({taskOnClick: 'selectTask'});
     return;
   }
+  // A product line from the Departments view — where its product is picked
+  // once for every task in it.
+  if(!sel && selLineKey && groupBy === 'dept'){
+    body.innerHTML = _renderLinePageHtml();
+    return;
+  }
   if(!sel && !selGroupKey){
     const groups = (typeof groupTasks === 'function')
       ? groupTasks((typeof visibleTasks === 'function') ? visibleTasks() : TASKS)
@@ -57,7 +63,7 @@ function renderShop(){
           <svg viewBox="0 0 24 24"><path d="M4 5.5h13l-1 4H5z"/><path d="M4 12h13v6H4z"/><path d="M8 8v4"/></svg>
         </span>
         <span class="shop-empty-title">Pick a task to edit</span>
-        <span class="shop-empty-desc">Click any task in the sidebar to see its details here — edit the contractor, cost, quantity, or pick a product from the suggested list.</span>
+        <span class="shop-empty-desc">Click any task in the sidebar to see its info here — edit the contractor, cost, quantity, or pick a product from the suggested list.</span>
         ${needsWorkHtml}
       </div>`;
     return;
@@ -66,11 +72,9 @@ function renderShop(){
   // the primary identifier is what you scan first, then room context,
   // then the "N of M" position (tertiary — you know where you are, but
   // you might want to know how far through the group you've gotten).
-  const grpArr = TASKS.filter(t => (groupBy === 'contractor')
-    ? (t.gc || 'unassigned') === (sel.gc || 'unassigned')
-    : t.room === sel.room);
+  const grpArr = TASKS.filter(t => taskGroupKey(t) === taskGroupKey(sel));
   const grpIdx = grpArr.findIndex(t => t.id === sel.id);
-  const grpLbl = (groupBy === 'contractor') ? (sel.gc || 'Unassigned') : sel.room;
+  const grpLbl = taskGroupLabel(sel);
   const progress = `<span class="shop-nav-progress"><b>${esc(sel.name)}</b><span class="shop-nav-sep">·</span>${esc(grpLbl)}<span class="shop-nav-sep">·</span>Task <b>${grpIdx + 1}</b> of <b>${grpArr.length}</b></span>`;
 
   body.innerHTML=`
@@ -112,8 +116,7 @@ function _shopTaskHeaderHtml(t){
   const isApprovedTask = approved.has(t.id);
   // The eyebrow names the group the user actually navigated through, so it
   // follows the sidebar's grouping rather than always reading the room.
-  const grpLbl = (typeof groupBy !== 'undefined' && groupBy === 'contractor')
-    ? (t.gc || 'Unassigned') : (t.room || '—');
+  const grpLbl = (typeof taskGroupLabel === 'function') ? taskGroupLabel(t) : (t.room || '—');
   const descSection = (() => {
     /* Collapsed by default: the description is reference material, not the
        thing you came to this card to do, so it costs a click rather than
@@ -126,7 +129,7 @@ function _shopTaskHeaderHtml(t){
       <button class="sec-taskdesc-hd" type="button" aria-expanded="${isExpanded}"
         onclick="event.stopPropagation();toggleDescExpanded(${t.id})"
         title="${isExpanded ? 'Hide the description' : 'Read the description'}">
-        <span class="sec-taskcard-lbl sec-taskdesc-title">Task details</span>
+        <span class="sec-taskcard-lbl sec-taskdesc-title">Task info</span>
         <svg class="sec-taskdesc-caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
       </button>
       ${isExpanded ? `<div class="sec-taskdesc-body">
@@ -134,6 +137,15 @@ function _shopTaskHeaderHtml(t){
         <span class="sec-taskcard-lbl">Contractor</span>
         ${hdrDdHtml('ddGc-' + t.id, t.gc || '', [{value:'', label:'Unassigned'}].concat(CONTRACTORS.map(c => ({value:c, label:c}))), 'setTaskContractor(' + t.id + ', __V__);requestSecTaskcardRerender()', (t.gc ? '' : 'is-un') + ch('gc', t.gc))}
         ${wGc}
+        <span class="sec-taskcard-lbl sec-taskdesc-lbl2">Department</span>
+        ${(() => {
+          const sug = suggestTaskDept(t);
+          const opts = [{value:'', label:`Suggested · ${sug}`}]
+            .concat(DEPARTMENTS.map(d => ({value:d, label:d})));
+          return hdrDdHtml('ddDept-' + t.id, t.dept || '', opts,
+            'setTaskDept(' + t.id + ', __V__);requestSecTaskcardRerender()',
+            t.dept ? '' : 'is-suggested');
+        })()}
         </div>
         <div class="sec-taskdesc-copy"><span class="sec-taskcard-lbl">Description</span><div class="sec-taskcard-desc">${body}</div>${wDesc}</div>
       </div>` : ''}
@@ -193,7 +205,7 @@ function _shopTaskHeaderHtml(t){
     ${coBannerInner}
     <div class="sec-taskcard-hdr">
       <div class="sec-taskcard-hdr-l">
-        <span class="sec-taskcard-eyebrow">${esc(grpLbl)} <span class="sec-taskcard-sep">·</span> ${esc(t.code)}</span>
+        <span class="sec-taskcard-eyebrow">${window.__KAI_SHOP_LAYOUT ? '<span class="page-kind">Task</span>' : ''}${esc(grpLbl)} <span class="sec-taskcard-sep">·</span> ${esc(t.code)}</span>
         <div class="sec-taskhdr-title-row">
           <div class="sec-taskcard-title">${esc(t.name)}</div>
       ${(()=>{
@@ -269,8 +281,11 @@ function taskActivityFeed(t){
   // `type` is the card's eyebrow — what kind of thing happened. `tone` is
   // separate because it drives the mark's colour, and the two don't line up:
   // an approval and a completion are different types but both read as done.
-  const at = (minRank, type, label, when, who, tone) => {
-    if(rank >= minRank) rows.push({type, label, when, who, tone: tone || ''});
+  // `st` is the plain status name a Task status row lands on. The timeline
+  // reads it to write "Marked In Progress" and the from → to line under it;
+  // the older consumers still read `label`, so both travel together.
+  const at = (minRank, type, label, when, who, tone, st) => {
+    if(rank >= minRank) rows.push({type, label, when, who, tone: tone || '', st: st || ''});
   };
   // What the row says this task is. Status entries below are gated on it: a
   // feed that claims a transition the task never made is worse than a short
@@ -293,19 +308,19 @@ function taskActivityFeed(t){
     return now >= want;
   };
   at(0, 'Event',           'Task created',                 'Jan 6, 2026',  'T. Okafor', 'decision');
-  at(1, 'Event',           'Submitted for review',         'Jan 9, 2026',  'T. Okafor', 'decision');
+  at(1, 'Event',           'Handed off for review',         'Jan 9, 2026',  'T. Okafor', 'decision');
   at(2, 'Approval status', 'Task reviewed',                'Jan 14, 2026', 'S. Patel',  'decision');
   at(3, 'Approval status', 'Task approved',                'Jan 16, 2026', 'T. Okafor', 'decision');
-  at(3, 'Task status',     'Status → <b>Not started</b>',  'Jan 20, 2026', agent);
+  at(3, 'Task status',     'Status → <b>Not started</b>',  'Jan 20, 2026', agent, '', 'Not started');
   if(_reached('In progress'))
-    at(3, 'Task status',   'Status → <b>In progress</b>',  'Feb 3, 2026',  agent);
+    at(3, 'Task status',   'Status → <b>In progress</b>',  'Feb 3, 2026',  agent, 'progress', 'In progress');
   // Rework only appears on tasks that actually went back — otherwise every
   // task would claim a history it didn't have.
   if(t.editRequested || t.status === 'in_review'){
-    at(3, 'Task status',   'Status → <b>Rework</b>', 'Feb 24, 2026', 'S. Patel');
+    at(3, 'Task status',   'Status → <b>Rework</b>', 'Feb 24, 2026', 'S. Patel', 'rework', 'Rework');
   }
   if(_reached('Completed'))
-    at(3, 'Task status',   'Status → <b>Completed</b>',    'Mar 12, 2026', agent, 'done');
+    at(3, 'Task status',   'Status → <b>Completed</b>',    'Mar 12, 2026', agent, 'done', 'Completed');
   // Closeout is signed off one task at a time, so this follows the task
   // rather than the stage.
   if(typeof approved !== 'undefined' && approved.has(t.id))
@@ -313,28 +328,95 @@ function taskActivityFeed(t){
   return rows;
 }
 /* Newest first. taskActivityFeed builds forward because that's how the
-   stages accumulate; the reverse happens here, at the point of display. */
+   stages accumulate; the reverse happens here, at the point of display.
+
+   Drawn as a timeline rather than a stack of cards: a dated rail down the
+   left, month rules breaking it into spans, and the event itself in two
+   lines — what happened, then what changed. The date is a day, not a
+   timestamp; the hour was precision the feed doesn't actually have. */
+function _taskActOrd(n){
+  const t = n % 100;
+  if(t >= 11 && t <= 13) return 'th';
+  return ({1:'st', 2:'nd', 3:'rd'})[n % 10] || 'th';
+}
+/* 'Jan 6, 2026' → the pieces the timeline sets separately: the month rule's
+   label, the day stamp, and a key to group consecutive rows by. */
+function _taskActWhen(when){
+  const m = /^([A-Za-z]+)\s+(\d+),\s*(\d{4})$/.exec(String(when || '').trim());
+  if(!m) return {month: '', day: String(when || ''), ord: '', key: String(when || '')};
+  const [, mon, d, yr] = m;
+  return {
+    month: `${mon.toUpperCase()} ${yr}`,
+    day: `${mon} ${d}`,
+    ord: _taskActOrd(+d),
+    key: `${mon} ${yr}`
+  };
+}
+/* The mark's colour follows the status the row lands on, not the eyebrow:
+   an approval and a completion are different kinds of event and both read
+   as done. Rows with no status are the plain events on the rail. */
+function _taskActTone(r){
+  if(r.tone === 'rework' || r.st === 'Rework') return 'rework';
+  if(r.tone === 'progress' || r.st === 'In progress') return 'progress';
+  if(r.tone === 'done' || r.st === 'Completed' || r.st === 'Approved') return 'done';
+  if(r.st === 'Not started') return 'idle';
+  return 'event';
+}
+/* The feed's status names are sentence case because they're written into a
+   "Status → x" sentence elsewhere. On the timeline they're the headline, so
+   they're set as titles — and Rework says what it is: work sent back. */
+const TASKACT_ST_LABEL = {
+  'Not started': 'Not Started',
+  'In progress': 'In Progress',
+  'Rework': 'Needs Rework',
+  'Completed': 'Complete',
+  'Approved': 'Approved'
+};
+const _taskActSt = st => TASKACT_ST_LABEL[st] || st;
 function _shopTaskActivityHtml(t){
   if(!t) return '';
-  const rows = taskActivityFeed(t).slice().reverse();
-  const body = rows.length
-    ? `<ol class="sec-taskact-list">${rows.map(r => `<li class="sec-taskact-row${r.tone ? ' is-' + r.tone : ''}">
+  const feed = taskActivityFeed(t);
+  const rows = feed.slice().reverse();
+  let body;
+  if(!rows.length){
+    body = `<div class="pgd-photos-empty">No activity yet for this task.</div>`;
+  } else {
+    // Walking the feed forward gives each status row the one before it, so
+    // the second line can say what it moved from. Built here and read back
+    // on the reversed pass.
+    const prev = {};
+    let last = '';
+    feed.forEach((r, i) => { if(r.st){ prev[i] = last; last = r.st; } });
+    const idxOf = new Map(feed.map((r, i) => [r, i]));
+    let month = '';
+    const out = [];
+    rows.forEach(r => {
+      const w = _taskActWhen(r.when);
+      if(w.key !== month){
+        month = w.key;
+        out.push(`<li class="sec-taskact-month"><span>${esc(w.month)}</span></li>`);
+      }
+      const from = prev[idxOf.get(r)] || '';
+      const title = r.st ? `Marked ${esc(_taskActSt(r.st))}` : r.label;
+      const sub = r.st
+        ? (from ? `${esc(_taskActSt(from))} <i>&rarr;</i> ${esc(_taskActSt(r.st))}` : esc(r.type))
+        : esc(r.type);
+      out.push(`<li class="sec-taskact-row is-${_taskActTone(r)}">
+        <div class="sec-taskact-date">${esc(w.day)}<sup>${w.ord}</sup></div>
         <span class="sec-taskact-mark"></span>
-        <div class="sec-taskact-card">
-          <div class="sec-taskact-main">
-            <div class="sec-taskact-kind">${esc(r.type)}</div>
-            <div class="sec-taskact-label">${r.label}</div>
-          </div>
-          <div class="sec-taskact-meta">
-            <div class="sec-taskact-when">${esc(r.when)}</div>
-            <div class="sec-taskact-who">${esc(r.who)}</div>
-          </div>
+        <div class="sec-taskact-body">
+          <div class="sec-taskact-title">${title}</div>
+          <div class="sec-taskact-sub">${sub}</div>
         </div>
-      </li>`).join('')}</ol>`
-    : `<div class="pgd-photos-empty">No activity yet for this task.</div>`;
+        <div class="sec-taskact-who">${esc(r.who)}</div>
+      </li>`);
+    });
+    body = `<ol class="sec-taskact-list">${out.join('')}</ol>`;
+  }
   return `<div class="pgd-details-sec sec-taskact">
     <div class="pgd-sec-hd">
       <div class="pgd-details-title">Task activity</div>
+      <div class="sec-taskact-count">${rows.length} ${rows.length === 1 ? 'event' : 'events'}</div>
     </div>
     ${body}
   </div>`;
@@ -353,10 +435,11 @@ function _shopPhotoSectionHtml(t){
   // label names the photo's own context: the room for a group shot,
   // the task for a task shot.
   const photoStrip = stripPhotos.length
-    ? `<div class="pgd-photos">${stripPhotos.map((p,i) => _pgdPhotoFigHtml(p, i, p.kind === 'group' ? (t.room || 'Project') : t.name, t.name)).join('')}</div>`
+    ? `<div class="pgd-photos">${stripPhotos.map((p,i) => _pgdPhotoFigHtml(p, i, p.kind === 'group' ? (t.room || 'Job') : t.name, t.name)).join('')}</div>`
     : `<div class="pgd-photos-empty">No photos yet for this task</div>`;
-  return `<div class="pgd-details-sec">
+  return `<div class="pgd-details-sec pgd-mediasec is-sticky">
     <div class="pgd-sec-hd">
+      <div class="pgd-media-ctx" aria-hidden="true"><span class="pgd-media-ctx-name">${esc(t.room || '')} › ${esc(t.name)}</span><span class="pgd-media-ctx-amt">${esc(t.cost || '')}</span></div>
       <div class="pgd-details-title">Task Photos${stripPhotos.length ? ` <span class="sec-mod-count is-static">&bull; ${stripPhotos.length} total ${stripPhotos.length === 1 ? 'photo' : 'photos'}</span>` : ''}</div>
       <div class="pgd-sec-hd-r">
         <button class="sec-mod-add" onclick="event.stopPropagation();goToProgressPhotos()" title="View every photo in Progress and add more">View all &amp; add</button>
@@ -395,7 +478,15 @@ function _shopEditNotesHtml(t){
   const linkTitle = latest ? 'Add a note' : 'Add the first note';
   // The count in the title is the way in — see countSuffix below. A separate
   // view-all link beside it stated the same destination twice.
-  const addBtn = `<button class="sec-mod-add" onclick="event.stopPropagation();openDrawer(${t.id},'notes')" title="${linkTitle}">View all &amp; add</button>`;
+  const addBtn = `<button class="sec-mod-add" onclick="event.stopPropagation();openDrawer(${t.id},'notes')" title="${linkTitle}">${latest ? 'View all &amp; add' : 'Add'}</button>`;
+  // Nothing on file: one short row — the title, a word that it's empty, and
+  // the way to write the first note.
+  if(!latest) return `<div class="pgd-hdr-box sec-tasknotes is-empty">
+    <div class="pgd-sec-hd">
+      <div class="pgd-details-title">Notes<span class="sec-notes-none">No notes yet</span></div>
+      <div class="pgd-sec-hd-r">${addBtn}</div>
+    </div>
+  </div>`;
   const body = latest
     ? `<div class="shop-notes-card">
         <div class="shop-notes-head">
@@ -456,8 +547,250 @@ function requestSecTaskcardRerender(){
    product (Browse), contractor, product cost, quantity, labor rate,
    modifiers — live here now. The sidebar is read-only in this variant;
    this card is the single editing surface. */
+/* A product row's quantity, number and unit apart. The box holds only the
+   number; the unit goes up in the Qty label, as on the Departments line
+   page. A row stated without a unit takes the catalogue's (KraftMaid sells
+   by the LF), then its option's. */
+function _prodQtySplit(o, p, t){
+  const raw = String((p && p.qty) || '').trim();
+  const num = (raw.match(/^-?[\d.,]+/) || [''])[0];
+  const cat = (t && p && p.sku && typeof productPool === 'function') ? productPool(t).find(x => x.sku === p.sku) : null;
+  const unit = raw.slice(num.length).trim() || (cat && cat.unit) || String((o && o.qtyUnit) || '').trim();
+  return {num, unit};
+}
+// Put the unit back on what was typed, so editing the number keeps "LF".
+function _prodQtyJoin(v, unit){
+  const n = String(v || '').trim();
+  return n && unit ? `${n} ${unit}` : n;
+}
+/* One product row, every field editable — the option card's row, and the
+   condensed layout's row while it is being edited. */
+function _prodRowFullHtml(t, o, p){
+  const hasSku = !!p.sku;
+  const thumb = p.image
+    ? `<img src="${esc(p.image)}" alt="${esc(p.product||'')}" loading="lazy">`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 5.5h13l-1 4H5z"/><path d="M4 12h13v6H4z"/><path d="M8 8v4"/></svg>`;
+  // The chip is the control now — see _prodModHtml. It only
+  // renders on a picked product, so an unselected option line
+  // has nothing to set.
+  const prodModsHtml = _prodModHtml(t, o, p);
+  const qs = _prodQtySplit(o, p, t);
+  return `<div class="sec-taskcard-product-row${hasSku?' is-catalog':''}${productIsPicked(p)?' is-picked':''}" data-prod="${p.id}" ${hasSku?`onclick="openFly(${t.id},'${esc(p.sku)}',event)" title="View product details"`:''}>
+    <div class="sec-taskcard-product-thumb">${thumb}</div>
+    <div class="sec-taskcard-product-name-block">
+      ${p.brand ? `<span class="sec-taskcard-product-brand">${esc(p.brand)}</span>` : ''}
+      <span class="sec-taskcard-product-name">${esc(p.product || 'Untitled product')}</span>
+      ${p.sku ? `<span class="sec-taskcard-product-sku">SKU ${esc(p.sku)}</span>` : ''}
+
+    </div>
+    <div class="sec-taskcard-product-cell">
+      <span class="sec-taskcard-lbl">Qty${qs.unit ? ` · ${esc(qs.unit)}` : ''}</span>
+      <div class="opt-card-qty-stepper" onclick="event.stopPropagation()">
+        <button class="opt-card-qty-btn" onclick="event.stopPropagation();bumpProductQty(${t.id},'${o.id}','${p.id}',-1)" aria-label="Decrease">
+          <svg viewBox="0 0 12 12" fill="none"><path d="M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <input class="opt-card-qty-input" value="${esc(qs.num)}" inputmode="decimal" onclick="event.stopPropagation()" oninput="commitOptionProduct(${t.id},'${o.id}','${p.id}','qty',_prodQtyJoin(this.value,'${esc(qs.unit)}'));requestSecTaskcardRerender()">
+        <button class="opt-card-qty-btn" onclick="event.stopPropagation();bumpProductQty(${t.id},'${o.id}','${p.id}',+1)" aria-label="Increase">
+          <svg viewBox="0 0 12 12" fill="none"><path d="M6 3v6M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="sec-taskcard-product-cell" onclick="event.stopPropagation()">
+      <span class="sec-taskcard-lbl">Parts</span>
+      <input class="sec-taskcard-field" value="${esc(p.parts || '')}" placeholder="$0.00" onclick="event.stopPropagation()" oninput="commitOptionProduct(${t.id},'${o.id}','${p.id}','parts',this.value);requestSecTaskcardRerender()">
+    </div>
+    <div class="sec-taskcard-product-cell" onclick="event.stopPropagation()">
+      <span class="sec-taskcard-lbl">Labor</span>
+      <input class="sec-taskcard-field" value="${esc(p.labor || '')}" placeholder="$0.00" onclick="event.stopPropagation()" oninput="commitOptionProduct(${t.id},'${o.id}','${p.id}','labor',this.value);requestSecTaskcardRerender()">
+    </div>
+    <div class="sec-taskcard-product-total">
+      <span class="sec-taskcard-product-amt">${esc(_fmtDollars(productLineTotal(p)))}</span>
+      ${(typeof productLineDelta === 'function' && typeof deltaChipHtml === 'function') ? deltaChipHtml(productLineDelta(t, o, p)) : ''}
+      ${prodModsHtml}
+    </div>
+    ${p.sku ? supplierPickHtml(offersForSku(p.sku), rowSupplier(p),
+      `setProductSupplier(${t.id},'${o.id}','${p.id}','__S__')`, `row:${p.id}`) : ''}
+  </div>`;
+}
+/* ════════ Options, condensed (ShopwithKai_layout.html) ════════
+   Read by default, open one option to change it, open one row to edit its
+   numbers. Each option is a single line — what it buys, how many, what it
+   costs — with anything that needs attention flagged on that line, so a
+   closed option never hides a problem. Opening one shows its rows as read
+   lines; a row opens to the full editing row. Alternatives nobody picked
+   fold into one line, the catalogue search sits behind "+ Search product", and
+   a labour-only option is one row with its amount editable in place. */
+const _optOpen = {};    // `${taskId}:${optId}` → true/false; unset = the default
+const _altOpen = {};    // `${taskId}:${optId}` → alternatives shown in full
+const _addOpen = {};    // `${taskId}:${optId}` → catalogue search shown
+function _optKey(t, o){ return `${t.id}:${o.id}`; }
+function _isLaborRow(p){ return !p.sku && /^labou?r$/i.test(String(p.product || '').trim()); }
+/* An option wants a decision when it's part of the job and nothing it could
+   buy has been bought — no rows at all, or a catalogue with nothing picked. */
+function _optNeedsPick(o){
+  if(!optionIsAdded(o)) return false;
+  const ps = Array.isArray(o.products) ? o.products : [];
+  if(!ps.length) return true;
+  if(ps.every(_isLaborRow)) return false;
+  return !ps.some(p => productIsPicked(p) && !_isLaborRow(p));
+}
+function _optIsOpen(t, o){
+  const k = _optKey(t, o);
+  if(k in _optOpen) return _optOpen[k];
+  // By default only the first option that needs a decision opens; the rest
+  // still carry their flag on the closed line.
+  const first = taskOptions(t).find(x => !(_optKey(t, x) in _optOpen) && _optNeedsPick(x));
+  return !!first && first.id === o.id && !taskOptions(t).some(x => _optOpen[_optKey(t, x)] === true);
+}
+function toggleOpt(taskId, optId){
+  const t = TASKS.find(x => x.id === taskId); if(!t) return;
+  const o = (t.options || []).find(x => x.id === optId); if(!o) return;
+  const k = _optKey(t, o), open = !_optIsOpen(t, o);
+  // One open at a time: opening this one closes the others on the task.
+  if(open) taskOptions(t).forEach(x => { if(x.id !== optId) _optOpen[_optKey(t, x)] = false; });
+  _optOpen[k] = open;
+  requestSecTaskcardRerender();
+}
+function toggleOptAlt(key, show){ _altOpen[key] = show; requestSecTaskcardRerender(); }
+function toggleOptAdd(key){ _addOpen[key] = !_addOpen[key]; requestSecTaskcardRerender(); }
+
+function _rowStock(p){
+  if(!p.sku || typeof offersForSku !== 'function') return null;
+  const sup = typeof rowSupplier === 'function' ? rowSupplier(p) : null;
+  const offers = offersForSku(p.sku) || [];
+  const off = offers.find(x => x.supplier === sup) || offers[0];
+  return off ? {sup:(typeof supplierName === 'function' ? supplierName(off.supplier) : off.supplier), stock:off.stock || 'in', price:off.price} : null;
+}
+const _stockTxt = s => s === 'out' ? 'Out of stock' : s === 'low' ? 'Low stock' : 'In stock';
+const _CARET = `<svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5l3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const _THUMB = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 5.5h13l-1 4H5z"/><path d="M4 12h13v6H4z"/><path d="M8 8v4"/></svg>`;
+
+function _optFlagsHtml(t, o){
+  if(!optionIsAdded(o)) return '';
+  const ps = Array.isArray(o.products) ? o.products : [];
+  const flags = [];
+  if(_optNeedsPick(o)) flags.push(['is-warn', 'No product picked']);
+  ps.filter(productIsPicked).forEach(p => {
+    const st = _rowStock(p);
+    if(st && st.stock === 'out') flags.push(['is-warn', 'Out of stock']);
+    else if(st && st.stock === 'low') flags.push(['', 'Low stock']);
+  });
+  const seen = new Set();
+  return flags.filter(([, l]) => !seen.has(l) && seen.add(l))
+    .map(([c, l]) => `<span class="optc-flag ${c}">${esc(l)}</span>`).join('');
+}
+/* The line's product, at a glance: its photo when the catalogue has one,
+   the product placeholder when it doesn't, and an empty slot for a labour
+   option, so every name starts at the same place. */
+function _optThumbHtml(t, o){
+  const p = optionIsAdded(o) ? (o.products || []).find(x => productIsPicked(x) && !_isLaborRow(x)) : null;
+  if(!p) return '<span class="optc-thumb is-blank" aria-hidden="true"></span>';
+  const cat = p.sku ? ((typeof productPool === 'function' ? (productPool(t) || []).find(c => c.sku === p.sku) : null)
+                      || (typeof catalogFind === 'function' ? catalogFind(p.sku) : null)) : null;
+  const img = p.image || (cat && cat.image) || '';
+  return `<span class="optc-thumb" aria-hidden="true">${img
+    ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.replaceWith(document.createRange().createContextualFragment(_THUMB))">`
+    : _THUMB}</span>`;
+}
+/* What the closed line says it buys. */
+function _optSummary(t, o){
+  if(!optionIsAdded(o)) return 'Not in the job';
+  const ps = Array.isArray(o.products) ? o.products : [];
+  const picked = ps.filter(productIsPicked);
+  if(!picked.length) return ps.length && ps.every(_isLaborRow) ? 'Labor' : '';
+  if(picked.every(_isLaborRow)) return 'Labor';
+  const goods = picked.filter(p => !_isLaborRow(p));
+  const first = goods[0];
+  const qs = _prodQtySplit(o, first, t);
+  const name = [first.brand, first.product].filter(Boolean).join(' ');
+  return `${name}${qs.num ? ` · ${qs.num}${qs.unit ? ' ' + qs.unit : ''}` : ''}${goods.length > 1 ? ` + ${goods.length - 1} more` : ''}${picked.some(_isLaborRow) ? ' + labor' : ''}`;
+}
+/* Labor-only: one row, the amount editable where it sits. */
+function _prodRowLaborHtml(t, o, p){
+  const qs = _prodQtySplit(o, p, t);
+  const q = parseFloat(qs.num) || 1;
+  return `<div class="optc-row is-labor">
+    <div class="optc-row-main"><div class="optc-row-name">Labor${q !== 1 ? ` <span class="optc-row-sub-in">× ${esc(qs.num)}${qs.unit ? ' ' + esc(qs.unit) : ''}</span>` : ''}</div></div>
+    <span class="optc-mods">${_prodModHtml(t, o, p)}</span>
+    <input class="sec-taskcard-field optc-labor-in" value="${esc(p.labor || '')}" placeholder="$0.00" aria-label="Labor amount"
+      oninput="commitOptionProduct(${t.id},'${o.id}','${p.id}','labor',this.value);requestSecTaskcardRerender()">
+    <div class="optc-row-amt">${esc(_fmtDollars(productLineTotal(p)))}</div>
+    <span class="optc-edit is-blank"></span>
+  </div>`;
+}
+function _shopEditCardCondensedHtml(t){
+  const opts = taskOptions(t);
+  const added = opts.filter(optionIsAdded);
+  return `<div class="sec-taskcard optc">
+    <div class="sec-taskcard-section">
+      <div class="sec-taskcard-options-hdr optc-hdr">
+        <span class="sec-taskcard-lbl">Options</span>
+        <span class="optc-hdr-sum">${added.length} of ${opts.length} option${opts.length === 1 ? '' : 's'} · ${esc(t.cost || '$0')}</span>
+      </div>
+      <div class="optc-list">
+        ${opts.map(o => {
+          const k = _optKey(t, o);
+          const open = _optIsOpen(t, o);
+          const isAdded = optionIsAdded(o);
+          const ps = Array.isArray(o.products) ? o.products : [];
+          const picked = ps.filter(productIsPicked);
+          const alts = ps.filter(p => !productIsPicked(p) && p.sku);
+          // Remove is a quiet trash icon; a removed option keeps "+ Add" to bring it back.
+          const toggle = isAdded
+            ? `<button type="button" class="optc-trash" onclick="event.stopPropagation();toggleOptionAdded(${t.id},'${o.id}')" title="Remove this option from the job" aria-label="Remove ${esc(o.name || 'option')} from the job"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.7 6.5v4.5M9.3 6.5v4.5"/></svg></button>`
+            : `<button class="opt-card-toggle" onclick="event.stopPropagation();toggleOptionAdded(${t.id},'${o.id}')" title="Add this option to the job">+ Add</button>`;
+          const head = `<div class="optc-head" role="button" tabindex="0" aria-expanded="${open}"
+              onclick="toggleOpt(${t.id},'${o.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleOpt(${t.id},'${o.id}');}">
+            <span class="optc-caret${open ? ' is-open' : ''}">${_CARET}</span>
+            ${_optThumbHtml(t, o)}
+            <span class="optc-name">${esc(o.name || 'Untitled option')}</span>
+            ${open ? '' : `<span class="optc-sum">${esc(_optSummary(t, o))}</span>`}
+            <span class="optc-flags">${_optFlagsHtml(t, o)}</span>
+            ${/* Modifiers stay in reach without opening the option: each picked
+                 row's modifier, set or "+ Modifier", is the control itself. */
+              isAdded && !open ? `<span class="optc-mods" onclick="event.stopPropagation()">${picked.map(p => _prodModHtml(t, o, p)).join('')}</span>` : ''}
+            ${isAdded ? `<span class="optc-total">${esc(o.cost || '$0')}</span>` : ''}
+            <span class="optc-act" onclick="event.stopPropagation()">${toggle}</span>
+          </div>`;
+          if(!open) return `<div class="optc-opt${isAdded ? '' : ' is-unadded'}">${head}</div>`;
+          // The option's own thumbnail (in its header, larger now it's open)
+          // already shows its first product, so that row doesn't repeat it.
+          const headProd = picked.find(p => !_isLaborRow(p));
+          const rows = picked.map(p => {
+            if(_isLaborRow(p)) return _prodRowLaborHtml(t, o, p);
+            // Opening an option opens its products for editing straight away;
+            // Done closes the option. The header's thumbnail stands for the
+            // first product, so its row doesn't show it again.
+            return `<div class="optc-editing${p === headProd ? ' is-head' : ''}">${_prodRowFullHtml(t, o, p)}<div class="optc-editing-ft"><button type="button" class="optc-done" onclick="toggleOpt(${t.id},'${o.id}')">Done</button></div></div>`;
+          }).join('');
+          // Nothing picked yet: the alternatives are the choice, so they show.
+          const altShown = k in _altOpen ? _altOpen[k] : !picked.some(p => !_isLaborRow(p));
+          const altLine = alts.length ? (altShown
+            ? `<div class="optc-alts-full">${alts.map(p => _prodRowFullHtml(t, o, p)).join('')}
+                 <button type="button" class="optc-link" onclick="toggleOptAlt('${k}', false)">Hide alternatives</button></div>`
+            : `<button type="button" class="optc-alt" onclick="toggleOptAlt('${k}', true)">
+                 <span>${alts.length} alternative${alts.length === 1 ? '' : 's'}</span>
+                 <span class="optc-alt-names">${alts.slice(0, 2).map(p => `${esc([p.brand, p.product].filter(Boolean).join(' '))} ${esc(_fmtDollars(_parseDollars(p.parts) || 0))}`).join(' · ')}${alts.length > 2 ? ' · …' : ''}</span>
+               </button>`) : '';
+          const add = _addOpen[k]
+            ? `<div class="optc-search">${prodSearchHtml(`opt:${t.id}:${o.id}`)}<button type="button" class="optc-link" onclick="toggleOptAdd('${k}')">Cancel</button></div>`
+            : `<button type="button" class="optc-link optc-add" onclick="toggleOptAdd('${k}')">+ Search product</button>`;
+          return `<div class="optc-opt is-open${isAdded ? '' : ' is-unadded'}">${head}
+            ${isAdded ? `<div class="optc-body">
+              ${rows || `<div class="optc-empty">Nothing picked for this option yet.${alts.length ? ' Set a quantity on one of the products below, or add another.' : ' Add a product.'}</div>`}
+              ${altLine}
+              ${add}
+            </div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
 function _shopEditCardHtml(t){
   if(!t) return '';
+  if(window.__KAI_SHOP_LAYOUT) return _shopEditCardCondensedHtml(t);
   const productMuted = /not selected|pending/i.test(t.product||'');
   const qtyParts = parseQty(t.qty);
   // Track-changes: only fires when a snapshot exists — populated at load
@@ -492,7 +825,7 @@ function _shopEditCardHtml(t){
           // amended afterwards, and an amendment is exactly what the change-
           // order banner at the top of the task is warning about.
           const optAdded = optionIsAdded(o);
-          const optToggle = `<button class="opt-card-toggle${optAdded ? ' is-on' : ''}" onclick="event.stopPropagation();toggleOptionAdded(${t.id},'${o.id}')" title="${optAdded ? 'Remove this option from the project' : 'Add this option to the project'}">${optAdded ? 'Remove' : '+ Add'}</button>`;
+          const optToggle = `<button class="opt-card-toggle${optAdded ? ' is-on' : ''}" onclick="event.stopPropagation();toggleOptionAdded(${t.id},'${o.id}')" title="${optAdded ? 'Remove this option from the job' : 'Add this option to the job'}">${optAdded ? 'Remove' : '+ Add'}</button>`;
           return `<div class="opt-card${changedCls}${isPrimary?'':' is-extra'}${optAdded ? '' : ' is-unadded'}">
             <div class="opt-card-body">
               <div class="opt-card-name-row">
@@ -503,129 +836,15 @@ function _shopEditCardHtml(t){
                 </div>
               </div>
               ${optAdded ? `<div class="sec-taskcard-products">
-                ${products.map(p => {
-                  const hasSku = !!p.sku;
-                  const thumb = p.image
-                    ? `<img src="${esc(p.image)}" alt="${esc(p.product||'')}" loading="lazy">`
-                    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 5.5h13l-1 4H5z"/><path d="M4 12h13v6H4z"/><path d="M8 8v4"/></svg>`;
-                  // The chip is the control now — see _prodModHtml. It only
-                  // renders on a picked product, so an unselected option line
-                  // has nothing to set.
-                  const prodModsHtml = _prodModHtml(t, o, p);
-                  const oos = p.stock === 'out';
-                  // Out of stock: greyed, and nothing in it can be set. The
-                  // in-stock products under it are where the pick goes.
-                  const dis = oos ? ' disabled' : '';
-                  /* A product with something to say — out of stock, a price
-                     change, or tags of its own — sits in a frame with its
-                     bars. Tags that describe the line stay on top; states
-                     that need a decision are bars underneath, each with its
-                     tag at its own start. */
-                  const pc = p.priceChange;
-                  const tags = Array.isArray(p.tags) ? p.tags : [];
-                  const framed = oos || pc || tags.length;
-                  const qtyOver = p.qtyDefault != null && String(p.qty) !== String(p.qtyDefault);
-                  return `${framed ? `<div class="prod-frame${oos ? ' is-oos' : ''}">${_prodTagsHtml(tags)}` : ''}<div class="sec-taskcard-product-row${hasSku?' is-catalog':''}${productIsPicked(p)?' is-picked':''}${oos?' is-oos':''}" data-prod="${p.id}" ${hasSku && !oos?`onclick="openFly(${t.id},'${esc(p.sku)}',event)" title="View product details"`:''}${oos?' aria-disabled="true"':''}>
-                    <div class="sec-taskcard-product-thumb">${thumb}</div>
-                    <div class="sec-taskcard-product-name-block">
-                      ${p.brand ? `<span class="sec-taskcard-product-brand">${esc(p.brand)}</span>` : ''}
-                      <span class="sec-taskcard-product-name">${esc(p.product || 'Untitled product')}</span>
-                      ${p.sku ? `<span class="sec-taskcard-product-sku">SKU ${esc(p.sku)}</span>` : ''}
-                    </div>
-                    <div class="sec-taskcard-product-cell">
-                      <span class="sec-taskcard-lbl">Qty</span>
-                      <div class="opt-card-qty-stepper" onclick="event.stopPropagation()">
-                        <button class="opt-card-qty-btn"${dis} onclick="event.stopPropagation();bumpProductQty(${t.id},'${o.id}','${p.id}',-1)" aria-label="Decrease">
-                          <svg viewBox="0 0 12 12" fill="none"><path d="M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-                        </button>
-                        <input class="opt-card-qty-input${qtyOver ? ' is-override' : ''}"${dis} value="${esc(p.qty || '')}" onclick="event.stopPropagation()" oninput="commitOptionProduct(${t.id},'${o.id}','${p.id}','qty',this.value);requestSecTaskcardRerender()">
-                        <button class="opt-card-qty-btn"${dis} onclick="event.stopPropagation();bumpProductQty(${t.id},'${o.id}','${p.id}',+1)" aria-label="Increase">
-                          <svg viewBox="0 0 12 12" fill="none"><path d="M6 3v6M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-                        </button>
-                      </div>
-                      ${qtyOver ? `<span class="prod-qty-default">Default ${esc(p.qtyDefault)}</span>` : ''}
-                    </div>
-                    <div class="sec-taskcard-product-cell" onclick="event.stopPropagation()">
-                      <span class="sec-taskcard-lbl">Parts</span>
-                      <input class="sec-taskcard-field"${dis} value="${esc(p.parts || '')}" placeholder="$0.00" onclick="event.stopPropagation()" oninput="commitOptionProduct(${t.id},'${o.id}','${p.id}','parts',this.value);requestSecTaskcardRerender()">
-                    </div>
-                    <div class="sec-taskcard-product-cell" onclick="event.stopPropagation()">
-                      <span class="sec-taskcard-lbl">Labor</span>
-                      <input class="sec-taskcard-field"${dis} value="${esc(p.labor || '')}" placeholder="$0.00" onclick="event.stopPropagation()" oninput="commitOptionProduct(${t.id},'${o.id}','${p.id}','labor',this.value);requestSecTaskcardRerender()">
-                    </div>
-                    <div class="sec-taskcard-product-total">
-                      <span class="sec-taskcard-product-amt">${esc(_fmtDollars(productLineTotal(p)))}</span>
-                      ${(typeof productLineDelta === 'function' && typeof deltaChipHtml === 'function') ? deltaChipHtml(productLineDelta(t, o, p)) : ''}
-                      ${prodModsHtml}
-                    </div>
-                  </div>${oos ? _prodOosBarHtml(t, o, p) : ''}${pc ? _prodPriceBarHtml(t, o, p) : ''}${framed ? '</div>' : ''}`;
-                }).join('') || `<div class="sec-taskcard-product-empty">No products for this option.</div>`}
-              </div>` : ''}
+                ${products.map(p => _prodRowFullHtml(t, o, p)).join('') || `<div class="sec-taskcard-product-empty">No products for this option.</div>`}
+              </div>
+              ${prodSearchHtml(`opt:${t.id}:${o.id}`)}` : ''}
             </div>
           </div>`;
         }).join('')}
       </div>
     </div>
   </div>`;
-}
-
-/* Out of stock. One bar under the row says all of it: the state, what the
-   supplier said and when, and where to go instead. It alerts and nothing
-   more — there is no replacement flow yet, so the way out is the in-stock
-   products listed with it. The tag used to sit on the row's top-left corner
-   as a separate flag, which split one message across two places; the row
-   and the bar now share one red frame, so they read as one thing. */
-function _prodOosBarHtml(t, o, p){
-  // The date rides on the tag — when the supplier last said so.
-  const when = p.stockChecked ? `: ${esc(p.stockChecked)}` : '';
-  return `<div class="prod-bar is-oos">
-    <span class="prod-bar-tag is-oos">Out of stock${when}</span>
-    <span class="prod-bar-msg">Unavailable from this supplier. Please make another selection.</span>
-  </div>`;
-}
-/* Price change, the same way: the tag opens its own bar rather than sitting
-   on the row's top edge, and the bar says what moved and what it does to the
-   line, with the one decision it needs. */
-function _prodPriceBarHtml(t, o, p){
-  const pc = p.priceChange;
-  const num = v => (typeof _parseDollars === 'function') ? _parseDollars(v) : (parseFloat(String(v||'0').replace(/[^0-9.-]/g,'')) || 0);
-  const fmt = v => '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
-  const from = num(pc.from), to = num(pc.to);
-  const next = productLineTotal(Object.assign({}, p, {parts: pc.to}));
-  return `<div class="prod-bar is-price">
-    <span class="prod-bar-tag is-price">Price change</span>
-    <span class="prod-bar-msg">Unit price ${to < from ? 'fell' : 'rose'} <s>${fmt(from)}</s> &rarr; <b>${fmt(to)}</b>. Total goes to <b>${fmt(next)}</b>.</span>
-    <button type="button" class="prod-bar-btn" onclick="event.stopPropagation();acceptPriceChange(${t.id},'${o.id}','${p.id}')">Accept</button>
-  </div>`;
-}
-function acceptPriceChange(taskId, optId, prodId){
-  const t = TASKS.find(x => x.id === taskId);
-  const o = t && (t.options || []).find(x => x.id === optId);
-  const p = o && (o.products || []).find(x => x.id === prodId);
-  if(!p || !p.priceChange) return;
-  const to = p.priceChange.to;
-  delete p.priceChange;
-  commitOptionProduct(taskId, optId, prodId, 'parts', to);
-  if(typeof renderAll === 'function') renderAll();
-  if(typeof toast === 'function') toast(`Price updated to ${to}`);
-}
-/* Tags that describe the line rather than ask for anything — they stay on
-   the frame's top edge. Override is the one in the error colour: it marks a
-   value someone changed from the default, which the quantity field below
-   shows in the same red. */
-const PROD_TAGS = {
-  override:     {label:'Override',             cls:'is-override'},
-  instructions: {label:'Instructions',         cls:'is-instructions', icon:true},
-  deferred:     {label:'Deferred',             cls:''},
-  resident:     {label:'Resident responsible', cls:''},
-};
-function _prodTagsHtml(tags){
-  if(!tags.length) return '';
-  return `<div class="prod-tags">${tags.map(k => {
-    const d = PROD_TAGS[k] || {label:k, cls:''};
-    const ico = d.icon ? '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 3.5h8M2 6h8M2 8.5h5"/></svg>' : '';
-    return `<span class="prod-tag ${d.cls}">${ico}${esc(d.label)}</span>`;
-  }).join('')}</div>`;
 }
 
 /* ── Synthesize rich detail content from a product (placeholder copy,
@@ -646,7 +865,7 @@ function productDetail(p, t){
     toilet:`${p.brand} ${p.name} is a comfort-height elongated toilet with a 1.28 GPF flush. Includes tank, bowl, hardware, and wax ring. Seat sold separately.`,
     mech:`${p.brand} ${p.name} is a smart, app-enabled garage door opener with battery backup and motion-activated lighting. Compatible with standard 7' single and double doors.`,
     storage:`${p.brand} ${p.name} is a wire shelving kit that adjusts to most reach-in closets. Includes tracks, brackets, shelves, and a hanging rod.`,
-    generic:`${p.brand} ${p.name} is the supplier's standard SKU for this scope item. Detail copy loads from the catalog feed when wired.`,
+    generic:`${p.brand} ${p.name} is the supplier's standard SKU for this scope item. Info copy loads from the catalog feed when wired.`,
   };
   const highlightsBy={
     cabinet:[
@@ -735,12 +954,12 @@ function productDetail(p, t){
   const includesBy={
     cabinet:'(1) cabinet box per LF, (2) doors per LF (where applicable), soft-close hardware, toe-kick strip, mounting screws',
     counter:'Templated and fabricated quartz slab(s), one undermount sink cutout, standard 1.25" edge, install hardware',
-    tile:'Tile boxes sized to project SF (10% waste factored), separately sold grout and edge trim',
+    tile:'Tile boxes sized to job SF (10% waste factored), separately sold grout and edge trim',
     appliance:'(1) Range, (1) Over-the-range microwave, (1) Dishwasher, (1) Counter-depth refrigerator',
-    floor:'Planks sized to project SF, attached underlayment, transition strips ordered separately',
+    floor:'Planks sized to job SF, attached underlayment, transition strips ordered separately',
     paint:'(1) Gallon per ' + p.unit + ', tinted to color, two-coat coverage',
     vanity:'(1) Vanity cabinet, (1) Pre-cut top with backsplash, hardware, mounting brackets',
-    shower:'Tile sized to project SF (10% waste factored), no trim or membrane',
+    shower:'Tile sized to job SF (10% waste factored), no trim or membrane',
     toilet:'(1) Tank, (1) Bowl, (1) Wax ring, (1) Set of hardware. Seat sold separately',
     mech:'(1) Motor, (1) Rail kit, (1) Remote, (1) Keypad, (1) Wall control, (1) Smart hub',
     storage:'(1) Track set, brackets, wire shelves, closet rod, mounting hardware',
@@ -827,4 +1046,617 @@ function gotoTaskFromCart(taskId){
   renderSidebar(); renderWork();
   const row=document.querySelector(`[data-tid="${t.id}"]`);
   if(row) row.scrollIntoView({block:'center', behavior:'smooth'});
+}
+
+/* The header's quantity says it's the line's total — "140 SF total",
+   "8 scoped in total" — since each task row below carries its own. A line
+   whose units don't add up falls back to its task count. */
+function _lineHdrNeed(l, isLabor){
+  const n = l.items.length;
+  if(isLabor) return `${n} ${n === 1 ? 'task' : 'tasks'}`;
+  const need = deptLineNeed(l.items);
+  if(/ tasks?$/.test(need)) return need;
+  if(n === 1) return need;
+  return / scoped$/.test(need) ? `${need} in total` : `${need} total`;
+}
+/* ── Product line page (Departments view) ───────────────────────────
+   Opened from a product line in the sidebar. The tasks lead, each with its
+   own quantity and a dropdown for its own product. Under them, the line's
+   catalogue section, where Apply puts a product on every task — the common
+   case, one toilet for both bathrooms, is one press; the odd one out is
+   then changed from its row. */
+/* A product line's photos: every photo of the tasks in it, the same reel
+   the task and room pages carry — pinned under the tabs while the page
+   scrolls, a compact bar with the line's name and figure once it is. */
+function _linePhotoSectionHtml(l, amt){
+  const codes = new Set(l.items.map(t => t.code));
+  const photos = (typeof PHOTOS !== 'undefined' ? PHOTOS : []).filter(p => p.kind === 'task' && codes.has(p.task));
+  const strip = photos.length
+    ? `<div class="pgd-photos">${photos.map((p, i) => _pgdPhotoFigHtml(p, i, null, null)).join('')}</div>`
+    : `<div class="pgd-photos-empty">No photos yet for the tasks in this line</div>`;
+  return `<div class="pgd-details-sec pgd-mediasec is-sticky">
+    <div class="pgd-sec-hd">
+      <div class="pgd-media-ctx" aria-hidden="true"><span class="pgd-media-ctx-name">${esc(l.name)}</span><span class="pgd-media-ctx-amt">${esc(amt)}</span><span class="pgd-media-ctx-n">${l.items.length} ${l.items.length === 1 ? 'task' : 'tasks'}</span></div>
+      <div class="pgd-details-title">Task Photos <span class="sec-mod-count is-static">(${l.items.length} ${l.items.length === 1 ? 'task' : 'tasks'} - ${photos.length} ${photos.length === 1 ? 'photo' : 'photos'})</span></div>
+      <div class="pgd-sec-hd-r">
+        <button class="sec-mod-add" onclick="event.stopPropagation();goToProgressPhotos()" title="View every photo in Progress and add more">View all &amp; add</button>
+      </div>
+    </div>
+    ${strip}
+  </div>`;
+}
+/* ════════ Product line, condensed (ShopwithKai_layout.html) ════════
+   The page is one decision — which product these tasks get — so it reads as
+   one card: the chosen product with its price and supplier, the tasks it goes
+   on with their quantities and costs, and the total. The product isn't
+   repeated per task while every task shares it; a task that needs another
+   says "Change" for its own dropdown, and tasks that already differ show
+   theirs. Alternatives fold into one line (open when nothing is chosen),
+   and the catalogue search sits behind "+ Search the catalog". */
+const _lnpAltOpen = {};   // line key → alternatives shown
+const _lnpChange = {};    // task id → its own product dropdown shown
+const _lnpEdit = {};      // task id → its row opened for editing
+function lnpToggle(map, key, show){ ({alt:_lnpAltOpen, change:_lnpChange, edit:_lnpEdit})[map][key] = show; if(typeof renderShop === 'function') renderShop(); }
+function _lnpOffer(l, cat){
+  const offers = (typeof catalogOffers === 'function') ? catalogOffers(Object.assign({section:(catalogFind(cat.sku) || {}).section}, cat)) : [];
+  const sup = lineSupplierFor(l, cat.sku);
+  return {offers, sup, offer:offers.find(o => o.supplier === sup) || offers[0] || {price:cat.price, stock:cat.stock}};
+}
+const _LNP_THUMB = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 5.5h13l-1 4H5z"/><path d="M4 12h13v6H4z"/><path d="M8 8v4"/></svg>`;
+function _lnpCondensedHtml(l, c){
+  const {k, n, qtys, sharedUnit, pool, needSum, boxSum, status, statusCls, svgMinus, svgPlus, anyPicked} = c;
+  const lk = esc(l.key).replace(/'/g, "\\'");
+  const picked = deptLinePicked(l);
+  // The one product every task shares, when there is one.
+  const sku = picked.state === 'one' ? ((l.items.map(t => _lineTaskPicked(l, t)).find(a => a.length) || [])[0] || {}).p?.sku : null;
+  const cat = sku ? (pool.find(x => x.sku === sku) || (typeof catalogFind === 'function' ? catalogFind(sku) : null)) : null;
+  const mixed = picked.state === 'mixed';
+  const fmtN = v => (Math.round(v * 100) / 100).toLocaleString('en-US');
+  const stockTxt = st => st === 'out' ? 'Out of stock' : st === 'low' ? 'Low stock' : 'In stock';
+  let head;
+  if(cat){
+    const o = _lnpOffer(l, cat);
+    head = `<div class="lnpc-prod">
+      <div class="lnpc-thumb">${cat.image ? `<img src="${esc(cat.image)}" alt="" loading="lazy">` : _LNP_THUMB}</div>
+      <div class="lnpc-prod-main" onclick="openFly(${l.items[0].id},'${esc(cat.sku)}',event)" title="View product details">
+        <div class="lnpc-brand">${esc(cat.brand || '')}</div>
+        <div class="lnpc-name">${esc(cat.name)}</div>
+      </div>
+      <div class="lnpc-prod-r">
+        <div class="lnpc-price">${money(Math.round(o.offer.price))}<span> / ${esc(cat.unit || 'ea')}</span></div>
+      </div>
+    </div>
+    ${supplierPickHtml(o.offers, o.sup, `setLineSupplier('${k}','${esc(cat.sku)}','__S__')`, `line:${l.key}|${cat.sku}`)}`;
+  } else {
+    head = `<div class="lnpc-prod is-none">
+      <div class="lnpc-thumb">${_LNP_THUMB}</div>
+      <div class="lnpc-prod-main">
+        <div class="lnpc-name">${mixed ? `Mixed · ${picked.n} products` : 'No product chosen'}</div>
+        <div class="lnpc-sub">${mixed ? 'The tasks below carry different products. Apply one to give them all the same.' : `${n} ${n === 1 ? 'task needs' : 'tasks need'} a product. Pick one below.`}</div>
+      </div>
+    </div>`;
+  }
+  const rows = l.items.map(t => {
+    const q = qtys.get(t.id);
+    const pk = _lineTaskPicked(l, t);
+    const cur = pk.length === 1 ? pk[0].p.sku : '';
+    // A row reads until it's clicked; then its stepper and Change open.
+    const editing = !!_lnpEdit[t.id] || !!_lnpChange[t.id];
+    const showDd = mixed || !cat || _lnpChange[t.id];
+    const opts = [{value:'', label: pk.length && !pool.some(x => x.sku === cur) ? taskPickedProducts(t).join(' + ') : 'Not picked'}]
+      .concat(pool.map(x => ({value:x.sku, label:`${x.brand} ${x.name}`})));
+    const prodCell = showDd
+      ? `<div class="lnpc-task-dd">${hdrDdHtml('ddLnp-' + t.id, pool.some(x => x.sku === cur) ? cur : '', opts, `setLineTaskProduct('${k}',${t.id},__V__)`, 'lnp-task-dd' + (pk.length ? '' : ' is-unset'))}</div>`
+      : `<button type="button" class="lnpc-change" onclick="event.stopPropagation();lnpToggle('change',${t.id},true)" title="Give this task a different product">Change</button>`;
+    const unitTxt = q.unit && q.unit !== 'ea' ? esc(q.unit) : '';
+    // Tasks that already differ show their product even at rest; otherwise
+    // the product cell only appears while the row is open.
+    const cell = editing || showDd ? prodCell : '<span class="lnpc-task-cell"></span>';
+    // At rest a row is just name, quantity and cost, so the name gets the
+    // width; the full grid (stepper, unit, product) is for an open row or
+    // one whose product differs.
+    const rest = !editing && !showDd;
+    return `<div class="lnpc-task${editing ? ' is-editing' : ''}${rest ? ' is-rest' : ''}" role="button" tabindex="0" aria-expanded="${editing}"
+        onclick="lnpToggle('edit',${t.id},${editing ? 'false' : 'true'});${editing ? `lnpToggle('change',${t.id},false)` : ''}"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();this.click();}" title="${editing ? 'Done' : 'Edit the quantity or product'}">
+      <span class="lnpc-task-l">
+        <button class="lnpc-task-name" onclick="event.stopPropagation();selectTask(${t.id})" title="Open ${esc(t.name)}"><span class="task-ctx">${esc(t.room)} ›</span> ${esc(t.name)}</button>
+        ${(() => {
+          // The task's modifiers — on the task, or on its product in this
+          // line — as quiet tags after its name.
+          const mods = new Set([...(t.mods || []), ...pk.flatMap(h => h.p.mods || [])]);
+          return [...mods].map(m => `<span class="optc-flag">${esc(typeof tagInfo === 'function' ? tagInfo(m).label : m)}</span>`).join('');
+        })()}
+      </span>
+      ${editing ? `<div class="opt-card-qty-stepper lnp-task-qty" onclick="event.stopPropagation()">
+        <button class="opt-card-qty-btn" onclick="bumpLineTaskQty('${k}',${t.id},-1)" aria-label="One fewer for this task">${svgMinus}</button>
+        <input class="opt-card-qty-input" value="${esc(q.num || '—')}" readonly tabindex="-1">
+        <button class="opt-card-qty-btn" onclick="bumpLineTaskQty('${k}',${t.id},+1)" aria-label="One more for this task">${svgPlus}</button>
+      </div>` : `<span class="lnpc-qty">${esc(q.num || '—')}${rest && unitTxt ? ' ' + unitTxt : ''}</span>`}
+      ${rest ? '' : `<span class="lnpc-unit">${unitTxt}</span>
+      <span onclick="event.stopPropagation()" class="lnpc-cellwrap">${cell}</span>`}
+      <span class="lnpc-task-amt">${money(Math.round(taskLineCost(l, t)))}</span>
+    </div>`;
+  }).join('');
+  const foot = `<div class="lnpc-foot">
+    ${(() => { const u = sharedUnit && sharedUnit !== 'ea' ? ' ' + esc(sharedUnit) : '';
+      // "Total" unless the quantities don't meet what's scoped — then say how.
+      return `<span class="lnpc-foot-l">Total${status ? `<span class="lnp-total-status ${statusCls}">${esc(status)}</span>` : ''}${u && sharedUnit !== null ? `<span class="lnpc-foot-q">${fmtN(boxSum)}${u}</span>` : ''}</span>`; })()}
+    ${anyPicked ? `<button type="button" class="lnpc-clear" onclick="clearLineProduct('${k}')">${n > 1 ? 'Clear all' : 'Clear'}</button>` : ''}
+    <span class="lnpc-foot-amt">${money(Math.round(deptLineCost(l)))}</span>
+  </div>`;
+  // The choice: what else this line could buy.
+  const alts = pool.filter(x => x.sku !== sku);
+  const priced = alts.map(x => ({x, o:_lnpOffer(l, x)}));
+  const low = priced.length ? Math.min(...priced.map(p => p.o.offer.price)) : null;
+  // Open by default; Hide folds them for this line.
+  const altOpen = l.key in _lnpAltOpen ? _lnpAltOpen[l.key] : true;
+  const altHtml = !alts.length ? '' : altOpen
+    ? `<div class="lnpc-alts">
+        <div class="lnpc-alts-hd"><span>${cat ? 'Alternatives' : 'Pick a product'}</span>${cat ? `<button type="button" class="optc-link" onclick="lnpToggle('alt','${lk}',false)">Hide</button>` : ''}</div>
+        ${priced.map(({x, o}) => {
+          const users = lineProductUsers(l, x.sku).length;
+          return `<div class="lnpc-alt-row">
+            <div class="lnpc-thumb is-sm">${x.image ? `<img src="${esc(x.image)}" alt="" loading="lazy">` : _LNP_THUMB}</div>
+            <div class="lnpc-alt-main" onclick="openFly(${l.items[0].id},'${esc(x.sku)}',event)" title="View product details">
+              <span class="lnpc-brand">${esc(x.brand || '')}</span>
+              <span class="lnpc-alt-name">${esc(x.name)}</span>
+            </div>
+            <span class="lnpc-alt-sup">${esc(supplierName(o.sup))} · <span class="optc-stock is-${o.offer.stock || 'in'}">${stockTxt(o.offer.stock)}</span>${o.offer.price === low && priced.length > 1 ? ' <span class="lnpc-low">Lowest</span>' : ''}</span>
+            <span class="lnpc-alt-price">${money(Math.round(o.offer.price))}<span> / ${esc(x.unit || 'ea')}</span></span>
+            ${users ? `<span class="lnpc-alt-on">On ${users} of ${n}</span>` : ''}
+            ${_lnpSelectBtnHtml(l, x.sku)}
+          </div>${_lnpPickHtml(l, x)}`;
+        }).join('')}
+      </div>`
+    : `<button type="button" class="optc-alt" onclick="lnpToggle('alt','${lk}',true)">
+        <span>${alts.length} alternative${alts.length === 1 ? '' : 's'}</span>
+        <span class="optc-alt-names">${priced.slice(0, 2).map(({x, o}) => `${esc(x.brand)} ${esc(x.name)} ${money(Math.round(o.offer.price))}`).join(' · ')}${priced.length > 2 ? ' · …' : ''}</span>
+      </button>`;
+  // The catalogue search is always there, under the alternatives.
+  const search = `<div class="optc-search">${prodSearchHtml('line:' + l.key)}</div>`;
+  return `<div class="pgd-details-sec lnpc">
+    <div class="pgd-details-title">${cat ? 'Chosen product' : 'Product'}</div>
+    <div class="lnpc-card">${head}<div class="lnpc-tasks">${rows}</div>${foot}</div>
+    ${altHtml}
+    ${search}
+  </div>`;
+}
+/* ════════ Select, then choose the tasks ════════
+   Picking a product for a line is two steps: Select it, then tick the tasks
+   it goes on — all of them, or only some. A task says when it has no
+   product yet, or already has this one; no confirm box follows. A line of
+   one task has nothing to choose, so Select applies straight away. */
+let _lnpPick = null;   // {line, sku, on:Set(taskIds)} while choosing
+function _lnpSelectBtnHtml(l, sku){
+  const k = _lineKeyArg(l.key);
+  const open = _lnpPick && _lnpPick.line === l.key && _lnpPick.sku === sku;
+  return `<button type="button" class="lnp-apply${open ? ' is-on' : ''}" aria-expanded="${open}"
+    onclick="event.stopPropagation();lnpPickStart('${k}','${esc(sku)}')">Select</button>`;
+}
+function lnpPickStart(key, sku){
+  const l = deptLineByKey(key); if(!l) return;
+  if(_lnpPick && _lnpPick.line === key && _lnpPick.sku === sku){ _lnpPick = null; renderShop(); return; }
+  if(l.items.length === 1){ applyLineProduct(key, sku, 'replace'); return; }
+  // Ticked to start: every task not already on this product.
+  const on = new Set(l.items.filter(t => !_lineTaskPicked(l, t).some(h => h.p.sku === sku)).map(t => t.id));
+  _lnpPick = {line:key, sku, on};
+  renderShop();
+}
+function lnpPickToggle(id){ if(!_lnpPick) return; _lnpPick.on.has(id) ? _lnpPick.on.delete(id) : _lnpPick.on.add(id); renderShop(); }
+function lnpPickAll(all){
+  if(!_lnpPick) return;
+  const l = deptLineByKey(_lnpPick.line); if(!l) return;
+  _lnpPick.on = new Set(all ? l.items.filter(t => !_lineTaskPicked(l, t).some(h => h.p.sku === _lnpPick.sku)).map(t => t.id) : []);
+  renderShop();
+}
+function lnpPickCancel(){ _lnpPick = null; renderShop(); }
+function lnpPickApply(){
+  if(!_lnpPick) return;
+  const l = deptLineByKey(_lnpPick.line); if(!l){ _lnpPick = null; return; }
+  const cat = _lineCat(l, _lnpPick.sku);
+  const targets = l.items.filter(t => _lnpPick.on.has(t.id));
+  _lnpPick = null;
+  if(!cat || !targets.length){ renderShop(); return; }
+  _applyLineProductTo(l, cat, targets);
+  if(typeof toast === 'function') toast(targets.length === 1
+    ? `${cat.brand} ${cat.name} → ${targets[0].room} › ${targets[0].name}`
+    : `${cat.brand} ${cat.name} applied to ${targets.length} tasks`);
+  renderAll();
+}
+function _lnpPickHtml(l, cat){
+  if(!_lnpPick || _lnpPick.line !== l.key || _lnpPick.sku !== cat.sku) return '';
+  const free = l.items.filter(t => !_lineTaskPicked(l, t).some(h => h.p.sku === cat.sku));
+  const allOn = free.length && free.every(t => _lnpPick.on.has(t.id));
+  const nOn = _lnpPick.on.size;
+  const rows = l.items.map(t => {
+    const pk = _lineTaskPicked(l, t);
+    const already = pk.some(h => h.p.sku === cat.sku);
+    const on = already || _lnpPick.on.has(t.id);
+    const now = already ? 'Already on this product' : pk.length ? '' : 'No product yet';
+    return `<label class="lnp-pick-row${already ? ' is-locked' : ''}">
+      <input type="checkbox" ${on ? 'checked' : ''} ${already ? 'disabled' : ''} onchange="lnpPickToggle(${t.id})">
+      <span class="lnp-pick-task"><span class="task-ctx">${esc(t.room)} ›</span> ${esc(t.name)}</span>
+      ${now ? `<span class="lnp-pick-now">${now}</span>` : ''}
+    </label>`;
+  }).join('');
+  return `<div class="lnp-pick" onclick="event.stopPropagation()">
+    <div class="lnp-pick-hd">
+      <span>Apply <b>${esc(cat.brand)} ${esc(cat.name)}</b> to</span>
+      ${free.length > 1 ? `<label class="lnp-pick-all"><input type="checkbox" ${allOn ? 'checked' : ''} onchange="lnpPickAll(this.checked)"> All ${free.length} tasks</label>` : ''}
+    </div>
+    <div class="lnp-pick-list">${rows}</div>
+    <div class="lnp-pick-ft">
+      <button type="button" class="optc-link" onclick="lnpPickCancel()">Cancel</button>
+      <button type="button" class="lnp-pick-go" ${nOn ? '' : 'disabled'} onclick="lnpPickApply()">${nOn ? `Apply to ${nOn} task${nOn === 1 ? '' : 's'}` : 'Choose a task'}</button>
+    </div>
+  </div>`;
+}
+function _renderLinePageHtml(){
+  const lines = allDeptLines();
+  const idx = lines.findIndex(l => l.key === selLineKey);
+  const l = lines[idx];
+  if(!l) return `<div class="pgd"><div class="pgd-muted" style="padding:24px 0">This product line is no longer in the scope. Pick another from the sidebar.</div></div>`;
+  const prevL = lines[idx - 1] || null;
+  const nextL = lines[idx + 1] || null;
+  const n = l.items.length;
+  const isLabor = l.dept === NO_PRODUCT_DEPT;
+  const k = _lineKeyArg(l.key);
+  const rooms = [...new Set(l.items.map(t => t.room))];
+  const svgMinus = `<svg viewBox="0 0 12 12" fill="none"><path d="M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+  const svgPlus  = `<svg viewBox="0 0 12 12" fill="none"><path d="M6 3v6M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+  const svgTick  = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-11"/></svg>`;
+
+  // Quantity as number and unit apart: the box holds the number, the unit
+  // goes up in the column heading when every task shares it ("Qty · SF"),
+  // and beside each box only when they don't.
+  const qtyOf = t => {
+    const raw = String(lineTaskQtyLabel(l, t) || '');
+    const num = (raw.match(/[\d.,]+/) || [''])[0];
+    const unit = raw.replace(/^[\s\d.,-]+/, '').trim() || String(t.qty || '').replace(/^[\s\d.,-]+/, '').trim();
+    return {num, unit};
+  };
+  const qtys = new Map(l.items.map(t => [t.id, qtyOf(t)]));
+  const unitSet = [...new Set([...qtys.values()].map(q => q.unit).filter(Boolean))];
+  const sharedUnit = unitSet.length <= 1 ? (unitSet[0] || '') : null;
+  const taskHead = isLabor ? '' : `<div class="lnp-task lnp-task-head">
+      <span>Task</span><span>Qty${sharedUnit ? ` · ${esc(sharedUnit)}` : ''}</span><span>Product</span><span class="num">Cost</span>
+    </div>`;
+  /* Total row, under the headings: what the boxes add up to against what
+     the tasks call for. "Needed" is each task's own measured quantity
+     (t.qty) — the boxes are what's being bought for it — so the row shows
+     at a glance whether the line is short, covered or over. Compared only
+     when every task states a need in the same unit; otherwise it just sums. */
+  const fmtN = v => (Math.round(v * 100) / 100).toLocaleString('en-US');
+  const unitOf = str => String(str || '').replace(/^[\s\d.,-]+/, '').trim();
+  const boxSum = l.items.reduce((a, t) => a + (_num(qtys.get(t.id).num) || 0), 0);
+  const notPicked = l.items.filter(t => !_lineTaskPicked(l, t).length).length;
+  const needKnown = sharedUnit !== null && l.items.every(t => _num(t.qty) > 0 && (!unitOf(t.qty) || unitOf(t.qty) === (sharedUnit || unitOf(t.qty))));
+  const needSum = needKnown ? l.items.reduce((a, t) => a + _num(t.qty), 0) : null;
+  const uTxt = sharedUnit && sharedUnit !== 'ea' ? ' ' + sharedUnit : '';
+  let status = '', statusCls = '';
+  if(needSum !== null){
+    const diff = Math.round((boxSum - needSum) * 100) / 100;
+    if(notPicked){ status = `${notPicked} ${notPicked === 1 ? 'task' : 'tasks'} still to pick`; statusCls = 'is-short'; }
+    else if(diff < 0){ status = `${fmtN(-diff)}${uTxt} short`; statusCls = 'is-short'; }
+    else if(diff > 0){ status = `${fmtN(diff)}${uTxt} over`; statusCls = 'is-over'; }
+    // Covered says nothing the quantity doesn't — "140 of 140 scoped" — so
+    // only a shortfall or an overage gets a word.
+    else { status = ''; statusCls = ''; }
+  } else if(notPicked){
+    status = `${notPicked} ${notPicked === 1 ? 'task' : 'tasks'} still to pick`; statusCls = 'is-short';
+  }
+  const taskTotal = (isLabor || n < 2) ? '' : `<div class="lnp-task lnp-task-total">
+      <span class="lnp-total-lead"><span class="lnp-total-lbl">Total</span>${status ? `<span class="lnp-total-status ${statusCls}">${statusCls === 'is-ok' ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-11"/></svg>' : ''}${esc(status)}</span>` : ''}</span>
+      <span class="lnp-total-qty"><b>${sharedUnit === null ? '—' : fmtN(boxSum)}</b>${needSum !== null ? `<span> of ${fmtN(needSum)} scoped</span>` : ''}</span>
+      ${(() => {
+        // The product, when it's one product across the whole line;
+        // nothing when the tasks differ — the rows below already say which.
+        const one = deptLinePicked(l);
+        return one.state === 'one'
+          ? `<span class="lnp-total-prod" title="${esc(one.product)}">${esc(one.product)}</span>`
+          : '<span></span>';
+      })()}
+      <span class="lnp-task-amt">${money(Math.round(deptLineCost(l)))}</span>
+    </div>`;
+  const pool = isLabor ? [] : deptLinePool(l);
+  const taskRows = l.items.map(t => {
+    const pk = taskPickedProducts(t);
+    const q = qtys.get(t.id);
+    return `<div class="lnp-task">
+      <button class="lnp-task-name" onclick="selectTask(${t.id})" title="Open ${esc(t.name)}"><span class="task-ctx">${esc(t.room)} ›</span> ${esc(t.name)}</button>
+      ${isLabor ? '<span></span>' : `<div class="lnp-task-qtycell"><div class="opt-card-qty-stepper lnp-task-qty">
+        <button class="opt-card-qty-btn" onclick="bumpLineTaskQty('${k}',${t.id},-1)" aria-label="One fewer for this task">${svgMinus}</button>
+        <input class="opt-card-qty-input" value="${esc(q.num || '—')}" readonly tabindex="-1" title="This task's quantity${q.unit ? ` (${esc(q.unit)})` : ''}">
+        <button class="opt-card-qty-btn" onclick="bumpLineTaskQty('${k}',${t.id},+1)" aria-label="One more for this task">${svgPlus}</button>
+      </div>${sharedUnit === null && q.unit ? `<span class="lnp-task-unit">${esc(q.unit)}</span>` : ''}</div>`}
+      ${isLabor ? `<span class="lnp-task-prod is-none">Nothing to buy</span>` : (() => {
+        // The task's own pick, straight from its row. Shows the line's
+        // catalogue; a task carrying something from outside it (or two
+        // things) says so in the button until it's re-picked.
+        const picked = _lineTaskPicked(l, t);
+        const cur = picked.length === 1 ? picked[0].p.sku : '';
+        const inPool = cur && pool.some(c => c.sku === cur);
+        const opts = [{value:'', label: pk.length && !inPool ? pk.join(' + ') : 'Not picked'}]
+          .concat(pool.map(c => ({value:c.sku, label:`${c.brand} ${c.name}`})));
+        return `<div class="lnp-task-pick">${hdrDdHtml('ddLnp-' + t.id, inPool ? cur : '', opts,
+          `setLineTaskProduct('${k}',${t.id},__V__)`, 'lnp-task-dd' + (pk.length ? '' : ' is-unset'))}</div>`;
+      })()}
+      <span class="lnp-task-amt">${isLabor ? '' : money(Math.round(taskLineCost(l, t)))}</span>
+    </div>`;
+  }).join('');
+
+  const prodRows = (isLabor ? [] : deptLinePool(l)).map(cat => {
+    const users = lineProductUsers(l, cat.sku);
+    const sku = esc(cat.sku);
+    const allHave = users.length === n;
+    // The supplier this line buys the product from, and that supplier's price.
+    const offers = (typeof catalogOffers === 'function') ? catalogOffers(Object.assign({section: (catalogFind(cat.sku) || {}).section}, cat)) : [];
+    const sup = lineSupplierFor(l, cat.sku);
+    const offer = offers.find(o => o.supplier === sup) || offers[0] || {price: cat.price};
+    const thumb = cat.image
+      ? `<img src="${esc(cat.image)}" alt="${esc(cat.name)}" loading="lazy">`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 5.5h13l-1 4H5z"/><path d="M4 12h13v6H4z"/><path d="M8 8v4"/></svg>`;
+    const act = allHave
+      ? `<span class="lnp-applied">${svgTick}Applied</span>`
+      : _lnpSelectBtnHtml(l, cat.sku);
+    return `<div class="sec-taskcard-product-row is-catalog lnp-prod${users.length ? ' is-picked' : ''}" onclick="openFly(${l.items[0].id},'${sku}',event)" title="View product details">
+      <div class="sec-taskcard-product-thumb">${thumb}</div>
+      <div class="sec-taskcard-product-name-block">
+        <span class="sec-taskcard-product-brand">${esc(cat.brand)}</span>
+        <span class="sec-taskcard-product-name">${esc(cat.name)}</span>
+        <span class="sec-taskcard-product-sku">SKU ${sku}</span>
+      </div>
+      <div class="lnp-prod-price">$${Number(offer.price).toLocaleString('en-US')}<span>/ ${esc(cat.unit)}</span></div>
+      <div class="lnp-prod-use">${users.length ? `On ${users.length} of ${n}` : ''}</div>
+      <div class="lnp-prod-act" onclick="event.stopPropagation()">${act}</div>
+      ${supplierPickHtml(offers, sup, `setLineSupplier('${k}','${sku}','__S__')`, `line:${l.key}|${cat.sku}`)}
+    </div>${_lnpPickHtml(l, cat)}`;
+  }).join('');
+
+  const anyPicked = l.items.some(t => _lineTaskPicked(l, t).length);
+  // ShopwithKai_layout.html: the chosen product, its tasks and the choice
+  // in one card, in place of the two sections below.
+  const condensed = (window.__KAI_SHOP_LAYOUT && !isLabor)
+    ? _lnpCondensedHtml(l, {k, n, qtys, sharedUnit, pool, needSum, boxSum, status, statusCls, svgMinus, svgPlus, anyPicked})
+    : '';
+  return `<div class="pgd lnp">
+    <div class="pgd-hdr-box">
+      <div class="sec-taskcard-hdr">
+        <div class="sec-taskcard-hdr-l">
+          <div class="lnp-eyebrow">${window.__KAI_SHOP_LAYOUT ? '<span class="page-kind">Product line</span>' : ''}${esc(l.dept)}</div>
+          <div class="pgd-title">${esc(l.name)}</div>
+          <div class="pgd-grp-meta">${esc(_lineHdrNeed(l, isLabor))}<span class="sep">&middot;</span>${rooms.length} ${rooms.length === 1 ? 'room' : 'rooms'}</div>
+        </div>
+        <div class="sec-taskcard-hdr-r">
+          ${isLabor ? '' : `<span class="sec-taskcard-amt-line"><span class="sec-taskcard-amt">${money(Math.round(deptLineCost(l)))}</span></span>`}
+          ${isLabor || !window.__KAI_SHOP ? '' : `<button type="button" class="lnp-po-link" onclick="openPurchaseOrder()">View purchase order &rarr;</button>`}
+        </div>
+      </div>
+    </div>
+    ${_linePhotoSectionHtml(l, isLabor ? '' : money(Math.round(deptLineCost(l))))}
+    ${condensed || `<div class="pgd-details-sec">
+      <div class="pgd-sec-hd">
+        <div class="pgd-details-title">Tasks in this line</div>
+        ${isLabor || !anyPicked ? '' : `<div class="pgd-sec-hd-r">
+          <button class="sec-mod-add" onclick="clearLineProduct('${k}')">${n > 1 ? 'Clear all products' : 'Clear product'}</button>
+        </div>`}
+      </div>
+      <div class="lnp-task-list${isLabor ? ' is-labor' : ''}">${taskHead}${taskTotal}${taskRows}</div>
+    </div>
+    ${isLabor ? `<div class="pgd-details-sec">
+      <div class="pgd-details-title">Nothing to buy</div>
+      <div class="pgd-muted">These tasks are labor only, or the resident supplies the product.</div>
+    </div>` : `<div class="pgd-details-sec">
+      <div class="pgd-details-title">Products</div>
+      ${prodSearchHtml('line:' + l.key)}
+      <div class="sec-taskcard-products lnp-products">${prodRows || '<div class="sec-taskcard-product-empty">No catalogue products for this line yet.</div>'}</div>
+    </div>`}`}
+    <div class="shop-nav-float">
+      <button class="shop-nav-btn" ${prevL ? '' : 'disabled'} onclick="${prevL ? `selectLine('${_lineKeyArg(prevL.key)}')` : ''}" title="${prevL ? esc(prevL.name) : 'No previous line'}">${svgChevL()} Previous line</button>
+      <button class="shop-nav-btn" ${nextL ? '' : 'disabled'} onclick="${nextL ? `selectLine('${_lineKeyArg(nextL.key)}')` : ''}" title="${nextL ? esc(nextL.name) : 'No next line'}">Next line ${svgChevR()}</button>
+    </div>
+  </div>`;
+}
+
+/* ── Product search (Editor) ─────────────────────────────────────────
+   A search box under the product rows that reaches the whole catalogue,
+   not just the products seeded on the option. Results drop down under the
+   box; each one's action depends on where the box is:
+     opt:<taskId>:<optId>  — add the product to that option (qty 0, so it's
+                             listed and ready to pick, like the others)
+     line:<lineKey>        — apply it to every task in a product line
+   Typing only redraws the result list, so the caret never jumps. */
+let prodSearchCtx = null;   // which box the results belong to
+let prodSearchQ = '';
+function prodSearchHtml(ctx){
+  const open = prodSearchCtx === ctx;
+  const id = 'ps-' + ctx.replace(/[^a-z0-9]/gi, '_');
+  return `<div class="prod-search${open && prodSearchQ ? ' has-results' : ''}" id="${id}" onclick="event.stopPropagation()">
+    <div class="prod-search-box">
+      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <input type="search" class="prod-search-input" placeholder="Search the catalog — brand, product or SKU"
+        value="${open ? esc(prodSearchQ) : ''}" autocomplete="off"
+        onfocus="prodSearchFocus('${esc(ctx).replace(/'/g, "\\'")}', this)"
+        oninput="prodSearchInput('${esc(ctx).replace(/'/g, "\\'")}', this.value)"
+        onkeydown="if(event.key==='Escape'){this.value='';prodSearchInput('${esc(ctx).replace(/'/g, "\\'")}','');this.blur();}">
+    </div>
+    <div class="prod-search-results" role="listbox">${open ? _prodSearchResultsHtml(ctx) : ''}</div>
+  </div>`;
+}
+function _prodSearchEl(ctx){ return document.getElementById('ps-' + ctx.replace(/[^a-z0-9]/gi, '_')); }
+function prodSearchFocus(ctx, el){
+  if(prodSearchCtx !== ctx){ prodSearchCtx = ctx; prodSearchQ = el.value || ''; }
+}
+function prodSearchInput(ctx, v){
+  prodSearchCtx = ctx; prodSearchQ = v;
+  const box = _prodSearchEl(ctx); if(!box) return;
+  box.classList.toggle('has-results', !!v.trim());
+  box.querySelector('.prod-search-results').innerHTML = _prodSearchResultsHtml(ctx);
+}
+function _prodSearchHas(ctx, sku){
+  const [kind, a, b] = ctx.split(':');
+  if(kind === 'opt'){
+    const t = TASKS.find(x => x.id === +a);
+    const o = t && (t.options || []).find(x => x.id === b);
+    return !!(o && (o.products || []).some(p => p.sku === sku));
+  }
+  if(kind === 'line' && typeof deptLineByKey === 'function'){
+    const l = deptLineByKey(ctx.slice(5));
+    return !!(l && lineProductUsers(l, sku).length === l.items.length);
+  }
+  return false;
+}
+function _prodSearchResultsHtml(ctx){
+  const q = (prodSearchQ || '').trim();
+  if(!q) return '';
+  const hits = catalogSearch(q, 8);
+  if(!hits.length) return `<div class="prod-search-empty">No products match “${esc(q)}”.</div>`;
+  const isLine = ctx.startsWith('line:');
+  const line = isLine && typeof deptLineByKey === 'function' ? deptLineByKey(ctx.slice(5)) : null;
+  const n = line ? line.items.length : 0;
+  const c = esc(ctx).replace(/'/g, "\\'");
+  return hits.map(p => {
+    const has = _prodSearchHas(ctx, p.sku);
+    const btn = has
+      ? `<span class="prod-search-added">${isLine ? 'Applied' : 'Added'}</span>`
+      : `<button type="button" class="prod-search-add" onclick="event.stopPropagation();prodSearchPick('${c}','${esc(p.sku)}')">${isLine ? (n > 1 ? `Apply to all ${n}` : 'Apply') : '+ Add'}</button>`;
+    // Same thumbnail as the product rows: the photo when the catalogue has
+    // one, the product glyph otherwise.
+    const thumb = p.image
+      ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy">`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 5.5h13l-1 4H5z"/><path d="M4 12h13v6H4z"/><path d="M8 8v4"/></svg>`;
+    return `<div class="prod-search-row" role="option">
+      <div class="sec-taskcard-product-thumb prod-search-thumb">${thumb}</div>
+      <div class="prod-search-main">
+        <span class="prod-search-brand">${esc(p.brand)}<span class="sep">·</span>${esc(CATALOG_SECTION_LABEL[p.section] || '')}</span>
+        <span class="prod-search-name">${esc(p.name)}</span>
+        <span class="prod-search-sku">SKU ${esc(p.sku)}</span>
+      </div>
+      ${(() => {
+        // Lowest price across the suppliers that carry it, and how many do.
+        const offers = catalogOffers(p);
+        const low = offers.length ? offers[0].price : p.price;
+        return `<span class="prod-search-price">${offers.length > 1 ? '<span class="from">from</span>' : ''}$${Number(low).toLocaleString('en-US')}<span>/ ${esc(p.unit)}</span>${offers.length > 1 ? `<em>${offers.length} suppliers</em>` : offers.length ? `<em>${esc(supplierName(offers[0].supplier))}</em>` : ''}</span>`;
+      })()}
+      ${btn}
+    </div>`;
+  }).join('');
+}
+function prodSearchPick(ctx, sku){
+  const cat = catalogFind(sku); if(!cat) return;
+  const [kind, a, b] = ctx.split(':');
+  if(kind === 'opt'){
+    const t = TASKS.find(x => x.id === +a);
+    const o = t && (t.options || []).find(x => x.id === b);
+    if(!o) return;
+    o.products = o.products || [];
+    if(!o.products.some(p => p.sku === sku)){
+      o.products.push({id:'prod_' + Math.random().toString(36).slice(2,7), sku:cat.sku, brand:cat.brand,
+        product:cat.name, qty:'0', parts:_fmtDollars(cat.price), labor:''});
+    }
+    toast(`${cat.brand} ${cat.name} added to ${t.name} — set a quantity to pick it`);
+  } else if(kind === 'line'){
+    applyLineProduct(ctx.slice(5), sku);
+  }
+  prodSearchCtx = null; prodSearchQ = '';
+  renderAll();
+}
+// Clicking elsewhere closes the results.
+document.addEventListener('click', () => {
+  if(!prodSearchCtx) return;
+  const box = _prodSearchEl(prodSearchCtx);
+  if(box) box.classList.remove('has-results');
+});
+
+/* ── Supplier picker ─────────────────────────────────────────────────
+   One product, several places to buy it. A strip across the bottom of the
+   product row names where it's buying from — supplier, price, stock, how
+   many carry it — and opens to every supplier, one per line, each with its
+   own price and stock and the cheapest marked. Click one to buy from it:
+   that sets the row's Parts rate; quantity and the rest stay as they are.
+   A product only one supplier carries just names it. `pick` is a handler
+   with __S__ for the supplier id; `key` remembers which strips are open. */
+let supOpen = new Set();
+const _supStock = s => s === 'out' ? 'Out of stock' : s === 'low' ? 'Low stock' : 'In stock';
+/* How soon the product can be in hand from a supplier: store pickup and
+   delivery. Prototype mock, by supplier and stock; in production these come
+   from the supplier's own availability feed for the job's ship-to address. */
+const _SUP_LOGI = {
+  hd:  {in:['Pick up in 6 hours', 'Delivery in 2 days'],   low:['Pick up tomorrow', 'Delivery in 3–5 days']},
+  low: {in:['Pick up in 4 hours', 'Delivery in 2 days'],   low:['Pick up tomorrow', 'Delivery in 4 days']},
+  fd:  {in:['Pick up tomorrow', 'Delivery in 3 days'],     low:['Pick up in 2 days', 'Delivery in 5 days']},
+  fer: {in:['Branch pickup tomorrow', 'Delivery in 2–3 days'], low:['Branch pickup in 3 days', 'Delivery in 5 days']},
+};
+function _supLogi(supplier, stock){
+  if(stock === 'out') return ['No pickup', 'Delivery in 7–10 days'];
+  const row = _SUP_LOGI[supplier] || _SUP_LOGI.hd;
+  return row[stock === 'low' ? 'low' : 'in'];
+}
+const _supLogiHtml = (supplier, stock) => {
+  const [pick, ship] = _supLogi(supplier, stock);
+  return `<span class="sup-logi"><span class="sup-logi-i">${esc(pick)}</span><span class="sup-logi-sep" aria-hidden="true">·</span><span class="sup-logi-i">${esc(ship)}</span></span>`;
+};
+const _supPrice = n => '$' + Number(n).toLocaleString('en-US');
+function supplierPickHtml(offers, cur, pick, key){
+  if(!offers || !offers.length) return '';
+  const low = offers[0].price;
+  const curOffer = offers.find(o => o.supplier === cur) || offers[0];
+  const stockCls = st => st === 'out' ? ' is-out' : st === 'low' ? ' is-low' : '';
+  const k = esc(key).replace(/'/g, "\\'");
+  if(offers.length === 1){
+    return `<div class="sup-strip is-single" onclick="event.stopPropagation()">
+      <span class="sup-strip-k">Sold by</span><b>${esc(supplierName(curOffer.supplier))}</b>
+      <span class="sup-stock${stockCls(curOffer.stock)}">${_supStock(curOffer.stock)}</span>
+      ${_supLogiHtml(curOffer.supplier, curOffer.stock)}
+    </div>`;
+  }
+  const open = supOpen.has(key);
+  const list = offers.map(o => {
+    const on = o.supplier === curOffer.supplier;
+    return `<button type="button" class="sup-opt${on ? ' on' : ''}" role="option" aria-selected="${on}"
+        onclick="event.stopPropagation();${on ? '' : pick.replace('__S__', esc(o.supplier))}">
+      <span class="sup-radio" aria-hidden="true"></span>
+      <span class="sup-opt-who">
+        <span class="sup-opt-name">${esc(supplierName(o.supplier))}</span>
+        ${_supLogiHtml(o.supplier, o.stock)}
+      </span>
+      <span class="sup-stock${stockCls(o.stock)}">${_supStock(o.stock)}</span>
+      ${o.price === low ? '<span class="sup-tag">Lowest</span>' : `<span class="sup-diff">+${_supPrice(o.price - low)}</span>`}
+      <span class="sup-opt-price">${_supPrice(o.price)}</span>
+    </button>`;
+  }).join('');
+  return `<div class="sup-strip${open ? ' open' : ''}" data-sup="${esc(key)}" onclick="event.stopPropagation()">
+    <button type="button" class="sup-strip-hd" aria-expanded="${open}" onclick="event.stopPropagation();toggleSupStrip('${k}')">
+      <span class="sup-strip-k">Buying from</span><b>${esc(supplierName(curOffer.supplier))}</b>
+      <span class="sup-strip-price">${_supPrice(curOffer.price)}</span>
+      <span class="sup-stock${stockCls(curOffer.stock)}">${_supStock(curOffer.stock)}</span>
+      ${_supLogiHtml(curOffer.supplier, curOffer.stock)}
+      ${curOffer.price === low ? '<span class="sup-tag">Lowest</span>' : ''}
+      <span class="sup-strip-n">${offers.length} suppliers</span>
+      <svg class="sup-strip-chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg>
+    </button>
+    <div class="sup-list" role="listbox">${list}</div>
+  </div>`;
+}
+// Opened and closed in place: a redraw would lose the user's scroll spot.
+function toggleSupStrip(key){
+  if(supOpen.has(key)) supOpen.delete(key); else supOpen.add(key);
+  document.querySelectorAll('.sup-strip').forEach(el => {
+    if(el.dataset.sup === key){
+      el.classList.toggle('open', supOpen.has(key));
+      const hd = el.querySelector('.sup-strip-hd'); if(hd) hd.setAttribute('aria-expanded', String(supOpen.has(key)));
+    }
+  });
+}
+function setProductSupplier(taskId, optId, prodId, supplier){
+  const t = TASKS.find(x => x.id === taskId); if(!t) return;
+  const o = (t.options || []).find(x => x.id === optId); if(!o) return;
+  const p = (o.products || []).find(x => x.id === prodId); if(!p) return;
+  const offer = offersForSku(p.sku).find(x => x.supplier === supplier); if(!offer) return;
+  p.supplier = supplier;
+  p.parts = _fmtDollars(offer.price);
+  recomputeOptionFromProducts(t, o);
+  toast(`${p.product} · buying from ${supplierName(supplier)} at ${_fmtDollars(offer.price)}`);
+  renderAll();
 }

@@ -11,6 +11,12 @@ let selGroupKey = null;
 // clicked the white Scope bar and neither a task nor a group is selected.
 let scopeView = false;
 let collapsedGrps = null;
+// Scope search. Unlike activeFilters this never touches what the sidebar
+// shows — the query lives only in the floating palette the Search button
+// opens, and picking a result navigates instead of narrowing. See the
+// SCOPE SEARCH block below for why.
+let sbQuery = '';
+let sbSearchOpen = false;
 let groupLabels = {};           // { groupKey: user-typed label string }, e.g. "Kitchen (including Pantry)"
 let editingGroupLabelFor = null; // group key currently showing the inline label input
 // Group-row tools (duplicate icon) are hidden by default and revealed via
@@ -150,19 +156,6 @@ function _coPillHtml(t){
   return `<span class="co-pill" title="${esc(why)} after approval — waiting on approval">${esc(why === 'Changed' ? 'Change order' : why)}</span>`;
 }
 
-/* A task whose product went out of stock and has not been replaced: some
-   added option carries an out-of-stock product and none of its in-stock
-   products is picked. Only the stock feed raises it — a draft line nobody
-   has chosen a product for yet is the Missing details state, not this. */
-function taskMissingProduct(t){
-  const opts = Array.isArray(t && t.options) ? t.options : [];
-  const picked = p => (typeof productIsPicked === 'function') ? productIsPicked(p) : false;
-  return opts.some(o => {
-    if(typeof optionIsAdded === 'function' && !optionIsAdded(o)) return false;
-    const ps = Array.isArray(o.products) ? o.products : [];
-    return ps.some(p => p.stock === 'out') && !ps.some(p => p.stock !== 'out' && picked(p));
-  });
-}
 function taskKeys(t){
   // Synth keys drive filter matching even when the underlying flag isn't
   // stored on the task explicitly.
@@ -171,7 +164,6 @@ function taskKeys(t){
   //   co_open → task has snapshot-tracked change-order edits not yet submitted
   const synth = [];
   if(!t.gc) synth.push('no_gc');
-  if(taskMissingProduct(t)) synth.push('no_product');
   if(t.editRequested) synth.push('edit_req');
   // Either half: a diverged field, or a staged change (contractor swap,
   // delete). This only asked the first, so a staged change flagged nothing.
@@ -200,6 +192,14 @@ function groupTasks(tasks){
   // The sidebar used to take these in whatever order they arrived, while
   // the right panel banded them by state — so the same task sat in two
   // different places depending on which side you looked at.
+  //
+  // Grouped by department the sidebar nests tasks under product lines, so
+  // the order has to be line first and state within it; otherwise Prev /
+  // Next in the Editor would hop between lines the sidebar shows apart.
+  if(groupBy === 'dept'){
+    return _groupTasksRaw(tasks).map(g => ({...g,
+      items: deptLines(g.items).flatMap(l => _pgdSortTasksForGroup(l.items))}));
+  }
   return _groupTasksRaw(tasks).map(g => ({...g, items: _pgdSortTasksForGroup(g.items)}));
 }
 function _groupTasksRaw(tasks){
@@ -212,12 +212,496 @@ function _groupTasksRaw(tasks){
     if(typeof PROJ_MODE !== 'undefined' && PROJ_MODE === 'draft') return _all;
     return _all.filter(g=>g.items.length);
   }
+  if(groupBy==='dept'){
+    // Store order, not alphabetical — the same aisle sequence every time,
+    // so a department sits in the same place whichever scope you open.
+    return DEPARTMENTS.concat(NO_PRODUCT_DEPT)
+      .map(d=>({key:d, name:d, pinned:false, items:tasks.filter(t=>taskDept(t)===d)}))
+      .filter(g=>g.items.length);
+  }
   const un=tasks.filter(t=>!t.gc);
   const gcs=[...new Set(tasks.filter(t=>t.gc).map(t=>t.gc))].sort();
   const groups=[];
   if(un.length) groups.push({key:'__un',name:'Unassigned',pinned:true,items:un});
   gcs.forEach(g=>groups.push({key:g,name:g,pinned:false,items:tasks.filter(t=>t.gc===g)}));
   return groups;
+}
+
+/* ════════════ DEPARTMENTS ════════════ */
+/* The third way to slice a scope, for the person shopping it. Group says
+   where in the property a task is and Contractor says who does it; Department
+   says what has to be bought for it and where that sits in the catalogue,
+   modelled on Lowe's department list.
+
+   Two levels: department, then product line inside it — Bathroom › Toilets,
+   Flooring › Carpet. A line gathers every task in the scope that needs that
+   kind of product, whichever room it's in, so one product can be picked once
+   and applied to all of them (one toilet model for both bathrooms). Rooms
+   drop to the third level, as context on each task.
+
+   A task's line is read from its name, option and product together, against
+   the rules below in order — the first match wins, so specific rules sit
+   above broad ones (a vanity's "undermount sinks" mustn't make it a sink).
+   Someone can pin the department with t.dept; the line is then the first
+   rule in that department that matches, or that department's catch-all.
+
+   Tasks with nothing to buy — labour only, or the resident supplies the
+   product — go to their own group at the bottom. In a shopping view they
+   are noise, and in a catalogue department they'd be wrong. */
+const DEPARTMENTS = [
+  'Appliances',
+  'Building Supplies & Lumber',
+  'Bathroom',
+  'Electrical',
+  'Flooring',
+  'Hardware',
+  'Heating & Cooling',
+  'Home Decor & Furniture',
+  'Kitchen',
+  'Lawn, Garden & Outdoor',
+  'Lighting & Ceiling Fans',
+  'Moulding & Millwork',
+  'Paint',
+  'Plumbing',
+  'Smart Home & Security',
+  'Storage & Organization',
+  'Tools',
+  'Windows & Doors',
+  'Other',
+];
+const NO_PRODUCT_DEPT = 'No products needed';
+const _LABOR_ONLY = /powerwash|pressure wash|haul away|haul-away|\bcutout\b|resident supplied|resident install|labor only|labour only/;
+// [department, product line, pattern]
+const _PRODUCT_LINES = [
+  // Ahead of smart home: a "smart" garage door opener is still an opener.
+  ['Windows & Doors',           'Garage door openers',        /door opener|garage door/],
+  ['Smart Home & Security',     'Smart home hubs',            /\bsmart\b|wi-?fi|\bhub\b/],
+  ['Smart Home & Security',     'Cameras & alarms',           /camera|alarm|security|doorbell/],
+  ['Electrical',                'Smoke & CO detectors',       /smoke|detector/],
+  ['Appliances',                'Range hoods',                /range hood|hood vent/],
+  ['Appliances',                'Appliance suites',           /appliance|stainless suite/],
+  ['Appliances',                'Refrigerators',              /refrigerator|fridge/],
+  ['Appliances',                'Dishwashers',                /dishwasher/],
+  ['Appliances',                'Washers & dryers',           /washer|dryer/],
+  ['Bathroom',                  'Vanities',                   /vanity/],
+  ['Bathroom',                  'Toilets',                    /toilet/],
+  ['Bathroom',                  'Shower doors',               /shower door|glass door/],
+  ['Bathroom',                  'Tubs',                       /\btub\b|bathtub/],
+  ['Bathroom',                  'Mirrors',                    /mirror/],
+  ['Heating & Cooling',         'Exhaust fans',               /exhaust fan/],
+  ['Heating & Cooling',         'Thermostats',                /thermostat/],
+  ['Heating & Cooling',         'HVAC equipment',             /hvac|furnace|heat pump|air condition/],
+  ['Lighting & Ceiling Fans',   'Ceiling fans',               /ceiling fan/],
+  ['Lighting & Ceiling Fans',   'Light fixtures',             /lighting|light fixture|pendant|sconce|recessed|chandelier|\blamp/],
+  ['Kitchen',                   'Cabinets',                   /cabinet/],
+  ['Kitchen',                   'Countertops',                /countertop|\bcounter\b|quartz|butcher block/],
+  ['Kitchen',                   'Sinks & faucets',            /\bsinks?\b|faucet/],
+  ['Kitchen',                   'Cabinet organizers',         /drawer insert|pull-out/],
+  ['Hardware',                  'Cabinet hinges',             /hinge/],
+  ['Hardware',                  'Door knobs & locks',         /knob|lever|\block|deadbolt|door hardware/],
+  ['Flooring',                  'Tile',                       /\btiles?\b|backsplash|porcelain|ceramic/],
+  ['Flooring',                  'Vinyl plank (LVP)',          /\blvp\b|vinyl plank|luxury vinyl/],
+  ['Flooring',                  'Carpet',                     /carpet/],
+  ['Flooring',                  'Hardwood',                   /hardwood/],
+  ['Flooring',                  'Laminate',                   /laminate/],
+  ['Paint',                     'Interior paint',             /paint|primer|repaint/],
+  ['Moulding & Millwork',       'Interior doors',             /interior door|door slab|prehung|bi-?fold/],
+  ['Moulding & Millwork',       'Baseboard & trim',           /baseboard|\btrim\b|moulding|molding|casing/],
+  ['Windows & Doors',           'Blinds & shades',            /blind|shade/],
+  ['Windows & Doors',           'Windows',                    /window/],
+  ['Windows & Doors',           'Exterior doors',             /storm door|exterior door|\bdoors?\b/],
+  ['Home Decor & Furniture',    'Curtains & rugs',            /curtain|\brug\b|wall art/],
+  ['Storage & Organization',    'Closet systems',             /closet|shelv|shelf|hanging rod/],
+  ['Plumbing',                  'Water heaters',              /water heater/],
+  ['Plumbing',                  'Pipes & fittings',           /plumb|pipe|filtration|sump/],
+  ['Lawn, Garden & Outdoor',    'Outdoor',                    /lawn|garden|landscap|patio|deck|fence|mulch/],
+  ['Building Supplies & Lumber','Drywall',                    /drywall/],
+  ['Building Supplies & Lumber','Insulation',                 /insulation/],
+  ['Building Supplies & Lumber','Lumber & framing',           /framing|plywood|lumber|\bstuds?\b/],
+  ['Building Supplies & Lumber','Roofing',                    /roof/],
+  ['Tools',                     'Tools',                      /\btools?\b|ladder|compressor/],
+];
+function _taskShopText(t){
+  return [t.name, t.opt, t.product].map(s => String(s || '')).join(' · ').toLowerCase();
+}
+// {dept, line} for a task, ignoring anything pinned on it — what the
+// Department field offers as its suggestion.
+function suggestTaskLine(t){
+  if(!t) return {dept:'Other', line:'Other items'};
+  const txt = _taskShopText(t);
+  if(_LABOR_ONLY.test(txt)) return {dept:NO_PRODUCT_DEPT, line:'Labor only'};
+  for(const [dept, line, re] of _PRODUCT_LINES) if(re.test(txt)){
+    // Lowe's shelves sinks under Kitchen, but a bathroom sink is bought in
+    // the Bathroom aisle beside the vanity it drops into.
+    if(line === 'Sinks & faucets' && /bath/i.test(t.room || '')) return {dept:'Bathroom', line};
+    return {dept, line};
+  }
+  return {dept:'Other', line:'Other items'};
+}
+function taskLine(t){
+  if(t && t.dept && DEPARTMENTS.includes(t.dept)){
+    const sug = suggestTaskLine(t);
+    if(sug.dept === t.dept) return sug;
+    const txt = _taskShopText(t);
+    const hit = _PRODUCT_LINES.find(([d, , re]) => d === t.dept && re.test(txt));
+    return {dept:t.dept, line: hit ? hit[1] : `${t.dept} items`};
+  }
+  return suggestTaskLine(t);
+}
+function taskDept(t){ return taskLine(t).dept; }
+function suggestTaskDept(t){ return suggestTaskLine(t).dept; }
+
+/* A department's tasks gathered into product lines, in rule order so a line
+   sits in the same place every time. Each line carries what the shopper
+   scans for: how many are needed, what the products cost, and whether one
+   product covers the lot. */
+function deptLines(items){
+  const order = new Map(_PRODUCT_LINES.map(([d, l], i) => [`${d}|${l}`, i]));
+  const byKey = new Map();
+  items.forEach(t => {
+    const {dept, line} = taskLine(t);
+    const key = `${dept}|${line}`;
+    if(!byKey.has(key)) byKey.set(key, {key, dept, name:line, items:[]});
+    byKey.get(key).items.push(t);
+  });
+  return [...byKey.values()].sort((a, b) =>
+    (order.has(a.key) ? order.get(a.key) : 1e9) - (order.has(b.key) ? order.get(b.key) : 1e9));
+}
+/* "2 scoped" when every task counts in each, "410 SF" when they share a
+   unit, and a plain task count when the units don't add up. */
+function deptLineNeed(items){
+  const parsed = items.map(t => {
+    const m = String(t.qty || '').match(/^\s*([\d.,]+)\s*(.*)$/);
+    if(!m) return null;
+    let unit = m[2].trim().toLowerCase();
+    if(unit === 'each' || unit === '') unit = 'ea';
+    return {n: parseFloat(m[1].replace(/,/g, '')) || 0, unit};
+  });
+  if(parsed.some(p => !p) || new Set(parsed.map(p => p.unit)).size !== 1){
+    return `${items.length} ${items.length === 1 ? 'task' : 'tasks'}`;
+  }
+  const n = Math.round(parsed.reduce((s, p) => s + p.n, 0) * 100) / 100;
+  const unit = parsed[0].unit;
+  if(unit === 'ea') return `${n} scoped`;
+  if(unit === 'sf' || unit === 'lf') return `${n.toLocaleString('en-US')} ${unit.toUpperCase()}`;
+  // Countable units read as words, so they take a plural: "2 rooms".
+  return `${n.toLocaleString('en-US')} ${unit}${n === 1 || /s$/.test(unit) ? '' : 's'}`;
+}
+/* The key of the sidebar group a task sits in under the current grouping —
+   one answer for every "which group is this in" question, so a third
+   grouping doesn't mean a third branch at every call site. */
+function taskGroupKey(t){
+  if(groupBy === 'contractor') return t.gc || '__un';
+  if(groupBy === 'dept')       return taskDept(t);
+  return t.room;
+}
+function taskGroupLabel(t){
+  if(groupBy === 'contractor') return t.gc || 'Unassigned';
+  if(groupBy === 'dept')       return taskDept(t);
+  return t.room || '—';
+}
+function groupKindNoun(){
+  return groupBy === 'contractor' ? 'contractor' : (groupBy === 'dept' ? 'department' : 'room');
+}
+
+/* ════════════ SCOPE SEARCH (floating palette) ════════════ */
+/* Modelled on Jira's search: the Search button opens a panel floating over
+   the work surface, results live IN that panel, and the panel goes away when
+   you pick something or click off it. The sidebar is never filtered.
+
+   The earlier version filtered the sidebar from an inline box, which left no
+   honest moment to close: a still-narrowed scope list and an empty-looking
+   box are the same picture, so the box had to stay open indefinitely. A
+   palette has a natural end — you either take a result or you dismiss it. */
+
+/* Every whitespace-separated word has to appear somewhere in the name, so
+   "kitchen light" finds "Kitchen and Dining Lighting" without the user
+   having to type the phrase exactly. */
+function _sbQueryTerms(){
+  const q = (sbQuery || '').trim().toLowerCase();
+  return q ? q.split(/\s+/) : [];
+}
+function _sbNameHit(name, terms){
+  const s = (name || '').toLowerCase();
+  return terms.every(t => s.includes(t));
+}
+/* Bold the matched runs, the way Jira does. Walks the string once per term
+   marking covered spans, so overlapping terms ("tile til") can't produce
+   nested <b> tags — then escapes, because the marks are computed on indices
+   of the raw string and have to survive escaping intact. */
+function _sbMark(name, terms){
+  const src = String(name || '');
+  if(!terms.length) return esc(src);
+  const lower = src.toLowerCase();
+  const hit = new Array(src.length).fill(false);
+  terms.forEach(t => {
+    let i = lower.indexOf(t);
+    while(i !== -1){
+      for(let k = i; k < i + t.length; k++) hit[k] = true;
+      i = lower.indexOf(t, i + 1);
+    }
+  });
+  let out = '', run = '', on = false;
+  const flush = () => { if(run) out += on ? `<b>${esc(run)}</b>` : esc(run); run = ''; };
+  for(let i = 0; i < src.length; i++){
+    if(hit[i] !== on){ flush(); on = hit[i]; }
+    run += src[i];
+  }
+  flush();
+  return out;
+}
+
+/* Groups before tasks — a group is the bigger target and the one a short
+   query usually means. A matched group brings its tasks with it as child
+   rows: "kitchen" means the kitchen, and its contents are the useful thing
+   to show, so the user can jump straight to a task without a second search.
+   Capped: past a couple of dozen rows the list stops being a shortcut.
+
+   Searches the WHOLE scope, not visibleTasks() — an active filter must not
+   decide what can be found. A search that silently inherited one would tell
+   a user with a forgotten filter on that a task does not exist, and being
+   wrong about that is worse than any tidiness gained. Picking a result the
+   filters exclude drops them; see _sbqRevealForPick. */
+const SBQ_LIMIT = 30;
+function sbSearchResults(){
+  const terms = _sbQueryTerms();
+  if(!terms.length) return [];
+  const groups = (typeof groupTasks === 'function') ? groupTasks(TASKS.slice()) : [];
+  const out = [];
+  const claimed = new Set();   // tasks already listed under their matched group
+  groups.forEach(g => {
+    if(!_sbNameHit(g.name, terms)) return;
+    out.push({kind:'group', key:g.key, name:g.name, n:g.items.length,
+              cost:g.items.reduce((a,t)=>a+dollars(t.cost),0)});
+    g.items.forEach(t => {
+      out.push({kind:'task', id:t.id, name:t.name, group:g.name, task:t, child:true});
+      claimed.add(t.id);
+    });
+  });
+  // Tasks matching on their own name. A task already shown under its group
+  // is skipped — listing it twice would just pad the result.
+  groups.forEach(g => {
+    g.items.forEach(t => {
+      if(claimed.has(t.id)) return;
+      if(_sbNameHit(t.name, terms)) out.push({kind:'task', id:t.id, name:t.name, group:g.name, task:t});
+    });
+  });
+  return out;
+}
+
+/* The template's tasks that are not in the scope yet, and so can be added
+   from here. A task counts as in the scope when one in the same room carries
+   its name. Nothing is offered once the scope is signed off — the same line
+   the sidebar's "New task" draws. */
+function _sbTemplateMisses(){
+  if(typeof JOB_TEMPLATE === 'undefined') return [];
+  if(typeof PROJ_MODE !== 'undefined' && PROJ_MODE === 'closeout-approved') return [];
+  const key = (room, name) => `${String(room).toLowerCase()}|${String(name).toLowerCase()}`;
+  const have = new Set(TASKS.map(t => key(t.room, t.name)));
+  return JOB_TEMPLATE.tasks.filter(t => !have.has(key(t.room, t.name)));
+}
+/* Template results, after the scope's own. Matched on room and name
+   together, so "kitchen" lists what the template still has for the kitchen
+   and "kitchen paint" finds that one task. Capped on their own, so a broad
+   query that fills the scope's share still shows what could be added. */
+const SBQ_TPL_LIMIT = 8;
+function sbTemplateResults(){
+  const terms = _sbQueryTerms();
+  if(!terms.length) return [];
+  return _sbTemplateMisses()
+    .filter(t => _sbNameHit(`${t.room} ${t.name}`, terms))
+    .map(t => ({kind:'tpl', name:t.name, room:t.room, tpl:t}));
+}
+
+let _sbqRows = [];      // current results, index-aligned with the rendered rows
+let _sbqActive = -1;    // keyboard cursor
+
+function toggleSbSearch(open){
+  const next = (open === undefined) ? !sbSearchOpen : !!open;
+  if(next === sbSearchOpen){ if(next) _sbFocusSearch(); return; }
+  sbSearchOpen = next;
+  const pal = document.getElementById('sbq');
+  const scrim = document.getElementById('sbqScrim');
+  if(pal) pal.hidden = !sbSearchOpen;
+  if(scrim) scrim.hidden = !sbSearchOpen;
+  if(sbSearchOpen){
+    _sbPositionPalette();
+    renderSbResults();
+    _sbFocusSearch();
+  } else {
+    // Dismissing is the end of the search — nothing about it survives.
+    sbQuery = '';
+    _sbqRows = []; _sbqActive = -1;
+    const inp = document.getElementById('sbqInput');
+    if(inp) inp.value = '';
+  }
+  if(typeof renderStateBar === 'function') renderStateBar();
+}
+function closeSbSearch(){ toggleSbSearch(false); }
+function _sbFocusSearch(){
+  requestAnimationFrame(()=>{
+    const inp = document.getElementById('sbqInput');
+    if(inp){ inp.focus(); inp.select(); }
+  });
+}
+/* Anchored under the tools bar and aligned to the sidebar's left edge, so it
+   reads as the scope's search while spilling over the work surface. Measured
+   on open (and on resize) rather than positioned in CSS — the sidebar is
+   user-resizable, so its edge isn't a constant. */
+function _sbPositionPalette(){
+  const pal = document.getElementById('sbq');
+  const bar = document.getElementById('sbStateBar');
+  if(!pal || !bar) return;
+  const r = bar.getBoundingClientRect();
+  const width = Math.min(620, window.innerWidth - 32);
+  pal.style.top  = Math.round(r.bottom + 8) + 'px';
+  pal.style.left = Math.round(Math.min(Math.max(16, r.left), window.innerWidth - width - 16)) + 'px';
+  pal.style.width = width + 'px';
+}
+window.addEventListener('resize', () => { if(sbSearchOpen) _sbPositionPalette(); });
+
+function setSbQuery(v){
+  sbQuery = v || '';
+  renderSbResults();
+}
+/* The × is always there, and always does the most useful thing available:
+   empties a box with something in it, dismisses an empty one. A button that
+   sits visible but inert in the empty state would be worse than no button,
+   and a pure close-only × would make "clear and keep looking" a keyboard-only
+   move. The tooltip says which of the two it currently is. */
+function sbqClearOrClose(){
+  if((sbQuery || '').trim()) clearSbQuery();
+  else closeSbSearch();
+}
+function clearSbQuery(){
+  const inp = document.getElementById('sbqInput');
+  if(inp) inp.value = '';
+  setSbQuery('');
+  if(inp) inp.focus();
+}
+function renderSbResults(){
+  const list = document.getElementById('sbqResults');
+  const clr  = document.getElementById('sbqClear');
+  if(clr){
+    const label = (sbQuery || '').trim() ? 'Clear search' : 'Close search';
+    clr.title = label;
+    clr.setAttribute('aria-label', label);
+  }
+  if(!list) return;
+  const terms = _sbQueryTerms();
+  if(!terms.length){
+    _sbqRows = []; _sbqActive = -1;
+    list.innerHTML = '';   // :empty collapses the row — the placeholder says it
+    return;
+  }
+  const all = sbSearchResults();
+  const tpl = sbTemplateResults();
+  const inScope = all.slice(0, SBQ_LIMIT);
+  _sbqRows = inScope.concat(tpl.slice(0, SBQ_TPL_LIMIT));
+  // Keep the first row armed so Enter always has an obvious target.
+  _sbqActive = _sbqRows.length ? 0 : -1;
+  if(!_sbqRows.length){
+    list.innerHTML = `<div class="sbq-hint">No group or task named &ldquo;${esc(sbQuery.trim())}&rdquo;.</div>`;
+    return;
+  }
+  const rows = _sbqRows.map((r,i) => r.kind === 'tpl'
+    /* Not in the scope, so it has no price of its own yet; the right-hand
+       column says what taking it does instead. A dashed box with a plus
+       rather than the task icon, the same mark the sidebar's add rows use. */
+    ? `${i === inScope.length ? `<div class="sbq-sec">Not in scope yet <span>· from ${esc(JOB_TEMPLATE.name)}</span></div>` : ''}
+      <button class="sbq-row is-tpl${i===_sbqActive?' on':''}" data-i="${i}" onclick="sbqPick(${i})" onmousemove="sbqHover(${i})">
+        <span class="sbq-ico is-add" aria-hidden="true"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M7 3.5v7M3.5 7h7"/></svg></span>
+        <span class="sbq-txt"><span class="sbq-name">${_sbMark(r.name, terms)}</span><span class="sbq-sub">${esc(r.room)} · not in scope</span></span>
+        <span class="sbq-add">Add task from template</span>
+      </button>`
+    : r.kind === 'group'
+    ? `<button class="sbq-row${i===_sbqActive?' on':''}" data-i="${i}" onclick="sbqPick(${i})" onmousemove="sbqHover(${i})">
+        <span class="sbq-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="4.5" width="21" height="15"/><path d="M1.5 9.5h21"/></svg></span>
+        <span class="sbq-txt"><span class="sbq-name">${_sbMark(r.name, terms)}</span><span class="sbq-sub">Group · ${r.n} ${r.n===1?'task':'tasks'}</span></span>
+        <span class="sbq-amt">${money(r.cost)}</span>
+      </button>`
+    : `<button class="sbq-row${i===_sbqActive?' on':''}${r.child?' is-child':''}" data-i="${i}" onclick="sbqPick(${i})" onmousemove="sbqHover(${i})">
+        ${r.child ? '' : `<span class="sbq-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 2.5h15v19h-15z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>`}
+        <span class="sbq-txt"><span class="sbq-name">${_sbMark(r.name, terms)}</span>${r.child ? '' : `<span class="sbq-sub">${esc(r.group)}</span>`}</span>
+        <span class="sbq-amt">${esc(r.task.cost || '')}</span>
+      </button>`).join('');
+  const hidden = (all.length + tpl.length) - _sbqRows.length;
+  const more = hidden > 0
+    ? `<div class="sbq-more">${hidden} more — keep typing to narrow</div>` : '';
+  list.innerHTML = rows + more;
+}
+function sbqHover(i){
+  if(i === _sbqActive) return;
+  _sbqActive = i;
+  _sbqPaintActive();
+}
+function _sbqPaintActive(){
+  const list = document.getElementById('sbqResults');
+  if(!list) return;
+  list.querySelectorAll('.sbq-row').forEach(el => {
+    el.classList.toggle('on', Number(el.dataset.i) === _sbqActive);
+  });
+  const el = list.querySelector('.sbq-row.on');
+  if(el) el.scrollIntoView({block:'nearest'});
+}
+/* Search sees the whole scope, so a result can be something the sidebar is
+   currently filtering out. Navigating to it would then select a task the
+   scope list does not contain — the Editor showing one thing, the sidebar
+   unable to show where it sits. Dropping the filters is the honest fix:
+   the user asked to go here, so the list they land in has to contain it.
+   Returns true when it cleared, so the caller can say so. */
+function _sbqRevealForPick(r){
+  if(typeof activeFilters === 'undefined' || !activeFilters.size) return false;
+  const vis = new Set(visibleTasks().map(t => t.id));
+  const g = r.kind === 'group'
+    ? groupTasks(TASKS.slice()).find(x => x.key === r.key)
+    : null;
+  const needed = r.kind === 'group' ? (g ? g.items : []) : [r.task];
+  // An empty matched group has nothing to hide, so the filters can stand.
+  if(!needed.length || needed.every(t => vis.has(t.id))) return false;
+  activeFilters.clear();   // the selection below repaints; no render needed here
+  return true;
+}
+/* Taking a result closes the palette — that IS the moment the search is
+   done, which is the whole reason for this shape. */
+function sbqPick(i){
+  const r = _sbqRows[i];
+  if(!r) return;
+  closeSbSearch();
+  // A template task is not in the scope to go to; taking it adds it.
+  if(r.kind === 'tpl'){
+    if(typeof addTemplateTask === 'function') addTemplateTask(r.tpl);
+    return;
+  }
+  const cleared = _sbqRevealForPick(r);
+  if(r.kind === 'group'){
+    if(typeof selectGroup === 'function') selectGroup(r.key);
+  } else {
+    if(typeof selectTask === 'function') selectTask(r.id, {toEditor:true});
+  }
+  if(cleared){
+    // selectGroup doesn't run renderAll, so the Filters button would keep
+    // showing a count for filters that are gone.
+    if(typeof renderFilter === 'function') renderFilter();
+    if(typeof renderStateBar === 'function') renderStateBar();
+    if(typeof toast === 'function') toast('Filters cleared to show this result');
+  }
+}
+function onSbSearchKey(e){
+  if(e.key === 'Escape'){ e.stopPropagation(); closeSbSearch(); return; }
+  if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+    if(!_sbqRows.length) return;
+    e.preventDefault();
+    const d = e.key === 'ArrowDown' ? 1 : -1;
+    _sbqActive = (_sbqActive + d + _sbqRows.length) % _sbqRows.length;
+    _sbqPaintActive();
+    return;
+  }
+  if(e.key === 'Enter'){
+    if(_sbqActive < 0) return;
+    e.preventDefault();
+    sbqPick(_sbqActive);
+  }
 }
 
 /* ════════════ ATTENTION FILTER ════════════ */
@@ -232,7 +716,7 @@ function renderFilter(){
   // wants resolving. Change orders aren't a problem, they're a step in the
   // process, so they sit in their own Workflow band between the flags and
   // the user-created modifiers.
-  const flagOrder=['no_gc','no_product','oos'];
+  const flagOrder=['no_gc','oos'];
   const flowOrder=['co_open'];
   // These filters are meaningful even at count=0 (they're the "state"
   // filters an admin scans for regularly), so always surface them in the
@@ -463,13 +947,17 @@ function renderStateBar(){
   const bar = document.getElementById('sbStateBar');
   if(!bar) return;
   const _afOpen = _afMenuWasOpen();   // see above
-  bar.className = 'sb-state-bar';
+  bar.className = 'sb-state-bar' + (IS_DRAFT_STAGE ? ' has-gear' : '');
   bar.hidden = false;
   // Group by toggle + Filter icon are always present — they're the scoping
   // controls for the sidebar and belong at the top of every state.
-  const groupBySeg = `<div class="sb-tools-seg" role="tablist" aria-label="Group scope by">
-    <button id="grpRoom" class="${groupBy==='room'?'active':''}" onclick="setGroupBy('room')">Group</button>
-    <button id="grpContractor" class="${groupBy==='contractor'?'active':''}" onclick="setGroupBy('contractor')">Contractor</button>
+  /* Named for what each view is for: everything, by room (All), who is
+     paid to do it (Labour, by contractor), what is bought for it
+     (Materials, by department). The ids keep their old names. */
+  const groupBySeg = `<div class="sb-tools-seg" role="tablist" aria-label="View scope by">
+    <button id="grpRoom" class="${groupBy==='room'?'active':''}" onclick="setGroupBy('room')">All</button>
+    <button id="grpContractor" class="${groupBy==='contractor'?'active':''}" onclick="setGroupBy('contractor')">Labor</button>
+    <button id="grpDept" class="${groupBy==='dept'?'active':''}" onclick="setGroupBy('dept')">Materials</button>
   </div>`;
   // Settings icon — reveals the per-group duplicate icon (draft stage only).
   // Keeps group rows clean by default; click to toggle the tool on/off.
@@ -485,6 +973,13 @@ function renderStateBar(){
     </button>
     <div class="af-menu" id="afMenu"></div>
   </div>`;
+  // Search trigger — sits with Filters because both narrow what the sidebar
+  // shows. Rendered here rather than kept static like the input below it: a
+  // button survives an innerHTML rewrite, an input mid-keystroke does not.
+  const searchBtn = `<button class="sb-tools-search${sbSearchOpen?' active':''}" onclick="toggleSbSearch()" title="Search groups and tasks" aria-label="Search groups and tasks" aria-expanded="${sbSearchOpen?'true':'false'}">
+    <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.75" stroke="currentColor" stroke-width="1.5"/><path d="M10.6 10.6 14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <span>Search</span>
+  </button>`;
   // The sidebar is always view-only in this variant, so we no longer
   // surface an "Editing" / "View only" chip or the yellow draft-state
   // background. The only surviving state-bar action is the "Return to
@@ -494,16 +989,11 @@ function renderStateBar(){
   if(currentVersionId !== 'v3'){
     actions = `<button class="sb-state-bar-btn" onclick="switchVersion('v3')">Return to current</button>`;
   }
-  // Collapses the sidebar entirely — the same end state as dragging the
-  // resize handle past the left edge. "Show scope" in the work-hdr tab bar
-  // brings it back. Defined in panel-init.js's resize block.
-  const hideScope = `<button class="sb-hide-scope" onclick="collapseSidebar()" title="Hide the scope list" aria-label="Hide scope">
-    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 2.5 4 6l3.5 3.5"/></svg>
-    Hide scope
-  </button>`;
   // Gear sits at the far right, aligned with the per-group duplicate icon
   // column it toggles (those sit flush with the sidebar's right edge too).
-  bar.innerHTML = `${groupBySeg}${filterIcon}<span class="sb-state-bar-sp"></span>${settingsIcon}${actions}${hideScope}`;
+  // Hide scope gave way to Expand in the work surface's tab bar.
+  bar.innerHTML = `${groupBySeg}${filterIcon}${searchBtn}<span class="sb-state-bar-sp"></span>${settingsIcon}${actions}`;
+  _sbFitTools();
   // Remember for renderFilter, which fills the menu; reopening here
   // would show it before it has any options in it.
   _afReopenPending = _afOpen;
@@ -512,6 +1002,56 @@ function renderStateBar(){
   // call renderStateBar without a renderFilter after it.
   if(typeof renderFilter === 'function') renderFilter();
 }
+/* ── Do the tools still fit on one row? ─────────────────────────────────
+   Asked of the layout rather than answered with a number. Every threshold
+   guessed in advance was wrong: the bar's width is not the window's, the
+   gear comes and goes with the stage, a container query measures the content
+   box while the wrap point was measured on the border box, and the labels
+   are set in whatever font actually loaded. So the labels go on, the row is
+   measured, and they come off only if it broke — which is the rule as it was
+   asked for, with nothing to keep in sync.
+
+   Reading layout then writing one class, once per render: no loop, because
+   the class changes the bar's height and the observer below watches the
+   sidebar's width. */
+function _sbFitTools(){
+  const bar = document.getElementById('sbStateBar');
+  if(!bar) return;
+  bar.classList.remove('is-tight');
+  const kids = [...bar.children].filter(e => {
+    const r = e.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  });
+  if(kids.length < 2) return;
+  const top = Math.min(...kids.map(e => e.getBoundingClientRect().top));
+  const wrapped = kids.some(e => e.getBoundingClientRect().top > top + 2);
+  if(wrapped) bar.classList.add('is-tight');
+}
+/* The sidebar is dragged, not just laid out once, so the question has to be
+   re-asked as it changes width — from more than one direction, because none
+   of them alone is dependable. A ResizeObserver is delivered with the
+   rendering steps, so a panel that is not being painted never hears from it;
+   window resize catches the collapse and the window itself; and the drag
+   writes flex-basis straight onto the sidebar, which fires neither, so it
+   calls in from panel-init. */
+let _sbFitRO = null;
+function _sbWatchToolsFit(){
+  if(_sbFitRO) return;
+  const sb = document.querySelector('.sidebar');
+  if(!sb) return;
+  window.addEventListener('resize', _sbFitTools);
+  if(typeof ResizeObserver !== 'undefined'){
+    _sbFitRO = new ResizeObserver(() => _sbFitTools());
+    _sbFitRO.observe(sb);
+  } else {
+    _sbFitRO = true;
+  }
+  _sbFitTools();
+}
+document.addEventListener('DOMContentLoaded', _sbWatchToolsFit);
+/* Scripts load after the markup, so DOMContentLoaded may already be spent. */
+if(document.readyState !== 'loading') _sbWatchToolsFit();
+
 // State-bar button handlers.
 function stateBarSubmitForReview(){
   // In change-order editing, submitting also ends the edit session — the
@@ -521,7 +1061,7 @@ function stateBarSubmitForReview(){
   if(typeof approveAll === 'function') approveAll();
   if(wasEditing && !IS_DRAFT_STAGE && typeof enterEditMode === 'function'){
     enterEditMode(false);
-    if(typeof toast === 'function') toast('Change order submitted for admin review');
+    if(typeof toast === 'function') toast('Change order submitted for review');
   }
 }
 function stateBarDuplicateAndEdit(){
