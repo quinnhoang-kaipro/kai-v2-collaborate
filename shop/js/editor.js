@@ -1227,9 +1227,9 @@ function _lnpCondensedHtml(l, c){
   // The pencil: a short menu of the line's other products. On a product it
   // swaps that product on every task beside it; on "No product yet" it puts
   // the pick on those tasks.
-  const penMenu = (choices, act, label) => `<details class="lnpg-pen">
+  const penMenu = (choices, act, label, head) => `<details class="lnpg-pen">
       <summary title="${esc(label)}" aria-label="${esc(label)}">${penSvg}</summary>
-      <div class="lnpg-pen-menu">${choices.map(x => `<button type="button" onclick="${act.replace('__V__', esc(x.sku))}"><span class="lnpc-brand">${esc(x.brand || '')}</span>${esc(x.name)}</button>`).join('') || '<span class="lnpg-pen-none">No other products</span>'}</div>
+      <div class="lnpg-pen-menu"><div class="lnpg-pen-hd">${esc(head)}</div>${choices.map(x => `<button type="button" onclick="${act.replace('__V__', esc(x.sku))}"><span class="lnpc-brand">${esc(x.brand || '')}</span>${esc(x.name)}</button>`).join('') || '<span class="lnpg-pen-none">No other products</span>'}</div>
     </details>`;
   // Groups in the order the line's tasks first reach them; '' is no product.
   const order = [];
@@ -1246,7 +1246,7 @@ function _lnpCondensedHtml(l, c){
           <div class="lnpg-prod">
             <span class="lnpg-prod-l is-none"><span class="lnpc-thumb is-sm">${_LNP_THUMB}</span>
               <span class="lnpg-prod-n"><span class="lnpg-bare-t">No product yet</span>
-                <span class="lnpg-acts">${penMenu(pool, `addLineProduct('${k}','__V__',[${ids}])`, 'Pick a product for these tasks')}</span></span></span>
+                <span class="lnpg-acts">${penMenu(pool, `addLineProduct('${k}','__V__',[${ids}])`, 'Pick a product for these tasks', 'Select a product from template')}</span></span></span>
           </div>
           <div class="lnpg-tasks">${bare.map(t => taskRow(t)).join('')}</div>
         </div>
@@ -1264,7 +1264,7 @@ function _lnpCondensedHtml(l, c){
             <span class="lnpg-prod-n">
               <span class="lnpg-open" onclick="openFly(${l.items[0].id},'${esc(cat.sku)}',event)" title="View product details"><span class="lnpc-brand">${esc(cat.brand || '')}</span><span class="lnpc-name">${esc(cat.name)}</span></span>
               <span class="lnpg-acts">
-                ${penMenu(pool.filter(x => x.sku !== cat.sku), `swapLineProduct('${k}','${esc(cat.sku)}','__V__')`, 'Change this product')}
+                ${penMenu(pool.filter(x => x.sku !== cat.sku), `swapLineProduct('${k}','${esc(cat.sku)}','__V__')`, 'Change this product', 'Select another product from template')}
                 <button type="button" class="optc-trash" onclick="event.stopPropagation();removeLineProduct('${k}','${esc(cat.sku)}')" title="Take this product off its tasks" aria-label="Remove ${esc(cat.brand)} ${esc(cat.name)}">${trashSvg}</button>
               </span>
             </span>

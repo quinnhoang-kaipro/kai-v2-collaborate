@@ -6784,3 +6784,4 @@ body.sb-collapsed .wmode-expand-off{display:inline-flex!important}
 .task-crumb-a{padding:0;border:0;background:none;cursor:pointer;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;border-bottom:1px solid transparent}
 .task-crumb-a:hover{color:var(--ink);border-bottom-color:var(--ink)}
 .task-crumbs-div{width:1px;height:10px;background:var(--stroke)}
+.lnpg-pen-hd{padding:8px 10px 6px;border-bottom:1px solid var(--stroke);margin-bottom:4px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
