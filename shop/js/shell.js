@@ -34,13 +34,17 @@ function KAI_PANEL_DOC(qs){
   /* ShopwithKai_layout.html adds one more: an order opens in the left panel,
      beside the Editor (see po-side.js). */
   const shopLayout = (typeof window.__KAI_SHOP_LAYOUT !== 'undefined') && !!window.__KAI_SHOP_LAYOUT;
+  /* ShopwithKai_materials.html: with Materials on, the Editor shows a
+     department as a shopping list (see materials-page.js). */
+  const shopMaterials = (typeof window.__KAI_SHOP_MATERIALS !== 'undefined') && !!window.__KAI_SHOP_MATERIALS;
   const boot =
     '<base href="' + location.href.split('#')[0] + '">' +
     '<scr' + 'ipt>window.__KAI_QS=' + JSON.stringify(qs ? '?' + qs : '')
       + ';window.__KAI_ACTIVITY_FULL=' + (full ? 'true' : 'false')
       + ';window.__KAI_ACTIVITY_SENTENCES=' + (sent ? 'true' : 'false')
       + ';window.__KAI_SHOP=' + (shop ? 'true' : 'false')
-      + ';window.__KAI_SHOP_LAYOUT=' + (shopLayout ? 'true' : 'false') + ';<\/script>';
+      + ';window.__KAI_SHOP_LAYOUT=' + (shopLayout ? 'true' : 'false')
+      + ';window.__KAI_SHOP_MATERIALS=' + (shopMaterials ? 'true' : 'false') + ';<\/script>';
   return KAI_PANEL_RAW.replace(/<head([^>]*)>/i, '<head$1>' + boot);
 }
 

@@ -930,7 +930,9 @@ function _sbSideAmtHtml(t, side, later){
   const whole = Math.round(dollars(t.cost || 0));
   const part = Math.round(side), wait = Math.round(later || 0);
   const of = (whole && whole !== part) ? `<span class="task-amt-of">of ${money(whole)}</span>` : '';
-  if(wait && wait >= part) return `<span class="task-amt is-later">${money(part)}</span><span class="task-amt-of">deferred</span>`;
+  // All of it waits: the grey amount says so, and the row's Deferred tag
+  // names it — no second "deferred" under the figure.
+  if(wait && wait >= part) return `<span class="task-amt is-later">${money(part)}</span>`;
   if(!part) return `<span class="task-amt is-none">—</span>${of}`;
   return `<span class="task-amt">${money(part - wait)}</span>${wait ? `<span class="task-amt-of">+${money(wait)} deferred</span>` : of}`;
 }
@@ -1250,6 +1252,77 @@ function setLineTaskProduct(key, id, sku){
   }
   renderAll();
 }
+/* Adding and removing (ShopwithKai_layout): a line can buy more than one
+   product. Add puts a product on every task in the line beside what each
+   already has, at the task's own need; Remove takes that one product off
+   every task and leaves the rest. */
+// ids: only these tasks; every task in the line when left out. qty: task id →
+// how many each gets, else the task's own need.
+function addLineProduct(key, sku, ids, qty){
+  const l = deptLineByKey(key); if(!l) return;
+  const cat = _lineCat(l, sku); if(!cat) return;
+  const sup = lineSupplierFor(l, cat.sku);
+  const offer = offersForSku(cat.sku).find(o => o.supplier === sup);
+  const targets = ids ? l.items.filter(t => ids.includes(t.id)) : l.items;
+  targets.forEach(t => {
+    const h = _ensureLineProductRow(t, cat); if(!h) return;
+    if(qty && qty[t.id] != null) h.p.qty = String(qty[t.id]);
+    else if(!productIsPicked(h.p)) h.p.qty = _taskNeedQty(t, cat);
+    if(offer){ h.p.supplier = offer.supplier; h.p.parts = _fmtDollars(offer.price); }
+    if(!optionIsAdded(h.o)) h.o.added = true;
+    recomputeOptionFromProducts(t, h.o);
+    _syncTaskProduct(t);
+  });
+  toast(`${cat.brand} ${cat.name} added to ${targets.length === 1 ? `${targets[0].room} › ${targets[0].name}` : `${targets.length} tasks`}`);
+  renderAll();
+}
+/* One task, one of its products: swap it for another (or, with no sku, take
+   it off). The task's other products stay; the quantity carries over. */
+function _swapTaskProduct(l, t, fromSku, toSku){
+  const from = _lineTaskPicked(l, t).filter(h => h.p.sku === fromSku);
+  const keepQty = from.length ? from[0].p.qty : null;
+  const touched = new Set();
+  from.forEach(h => { h.p.qty = '0'; touched.add(h.o); });
+  let cat = null;
+  if(toSku){
+    cat = _lineCat(l, toSku);
+    const h = cat && _ensureLineProductRow(t, cat);
+    if(h){
+      const offer = offersForSku(cat.sku).find(o => o.supplier === lineSupplierFor(l, cat.sku));
+      h.p.qty = String(_num(h.p.qty) + _num(keepQty || _taskNeedQty(t, cat)));
+      if(offer){ h.p.supplier = offer.supplier; h.p.parts = _fmtDollars(offer.price); }
+      if(!optionIsAdded(h.o)) h.o.added = true;
+      touched.add(h.o);
+    }
+  }
+  touched.forEach(o => recomputeOptionFromProducts(t, o));
+  _syncTaskProduct(t);
+  return cat;
+}
+// Every task on one product, onto another.
+function swapLineProduct(key, fromSku, toSku){
+  const l = deptLineByKey(key); if(!l) return;
+  const on = l.items.filter(t => _lineTaskPicked(l, t).some(h => h.p.sku === fromSku));
+  let cat = null;
+  on.forEach(t => { cat = _swapTaskProduct(l, t, fromSku, toSku) || cat; });
+  if(cat) toast(`${cat.brand} ${cat.name} on ${on.length === 1 ? `${on[0].room} › ${on[0].name}` : `${on.length} tasks`}`);
+  renderAll();
+}
+function removeLineProduct(key, sku){
+  const l = deptLineByKey(key); if(!l) return;
+  let name = '';
+  l.items.forEach(t => {
+    const touched = new Set();
+    _lineTaskPicked(l, t).filter(h => h.p.sku === sku).forEach(h => {
+      name = [h.p.brand, h.p.product].filter(Boolean).join(' ');
+      h.p.qty = '0'; touched.add(h.o);
+    });
+    touched.forEach(o => recomputeOptionFromProducts(t, o));
+    if(touched.size) _syncTaskProduct(t);
+  });
+  toast(`${name || 'Product'} removed`);
+  renderAll();
+}
 function clearLineProduct(key){
   const l = deptLineByKey(key); if(!l) return;
   const targets = l.items.slice();
@@ -1259,12 +1332,20 @@ function clearLineProduct(key){
 }
 /* One task's own quantity. On its picked product once it has one; before
    that, on the task itself, which is what the first apply will use. */
-function bumpLineTaskQty(key, id, dir){
+// sku: which of the task's products to step, when it carries more than one.
+function bumpLineTaskQty(key, id, dir, sku){
   const l = deptLineByKey(key); if(!l) return;
   const t = l.items.find(x => x.id === id); if(!t) return;
   const picked = _lineTaskPicked(l, t);
   if(picked.length){
-    const h = picked[0];
+    const h = (sku && picked.find(x => x.p.sku === sku)) || picked[0];
+    // Stepping one product on a task down past 1 takes it off that task.
+    if(sku && _num(h.p.qty) + dir < 1){
+      _swapTaskProduct(l, t, sku, '');
+      toast(`${[h.p.brand, h.p.product].filter(Boolean).join(' ')} taken off ${t.room} › ${t.name}`);
+      renderAll();
+      return;
+    }
     h.p.qty = String(Math.max(1, _num(h.p.qty) + dir));
     recomputeOptionFromProducts(t, h.o);
     renderAll();

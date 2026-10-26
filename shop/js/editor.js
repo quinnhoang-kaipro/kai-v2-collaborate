@@ -15,6 +15,13 @@ function renderShop(){
   }
   // A product line from the Departments view — where its product is picked
   // once for every task in it.
+  // ShopwithKai_materials.html: a product type opens on its department's
+  // shopping list, that type's card open (materials-page.js). A department
+  // itself keeps the group page every view has.
+  if(!sel && groupBy === 'dept' && typeof SHOP_MATERIALS !== 'undefined' && SHOP_MATERIALS && selLineKey){
+    const dept = selLineKey.split('|')[0];
+    if(dept !== NO_PRODUCT_DEPT){ body.innerHTML = _renderMaterialsDeptHtml(dept); return; }
+  }
   if(!sel && selLineKey && groupBy === 'dept'){
     body.innerHTML = _renderLinePageHtml();
     return;
@@ -137,7 +144,7 @@ function _shopTaskHeaderHtml(t){
         <span class="sec-taskcard-lbl">Contractor</span>
         ${hdrDdHtml('ddGc-' + t.id, t.gc || '', [{value:'', label:'Unassigned'}].concat(CONTRACTORS.map(c => ({value:c, label:c}))), 'setTaskContractor(' + t.id + ', __V__);requestSecTaskcardRerender()', (t.gc ? '' : 'is-un') + ch('gc', t.gc))}
         ${wGc}
-        <span class="sec-taskcard-lbl sec-taskdesc-lbl2">Department</span>
+        ${window.__KAI_SHOP_LAYOUT ? '' : `<span class="sec-taskcard-lbl sec-taskdesc-lbl2">Department</span>
         ${(() => {
           const sug = suggestTaskDept(t);
           const opts = [{value:'', label:`Suggested · ${sug}`}]
@@ -145,7 +152,7 @@ function _shopTaskHeaderHtml(t){
           return hdrDdHtml('ddDept-' + t.id, t.dept || '', opts,
             'setTaskDept(' + t.id + ', __V__);requestSecTaskcardRerender()',
             t.dept ? '' : 'is-suggested');
-        })()}
+        })()}`}
         </div>
         <div class="sec-taskdesc-copy"><span class="sec-taskcard-lbl">Description</span><div class="sec-taskcard-desc">${body}</div>${wDesc}</div>
       </div>` : ''}
@@ -205,7 +212,7 @@ function _shopTaskHeaderHtml(t){
     ${coBannerInner}
     <div class="sec-taskcard-hdr">
       <div class="sec-taskcard-hdr-l">
-        <span class="sec-taskcard-eyebrow">${window.__KAI_SHOP_LAYOUT ? '<span class="page-kind">Task</span>' : ''}${esc(grpLbl)} <span class="sec-taskcard-sep">·</span> ${esc(t.code)}</span>
+        ${window.__KAI_SHOP_LAYOUT ? _taskCrumbsHtml(t) : `<span class="sec-taskcard-eyebrow">${esc(grpLbl)} <span class="sec-taskcard-sep">·</span> ${esc(t.code)}</span>`}
         <div class="sec-taskhdr-title-row">
           <div class="sec-taskcard-title">${esc(t.name)}</div>
       ${(()=>{
@@ -618,11 +625,10 @@ function _prodRowFullHtml(t, o, p){
    costs — with anything that needs attention flagged on that line, so a
    closed option never hides a problem. Opening one shows its rows as read
    lines; a row opens to the full editing row. Alternatives nobody picked
-   fold into one line, the catalogue search sits behind "+ Search product", and
+   fold into one line, the catalogue search sits open under them, and
    a labour-only option is one row with its amount editable in place. */
 const _optOpen = {};    // `${taskId}:${optId}` → true/false; unset = the default
 const _altOpen = {};    // `${taskId}:${optId}` → alternatives shown in full
-const _addOpen = {};    // `${taskId}:${optId}` → catalogue search shown
 function _optKey(t, o){ return `${t.id}:${o.id}`; }
 function _isLaborRow(p){ return !p.sku && /^labou?r$/i.test(String(p.product || '').trim()); }
 /* An option wants a decision when it's part of the job and nothing it could
@@ -652,7 +658,6 @@ function toggleOpt(taskId, optId){
   requestSecTaskcardRerender();
 }
 function toggleOptAlt(key, show){ _altOpen[key] = show; requestSecTaskcardRerender(); }
-function toggleOptAdd(key){ _addOpen[key] = !_addOpen[key]; requestSecTaskcardRerender(); }
 
 function _rowStock(p){
   if(!p.sku || typeof offersForSku !== 'function') return null;
@@ -772,12 +777,11 @@ function _shopEditCardCondensedHtml(t){
                  <span>${alts.length} alternative${alts.length === 1 ? '' : 's'}</span>
                  <span class="optc-alt-names">${alts.slice(0, 2).map(p => `${esc([p.brand, p.product].filter(Boolean).join(' '))} ${esc(_fmtDollars(_parseDollars(p.parts) || 0))}`).join(' · ')}${alts.length > 2 ? ' · …' : ''}</span>
                </button>`) : '';
-          const add = _addOpen[k]
-            ? `<div class="optc-search">${prodSearchHtml(`opt:${t.id}:${o.id}`)}<button type="button" class="optc-link" onclick="toggleOptAdd('${k}')">Cancel</button></div>`
-            : `<button type="button" class="optc-link optc-add" onclick="toggleOptAdd('${k}')">+ Search product</button>`;
+          // The catalogue search is always there, no link to open it.
+          const add = `<div class="optc-search">${prodSearchHtml(`opt:${t.id}:${o.id}`)}</div>`;
           return `<div class="optc-opt is-open${isAdded ? '' : ' is-unadded'}">${head}
             ${isAdded ? `<div class="optc-body">
-              ${rows || `<div class="optc-empty">Nothing picked for this option yet.${alts.length ? ' Set a quantity on one of the products below, or add another.' : ' Add a product.'}</div>`}
+              ${rows}
               ${altLine}
               ${add}
             </div>` : ''}
@@ -1103,110 +1107,209 @@ function _lnpOffer(l, cat){
   return {offers, sup, offer:offers.find(o => o.supplier === sup) || offers[0] || {price:cat.price, stock:cat.stock}};
 }
 const _LNP_THUMB = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 5.5h13l-1 4H5z"/><path d="M4 12h13v6H4z"/><path d="M8 8v4"/></svg>`;
+/* ShopwithKai_layout: a task's eyebrow is two breadcrumbs, each a way up —
+   where it is (room · its code), and what it buys (department › product
+   type). */
+function _taskCrumbsHtml(t){
+  const tl = taskLine(t);
+  const lk = _lineKeyArg(`${tl.dept}|${tl.line}`);
+  const q = v => esc(String(v)).replace(/'/g, "\\'");
+  return `<span class="sec-taskcard-eyebrow task-crumbs">
+    <span class="page-kind">Task</span>
+    <nav class="task-crumb" aria-label="Room">
+      <button type="button" class="task-crumb-a" onclick="goUpRoom('${q(t.room)}')" title="Open ${esc(t.room)}">${esc(t.room)}</button>
+      <span class="sec-taskcard-sep" aria-hidden="true">·</span><span>${esc(t.code)}</span>
+    </nav>
+    <span class="task-crumbs-div" aria-hidden="true"></span>
+    <span class="page-kind">Product type</span>
+    <nav class="task-crumb" aria-label="Product type">
+      <button type="button" class="task-crumb-a" onclick="goUpMaterials('${q(tl.dept)}')" title="Open ${esc(tl.dept)} under Materials">${esc(tl.dept)}</button>
+      <span class="sec-taskcard-sep" aria-hidden="true">›</span>
+      <button type="button" class="task-crumb-a" onclick="goUpMaterials('${q(tl.dept)}','${lk}')" title="Open ${esc(tl.line)}">${esc(tl.line)}</button>
+    </nav>
+  </span>`;
+}
+// Up to the task's room, under All.
+function goUpRoom(room){
+  if(groupBy !== 'room') setGroupBy('room');
+  selLineKey = null; selId = null;
+  selectGroup(room);
+  if(workMode !== 'shop') setWorkMode('shop');
+  if(typeof renderAll === 'function') renderAll();
+}
+/* Up the Materials tree from a task: its department, or its product type
+   (key). Switches the scope list to Materials so the sidebar shows where. */
+function goUpMaterials(dept, key){
+  if(groupBy !== 'dept') setGroupBy('dept');
+  if(key) selectLine(key); else { selLineKey = null; selId = null; selectGroup(dept); }
+  if(workMode !== 'shop') setWorkMode('shop');
+  if(typeof renderAll === 'function') renderAll();
+}
+/* The tasks at a glance, in the header card: each with its product, quantity
+   and cost, read-only. Clicking it goes down to the chosen products, where
+   each task's product and quantity are edited. */
+function _lnpTaskSummaryHtml(l){
+  // One row per task and product: a task buying two products gets two rows,
+  // its name on the first, so each quantity is one product's.
+  const fmtQ = v => (Math.round(v * 100) / 100).toLocaleString('en-US');
+  const row = (t, first, prod, qty, amt, none) => `<span class="lnps-row${first ? '' : ' is-cont'}">
+      <span class="lnps-task">${first ? `<span class="task-ctx">${esc(t.room)} ›</span> ${esc(t.name)}` : ''}</span>
+      <span class="lnps-prod${none ? ' is-none' : ''}">${esc(prod)}</span>
+      <span class="lnps-qty">${qty}</span>
+      <span class="lnps-amt">${money(Math.round(amt))}</span>
+    </span>`;
+  const rows = l.items.map(t => {
+    const pk = _lineTaskPicked(l, t);
+    if(!pk.length) return row(t, true, 'No product yet', '—', taskLineCost(l, t), true);
+    if(pk.length === 1) return row(t, true, [pk[0].p.brand, pk[0].p.product].filter(Boolean).join(' '), fmtQ(_num(pk[0].p.qty)), taskLineCost(l, t));
+    return pk.map((h, i) => row(t, i === 0, [h.p.brand, h.p.product].filter(Boolean).join(' '),
+      fmtQ(_num(h.p.qty)), _num(h.p.qty) * _parseDollars(h.p.parts))).join('');
+  }).join('');
+  return `<button type="button" class="lnps" onclick="lnpJumpToProducts()" title="Edit each task's product and quantity">
+    <span class="lnps-head"><span>Task</span><span>Product</span><span>Qty</span><span>Cost</span></span>${rows}
+    <span class="lnps-edit">Edit products and quantities ↓</span>
+  </button>`;
+}
+function lnpJumpToProducts(){
+  const el = document.getElementById('lnpProducts');
+  const wb = document.getElementById('workBody');
+  if(!el || !wb) return;
+  // Clear of the photo bar that sticks at the top once scrolled.
+  const top = wb.scrollTop + el.getBoundingClientRect().top - wb.getBoundingClientRect().top - 175;
+  wb.scrollTo({top, behavior:'smooth'});
+  setTimeout(() => { if(Math.abs(wb.scrollTop - top) > 4) wb.scrollTo({top, behavior:'instant'}); }, 450);
+  el.classList.remove('is-flash'); void el.offsetWidth; el.classList.add('is-flash');
+}
 function _lnpCondensedHtml(l, c){
   const {k, n, qtys, sharedUnit, pool, needSum, boxSum, status, statusCls, svgMinus, svgPlus, anyPicked} = c;
   const lk = esc(l.key).replace(/'/g, "\\'");
   const picked = deptLinePicked(l);
-  // The one product every task shares, when there is one.
-  const sku = picked.state === 'one' ? ((l.items.map(t => _lineTaskPicked(l, t)).find(a => a.length) || [])[0] || {}).p?.sku : null;
-  const cat = sku ? (pool.find(x => x.sku === sku) || (typeof catalogFind === 'function' ? catalogFind(sku) : null)) : null;
+  // Every product the line buys, in the order its tasks carry them — a line
+  // can buy more than one; each is added or removed on its own.
+  const added = [...new Set(l.items.flatMap(t => _lineTaskPicked(l, t).map(h => h.p.sku)))]
+    .map(s => pool.find(x => x.sku === s) || (typeof catalogFind === 'function' ? catalogFind(s) : null)).filter(Boolean);
+  const cat = picked.state === 'one' ? added[0] || null : null;
+  const sku = cat ? cat.sku : null;
   const mixed = picked.state === 'mixed';
   const fmtN = v => (Math.round(v * 100) / 100).toLocaleString('en-US');
   const stockTxt = st => st === 'out' ? 'Out of stock' : st === 'low' ? 'Low stock' : 'In stock';
-  let head;
-  if(cat){
-    const o = _lnpOffer(l, cat);
-    head = `<div class="lnpc-prod">
-      <div class="lnpc-thumb">${cat.image ? `<img src="${esc(cat.image)}" alt="" loading="lazy">` : _LNP_THUMB}</div>
-      <div class="lnpc-prod-main" onclick="openFly(${l.items[0].id},'${esc(cat.sku)}',event)" title="View product details">
-        <div class="lnpc-brand">${esc(cat.brand || '')}</div>
-        <div class="lnpc-name">${esc(cat.name)}</div>
-      </div>
-      <div class="lnpc-prod-r">
-        <div class="lnpc-price">${money(Math.round(o.offer.price))}<span> / ${esc(cat.unit || 'ea')}</span></div>
-      </div>
-    </div>
-    ${supplierPickHtml(o.offers, o.sup, `setLineSupplier('${k}','${esc(cat.sku)}','__S__')`, `line:${l.key}|${cat.sku}`)}`;
-  } else {
-    head = `<div class="lnpc-prod is-none">
-      <div class="lnpc-thumb">${_LNP_THUMB}</div>
-      <div class="lnpc-prod-main">
-        <div class="lnpc-name">${mixed ? `Mixed · ${picked.n} products` : 'No product chosen'}</div>
-        <div class="lnpc-sub">${mixed ? 'The tasks below carry different products. Apply one to give them all the same.' : `${n} ${n === 1 ? 'task needs' : 'tasks need'} a product. Pick one below.`}</div>
-      </div>
-    </div>`;
-  }
-  const rows = l.items.map(t => {
+  /* Chosen products as one table: the total on top, one column header, then
+     each product as a group — product on the left (pencil to change it,
+     trash to take it off), the tasks it goes on beside it, where it's bought
+     under both. Groups keep the order of the line's tasks, so taking a
+     product off leaves its tasks where they were, under "No product yet". */
+  const trashSvg = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.7 6.5v4.5M9.3 6.5v4.5"/></svg>`;
+  const penSvg = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.8 2.7l2.5 2.5L5.6 12.9l-3.1.6.6-3.1z"/><path d="M9.3 4.2l2.5 2.5"/></svg>`;
+  const qtyOf = (t, sku) => _lineTaskPicked(l, t).filter(h => h.p.sku === sku).reduce((a, h) => a + _num(h.p.qty), 0);
+  const costOf = (t, sku) => _lineTaskPicked(l, t).filter(h => h.p.sku === sku).reduce((a, h) => a + _num(h.p.qty) * _parseDollars(h.p.parts), 0);
+  const taskRow = (t, sku) => {
     const q = qtys.get(t.id);
     const pk = _lineTaskPicked(l, t);
-    const cur = pk.length === 1 ? pk[0].p.sku : '';
-    // A row reads until it's clicked; then its stepper and Change open.
-    const editing = !!_lnpEdit[t.id] || !!_lnpChange[t.id];
-    const showDd = mixed || !cat || _lnpChange[t.id];
-    const opts = [{value:'', label: pk.length && !pool.some(x => x.sku === cur) ? taskPickedProducts(t).join(' + ') : 'Not picked'}]
-      .concat(pool.map(x => ({value:x.sku, label:`${x.brand} ${x.name}`})));
-    const prodCell = showDd
-      ? `<div class="lnpc-task-dd">${hdrDdHtml('ddLnp-' + t.id, pool.some(x => x.sku === cur) ? cur : '', opts, `setLineTaskProduct('${k}',${t.id},__V__)`, 'lnp-task-dd' + (pk.length ? '' : ' is-unset'))}</div>`
-      : `<button type="button" class="lnpc-change" onclick="event.stopPropagation();lnpToggle('change',${t.id},true)" title="Give this task a different product">Change</button>`;
-    const unitTxt = q.unit && q.unit !== 'ea' ? esc(q.unit) : '';
-    // Tasks that already differ show their product even at rest; otherwise
-    // the product cell only appears while the row is open.
-    const cell = editing || showDd ? prodCell : '<span class="lnpc-task-cell"></span>';
-    // At rest a row is just name, quantity and cost, so the name gets the
-    // width; the full grid (stepper, unit, product) is for an open row or
-    // one whose product differs.
-    const rest = !editing && !showDd;
-    return `<div class="lnpc-task${editing ? ' is-editing' : ''}${rest ? ' is-rest' : ''}" role="button" tabindex="0" aria-expanded="${editing}"
-        onclick="lnpToggle('edit',${t.id},${editing ? 'false' : 'true'});${editing ? `lnpToggle('change',${t.id},false)` : ''}"
-        onkeydown="if(event.key==='Enter'){event.preventDefault();this.click();}" title="${editing ? 'Done' : 'Edit the quantity or product'}">
-      <span class="lnpc-task-l">
-        <button class="lnpc-task-name" onclick="event.stopPropagation();selectTask(${t.id})" title="Open ${esc(t.name)}"><span class="task-ctx">${esc(t.room)} ›</span> ${esc(t.name)}</button>
-        ${(() => {
-          // The task's modifiers — on the task, or on its product in this
-          // line — as quiet tags after its name.
-          const mods = new Set([...(t.mods || []), ...pk.flatMap(h => h.p.mods || [])]);
-          return [...mods].map(m => `<span class="optc-flag">${esc(typeof tagInfo === 'function' ? tagInfo(m).label : m)}</span>`).join('');
-        })()}
+    const qNum = sku ? fmtN(qtyOf(t, sku)) : q.num;
+    const amt = sku ? costOf(t, sku) : taskLineCost(l, t);
+    const skuArg = sku ? `,'${esc(sku)}'` : '';
+    const mods = new Set([...(t.mods || []), ...pk.flatMap(h => h.p.mods || [])]);
+    return `<div class="lnpg-task">
+      <span class="lnpt-task">
+        <button class="lnpc-task-name" onclick="selectTask(${t.id})" title="Open ${esc(t.name)}"><span class="task-ctx">${esc(t.room)} ›</span> ${esc(t.name)}</button>
+        ${[...mods].map(m => `<span class="optc-flag">${esc(typeof tagInfo === 'function' ? tagInfo(m).label : m)}</span>`).join('')}
       </span>
-      ${editing ? `<div class="opt-card-qty-stepper lnp-task-qty" onclick="event.stopPropagation()">
-        <button class="opt-card-qty-btn" onclick="bumpLineTaskQty('${k}',${t.id},-1)" aria-label="One fewer for this task">${svgMinus}</button>
-        <input class="opt-card-qty-input" value="${esc(q.num || '—')}" readonly tabindex="-1">
-        <button class="opt-card-qty-btn" onclick="bumpLineTaskQty('${k}',${t.id},+1)" aria-label="One more for this task">${svgPlus}</button>
-      </div>` : `<span class="lnpc-qty">${esc(q.num || '—')}${rest && unitTxt ? ' ' + unitTxt : ''}</span>`}
-      ${rest ? '' : `<span class="lnpc-unit">${unitTxt}</span>
-      <span onclick="event.stopPropagation()" class="lnpc-cellwrap">${cell}</span>`}
-      <span class="lnpc-task-amt">${money(Math.round(taskLineCost(l, t)))}</span>
+      <span class="lnpt-qty">
+        <span class="opt-card-qty-stepper lnpt-step">
+          <button class="opt-card-qty-btn" onclick="bumpLineTaskQty('${k}',${t.id},-1${skuArg})" aria-label="One fewer for this task">${svgMinus}</button>
+          <input class="opt-card-qty-input" value="${esc(qNum || '—')}" readonly tabindex="-1">
+          <button class="opt-card-qty-btn" onclick="bumpLineTaskQty('${k}',${t.id},+1${skuArg})" aria-label="One more for this task">${svgPlus}</button>
+        </span>
+      </span>
+      <span class="lnpc-task-amt">${money(Math.round(amt))}</span>
+    </div>`;
+  };
+  // The pencil: a short menu of the line's other products. On a product it
+  // swaps that product on every task beside it; on "No product yet" it puts
+  // the pick on those tasks.
+  const penMenu = (choices, act, label) => `<details class="lnpg-pen">
+      <summary title="${esc(label)}" aria-label="${esc(label)}">${penSvg}</summary>
+      <div class="lnpg-pen-menu">${choices.map(x => `<button type="button" onclick="${act.replace('__V__', esc(x.sku))}"><span class="lnpc-brand">${esc(x.brand || '')}</span>${esc(x.name)}</button>`).join('') || '<span class="lnpg-pen-none">No other products</span>'}</div>
+    </details>`;
+  // Groups in the order the line's tasks first reach them; '' is no product.
+  const order = [];
+  l.items.forEach(t => {
+    const pk = _lineTaskPicked(l, t);
+    (pk.length ? [...new Set(pk.map(h => h.p.sku))] : ['']).forEach(sku => { if(!order.includes(sku)) order.push(sku); });
+  });
+  const groups = order.map(sku => {
+    if(!sku){
+      const bare = l.items.filter(t => !_lineTaskPicked(l, t).length);
+      const ids = bare.map(t => t.id).join(',');
+      return `<div class="lnpg is-bare">
+        <div class="lnpg-body">
+          <div class="lnpg-prod">
+            <span class="lnpg-prod-l is-none"><span class="lnpc-thumb is-sm">${_LNP_THUMB}</span>
+              <span class="lnpg-prod-n"><span class="lnpg-bare-t">No product yet</span>
+                <span class="lnpg-acts">${penMenu(pool, `addLineProduct('${k}','__V__',[${ids}])`, 'Pick a product for these tasks')}</span></span></span>
+          </div>
+          <div class="lnpg-tasks">${bare.map(t => taskRow(t)).join('')}</div>
+        </div>
+      </div>`;
+    }
+    const cat = added.find(x => x.sku === sku); if(!cat) return '';
+    const o = _lnpOffer(l, cat);
+    const on = l.items.filter(t => _lineTaskPicked(l, t).some(h => h.p.sku === cat.sku));
+    return `<div class="lnpg">
+      <div class="lnpg-body">
+        <div class="lnpg-prod">
+          <!-- Change and remove sit under the name; the task costs carry the money. -->
+          <span class="lnpg-prod-l">
+            <span class="lnpc-thumb is-sm lnpg-open" onclick="openFly(${l.items[0].id},'${esc(cat.sku)}',event)" title="View product details">${cat.image ? `<img src="${esc(cat.image)}" alt="" loading="lazy">` : _LNP_THUMB}</span>
+            <span class="lnpg-prod-n">
+              <span class="lnpg-open" onclick="openFly(${l.items[0].id},'${esc(cat.sku)}',event)" title="View product details"><span class="lnpc-brand">${esc(cat.brand || '')}</span><span class="lnpc-name">${esc(cat.name)}</span></span>
+              <span class="lnpg-acts">
+                ${penMenu(pool.filter(x => x.sku !== cat.sku), `swapLineProduct('${k}','${esc(cat.sku)}','__V__')`, 'Change this product')}
+                <button type="button" class="optc-trash" onclick="event.stopPropagation();removeLineProduct('${k}','${esc(cat.sku)}')" title="Take this product off its tasks" aria-label="Remove ${esc(cat.brand)} ${esc(cat.name)}">${trashSvg}</button>
+              </span>
+            </span>
+          </span>
+        </div>
+        <div class="lnpg-tasks">${on.map(t => taskRow(t, cat.sku)).join('')}</div>
+      </div>
+      ${supplierPickHtml(o.offers, o.sup, `setLineSupplier('${k}','${esc(cat.sku)}','__S__')`, `line:${l.key}|${cat.sku}`)}
     </div>`;
   }).join('');
-  const foot = `<div class="lnpc-foot">
+  const bareHtml = '';
+  const total = `<div class="lnpc-foot lnpg-total">
     ${(() => { const u = sharedUnit && sharedUnit !== 'ea' ? ' ' + esc(sharedUnit) : '';
       // "Total" unless the quantities don't meet what's scoped — then say how.
       return `<span class="lnpc-foot-l">Total${status ? `<span class="lnp-total-status ${statusCls}">${esc(status)}</span>` : ''}${u && sharedUnit !== null ? `<span class="lnpc-foot-q">${fmtN(boxSum)}${u}</span>` : ''}</span>`; })()}
-    ${anyPicked ? `<button type="button" class="lnpc-clear" onclick="clearLineProduct('${k}')">${n > 1 ? 'Clear all' : 'Clear'}</button>` : ''}
     <span class="lnpc-foot-amt">${money(Math.round(deptLineCost(l)))}</span>
   </div>`;
+  const colHead = `<div class="lnpg-head"><span>Product</span><span class="lnpg-head-t"><span>Task</span><span>Qty</span><span class="num">Cost</span></span></div>`;
+  const head = total + colHead + (groups || `<div class="lnpg-empty">${n} ${n === 1 ? 'task needs' : 'tasks need'} a product. Pick one below.</div>`) + bareHtml;
+  const foot = '';
   // The choice: what else this line could buy.
-  const alts = pool.filter(x => x.sku !== sku);
+  const alts = pool.filter(x => !added.some(a => a.sku === x.sku));
   const priced = alts.map(x => ({x, o:_lnpOffer(l, x)}));
   const low = priced.length ? Math.min(...priced.map(p => p.o.offer.price)) : null;
   // Open by default; Hide folds them for this line.
   const altOpen = l.key in _lnpAltOpen ? _lnpAltOpen[l.key] : true;
   const altHtml = !alts.length ? '' : altOpen
     ? `<div class="lnpc-alts">
-        <div class="lnpc-alts-hd"><span>${cat ? 'Alternatives' : 'Pick a product'}</span>${cat ? `<button type="button" class="optc-link" onclick="lnpToggle('alt','${lk}',false)">Hide</button>` : ''}</div>
+        <div class="lnpc-alts-hd"><span>${added.length ? 'Alternatives' : 'Pick a product'}</span>${added.length ? `<button type="button" class="optc-link" onclick="lnpToggle('alt','${lk}',false)">Hide</button>` : ''}</div>
         ${priced.map(({x, o}) => {
-          const users = lineProductUsers(l, x.sku).length;
-          return `<div class="lnpc-alt-row">
+          // Each alternative says where it would be bought from, and can be
+          // switched before it's added — the same strip the chosen product has.
+          return `<div class="lnpc-alt"><div class="lnpc-alt-row">
             <div class="lnpc-thumb is-sm">${x.image ? `<img src="${esc(x.image)}" alt="" loading="lazy">` : _LNP_THUMB}</div>
             <div class="lnpc-alt-main" onclick="openFly(${l.items[0].id},'${esc(x.sku)}',event)" title="View product details">
               <span class="lnpc-brand">${esc(x.brand || '')}</span>
               <span class="lnpc-alt-name">${esc(x.name)}</span>
             </div>
-            <span class="lnpc-alt-sup">${esc(supplierName(o.sup))} · <span class="optc-stock is-${o.offer.stock || 'in'}">${stockTxt(o.offer.stock)}</span>${o.offer.price === low && priced.length > 1 ? ' <span class="lnpc-low">Lowest</span>' : ''}</span>
+            ${o.offer.price === low && priced.length > 1 ? '<span class="lnpc-alt-sup"><span class="lnpc-low">Lowest</span></span>' : ''}
             <span class="lnpc-alt-price">${money(Math.round(o.offer.price))}<span> / ${esc(x.unit || 'ea')}</span></span>
-            ${users ? `<span class="lnpc-alt-on">On ${users} of ${n}</span>` : ''}
-            ${_lnpSelectBtnHtml(l, x.sku)}
-          </div>${_lnpPickHtml(l, x)}`;
+            ${(() => { const open = _lnpSel && _lnpSel.line === l.key && _lnpSel.sku === x.sku;
+              return `<button type="button" class="lnp-apply lnp-select${open ? ' is-on' : ''}" aria-expanded="${open}" onclick="event.stopPropagation();lnpSelStart('${k}','${esc(x.sku)}')">${open ? 'Cancel' : 'Select'}</button>`; })()}
+          </div>
+          ${supplierPickHtml(o.offers, o.sup, `setLineSupplier('${k}','${esc(x.sku)}','__S__')`, `line:${l.key}|${x.sku}`)}
+          ${_lnpSelHtml(l, x)}</div>`;
         }).join('')}
       </div>`
     : `<button type="button" class="optc-alt" onclick="lnpToggle('alt','${lk}',true)">
@@ -1216,10 +1319,135 @@ function _lnpCondensedHtml(l, c){
   // The catalogue search is always there, under the alternatives.
   const search = `<div class="optc-search">${prodSearchHtml('line:' + l.key)}</div>`;
   return `<div class="pgd-details-sec lnpc">
-    <div class="pgd-details-title">${cat ? 'Chosen product' : 'Product'}</div>
-    <div class="lnpc-card">${head}<div class="lnpc-tasks">${rows}</div>${foot}</div>
+    <!-- Each product with the tasks it goes on, editable; the total under
+         them all. The header card above carries the read-only summary. -->
+    <div class="pgd-details-title lnpc-prod-t">${added.length > 1 ? `Chosen products · ${added.length}` : added.length ? 'Chosen product' : 'Product'}</div>
+    <div class="lnpc-card lnpc-card-prod" id="lnpProducts">${head}${foot}</div>
     ${altHtml}
     ${search}
+  </div>`;
+}
+/* ════════ Alternatives: Select, then Replace or Add, then which tasks ════════
+   Select opens a panel under the product. First: Replace what a task has in
+   this line, or Add beside it. Then tick the tasks — all, or some. A task
+   that already has just this product (Replace) or already carries it (Add)
+   has nothing to change and stays unticked. */
+let _lnpSel = null;   // {line, sku, mode:'replace'|'add', on:Set(taskIds), qty:{taskId:n}}
+// How many each task starts with: on Replace, what it has now in the line;
+// on Add, what the task itself calls for.
+function _lnpSelQtys(l, sku, mode){
+  const cat = _lineCat(l, sku);
+  const out = {};
+  l.items.forEach(t => {
+    const pk = _lineTaskPicked(l, t);
+    const now = pk.length ? _num(pk[0].p.qty) : 0;
+    out[t.id] = (mode === 'replace' && now) ? now : _num(_taskNeedQty(t, cat)) || 1;
+  });
+  return out;
+}
+function lnpSelQty(id, dir){
+  if(!_lnpSel) return;
+  _lnpSel.qty[id] = Math.max(1, (_lnpSel.qty[id] || 1) + dir);
+  _lnpSel.on.add(id);
+  renderShop();
+}
+function _lnpSelFree(l, sku, mode){
+  return l.items.filter(t => {
+    const pk = _lineTaskPicked(l, t);
+    const has = pk.some(h => h.p.sku === sku);
+    return mode === 'add' ? !has : !(has && pk.length === 1);
+  });
+}
+function lnpSelStart(key, sku){
+  if(_lnpSel && _lnpSel.line === key && _lnpSel.sku === sku){ _lnpSel = null; renderShop(); return; }
+  const l = deptLineByKey(key); if(!l) return;
+  const anyChosen = l.items.some(t => _lineTaskPicked(l, t).length);
+  const mode = anyChosen ? 'replace' : 'add';
+  _lnpSel = {line:key, sku, mode, on:new Set(_lnpSelFree(l, sku, mode).map(t => t.id)), qty:_lnpSelQtys(l, sku, mode)};
+  renderShop();
+}
+function lnpSelMode(mode){
+  if(!_lnpSel) return;
+  const l = deptLineByKey(_lnpSel.line); if(!l) return;
+  _lnpSel.mode = mode;
+  _lnpSel.on = new Set(_lnpSelFree(l, _lnpSel.sku, mode).map(t => t.id));
+  _lnpSel.qty = _lnpSelQtys(l, _lnpSel.sku, mode);
+  renderShop();
+}
+function lnpSelToggle(id){ if(!_lnpSel) return; _lnpSel.on.has(id) ? _lnpSel.on.delete(id) : _lnpSel.on.add(id); renderShop(); }
+function lnpSelAll(all){
+  if(!_lnpSel) return;
+  const l = deptLineByKey(_lnpSel.line); if(!l) return;
+  _lnpSel.on = new Set(all ? _lnpSelFree(l, _lnpSel.sku, _lnpSel.mode).map(t => t.id) : []);
+  renderShop();
+}
+function lnpSelApply(){
+  if(!_lnpSel) return;
+  const {line, sku, mode, on, qty} = _lnpSel;
+  _lnpSel = null;
+  const l = deptLineByKey(line); if(!l){ renderShop(); return; }
+  const ids = [...on];
+  if(!ids.length){ renderShop(); return; }
+  if(mode === 'add'){ addLineProduct(line, sku, ids, qty); return; }
+  const cat = _lineCat(l, sku); if(!cat){ renderShop(); return; }
+  const targets = l.items.filter(t => on.has(t.id));
+  _applyLineProductTo(l, cat, targets);
+  // Then each task's chosen amount.
+  targets.forEach(t => {
+    _lineTaskPicked(l, t).filter(h => h.p.sku === sku).forEach(h => { h.p.qty = String(qty[t.id]); recomputeOptionFromProducts(t, h.o); });
+    _syncTaskProduct(t);
+  });
+  toast(targets.length === 1
+    ? `${targets[0].room} › ${targets[0].name} now on ${cat.brand} ${cat.name}`
+    : `${cat.brand} ${cat.name} replaces what ${targets.length} tasks had`);
+  renderAll();
+}
+function _lnpSelHtml(l, cat){
+  if(!_lnpSel || _lnpSel.line !== l.key || _lnpSel.sku !== cat.sku) return '';
+  const {mode, on} = _lnpSel;
+  const anyChosen = l.items.some(t => _lineTaskPicked(l, t).length);
+  const free = _lnpSelFree(l, cat.sku, mode);
+  const allOn = free.length && free.every(t => on.has(t.id));
+  const nOn = on.size;
+  const price = _lnpOffer(l, cat).offer.price;
+  const unit = esc(cat.unit || 'ea');
+  const sumOn = l.items.filter(t => on.has(t.id)).reduce((a, t) => a + (_lnpSel.qty[t.id] || 0) * price, 0);
+  const minus = `<svg viewBox="0 0 12 12" fill="none"><path d="M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+  const plus = `<svg viewBox="0 0 12 12" fill="none"><path d="M6 3v6M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+  const rows = l.items.map(t => {
+    const pk = _lineTaskPicked(l, t);
+    const ok = free.includes(t);
+    const now = pk.length ? pk.map(h => [h.p.brand, h.p.product].filter(Boolean).join(' ')).join(' + ') : 'No product yet';
+    const note = !ok ? (mode === 'add' ? 'Already has it' : 'Already on just this')
+      : (mode === 'replace' && pk.length ? `Replaces ${now}` : now);
+    const q = _lnpSel.qty[t.id] || 1;
+    const live = ok && on.has(t.id);
+    return `<label class="lnp-sel-row${ok ? '' : ' is-locked'}${live ? '' : ' is-off'}">
+      <input type="checkbox" ${live ? 'checked' : ''} ${ok ? '' : 'disabled'} onchange="lnpSelToggle(${t.id})">
+      <span class="lnp-sel-l">
+        <span class="lnp-sel-task"><span class="task-ctx">${esc(t.room)} ›</span> ${esc(t.name)}</span>
+        <span class="lnp-sel-now" title="${esc(note)}">${esc(note)}</span>
+      </span>
+      ${ok ? `<span class="opt-card-qty-stepper lnp-sel-step" onclick="event.preventDefault();event.stopPropagation()">
+        <button type="button" class="opt-card-qty-btn" onclick="lnpSelQty(${t.id},-1)" aria-label="One fewer">${minus}</button>
+        <input class="opt-card-qty-input" value="${q.toLocaleString('en-US')}" readonly tabindex="-1">
+        <button type="button" class="opt-card-qty-btn" onclick="lnpSelQty(${t.id},1)" aria-label="One more">${plus}</button>
+      </span>` : '<span></span>'}
+      <span class="lnp-sel-amt">${ok ? `${money(Math.round(q * price))}<span class="lnp-sel-unit">${q.toLocaleString('en-US')} ${unit} × ${money(Math.round(price))}</span>` : ''}</span>
+    </label>`;
+  }).join('');
+  const seg = m => `<button type="button" class="${mode === m ? 'on' : ''}" onclick="lnpSelMode('${m}')">${m === 'replace' ? 'Replace' : '+ Add'}</button>`;
+  return `<div class="lnp-sel" onclick="event.stopPropagation()">
+    <div class="lnp-sel-hd">
+      ${anyChosen ? `<span class="lnp-sel-seg" role="group" aria-label="Replace or add">${seg('replace')}${seg('add')}</span>` : ''}
+      <span class="lnp-sel-what">${mode === 'replace' ? 'Swap it in on' : 'Add it to'}</span>
+      ${free.length > 1 ? `<label class="lnp-sel-all"><input type="checkbox" ${allOn ? 'checked' : ''} onchange="lnpSelAll(this.checked)"> All ${free.length} tasks</label>` : ''}
+    </div>
+    <div class="lnp-sel-list">${rows}</div>
+    <div class="lnp-sel-ft">
+      <button type="button" class="optc-link" onclick="lnpSelStart('${_lineKeyArg(l.key)}','${esc(cat.sku)}')">Cancel</button>
+      <button type="button" class="lnp-pick-go" ${nOn ? '' : 'disabled'} onclick="lnpSelApply()">${nOn ? `${mode === 'replace' ? 'Replace on' : 'Add to'} ${nOn} task${nOn === 1 ? '' : 's'} · ${money(Math.round(sumOn))}` : 'Choose a task'}</button>
+    </div>
   </div>`;
 }
 /* ════════ Select, then choose the tasks ════════
@@ -1424,7 +1652,21 @@ function _renderLinePageHtml(){
     <div class="pgd-hdr-box">
       <div class="sec-taskcard-hdr">
         <div class="sec-taskcard-hdr-l">
-          <div class="lnp-eyebrow">${window.__KAI_SHOP_LAYOUT ? '<span class="page-kind">Product line</span>' : ''}${esc(l.dept)}</div>
+          ${window.__KAI_SHOP_LAYOUT ? (() => {
+            /* Breadcrumbs, as on a task: the department above it (a way up),
+               then the rooms — the groups — its tasks are in. */
+            const q = v => esc(String(v)).replace(/'/g, "\\'");
+            return `<div class="lnp-eyebrow"><span class="sec-taskcard-eyebrow task-crumbs">
+              <span class="page-kind">Product type</span>
+              <nav class="task-crumb" aria-label="Department">
+                <button type="button" class="task-crumb-a" onclick="goUpMaterials('${q(l.dept)}')" title="Open ${esc(l.dept)}">${esc(l.dept)}</button>
+                <span class="sec-taskcard-sep" aria-hidden="true">›</span><span>${esc(l.name)}</span>
+              </nav>
+              <span class="task-crumbs-div" aria-hidden="true"></span>
+              <span class="page-kind">${rooms.length === 1 ? 'Room' : 'Rooms'}</span>
+              <nav class="task-crumb" aria-label="Rooms">${rooms.map((r, i) => `${i ? '<span class="sec-taskcard-sep" aria-hidden="true">·</span>' : ''}<button type="button" class="task-crumb-a" onclick="goUpRoom('${q(r)}')" title="Open ${esc(r)}">${esc(r)}</button>`).join('')}</nav>
+            </span></div>`;
+          })() : `<div class="lnp-eyebrow">${esc(l.dept)}</div>`}
           <div class="pgd-title">${esc(l.name)}</div>
           <div class="pgd-grp-meta">${esc(_lineHdrNeed(l, isLabor))}<span class="sep">&middot;</span>${rooms.length} ${rooms.length === 1 ? 'room' : 'rooms'}</div>
         </div>
@@ -1433,6 +1675,7 @@ function _renderLinePageHtml(){
           ${isLabor || !window.__KAI_SHOP ? '' : `<button type="button" class="lnp-po-link" onclick="openPurchaseOrder()">View purchase order &rarr;</button>`}
         </div>
       </div>
+      ${window.__KAI_SHOP_LAYOUT && !isLabor ? _lnpTaskSummaryHtml(l) : ''}
     </div>
     ${_linePhotoSectionHtml(l, isLabor ? '' : money(Math.round(deptLineCost(l))))}
     ${condensed || `<div class="pgd-details-sec">
