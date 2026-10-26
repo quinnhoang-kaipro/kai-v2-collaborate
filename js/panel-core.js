@@ -401,7 +401,7 @@ function taskGroupLabel(t){
   return t.room || '—';
 }
 function groupKindNoun(){
-  return groupBy === 'contractor' ? 'contractor' : (groupBy === 'dept' ? 'department' : 'group');
+  return groupBy === 'contractor' ? 'contractor' : (groupBy === 'dept' ? 'department' : 'room');
 }
 
 /* ════════════ SCOPE SEARCH (floating palette) ════════════ */
@@ -951,10 +951,13 @@ function renderStateBar(){
   bar.hidden = false;
   // Group by toggle + Filter icon are always present — they're the scoping
   // controls for the sidebar and belong at the top of every state.
-  const groupBySeg = `<div class="sb-tools-seg" role="tablist" aria-label="Group scope by">
-    <button id="grpRoom" class="${groupBy==='room'?'active':''}" onclick="setGroupBy('room')">Group</button>
-    <button id="grpContractor" class="${groupBy==='contractor'?'active':''}" onclick="setGroupBy('contractor')">Contractor</button>
-    <button id="grpDept" class="${groupBy==='dept'?'active':''}" onclick="setGroupBy('dept')">Departments</button>
+  /* Named for what each view is for: everything, by room (All), who is
+     paid to do it (Labour, by contractor), what is bought for it
+     (Materials, by department). The ids keep their old names. */
+  const groupBySeg = `<div class="sb-tools-seg" role="tablist" aria-label="View scope by">
+    <button id="grpRoom" class="${groupBy==='room'?'active':''}" onclick="setGroupBy('room')">All</button>
+    <button id="grpContractor" class="${groupBy==='contractor'?'active':''}" onclick="setGroupBy('contractor')">Labor</button>
+    <button id="grpDept" class="${groupBy==='dept'?'active':''}" onclick="setGroupBy('dept')">Materials</button>
   </div>`;
   // Settings icon — reveals the per-group duplicate icon (draft stage only).
   // Keeps group rows clean by default; click to toggle the tool on/off.

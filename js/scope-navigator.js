@@ -1,5 +1,21 @@
 /* ════════════ SIDEBAR ════════════ */
+let _carryTaskId = null;   // the task a product line was reached from (layout file)
 function setGroupBy(g){
+  /* ShopwithKai_layout.html: the Editor shows what is selected, and the
+     selection follows the grouping across — a task becomes its product line
+     under Departments, and a product line goes back to the task last open
+     in it. The tab never changes; only what it shows. */
+  if(window.__KAI_SHOP_LAYOUT && g !== groupBy){
+    if(g === 'dept' && selId != null){
+      const t = TASKS.find(x => x.id === selId);
+      if(t){ const tl = taskLine(t); _carryTaskId = t.id; selId = null; openIds.clear(); selGroupKey = null; selLineKey = `${tl.dept}|${tl.line}`; }
+    } else if(g !== 'dept' && selLineKey){
+      const back = TASKS.find(x => x.id === _carryTaskId && `${taskLine(x).dept}|${taskLine(x).line}` === selLineKey)
+        || TASKS.find(x => `${taskLine(x).dept}|${taskLine(x).line}` === selLineKey);
+      selLineKey = null;
+      if(back){ selId = back.id; openIds = new Set([back.id]); selGroupKey = null; scopeView = false; }
+    }
+  }
   groupBy=g; collapsedGrps=null;
   if(g !== 'dept') selLineKey = null;   // product lines only exist under Departments
   const rBtn=document.getElementById('grpRoom'); if(rBtn) rBtn.classList.toggle('active',g==='room');
@@ -694,8 +710,22 @@ function renderSidebar(){
   // The count sits left of the title now; the rollup keeps the money.
   const _hc = document.getElementById('sbHdrCount');
   if(_hc) _hc.textContent = `${ruCount} ${ruCount===1?'task':'tasks'}`;
-  document.getElementById('sbRollup').innerHTML=
-    `<span class="total">${totalDisplay}</span>${scopeDeltaChip}`;
+  /* The bar names what the view adds up: the whole scope by room, or one
+     side of it — the labour paid to contractors, the materials ordered —
+     each the same figure the Record tab's bar shows for that segment, so
+     the two never disagree. */
+  const _ht = document.querySelector('#sbHdr .sb-hdr-title');
+  const _cls = (groupBy !== 'room' && typeof _regClassify === 'function') ? _regClassify() : null;
+  let _sideTotal = null;
+  if(_cls && groupBy === 'dept') _sideTotal = _cls.onPos;
+  else if(_cls && groupBy === 'contractor'){
+    const live = TASKS.reduce((a, t) => a + dollars(t.cost), 0);
+    _sideTotal = Math.max(0, live - _cls.onPos - _cls.deferredAll);
+  }
+  if(_ht) _ht.textContent = _sideTotal == null ? 'All scope' : (groupBy === 'dept' ? 'All materials' : 'All labor');
+  document.getElementById('sbRollup').innerHTML = _sideTotal == null
+    ? `<span class="total">${totalDisplay}</span>${scopeDeltaChip}`
+    : `<span class="total">${money(Math.round(_sideTotal))}</span>`;
   if(!groups.length){
     // Distinguish "the whole scope is empty" (Step 1 · Empty draft — offer
     // an add-your-first-group CTA) from "you filtered everything out"
@@ -715,9 +745,15 @@ function renderSidebar(){
     // A department totals what its products cost — it's the shopping view,
     // and labour on top would make the figure useless for a budget at the
     // till. Rooms and contractors total the task, as before.
+    /* Materials and Labour total only their side of each task, and only
+       what is on the job now: deferred work waits for a change order, as
+       the Record's bar keeps it apart. So the groups add up to the header
+       above them, and the header to the Record's bar. Room totals the task. */
     const cost = groupBy === 'dept'
-      ? deptLines(g.items).reduce((a, l) => a + deptLineCost(l), 0)
-      : g.items.reduce((s,t)=>s+dollars(t.cost),0);
+      ? g.items.reduce((a, t) => a + _taskMatSplit(t).now, 0)
+      : groupBy === 'contractor'
+        ? g.items.reduce((a, t) => a + (_taskIsDeferred(t) ? 0 : _taskLabor(t)), 0)
+        : g.items.reduce((s,t)=>s+dollars(t.cost),0);
     const isCollapsed=collapsedGrps.has(g.key);
     const allApproved=g.items.every(t=>approved.has(t.id));
     // In draft mode we surface an "Add task" affordance INSIDE each group
@@ -775,6 +811,7 @@ function renderSidebar(){
             ? g.items.map(t => taskRow(t, {
                 onRow: `toggleGcTask(${t.id})`,
                 after: gcTaskOpen.has(t.id) ? _gcTaskLaborHtml(t) : '',
+                amtHtml: _sbSideAmtHtml(t, _taskLabor(t), _taskIsDeferred(t) ? _taskLabor(t) : 0),
               })).join('')
             : g.items.map(t => taskRow(t)).join('')}
       </div>
@@ -814,7 +851,14 @@ function deptLinesHtml(g){
         </button>
         <span class="dline-name">${esc(l.name)}</span>
         <span class="dline-need">${esc(isLabor ? `${l.items.length} ${l.items.length === 1 ? 'task' : 'tasks'}` : deptLineNeed(l.items))}</span>
-        <span class="dline-amt">${isLabor ? '' : money(Math.round(deptLineCost(l)))}</span>
+        ${(() => {
+          // What the line puts on the orders now; what waits for a change
+          // order is said beside it, not added in.
+          const now = l.items.reduce((a, t) => a + _taskMatSplit(t).now, 0);
+          const later = l.items.reduce((a, t) => a + _taskMatSplit(t).later, 0);
+          return `<span class="dline-amt">${now ? money(Math.round(now)) : (later ? '—' : (isLabor ? '' : '$0'))}</span>`
+            + (later ? `<span class="dline-later" title="Waiting on a change order">+${money(Math.round(later))} deferred</span>` : '');
+        })()}
       </div>
       <div class="dline-body">${l.items.map(t => {
         // A task row here can open to show what it's buying from this line —
@@ -825,7 +869,7 @@ function deptLinesHtml(g){
           ctx: t.room,
           onRow: `toggleDeptTask('${k}',${t.id})`,
           after: open ? _deptTaskProductsHtml(l, t) : '',
-          amtHtml: isLabor ? null : _deptTaskAmtHtml(l, t),
+          amtHtml: (() => { const sp = _taskMatSplit(t); return (isLabor && !sp.now && !sp.later) ? null : _sbSideAmtHtml(t, sp.now + sp.later, sp.later); })(),
         });
       }).join('')}</div>
     </div>`;
@@ -859,6 +903,39 @@ function _gcTaskLaborHtml(t){
    parts rate). A task with no catalogue rows at all falls back to its own
    product cost. Every figure in the Departments view is built from this, so
    task rows add up to their line and lines to their department. */
+/* A task's two sides, as the Record's bar splits the job: the materials it
+   has picked (on options in the job), apart into what is on the orders now
+   and what is deferred — the task's or the row's Deferred modifier — and the
+   labour, which is the rest of the task. Summed over the scope these are the
+   bar's Materials and Labour exactly. */
+function _taskMatSplit(t){
+  let now = 0, later = 0;
+  const td = (t.mods || []).indexOf('deferred') !== -1;
+  taskOptions(t).forEach(o => {
+    if(!optionIsAdded(o)) return;
+    (o.products || []).forEach(p => {
+      if(!productIsPicked(p)) return;
+      const a = _num(p.qty) * _num(p.parts);
+      if(td || (p.mods || []).indexOf('deferred') !== -1) later += a; else now += a;
+    });
+  });
+  return {now, later};
+}
+function _taskIsDeferred(t){ return (t.mods || []).indexOf('deferred') !== -1; }
+function _taskLabor(t){ const sp = _taskMatSplit(t); return Math.max(0, dollars(t.cost) - sp.now - sp.later); }
+/* A task's figure in the Materials or Labour view: its side ("$1,620"),
+   then the whole task muted ("of $3,520"); what is deferred says so instead
+   of counting. */
+function _sbSideAmtHtml(t, side, later){
+  const whole = Math.round(dollars(t.cost || 0));
+  const part = Math.round(side), wait = Math.round(later || 0);
+  const of = (whole && whole !== part) ? `<span class="task-amt-of">of ${money(whole)}</span>` : '';
+  // All of it waits: the grey amount says so, and the row's Deferred tag
+  // names it — no second "deferred" under the figure.
+  if(wait && wait >= part) return `<span class="task-amt is-later">${money(part)}</span>`;
+  if(!part) return `<span class="task-amt is-none">—</span>${of}`;
+  return `<span class="task-amt">${money(part - wait)}</span>${wait ? `<span class="task-amt-of">+${money(wait)} deferred</span>` : of}`;
+}
 function taskLineCost(l, t){
   const picked = _lineTaskPicked(l, t);
   if(picked.length) return picked.reduce((a, h) => a + _num(h.p.qty) * _num(h.p.parts), 0);
@@ -867,17 +944,6 @@ function taskLineCost(l, t){
 }
 function deptLineCost(l){
   return l.items.reduce((a, t) => a + taskLineCost(l, t), 0);
-}
-/* "$1,620 of $3,520": the line's share first, in the row's amount style so
-   it's what adds up to the line, then the whole task's cost, muted, as
-   context. Just the share when it is the whole task; a dash when nothing's
-   picked yet. */
-function _deptTaskAmtHtml(l, t){
-  const part = Math.round(taskLineCost(l, t));
-  const whole = Math.round(dollars(t.cost || 0));
-  const of = (whole && whole !== part) ? `<span class="task-amt-of">of ${money(whole)}</span>` : '';
-  if(!part) return `<span class="task-amt is-none">—</span>${of}`;
-  return `<span class="task-amt">${money(part)}</span>${of}`;
 }
 let deptTaskOpen = new Set();   // `${lineKey}|${taskId}` rows showing their products
 /* Clicking a task under a product line opens the task, as anywhere else,
@@ -1186,6 +1252,77 @@ function setLineTaskProduct(key, id, sku){
   }
   renderAll();
 }
+/* Adding and removing (ShopwithKai_layout): a line can buy more than one
+   product. Add puts a product on every task in the line beside what each
+   already has, at the task's own need; Remove takes that one product off
+   every task and leaves the rest. */
+// ids: only these tasks; every task in the line when left out. qty: task id →
+// how many each gets, else the task's own need.
+function addLineProduct(key, sku, ids, qty){
+  const l = deptLineByKey(key); if(!l) return;
+  const cat = _lineCat(l, sku); if(!cat) return;
+  const sup = lineSupplierFor(l, cat.sku);
+  const offer = offersForSku(cat.sku).find(o => o.supplier === sup);
+  const targets = ids ? l.items.filter(t => ids.includes(t.id)) : l.items;
+  targets.forEach(t => {
+    const h = _ensureLineProductRow(t, cat); if(!h) return;
+    if(qty && qty[t.id] != null) h.p.qty = String(qty[t.id]);
+    else if(!productIsPicked(h.p)) h.p.qty = _taskNeedQty(t, cat);
+    if(offer){ h.p.supplier = offer.supplier; h.p.parts = _fmtDollars(offer.price); }
+    if(!optionIsAdded(h.o)) h.o.added = true;
+    recomputeOptionFromProducts(t, h.o);
+    _syncTaskProduct(t);
+  });
+  toast(`${cat.brand} ${cat.name} added to ${targets.length === 1 ? `${targets[0].room} › ${targets[0].name}` : `${targets.length} tasks`}`);
+  renderAll();
+}
+/* One task, one of its products: swap it for another (or, with no sku, take
+   it off). The task's other products stay; the quantity carries over. */
+function _swapTaskProduct(l, t, fromSku, toSku){
+  const from = _lineTaskPicked(l, t).filter(h => h.p.sku === fromSku);
+  const keepQty = from.length ? from[0].p.qty : null;
+  const touched = new Set();
+  from.forEach(h => { h.p.qty = '0'; touched.add(h.o); });
+  let cat = null;
+  if(toSku){
+    cat = _lineCat(l, toSku);
+    const h = cat && _ensureLineProductRow(t, cat);
+    if(h){
+      const offer = offersForSku(cat.sku).find(o => o.supplier === lineSupplierFor(l, cat.sku));
+      h.p.qty = String(_num(h.p.qty) + _num(keepQty || _taskNeedQty(t, cat)));
+      if(offer){ h.p.supplier = offer.supplier; h.p.parts = _fmtDollars(offer.price); }
+      if(!optionIsAdded(h.o)) h.o.added = true;
+      touched.add(h.o);
+    }
+  }
+  touched.forEach(o => recomputeOptionFromProducts(t, o));
+  _syncTaskProduct(t);
+  return cat;
+}
+// Every task on one product, onto another.
+function swapLineProduct(key, fromSku, toSku){
+  const l = deptLineByKey(key); if(!l) return;
+  const on = l.items.filter(t => _lineTaskPicked(l, t).some(h => h.p.sku === fromSku));
+  let cat = null;
+  on.forEach(t => { cat = _swapTaskProduct(l, t, fromSku, toSku) || cat; });
+  if(cat) toast(`${cat.brand} ${cat.name} on ${on.length === 1 ? `${on[0].room} › ${on[0].name}` : `${on.length} tasks`}`);
+  renderAll();
+}
+function removeLineProduct(key, sku){
+  const l = deptLineByKey(key); if(!l) return;
+  let name = '';
+  l.items.forEach(t => {
+    const touched = new Set();
+    _lineTaskPicked(l, t).filter(h => h.p.sku === sku).forEach(h => {
+      name = [h.p.brand, h.p.product].filter(Boolean).join(' ');
+      h.p.qty = '0'; touched.add(h.o);
+    });
+    touched.forEach(o => recomputeOptionFromProducts(t, o));
+    if(touched.size) _syncTaskProduct(t);
+  });
+  toast(`${name || 'Product'} removed`);
+  renderAll();
+}
 function clearLineProduct(key){
   const l = deptLineByKey(key); if(!l) return;
   const targets = l.items.slice();
@@ -1195,12 +1332,20 @@ function clearLineProduct(key){
 }
 /* One task's own quantity. On its picked product once it has one; before
    that, on the task itself, which is what the first apply will use. */
-function bumpLineTaskQty(key, id, dir){
+// sku: which of the task's products to step, when it carries more than one.
+function bumpLineTaskQty(key, id, dir, sku){
   const l = deptLineByKey(key); if(!l) return;
   const t = l.items.find(x => x.id === id); if(!t) return;
   const picked = _lineTaskPicked(l, t);
   if(picked.length){
-    const h = picked[0];
+    const h = (sku && picked.find(x => x.p.sku === sku)) || picked[0];
+    // Stepping one product on a task down past 1 takes it off that task.
+    if(sku && _num(h.p.qty) + dir < 1){
+      _swapTaskProduct(l, t, sku, '');
+      toast(`${[h.p.brand, h.p.product].filter(Boolean).join(' ')} taken off ${t.room} › ${t.name}`);
+      renderAll();
+      return;
+    }
     h.p.qty = String(Math.max(1, _num(h.p.qty) + dir));
     recomputeOptionFromProducts(t, h.o);
     renderAll();
@@ -2000,6 +2145,7 @@ function selectTask(id, opts){
     return;
   }
   scopeView = false;   // drilling into a task leaves the scope view
+  _carryTaskId = id;   // where a product line goes back to (layout file)
   // Any pending approve-confirm state belongs to the previously selected
   // task — clear it so switching tasks doesn't carry a stale confirm.
   taskApproveConfirmId = null;
@@ -3421,6 +3567,10 @@ function setWorkMode(m){
     if(wb) wb.innerHTML = '<div class="shop-empty"><span class="shop-empty-title">'+m+'</span><span class="shop-empty-desc">Something went wrong rendering this view.</span></div>';
   }
   if(m==='shop') renderSidebar();   // re-render to apply needs-product highlights
+  // Leaving the Record leaves its order document: the turn buttons go back.
+  if(typeof _poSyncFocus === 'function') _poSyncFocus();
+  // The order beside it lights whichever of its rows this tab is showing.
+  if(typeof _renderPoSide === 'function') _renderPoSide();
 }
 
 /* ── Scope copies model ─────────────────────────────────────────────────
@@ -3473,15 +3623,25 @@ function toggleWorkExpand(){
    Departments view — the view products are picked in, so the orders they
    end up on are one step away. Opens the orders on the Record tab. */
 function _sbPoLinkHtml(){
+  // A demo setting, off by default (Demo menu → Shop with Kai).
+  let shown = false;
+  try{ shown = !!(window.parent && window.parent !== window && window.parent.kaiShowPoLink && window.parent.kaiShowPoLink()); }catch(e){}
+  if(!shown) return '';
   if(!window.__KAI_SHOP || groupBy !== 'dept' || typeof _poOrders !== 'function'
      || !WORK_MODES.some(m => m.id === 'artifact')) return '';
   const {orders, total} = _poOrders();
   if(!orders.length) return '';
   const n = orders.filter(o => !o.cancel).length;
-  return `<button type="button" class="sb-po-link" onclick="openPurchaseOrder()" title="Open the purchase orders on the Record tab">
+  const layout = typeof SHOP_LAYOUT !== 'undefined' && SHOP_LAYOUT;
+  // The layout file opens only the current order, so the link names it.
+  const cur = layout ? _poOrderById(_poFocusOrderId()) : null;
+  const meta = cur
+    ? `${cur.draft ? 'Draft · ' + _poTurnTxt(cur) : 'Approved'} · ${artMoney(cur.amt)}`
+    : `${n} order${n === 1 ? '' : 's'} · ${artMoney(total)} at cost`;
+  return `<button type="button" class="sb-po-link" onclick="${layout ? 'openPoSide()' : 'openPurchaseOrder()'}" title="Open the purchase order${layout ? '' : 's'}">
     <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M3 2.5h8v9l-1.5-1-1.5 1-1-1-1 1-1.5-1-1.5 1z"/><path d="M5 5.5h4M5 7.5h4" stroke-linecap="round"/></svg>
-    <span class="sb-po-link-t">Purchase orders</span>
-    <span class="sb-po-link-m">${n} order${n === 1 ? '' : 's'} · ${artMoney(total)} at cost</span>
+    <span class="sb-po-link-t">${cur ? 'Purchase order' : 'Purchase orders'}</span>
+    <span class="sb-po-link-m">${esc(meta)}</span>
     <span class="sb-po-link-go" aria-hidden="true">›</span>
   </button>`;
 }

@@ -223,6 +223,8 @@ window.KAI_PANEL_SRC = `<!DOCTYPE html>
 <script src="js/progress.js"></script>
 <script src="js/overview.js"></script>
 <script src="js/artifact.js"></script>
+<script src="js/po-side.js"></script>
+<script src="js/materials-page.js"></script>
 <!-- Artifact 2, split by concern so its parts can be worked on independently.
      Order matters only for a2-init.js, which must load last: it references
      functions the other modules declare. -->

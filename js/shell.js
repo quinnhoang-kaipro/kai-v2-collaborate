@@ -31,12 +31,20 @@ function KAI_PANEL_DOC(qs){
      labour, and the shortcuts to it. index.html leaves it unset and keeps the
      Record as it was. */
   const shop = (typeof window.__KAI_SHOP !== 'undefined') && !!window.__KAI_SHOP;
+  /* ShopwithKai_layout.html adds one more: an order opens in the left panel,
+     beside the Editor (see po-side.js). */
+  const shopLayout = (typeof window.__KAI_SHOP_LAYOUT !== 'undefined') && !!window.__KAI_SHOP_LAYOUT;
+  /* ShopwithKai_materials.html: with Materials on, the Editor shows a
+     department as a shopping list (see materials-page.js). */
+  const shopMaterials = (typeof window.__KAI_SHOP_MATERIALS !== 'undefined') && !!window.__KAI_SHOP_MATERIALS;
   const boot =
     '<base href="' + location.href.split('#')[0] + '">' +
     '<scr' + 'ipt>window.__KAI_QS=' + JSON.stringify(qs ? '?' + qs : '')
       + ';window.__KAI_ACTIVITY_FULL=' + (full ? 'true' : 'false')
       + ';window.__KAI_ACTIVITY_SENTENCES=' + (sent ? 'true' : 'false')
-      + ';window.__KAI_SHOP=' + (shop ? 'true' : 'false') + ';<\/script>';
+      + ';window.__KAI_SHOP=' + (shop ? 'true' : 'false')
+      + ';window.__KAI_SHOP_LAYOUT=' + (shopLayout ? 'true' : 'false')
+      + ';window.__KAI_SHOP_MATERIALS=' + (shopMaterials ? 'true' : 'false') + ';<\/script>';
   return KAI_PANEL_RAW.replace(/<head([^>]*)>/i, '<head$1>' + boot);
 }
 
@@ -1793,6 +1801,72 @@ function renderStageConfirm(){
     </div>`;
 }
 
+/* ── Purchase orders (Shop with Kai) ──────────────────────────────────
+   An order is a Draft while someone holds it, and Approved once the job
+   manager has approved each item and then the order. The panel says which
+   draft order is on screen through kaiPoFocus(); while one is, the turn
+   buttons are that order's: Hand off for whoever holds it, Approve order for
+   the manager once every item is approved, Take turn for anyone else. */
+window.__KAI_PO_FOCUS = null;
+window.kaiPoFocus = function(f){
+  window.__KAI_PO_FOCUS = f || null;
+  if(typeof syncAppApproveBtn === 'function') syncAppApproveBtn();
+};
+window.kaiPoContext = function(){
+  return {role:state.role, me:(ROLE_PEOPLE[state.role] || {}).name || 'You',
+          people:ROLE_PEOPLE};
+};
+/* openModal serialises onConfirm, so the order's callback is parked here. */
+let kaiPoPending = null;
+function kaiPoRunPending(){ const f = kaiPoPending; kaiPoPending = null; if(f) f(); }
+function _syncPoCta(btn, secondBtn, tipEl, cancelBtn){
+  const po = window.__KAI_PO_FOCUS;
+  if(!po) return false;
+  if(cancelBtn) cancelBtn.hidden = true;
+  if(tipEl) tipEl.hidden = true;
+  btn.disabled = false;
+  // Read against the shell's own role, so switching roles in the demo nav
+  // re-decides whose move it is without the panel having to say so again.
+  const mine = po.holderRole === state.role;
+  const canApprove = mine && state.role === 'manager';
+  if(!mine){
+    btn.textContent = 'Take turn';
+    btn.onclick = () => {
+      kaiPoPending = po.onTake;
+      openModal({icon:'alert', title:`Take the purchase order from ${po.holder}?`,
+        body:`${po.holder} may still be working on it. You can take it anyway, and we'll notify ${po.holder}.`,
+        confirm:'Take turn', cancel:'Nevermind', onConfirm:()=>{ kaiPoRunPending(); }});
+    };
+    return true;
+  }
+  btn.textContent = 'Hand off';
+  btn.onclick = () => openHandoff({
+    title:'Hand off the purchase order', confirm:'Hand off', subject:'the purchase order', defaultTo:'manager',
+    placeholder:'What should they check on this order?',
+    onDone:(to) => { if(to) po.onHandedOff(to.name, to.roleId); toast(to ? `Purchase order handed off to ${to.name}` : 'Purchase order handed off'); },
+  });
+  if(secondBtn && canApprove){
+    const all = po.total > 0 && po.done === po.total;
+    secondBtn.textContent = all ? 'Approve order' : `Approve order · ${po.done}/${po.total}`;
+    secondBtn.disabled = !all;
+    secondBtn.title = all ? '' : 'Approve every item first';
+    secondBtn.onclick = all ? () => {
+      kaiPoPending = po.onApprove;
+      openModal({icon:'check', title:'Approve the purchase order?',
+        body:`All ${po.total} item${po.total === 1 ? '' : 's'} on ${po.name} are approved. Approving the order makes it ready to send to ${po.supplier}, and it can't be edited after that.`,
+        confirm:'Approve order', onConfirm:()=>{ kaiPoRunPending(); }});
+    } : null;
+    secondBtn.hidden = false;
+    /* Same swap the scope's review makes: once nothing is outstanding the
+       decision is the point of the screen, so Approve takes the accent. */
+    if(all){
+      btn.classList.remove('btn-primary'); btn.classList.add('btn-ghost');
+      secondBtn.classList.remove('btn-ghost'); secondBtn.classList.add('btn-primary');
+    }
+  }
+  return true;
+}
+
 function syncAppApproveBtn(){
   const btn = document.getElementById('appApproveBtn');
   const tipEl = document.getElementById('appApproveTip');
@@ -1801,7 +1875,7 @@ function syncAppApproveBtn(){
   if(!btn) return;
   // Off unless a branch below claims it, or it survives a stage or role change
   // that no longer offers a second action.
-  if(secondBtn){ secondBtn.hidden = true; secondBtn.onclick = null; }
+  if(secondBtn){ secondBtn.hidden = true; secondBtn.onclick = null; secondBtn.disabled = false; secondBtn.title = ''; }
   /* Which slot is yellow can be swapped below, and a class set on one render
      would otherwise still be there on the next. Reset to the default emphasis
      first: the right-hand slot is the primary, the left-hand one the outline. */
@@ -1822,6 +1896,10 @@ function syncAppApproveBtn(){
     return;
   }
   btn.hidden = false;
+  /* A draft purchase order on screen (Shop with Kai) owns the turn buttons
+     while it is there: it is the document being worked, and its holder hands
+     it off or, as the job manager, approves it. */
+  if(_syncPoCta(btn, secondBtn, tipEl, cancelBtn)) return;
   // Change-order-active override: when the iframe reports staged edits
   // AND we're in a stage where those edits create a Change Order
   // (published = Work in progress, closeout = Closeout submitted),
@@ -2582,6 +2660,8 @@ function computeLock(){
 }
 
 function syncSettings(){
+  const poCb = document.getElementById('showPoLink');
+  if(poCb) poCb.checked = !!state.showPoLink;
   const cb=document.getElementById('twoStep');
   if(cb) cb.checked = !!state.twoStep;
 }
@@ -2603,6 +2683,14 @@ function setRole(r){
 }
 function roleName(id){ const r=ROLES.find(x=>x.id===id); return r?r.name:id; }
 
+/* Demo: whether the Materials view leads with the purchase-order row.
+   Off by default; the panel asks for it through kaiShowPoLink(). */
+function setShowPoLink(v){
+  state.showPoLink = !!v; saveState();
+  const ifr = document.getElementById('iframe');
+  try{ if(ifr && ifr.contentWindow && ifr.contentWindow.renderSidebar) ifr.contentWindow.renderSidebar(); }catch(e){}
+}
+window.kaiShowPoLink = function(){ return !!state.showPoLink; };
 function setTwoStep(v){
   state.twoStep=!!v; saveState();
   // If turning 2-step off while in awaiting-pub, advance project stage
