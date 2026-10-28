@@ -76,6 +76,9 @@ function taskHasDraftChangeOrder(t){
   if(__CO_SUBMITTED.has(t.id)) return false;   // already handed over
   if(__CO_ADDED.has(t.id) || __CO_REMOVED.has(t.id)) return true;
   if(typeof taskHasSnapshotChanges === 'function' && taskHasSnapshotChanges(t)) return true;
+  // A price moved through its options' line items — no flat field differs,
+  // but the total does.
+  if(typeof taskDelta === 'function' && Math.round(taskDelta(t))) return true;
   if(typeof coHasChange === 'function' && coHasChange(t.id)) return true;
   return false;
 }
@@ -150,10 +153,14 @@ function approveChangeOrder(id){
 }
 /* The pill. Only once submitted — before that the change is the contractor's
    draft and the bar is where it lives. */
+/* One tag for every change after approval — a removal, a new task, an edit —
+   whether the change order is still a draft or waiting on approval. What
+   kind of change it is goes in the tooltip. */
 function _coPillHtml(t){
-  if(!taskHasOpenChangeOrder(t)) return '';
+  const open = taskHasOpenChangeOrder(t);
+  if(!open && !(window.__KAI_SHOP && taskHasDraftChangeOrder(t))) return '';
   const why = coReasonFor(t);
-  return `<span class="co-pill" title="${esc(why)} after approval — waiting on approval">${esc(why === 'Changed' ? 'Change order' : why)}</span>`;
+  return `<span class="co-pill" title="${esc(why)} after approval — ${open ? 'waiting on approval' : 'change order in draft'}">Change order</span>`;
 }
 
 function taskKeys(t){

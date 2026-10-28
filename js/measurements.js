@@ -2564,6 +2564,16 @@ function _renderGroupPageHtml(opts){
   return `<div class="pgd">
     ${ctrlBarHtml}
     <div class="pgd-hdr-box">
+      ${(() => {
+        /* Shop with Kai: a group with changes in a draft change order says
+           so at the top, as a task does — a removed room included. */
+        if(!window.__KAI_SHOP || !(PROJ_MODE === 'work' || PROJ_MODE === 'closeout')) return '';
+        if(!g.items.some(t => typeof taskHasDraftChangeOrder === 'function' && taskHasDraftChangeOrder(t))) return '';
+        return `<div class="sec-taskcard-co-banner has-changes">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.5L14.5 5v6L8 14.5 1.5 11V5z"/><path d="M8 8v3.5M8 5.2v.2"/></svg>
+          <span class="sec-taskcard-co-banner-body"><b>Change order is in draft.</b> Submit it for review and approval before it's finalized and shareable to contractors.</span>
+        </div>`;
+      })()}
       <div class="sec-taskcard-hdr">
         <div class="sec-taskcard-hdr-l">
           ${window.__KAI_SHOP_LAYOUT && groupBy === 'dept' ? (() => {
@@ -2586,6 +2596,7 @@ function _renderGroupPageHtml(opts){
           })() : ''}
           <div class="pgd-title-l">
             <div class="pgd-title">${esc(g.name)}</div>
+            ${window.__KAI_SHOP && g.items.length && g.items.every(t => typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id)) ? '<span class="co-pill" title="Removal after approval">Change order</span>' : ''}
           ${editingGroupLabelFor === g.key
             ? `<input class="pgd-label-input" maxlength="40" value="${esc(groupLabels[g.key]||'')}" placeholder="e.g. Kitchen (including Pantry)"
                  onclick="event.stopPropagation()"

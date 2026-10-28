@@ -2324,7 +2324,7 @@ function subStatusMeta(sgId){
     if(proj==='submitted' || proj==='reviewing' || proj==='review-done' || proj==='awaiting-pub') return 'Scope in review';
     /* A change order against a live scope is what the whole screen is about, so
        the step reports that rather than the settled state underneath it. */
-    if(inChangeOrder()) return `${changeOrderInfo().label} in review`;
+    if(inChangeOrder()) return `${changeOrderInfo().label} ${window.__KAI_SHOP && state.role === 'field_agent' ? 'in draft' : 'in review'}`;
     if(proj==='published' || proj==='closeout' || proj==='closeout-approved') return 'Scope approved';
     return 'Scope in draft';
   }
