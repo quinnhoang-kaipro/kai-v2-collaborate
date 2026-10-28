@@ -1,6 +1,12 @@
 function renderShop(){
   const body=document.getElementById('workBody');
   const sel=selId?TASKS.find(t=>t.id===selId):null;
+  /* Shop with Kai: a task or room being taken out by a change order sits on
+     grey paper, so it never reads as live scope. */
+  if(window.__KAI_SHOP && typeof __CO_REMOVED !== 'undefined'){
+    const rmGrp = !sel && selGroupKey && groupBy === 'room' && (() => { const it = TASKS.filter(t => t.room === selGroupKey); return it.length && it.every(t => __CO_REMOVED.has(t.id)); })();
+    body.classList.toggle('is-co-removed', !!((sel && __CO_REMOVED.has(sel.id)) || rmGrp));
+  }
   const need=tasksNeedingProduct();
   // No task, no group — auto-select the first group so the tab lands on
   // the group view by default rather than an empty "pick a task" state.
@@ -177,7 +183,9 @@ function _shopTaskHeaderHtml(t){
   // Two steps, and the same ink treatment as the task approval beside it.
   const _coOpen = (typeof taskHasOpenChangeOrder === 'function') && taskHasOpenChangeOrder(t);
   const _coConfirming = typeof coApproveConfirmId !== 'undefined' && coApproveConfirmId === t.id;
-  const _coBtn = !_coOpen ? ''
+  // Approving a change order is the job manager's decision, not the field
+  // agent's.
+  const _coBtn = (!_coOpen || (typeof USER_ROLE !== 'undefined' && USER_ROLE === 'field_agent')) ? ''
     : _coConfirming
       ? `<button class="act cancel" onclick="event.stopPropagation();cancelCoApprove()">Cancel</button>`
         + `<button class="act approve" onclick="event.stopPropagation();confirmCoApprove(${t.id})">${_ckSvg} Confirm approve</button>`
@@ -195,9 +203,13 @@ function _shopTaskHeaderHtml(t){
      carry it is more use than naming which gate you passed through. */
   const coApplies = PROJ_MODE === 'work' || PROJ_MODE === 'closeout';
   const _coChanges = coApplies ? _coTaskChanges(t) : [];
-  const coBannerInner = coApplies ? `<div class="sec-taskcard-co-banner${_coChanges.length ? ' has-changes' : ''}">
+  // A task being taken out has no field to diff, but it is a change all the same.
+  const _coDraft = _coChanges.length || (typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id));
+  const coBannerInner = coApplies ? `<div class="sec-taskcard-co-banner${_coDraft ? ' has-changes' : ''}">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.5L14.5 5v6L8 14.5 1.5 11V5z"/><path d="M8 8v3.5M8 5.2v.2"/></svg>
-    <span class="sec-taskcard-co-banner-body">${_coChanges.length
+    <span class="sec-taskcard-co-banner-body">${_coDraft && _coOpen
+      ? `<b>Change order is in review.</b> It becomes part of the scope once it's approved.`
+      : _coDraft
       ? `<b>Change order is in draft.</b> Submit it for review and approval before it's finalized and shareable to contractors.`
       : `Edits to the contractor, options or products will create a <b>Change Order</b> since the scope is approved.`}</span>
   </div>` : '';
@@ -208,6 +220,7 @@ function _shopTaskHeaderHtml(t){
      construction stages and nowhere else. */
   const _hdrSt = (typeof _pgdRowStatusMeta === 'function') ? _pgdRowStatusMeta(t) : null;
   const approvedChip = '';
+  if(window.__KAI_SHOP && !window.__KAI_SHOP_LAYOUT) return _tkhHtml(t, coBannerInner, _coOpen, _coConfirming, _ckSvg);
   return `<div class="pgd-hdr-box sec-taskhdr">
     ${coBannerInner}
     <div class="sec-taskcard-hdr">
@@ -257,6 +270,99 @@ function _shopTaskHeaderHtml(t){
   </div>`;
 }
 
+/* ── Task header, Shop with Kai ───────────────────────────────────────
+   Where the task sits as two breadcrumbs — scope › room, and scope ›
+   department › product type — with its code on the right; the title with
+   the total, and, under a change order, a warning mark and what the total
+   moved by and from; the contractor with Change; the description on one line
+   (more / less); and the actions — Undo change while the change order is a
+   draft, Update progress always. */
+function _tkhHtml(t, coBannerInner, coOpen, coConfirming, ckSvg){
+  const q = v => esc(String(v)).replace(/'/g, "\\'");
+  const tl = taskLine(t);
+  const lk = _lineKeyArg(`${tl.dept}|${tl.line}`);
+  const crumb = parts => parts.map(([lbl, on]) => on
+    ? `<button type="button" class="tkh-crumb-a" onclick="${on}">${esc(lbl)}</button>`
+    : `<span>${esc(lbl)}</span>`).join('<span class="tkh-crumb-sep" aria-hidden="true">›</span>');
+  const removed = typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id);
+  const hasCo = (typeof taskHasAnyChangeOrder === 'function') && taskHasAnyChangeOrder(t);
+  const draft = (typeof taskHasDraftChangeOrder === 'function') && taskHasDraftChangeOrder(t) && !coOpen;
+  const tracked = !!__TASK_ORIGINALS[t.id];
+  const was = tracked ? originalTaskCost(t.id) : dollars(t.cost);
+  const now = removed ? 0 : dollars(t.cost);
+  const delta = tracked ? now - was : 0;
+  const fmt2 = v => '$' + Math.abs(v).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const isMgr = typeof USER_ROLE === 'undefined' || USER_ROLE !== 'field_agent';
+  const open = _taskDetailsOpen(t);
+  const desc = t.desc || '';
+  const warn = `<svg class="tkh-warn" viewBox="0 0 16 16" aria-label="Change order"><path d="M8 1.8 15 14H1z"/></svg>`;
+  const acts = [
+    draft ? `<button type="button" class="tkh-btn is-quiet" onclick="event.stopPropagation();undoTaskCo(${t.id})">Undo change</button>` : '',
+    (coOpen && isMgr) ? (coConfirming
+      ? `<button type="button" class="tkh-btn is-quiet" onclick="event.stopPropagation();cancelCoApprove()">Cancel</button><button type="button" class="tkh-btn" onclick="event.stopPropagation();confirmCoApprove(${t.id})">${ckSvg} Confirm approve</button>`
+      : `<button type="button" class="tkh-btn is-quiet" onclick="event.stopPropagation();askCoApprove(${t.id})">${ckSvg} Approve change</button>`) : '',
+    `<button type="button" class="tkh-btn" onclick="event.stopPropagation();tkhUpdateProgress(${t.id})">Update progress</button>`,
+  ].join('');
+  const gcOpts = [{value:'__keep', label:'Change'}, {value:'', label:'Unassigned'}].concat(CONTRACTORS.map(c => ({value:c, label:c})));
+  return `<div class="pgd-hdr-box sec-taskhdr tkh${removed ? ' is-removed' : ''}">
+    ${coBannerInner}
+    <div class="tkh-top">
+      <div class="tkh-crumbs">
+        <div class="tkh-crumb">${crumb([['Scope', 'selectScope()'], [t.room, `goUpRoom('${q(t.room)}')`]])}<span class="tkh-crumb-sep" aria-hidden="true">›</span></div>
+        <div class="tkh-crumb">${crumb([['Scope', 'selectScope()'], [tl.dept, `goUpMaterials('${q(tl.dept)}')`], [tl.line, `goUpMaterials('${q(tl.dept)}','${lk}')`]])}</div>
+      </div>
+      <span class="tkh-code">${esc(t.code)}</span>
+    </div>
+    <div class="tkh-title-row">
+      <h2 class="tkh-title">${hasCo ? warn : ''}<span>${esc(t.name)}</span></h2>
+      <div class="tkh-price">
+        <div class="tkh-amt${removed ? ' is-struck' : ''}">${removed ? fmt2(was) : fmt2(now)}</div>
+        ${tracked && Math.round(delta * 100) ? `<div class="tkh-delta"><span class="tkh-chg">change: <b>${delta > 0 ? '+' : '−'}${fmt2(delta)}</b></span><span class="tkh-was">was: <s>${fmt2(was)}</s></span></div>` : ''}
+      </div>
+    </div>
+    <div class="tkh-row">
+      <span class="tkh-lbl">Contractor</span>
+      <span class="tkh-val">${esc(t.gc || 'Unassigned')}</span>
+      ${hdrDdHtml('ddGc-' + t.id, '__keep', gcOpts, `tkhSetGc(${t.id}, __V__)`, 'tkh-change')}
+    </div>
+    <div class="tkh-row tkh-desc-row">
+      <span class="tkh-lbl">Description</span>
+      <div class="tkh-desc${open ? ' is-open' : ''}">${desc ? `<span class="tkh-desc-t">${esc(desc)}</span>` : '<span class="tkh-none">N/A</span>'}${desc ? ` <button type="button" class="tkh-more" onclick="event.stopPropagation();toggleDescExpanded(${t.id})">${open ? 'less ⌃' : 'more ⌄'}</button>` : ''}</div>
+      <div class="tkh-acts">${acts}</div>
+    </div>
+  </div>`;
+}
+function tkhSetGc(id, v){
+  if(v === '__keep'){ document.querySelectorAll('.sec-hdr-dd.open').forEach(d => d.classList.remove('open')); return; }
+  setTaskContractor(id, v);
+  if(typeof requestSecTaskcardRerender === 'function') requestSecTaskcardRerender();
+}
+// Update progress: the task's page on the Progress tab, where photos and the
+// work status are posted.
+function tkhUpdateProgress(id){
+  selId = id;
+  if(typeof setWorkMode === 'function') setWorkMode('pano');
+}
+/* Undo change: the task goes back to the approved scope — a removal taken
+   back, its fields and its options' line items as they were. */
+function undoTaskCo(id){
+  const t = TASKS.find(x => x.id === id); if(!t) return;
+  const o = __TASK_ORIGINALS[id];
+  if(typeof __CO_REMOVED !== 'undefined') __CO_REMOVED.delete(id);
+  if(o && Array.isArray(o.options)){
+    o.options.forEach(so => {
+      const opt = (t.options || []).find(x => x.id === so.id); if(!opt) return;
+      opt.added = so.added;
+      (so.products || []).forEach(sp => {
+        const p = (opt.products || []).find(x => x.id === sp.id); if(!p) return;
+        p.qty = sp.qty; p.parts = sp.parts; p.labor = sp.labor;
+      });
+    });
+  }
+  if(typeof pendingChanges !== 'undefined') pendingChanges = pendingChanges.filter(c => c.taskId !== id);
+  if(o) undoTaskChanges(id);
+  else { if(typeof renderAll === 'function') renderAll(); toast(`${t.name}: change undone`); }
+}
 /* ── Task activity ───────────────────────────────────────────────────
    The timeline a task has actually been through by this stage. There's no
    event log in the data, so it's derived: each stage adds the entries that
@@ -1202,16 +1308,22 @@ function _lnpCondensedHtml(l, c){
   const penSvg = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.8 2.7l2.5 2.5L5.6 12.9l-3.1.6.6-3.1z"/><path d="M9.3 4.2l2.5 2.5"/></svg>`;
   const qtyOf = (t, sku) => _lineTaskPicked(l, t).filter(h => h.p.sku === sku).reduce((a, h) => a + _num(h.p.qty), 0);
   const costOf = (t, sku) => _lineTaskPicked(l, t).filter(h => h.p.sku === sku).reduce((a, h) => a + _num(h.p.qty) * _parseDollars(h.p.parts), 0);
-  const taskRow = (t, sku) => {
+  /* A row is one option of one task — where the product actually sits (the
+     task's Editor page picks products inside an option) — named Group ›
+     Task › Option. h: that option's product row. */
+  const taskRow = (t, sku, h) => {
     const q = qtys.get(t.id);
     const pk = _lineTaskPicked(l, t);
-    const qNum = sku ? fmtN(qtyOf(t, sku)) : q.num;
-    const amt = sku ? costOf(t, sku) : taskLineCost(l, t);
-    const skuArg = sku ? `,'${esc(sku)}'` : '';
+    const qNum = h ? fmtN(_num(h.p.qty)) : q.num;
+    const amt = h ? _num(h.p.qty) * _parseDollars(h.p.parts) : taskLineCost(l, t);
+    const skuArg = h ? `,'${esc(sku)}','${esc(h.o.id)}'` : '';
+    const o = h ? h.o : (typeof _lineOption === 'function' ? _lineOption(t) : null);
+    const optName = o ? (o.name || 'Option') : '';
     const mods = new Set([...(t.mods || []), ...pk.flatMap(h => h.p.mods || [])]);
     return `<div class="lnpg-task">
       <span class="lnpt-task">
         <button class="lnpc-task-name" onclick="selectTask(${t.id})" title="Open ${esc(t.name)}"><span class="task-ctx">${esc(t.room)} ›</span> ${esc(t.name)}</button>
+        ${optName ? `<span class="lnpg-opt" title="${esc(optName)}"><span class="task-ctx">›</span> ${esc(optName)}</span>` : ''}
         ${[...mods].map(m => `<span class="optc-flag">${esc(typeof tagInfo === 'function' ? tagInfo(m).label : m)}</span>`).join('')}
       </span>
       <span class="lnpt-qty">
@@ -1270,7 +1382,7 @@ function _lnpCondensedHtml(l, c){
             </span>
           </span>
         </div>
-        <div class="lnpg-tasks">${on.map(t => taskRow(t, cat.sku)).join('')}</div>
+        <div class="lnpg-tasks">${on.flatMap(t => _lineTaskPicked(l, t).filter(h => h.p.sku === cat.sku).map(h => taskRow(t, cat.sku, h))).join('')}</div>
       </div>
       ${supplierPickHtml(o.offers, o.sup, `setLineSupplier('${k}','${esc(cat.sku)}','__S__')`, `line:${l.key}|${cat.sku}`)}
     </div>`;
@@ -1282,7 +1394,7 @@ function _lnpCondensedHtml(l, c){
       return `<span class="lnpc-foot-l">Total${status ? `<span class="lnp-total-status ${statusCls}">${esc(status)}</span>` : ''}${u && sharedUnit !== null ? `<span class="lnpc-foot-q">${fmtN(boxSum)}${u}</span>` : ''}</span>`; })()}
     <span class="lnpc-foot-amt">${money(Math.round(deptLineCost(l)))}</span>
   </div>`;
-  const colHead = `<div class="lnpg-head"><span>Product</span><span class="lnpg-head-t"><span>Task</span><span>Qty</span><span class="num">Cost</span></span></div>`;
+  const colHead = `<div class="lnpg-head"><span>Product</span><span class="lnpg-head-t"><span>Group › Task › Option</span><span>Qty</span><span class="num">Cost</span></span></div>`;
   const head = total + colHead + (groups || `<div class="lnpg-empty">${n} ${n === 1 ? 'task needs' : 'tasks need'} a product. Pick one below.</div>`) + bareHtml;
   const foot = '';
   // The choice: what else this line could buy.

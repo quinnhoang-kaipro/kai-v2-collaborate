@@ -50,12 +50,43 @@ if(PROJ_MODE === 'work' || PROJ_MODE === 'closeout'){
         options:(typeof _snapshotOptions === 'function') ? _snapshotOptions(t) : [],
       };
     });
+    if(window.__KAI_SHOP && typeof WORK_TRACK !== 'undefined' && WORK_TRACK === 'change_order') _seedCoReviewDemo();
     // Add co-mode body class so the "CHANGE ORDER" pill CSS lights up on
     // any task whose fields diverge from its snapshot. Existing logic added
     // this class only for context=construction URL param; broadening here
     // so closeout mode gets the same treatment.
     document.body.classList.add('co-mode');
   });
+}
+/* Shop with Kai, step 6 (change order review): a change order with more in
+   it than one edit — a whole room taken out (Garage), single tasks taken
+   out, and prices moved both ways — submitted and waiting on review. Made
+   after the approved snapshot, so every change reads against it. Mock. */
+function _seedCoReviewDemo(){
+  const T = id => TASKS.find(t => t.id === id);
+  // A task's price moves through its products where it has them, so the
+  // option and the line items agree; otherwise on the task itself.
+  const reprice = (id, f) => {
+    const t = T(id); if(!t) return;
+    const hit = (typeof taskOptions === 'function' ? taskOptions(t) : []).flatMap(o => (o.products || []).filter(p => typeof productIsPicked === 'function' && productIsPicked(p)).map(p => ({o, p})))[0];
+    if(hit && typeof recomputeOptionFromProducts === 'function'){
+      hit.p.qty = String(Math.max(1, Math.round(_parseDollars(hit.p.qty) * f)));
+      recomputeOptionFromProducts(t, hit.o);
+    } else {
+      t.cost = money(Math.round(_parseDollars(t.cost) * f));
+    }
+  };
+  reprice(1, 1.3);    // Kitchen › Cabinets — two more boxes
+  reprice(2, 1.25);   // Kitchen › Countertops — the island top
+  reprice(12, 0.75);  // Bathroom › Flooring — the tub alcove left as is
+  reprice(10, 1.6);   // Master Bath › Toilet — comfort height
+  // The whole Garage, and two paint tasks.
+  TASKS.filter(t => t.room === 'Garage').forEach(t => __CO_REMOVED.add(t.id));
+  [6, 19].forEach(id => { if(T(id)) __CO_REMOVED.add(id); });
+  // The job manager reviews it; the field agent is the one still putting it
+  // together, so for them it is a draft.
+  if(typeof USER_ROLE !== 'undefined' && USER_ROLE === 'field_agent') return;
+  TASKS.filter(t => __CO_REMOVED.has(t.id) || computeCostDelta(t) !== 0).forEach(t => __CO_SUBMITTED.add(t.id));
 }
 // Which task descriptions are currently expanded (unfolded) in the Task
 // tab card. Long descriptions collapse by default so the card stays
@@ -663,7 +694,11 @@ function taskRow(t, opts){
   const amtHtml = (opts && opts.amtHtml != null) ? opts.amtHtml
     : isMissing
       ? `<span class="task-amt">$--</span>`
-      : `<span class="task-amt">${t.cost}</span>${deltaChipHtml(taskDelta(t))}`;
+      : (window.__KAI_SHOP && taskDelta(t) && !(typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id)))
+        // A changed price reads as the approved one struck through and the
+        // new one beside it.
+        ? `<span class="task-amt-was">${money(originalTaskCost(t.id))}</span><span class="task-amt">${t.cost}</span>`
+        : `<span class="task-amt">${t.cost}</span>${deltaChipHtml(taskDelta(t))}`;
   return `<div class="task${selId===t.id?' sel':''}${isApproved?' approved':''}${needs?' needs-product':''}${hasCo?' co-pending':''}${(typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id))?' co-removed':''}${isMissing?' is-missing':''}" data-tid="${t.id}">
     <div class="task-row" onclick="${(opts && opts.onRow) || `selectTask(${t.id})`}">
       <div class="task-mid">
@@ -723,7 +758,15 @@ function renderSidebar(){
     _sideTotal = Math.max(0, live - _cls.onPos - _cls.deferredAll);
   }
   if(_ht) _ht.textContent = _sideTotal == null ? 'All scope' : (groupBy === 'dept' ? 'All materials' : 'All labor');
-  document.getElementById('sbRollup').innerHTML = _sideTotal == null
+  // Shop with Kai, under a change order: the approved total struck through,
+  // and the total after it — removals out, price changes in.
+  const _coScope = !!window.__KAI_SHOP && _sideTotal == null && tasks.some(t => __TASK_ORIGINALS[t.id])
+    && !(typeof __KAI_SCOPE_TOTAL_OVERRIDE !== 'undefined' && __KAI_SCOPE_TOTAL_OVERRIDE);
+  const _scWas = _coScope ? tasks.reduce((a, t) => a + (__TASK_ORIGINALS[t.id] ? originalTaskCost(t.id) : dollars(t.cost)), 0) : 0;
+  const _scNow = _coScope ? tasks.filter(t => !(typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id))).reduce((a, t) => a + dollars(t.cost), 0) : 0;
+  document.getElementById('sbRollup').innerHTML = (_coScope && Math.round(_scWas) !== Math.round(_scNow))
+    ? `<span class="total-was">${money(_scWas)}</span><span class="total">${money(_scNow)}</span>`
+    : _sideTotal == null
     ? `<span class="total">${totalDisplay}</span>${scopeDeltaChip}`
     : `<span class="total">${money(Math.round(_sideTotal))}</span>`;
   if(!groups.length){
@@ -756,6 +799,14 @@ function renderSidebar(){
         : g.items.reduce((s,t)=>s+dollars(t.cost),0);
     const isCollapsed=collapsedGrps.has(g.key);
     const allApproved=g.items.every(t=>approved.has(t.id));
+    /* Shop with Kai, under a change order, by room: a room whose every task
+       is being taken out is struck through whole; otherwise a total that
+       moves reads approved (struck) → after the change order. */
+    const _isRm = t => typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id);
+    const grpRemoved = !!window.__KAI_SHOP && g.items.length > 0 && g.items.every(_isRm);
+    const coRoom = !!window.__KAI_SHOP && groupBy === 'room' && g.items.some(t => __TASK_ORIGINALS[t.id]);
+    const grpWas = coRoom ? g.items.reduce((s, t) => s + (__TASK_ORIGINALS[t.id] ? originalTaskCost(t.id) : dollars(t.cost)), 0) : cost;
+    const grpNow = coRoom ? g.items.filter(t => !_isRm(t)).reduce((s, t) => s + dollars(t.cost), 0) : cost;
     // In draft mode we surface an "Add task" affordance INSIDE each group
     // (see draftAddTaskRow below) rather than a "+" button in the header —
     // the block-level dashed row matches the "+ New group" pattern at the
@@ -773,7 +824,7 @@ function renderSidebar(){
     // SHOP-EDIT VARIANT: sidebar is view-only. No "+ Update" affordance on
     // group headers — updates get posted from the Task / Progress tabs.
     const progressAdd = '';
-    return `<div class="grp${g.pinned?' pinned':''}${isCollapsed?' collapsed':''}${approvedGroupsExplicit.has(g.key)?' allapproved':''}${selGroupKey===g.key?' is-selgrp':''}${g.items.length?'':' is-empty'}" data-grp="${g.key}">
+    return `<div class="grp${grpRemoved?' co-removed':''}${g.pinned?' pinned':''}${isCollapsed?' collapsed':''}${approvedGroupsExplicit.has(g.key)?' allapproved':''}${selGroupKey===g.key?' is-selgrp':''}${g.items.length?'':' is-empty'}" data-grp="${g.key}">
       <div class="grp-hdr" onclick="selectGroup('${g.key}')">
         <button class="grp-caret-btn" onclick="event.stopPropagation();toggleGrp(this)" aria-label="Toggle group" title="Expand / collapse">
           <svg class="grp-caret" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5l3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -786,9 +837,12 @@ function renderSidebar(){
           const n = g.items.length;
           return `<span class="grp-approve-caption" title="${n} ${n===1?'task':'tasks'}">${n} ${n===1?'task':'tasks'}</span>`;
         })()}
-        <span class="grp-total">${money(cost)}</span>
+        ${grpRemoved ? `<span class="grp-total">${money(grpWas)}</span>`
+          : (coRoom && Math.round(grpWas) !== Math.round(grpNow))
+            ? `<span class="grp-total-was">${money(grpWas)}</span><span class="grp-total">${money(grpNow)}</span>`
+            : `<span class="grp-total">${money(cost)}</span>`}
         ${groupDecisionHtml(g)}
-        ${deltaChipHtml(groupDelta(g.items))}
+        ${coRoom ? '' : deltaChipHtml(groupDelta(g.items))}
         ${(IS_DRAFT_STAGE && !g.pinned && sbToolsVisible)?`<button class="grp-dup" onclick="event.stopPropagation();duplicateGroup('${g.key}')" title="Duplicate ${esc(g.name)} group">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="11" height="11" rx="1"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></svg></button>`:''}
         ${progressAdd}
@@ -1332,16 +1386,19 @@ function clearLineProduct(key){
 }
 /* One task's own quantity. On its picked product once it has one; before
    that, on the task itself, which is what the first apply will use. */
-// sku: which of the task's products to step, when it carries more than one.
-function bumpLineTaskQty(key, id, dir, sku){
+// sku: which of the task's products to step, when it carries more than one;
+// optId: in which of the task's options.
+function bumpLineTaskQty(key, id, dir, sku, optId){
   const l = deptLineByKey(key); if(!l) return;
   const t = l.items.find(x => x.id === id); if(!t) return;
   const picked = _lineTaskPicked(l, t);
   if(picked.length){
-    const h = (sku && picked.find(x => x.p.sku === sku)) || picked[0];
-    // Stepping one product on a task down past 1 takes it off that task.
+    const h = (sku && picked.find(x => x.p.sku === sku && (!optId || x.o.id === optId))) || picked[0];
+    // Stepping a product down past 1 takes it off that option.
     if(sku && _num(h.p.qty) + dir < 1){
-      _swapTaskProduct(l, t, sku, '');
+      h.p.qty = '0';
+      recomputeOptionFromProducts(t, h.o);
+      _syncTaskProduct(t);
       toast(`${[h.p.brand, h.p.product].filter(Boolean).join(' ')} taken off ${t.room} › ${t.name}`);
       renderAll();
       return;

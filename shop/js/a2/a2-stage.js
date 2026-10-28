@@ -52,7 +52,10 @@ let A2_PENDING_VER = null;
     /* Which live tasks are in the order — derived from the snapshot rather than
        listed again here, so the two can't drift. __CO_SUBMITTED is what
        taskHasOpenChangeOrder() reads, which is what puts the pill on a row. */
-    if(typeof SCOPE !== 'undefined' && typeof TASKS !== 'undefined' && typeof __CO_SUBMITTED !== 'undefined'){
+    /* Shop with Kai: the field agent is still putting the order together, so
+       for them it is a draft, not handed in. */
+    const draftForMe = !!window.__KAI_SHOP && typeof USER_ROLE !== 'undefined' && USER_ROLE === 'field_agent';
+    if(!draftForMe && typeof SCOPE !== 'undefined' && typeof TASKS !== 'undefined' && typeof __CO_SUBMITTED !== 'undefined'){
       const touched = new Set();
       SCOPE.forEach(g => g.tasks.forEach(t => {
         if((t.changes || []).some(ch => ch.ver === pending)) touched.add(t.code);
