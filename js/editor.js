@@ -325,6 +325,7 @@ function _tkhHtml(t, coBannerInner, coOpen, coConfirming, ckSvg){
       <span class="tkh-val">${esc(t.gc || 'Unassigned')}</span>
       ${hdrDdHtml('ddGc-' + t.id, '__keep', gcOpts, `tkhSetGc(${t.id}, __V__)`, 'tkh-change')}
     </div>
+    ${ALLOW_ON ? taskAllowanceRowHtml(t) : ''}
     <div class="tkh-row tkh-desc-row">
       <span class="tkh-lbl">Description</span>
       <div class="tkh-desc${open ? ' is-open' : ''}">${desc ? `<span class="tkh-desc-t">${esc(desc)}</span>` : '<span class="tkh-none">N/A</span>'}${desc ? ` <button type="button" class="tkh-more" onclick="event.stopPropagation();toggleDescExpanded(${t.id})">${open ? 'less ⌃' : 'more ⌄'}</button>` : ''}</div>

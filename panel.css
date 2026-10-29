@@ -6882,3 +6882,127 @@ body.co-mode .task.co-removed>.task-row::before{background:var(--stroke)}
 .work-body.is-co-removed .pgd-tk-list{opacity:.8}
 .work-body.is-co-removed .tkh-btn{--white:#fff}
 .work-body.is-co-removed .tkh-btn:not(.is-quiet){color:#fff}
+
+/* Shop with Kai: a group's change sits left of its total, so the latest
+   prices stay aligned on the right edge. */
+.grp-hdr .cost-delta.is-lead{margin-left:auto;margin-right:10px}
+.grp-hdr .cost-delta.is-lead + .grp-total{margin-left:0}
+.task-amt-line > .cost-delta:first-child{margin-left:0;margin-right:6px}
+.sb-rollup > .cost-delta:first-child{margin-left:0}
+/* A task row's change before its figure; the figure keeps its own stack. */
+.task-amt-line:has(> .cost-delta){flex-direction:row;align-items:baseline}
+.tal-stack{display:inline-flex;flex-direction:column;align-items:flex-end;gap:1px}
+.dline-hdr .cost-delta.is-lead{margin-left:auto;margin-right:10px}
+.dline-hdr .cost-delta.is-lead + .dline-amt{margin-left:0}
+
+/* ── Budget & allowances (ShopwithKai.html, allowances.js) ── */
+.alw-v{font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink)}
+.alw-v.is-none{font-weight:400;color:var(--t3)}
+.alw-btn{padding:0;margin-left:8px;background:none;border:0;border-bottom:1px solid var(--stroke);
+  font:inherit;font-size:12px;color:var(--t2);cursor:pointer;line-height:1.2}
+.alw-btn:hover{color:var(--ink);border-bottom-color:var(--ink)}
+.alw-edit{display:inline-flex;align-items:baseline;gap:2px;border-bottom:1.5px solid var(--ink)}
+.alw-cur{color:var(--t3)}
+.alw-input{width:110px;border:0;background:transparent;font:inherit;font-variant-numeric:tabular-nums;
+  color:var(--ink);padding:1px 0;outline:none}
+.alw-st{font-size:12px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.alw-st.is-under{color:var(--success)}
+.alw-st.is-near{color:#9E6B2F}
+.alw-st.is-over{color:var(--error)}
+.alw-src{display:block;font-size:11.5px;color:var(--t3);font-weight:400}
+.alw-line{display:inline-flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px}
+.alw-warn-ic{width:13px;height:13px;flex-shrink:0;fill:#C2410C;vertical-align:-2px;margin-left:6px}
+.alw-warn{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;background:#FFF4E5;
+  border-left:3px solid #E58A2B;font-size:12.5px;color:var(--ink);line-height:1.4}
+.alw-warn .alw-warn-ic{margin:2px 0 0}
+
+/* Overview: the budget leads the head, right-aligned. */
+.ov-head > .ov-budget{margin-left:auto;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
+.ov-budget-v{display:flex;align-items:baseline}
+.ov-budget-v .alw-v{font-family:var(--display);font-size:26px;font-weight:700;letter-spacing:-.015em;line-height:1.1}
+.ov-budget-v .alw-input{font-family:var(--display);font-size:22px;font-weight:700;width:150px;text-align:right}
+.ov-budget-sub{display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-size:12.5px;color:var(--t2);margin-top:2px}
+.ov-budget-row{display:inline-flex;gap:6px;font-variant-numeric:tabular-nums}
+.ov-budget-row b{color:var(--ink);font-weight:600}
+.alw-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.alw-tbl th{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--t3);text-align:left;padding:0 8px 6px 0;border-bottom:1px solid var(--stroke)}
+.alw-tbl td{padding:7px 8px 7px 0;border-bottom:1px solid var(--stroke);vertical-align:baseline}
+.alw-tbl .alw-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.alw-tbl th.alw-num{text-align:right}
+.alw-tr.is-dept td:first-child{font-weight:600}
+.alw-tr.is-unset td{color:var(--t3)}
+.alw-tr.is-task td{font-size:12.5px;color:var(--t2);padding-top:4px;padding-bottom:4px}
+.alw-tr.is-task td:first-child{padding-left:16px}
+.alw-tr.is-warn td{padding:0 0 8px;border-bottom:1px solid var(--stroke)}
+.alw-tr.is-dept:has(+ .alw-tr.is-warn) td,.alw-tr.is-dept:has(+ .alw-tr.is-task) td,.alw-tr.is-task:has(+ .alw-tr.is-task) td{border-bottom:0}
+.alw-tr .alw-src{display:inline;margin-left:6px}
+.alw-link{padding:0;background:none;border:0;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.alw-link:hover{text-decoration:underline}
+.alw-tbl tfoot td{font-weight:700;border-bottom:0;padding-top:9px}
+.alw-foot-note{font-weight:400;color:var(--t3);font-size:12px}
+.alw-note{margin:10px 0 0;font-size:12px;color:var(--t3);line-height:1.45}
+
+/* Department page: the allowance band under the title. */
+.alw-band{display:flex;flex-wrap:wrap;gap:10px 36px;align-items:flex-start;margin-top:12px;padding-top:12px;border-top:1px solid var(--stroke)}
+.alw-cell{display:flex;flex-direction:column;gap:3px;min-width:0}
+.alw-k{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.alw-band .alw-v{font-size:16px}
+.alw-band .alw-warn{flex-basis:100%}
+
+/* Task header row. */
+.alw-tkh .alw-line{font-size:13.5px}
+
+/* Left panel marks. */
+.alw-mark{display:inline-block;margin-left:6px;padding:2px 6px;font-family:var(--mono);font-size:9.5px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;vertical-align:middle;line-height:1.3}
+.alw-mark.is-over{background:#FBE7E4;color:var(--error)}
+.alw-mark.is-warn{background:#FFF4E5;color:#B45309}
+.grp-hdr .alw-mark{margin-left:8px}
+.alw-tr.is-unset-list td{font-size:12.5px;color:var(--t3);padding-top:9px;line-height:1.6}
+.alw-tr.is-unset-list .alw-k{margin-right:6px}
+.alw-sep{margin:0 6px;color:var(--t3)}
+button.alw-v.is-edit{padding:0;margin:0;background:none;border:0;font:inherit;color:inherit;cursor:text;text-align:inherit}
+button.alw-v.is-edit:hover{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px;text-decoration-color:var(--t3)}
+.ov-budget-v button.alw-v{font-family:var(--display);font-size:26px;font-weight:700;letter-spacing:-.015em;line-height:1.1}
+
+/* New task modal (Shop with Kai): a search line and a plain list — no box
+   around either, hairlines between rows, the pick held until Add. */
+.ntm{width:600px;padding:26px 30px 20px;display:flex;flex-direction:column;max-height:min(720px, calc(100vh - 60px))}
+.ntm-search{display:flex;align-items:center;gap:10px;margin-top:16px;padding:8px 0;border-bottom:1.5px solid var(--ink);cursor:text}
+.ntm-search svg{width:15px;height:15px;color:var(--t3);flex-shrink:0}
+.ntm-search input{flex:1;min-width:0;border:0;outline:none;background:transparent;font-family:var(--body);font-size:15px;color:var(--ink);padding:2px 0}
+.ntm-search input::placeholder{color:var(--t3);font-style:italic}
+.ntm-list{flex:1;min-height:0;overflow-y:auto;margin:6px -10px 0;padding:0 10px}
+.ntm-list::-webkit-scrollbar{width:6px}
+.ntm-list::-webkit-scrollbar-thumb{background:var(--stroke);border-radius:3px}
+.ntm-row{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;padding:11px 10px;margin:0 -10px;width:calc(100% + 20px);
+  background:transparent;border:0;border-bottom:1px solid rgba(0,0,0,.06);cursor:pointer;font-family:var(--body);text-align:left;color:var(--ink)}
+.ntm-row:hover{background:var(--sunken,#F4F0E6)}
+.ntm-row.is-sel{background:var(--accent-tint, #FCF8D0);box-shadow:inset 3px 0 0 var(--ink)}
+.ntm-name{font-size:14.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ntm-row.is-sel .ntm-name{font-weight:600}
+.ntm-cat{flex-shrink:0;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.ntm-row.is-custom{border-bottom:0}
+.ntm-row.is-custom .ntm-name{color:var(--t2)}
+.ntm-empty{padding:14px 0;color:var(--t3);font-size:13.5px}
+.ntm-acts{margin-top:16px;padding-top:14px;border-top:1px solid var(--stroke)}
+.ntm-acts .se-btn:disabled{opacity:.45;cursor:default;filter:none}
+/* Category chips, and the list sectioned by category. */
+.ntm-cats{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.ntm-chip{display:inline-flex;align-items:baseline;gap:5px;padding:5px 10px;border:1px solid var(--stroke);background:var(--white);
+  font-family:var(--body);font-size:12.5px;color:var(--t2);cursor:pointer;line-height:1.2}
+.ntm-chip:hover:not(:disabled){border-color:var(--ink);color:var(--ink)}
+.ntm-chip.is-on{background:var(--ink);border-color:var(--ink);color:var(--white)}
+.ntm-chip:disabled{opacity:.4;cursor:default}
+.ntm-chip-n{font-size:11px;color:var(--t3)}
+.ntm-chip.is-on .ntm-chip-n{color:rgba(255,255,255,.6)}
+.ntm-list{margin-top:10px}
+.ntm-sec-h{position:sticky;top:0;z-index:1;display:flex;align-items:baseline;gap:6px;padding:12px 0 6px;background:var(--white);
+  border-bottom:1px solid var(--stroke);font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.ntm-sec-n{font-weight:400;letter-spacing:0}
+.ntm-sec .ntm-row{padding-left:10px}
+/* Add task: black, always the same words. */
+.ntm-add{background:var(--ink);border-color:var(--ink);color:var(--white)}
+.ntm-add:hover:not(:disabled){background:#000}
+.ntm-acts .ntm-add:disabled{opacity:.3}

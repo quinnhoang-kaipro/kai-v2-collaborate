@@ -2596,7 +2596,7 @@ function _renderGroupPageHtml(opts){
           })() : ''}
           <div class="pgd-title-l">
             <div class="pgd-title">${esc(g.name)}</div>
-            ${window.__KAI_SHOP && g.items.length && g.items.every(t => typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id)) ? '<span class="co-pill" title="Removal after approval">Change order</span>' : ''}
+            ${window.__KAI_SHOP && g.items.length && g.items.every(t => typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id)) ? '<span class="co-pill" title="Removal after approval">Change</span>' : ''}
           ${editingGroupLabelFor === g.key
             ? `<input class="pgd-label-input" maxlength="40" value="${esc(groupLabels[g.key]||'')}" placeholder="e.g. Kitchen (including Pantry)"
                  onclick="event.stopPropagation()"
@@ -2612,14 +2612,15 @@ function _renderGroupPageHtml(opts){
         </div>
         <div class="sec-taskcard-hdr-r">
           <span class="sec-taskcard-amt-line">
-            <span class="sec-taskcard-amt">${money(gCost)}</span>
+            <span class="sec-taskcard-amt">${(window.__KAI_SHOP ? sbMoney(gCost) : money(gCost))}</span>
           </span>
         </div>
       </div>
+      ${ALLOW_ON && groupBy === 'dept' && g.key !== NO_PRODUCT_DEPT ? deptAllowanceHtml(g.key) : ''}
     </div>
     <div class="pgd-details-sec pgd-mediasec is-sticky">
       <div class="pgd-sec-hd">
-        <div class="pgd-media-ctx" aria-hidden="true"><span class="pgd-media-ctx-name">${esc(g.name)}</span><span class="pgd-media-ctx-amt">${money(gCost)}</span><span class="pgd-media-ctx-n">${g.items.length} ${g.items.length === 1 ? 'task' : 'tasks'}</span></div>
+        <div class="pgd-media-ctx" aria-hidden="true"><span class="pgd-media-ctx-name">${esc(g.name)}</span><span class="pgd-media-ctx-amt">${(window.__KAI_SHOP ? sbMoney(gCost) : money(gCost))}</span><span class="pgd-media-ctx-n">${g.items.length} ${g.items.length === 1 ? 'task' : 'tasks'}</span></div>
         <div class="pgd-details-title">Group and Task Photos${allGroupPhotos.length ? ` <span class="sec-mod-count is-static">&bull; ${allGroupPhotos.length} total ${allGroupPhotos.length === 1 ? 'photo' : 'photos'}</span>` : ''}</div>
         <div class="pgd-sec-hd-r">
           <button class="sec-mod-add" onclick="event.stopPropagation();goToProgressPhotos()" title="View every photo in Progress and add more">View all &amp; add</button>
