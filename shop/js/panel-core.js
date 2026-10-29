@@ -160,7 +160,7 @@ function _coPillHtml(t){
   const open = taskHasOpenChangeOrder(t);
   if(!open && !(window.__KAI_SHOP && taskHasDraftChangeOrder(t))) return '';
   const why = coReasonFor(t);
-  return `<span class="co-pill" title="${esc(why)} after approval — ${open ? 'waiting on approval' : 'change order in draft'}">Change order</span>`;
+  return `<span class="co-pill" title="${esc(why)} after approval — ${open ? 'waiting on approval' : 'change order in draft'}">${window.__KAI_SHOP ? 'Change' : 'Change order'}</span>`;
 }
 
 function taskKeys(t){

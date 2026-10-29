@@ -12,7 +12,15 @@ function _fmtDollars(n){
 function _fmtDelta(d){
   if(!d) return '';
   const sign = d > 0 ? '+' : '−';
+  // Shop with Kai reads to the cent; everywhere else stays whole dollars.
+  if(window.__KAI_SHOP) return sign + '$' + Math.abs(d).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
   return sign + '$' + Math.abs(Math.round(d)).toLocaleString();
+}
+/* The sidebar's money. Shop with Kai shows it to the cent and unrounded;
+   the other prototypes keep whole dollars. */
+function sbMoney(n){
+  if(window.__KAI_SHOP) return (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  return '$' + Math.round(n).toLocaleString();
 }
 /* Deep-ish copy of a task's Option → Line-Item(product) tree, captured into the
    approved-scope snapshot (__TASK_ORIGINALS) so the change-order summary can
