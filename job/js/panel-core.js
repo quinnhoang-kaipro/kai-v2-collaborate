@@ -76,6 +76,9 @@ function taskHasDraftChangeOrder(t){
   if(__CO_SUBMITTED.has(t.id)) return false;   // already handed over
   if(__CO_ADDED.has(t.id) || __CO_REMOVED.has(t.id)) return true;
   if(typeof taskHasSnapshotChanges === 'function' && taskHasSnapshotChanges(t)) return true;
+  // A price moved through its options' line items — no flat field differs,
+  // but the total does.
+  if(typeof taskDelta === 'function' && Math.round(taskDelta(t))) return true;
   if(typeof coHasChange === 'function' && coHasChange(t.id)) return true;
   return false;
 }
@@ -150,10 +153,14 @@ function approveChangeOrder(id){
 }
 /* The pill. Only once submitted — before that the change is the contractor's
    draft and the bar is where it lives. */
+/* One tag for every change after approval — a removal, a new task, an edit —
+   whether the change order is still a draft or waiting on approval. What
+   kind of change it is goes in the tooltip. */
 function _coPillHtml(t){
-  if(!taskHasOpenChangeOrder(t)) return '';
+  const open = taskHasOpenChangeOrder(t);
+  if(!open && !(window.__KAI_SHOP && taskHasDraftChangeOrder(t))) return '';
   const why = coReasonFor(t);
-  return `<span class="co-pill" title="${esc(why)} after approval — waiting on approval">${esc(why === 'Changed' ? 'Change order' : why)}</span>`;
+  return `<span class="co-pill" title="${esc(why)} after approval — ${open ? 'waiting on approval' : 'change order in draft'}">${window.__KAI_SHOP ? 'Change' : 'Change order'}</span>`;
 }
 
 function taskKeys(t){
@@ -401,7 +408,7 @@ function taskGroupLabel(t){
   return t.room || '—';
 }
 function groupKindNoun(){
-  return groupBy === 'contractor' ? 'contractor' : (groupBy === 'dept' ? 'department' : 'group');
+  return groupBy === 'contractor' ? 'contractor' : (groupBy === 'dept' ? 'department' : 'room');
 }
 
 /* ════════════ SCOPE SEARCH (floating palette) ════════════ */
@@ -951,10 +958,13 @@ function renderStateBar(){
   bar.hidden = false;
   // Group by toggle + Filter icon are always present — they're the scoping
   // controls for the sidebar and belong at the top of every state.
-  const groupBySeg = `<div class="sb-tools-seg" role="tablist" aria-label="Group scope by">
-    <button id="grpRoom" class="${groupBy==='room'?'active':''}" onclick="setGroupBy('room')">Group</button>
-    <button id="grpContractor" class="${groupBy==='contractor'?'active':''}" onclick="setGroupBy('contractor')">Contractor</button>
-    <button id="grpDept" class="${groupBy==='dept'?'active':''}" onclick="setGroupBy('dept')">Departments</button>
+  /* Named for what each view is for: everything, by room (All), who is
+     paid to do it (Labour, by contractor), what is bought for it
+     (Materials, by department). The ids keep their old names. */
+  const groupBySeg = `<div class="sb-tools-seg" role="tablist" aria-label="View scope by">
+    <button id="grpRoom" class="${groupBy==='room'?'active':''}" onclick="setGroupBy('room')">All</button>
+    <button id="grpContractor" class="${groupBy==='contractor'?'active':''}" onclick="setGroupBy('contractor')">Labor</button>
+    <button id="grpDept" class="${groupBy==='dept'?'active':''}" onclick="setGroupBy('dept')">Materials</button>
   </div>`;
   // Settings icon — reveals the per-group duplicate icon (draft stage only).
   // Keeps group rows clean by default; click to toggle the tool on/off.

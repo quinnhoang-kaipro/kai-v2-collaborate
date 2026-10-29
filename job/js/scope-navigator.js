@@ -1,5 +1,21 @@
 /* ════════════ SIDEBAR ════════════ */
+let _carryTaskId = null;   // the task a product line was reached from (layout file)
 function setGroupBy(g){
+  /* ShopwithKai_layout.html: the Editor shows what is selected, and the
+     selection follows the grouping across — a task becomes its product line
+     under Departments, and a product line goes back to the task last open
+     in it. The tab never changes; only what it shows. */
+  if(window.__KAI_SHOP_LAYOUT && g !== groupBy){
+    if(g === 'dept' && selId != null){
+      const t = TASKS.find(x => x.id === selId);
+      if(t){ const tl = taskLine(t); _carryTaskId = t.id; selId = null; openIds.clear(); selGroupKey = null; selLineKey = `${tl.dept}|${tl.line}`; }
+    } else if(g !== 'dept' && selLineKey){
+      const back = TASKS.find(x => x.id === _carryTaskId && `${taskLine(x).dept}|${taskLine(x).line}` === selLineKey)
+        || TASKS.find(x => `${taskLine(x).dept}|${taskLine(x).line}` === selLineKey);
+      selLineKey = null;
+      if(back){ selId = back.id; openIds = new Set([back.id]); selGroupKey = null; scopeView = false; }
+    }
+  }
   groupBy=g; collapsedGrps=null;
   if(g !== 'dept') selLineKey = null;   // product lines only exist under Departments
   const rBtn=document.getElementById('grpRoom'); if(rBtn) rBtn.classList.toggle('active',g==='room');
@@ -22,6 +38,30 @@ let scopeEditMode = false;
 // approved, so any field edits create a change order. Snapshot every task's
 // current values at load so hasChanged() / wasIndicator() can render "Was
 // $X" chips next to fields the user has since modified.
+/* Shop with Kai prices to the cent: the mock catalogue is all whole dollars,
+   so each product's unit price picks up a steady few cents and
+   the task totals are rebuilt from them. Registered ahead of the snapshot
+   below, so the approved prices carry the cents too. */
+function _seedShopCents(){
+  const cents = key => { let h = 0; for(const ch of String(key)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return (h % 99 + 1) / 100; };
+  const fmt = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  TASKS.forEach(t => {
+    const opts = Array.isArray(t.options) ? t.options : [];
+    let hit = false;
+    // Keyed on position, not the product's id: those are minted fresh on
+    // every load, and the cents should not move between visits.
+    opts.forEach((o, oi) => (o.products || []).forEach((p, pi) => {
+      const v = _parseDollars(p.parts);
+      if(v > 0 && v === Math.floor(v)){ p.parts = fmt(v + cents(`${t.id}|${oi}|${pi}`)); hit = true; }
+    }));
+    if(hit) opts.forEach(o => { if((o.products || []).length) recomputeOptionFromProducts(t, o); });
+    else {
+      const c = _parseDollars(t.cost);
+      if(c > 0 && c === Math.floor(c)) t.cost = fmt(c + cents(t.id));
+    }
+  });
+}
+if(window.__KAI_SHOP) document.addEventListener('DOMContentLoaded', _seedShopCents);
 if(PROJ_MODE === 'work' || PROJ_MODE === 'closeout'){
   // Deferred to DOMContentLoaded so TASKS is fully seeded (per any preset
   // fixup that runs above) before we capture the snapshot.
@@ -34,12 +74,46 @@ if(PROJ_MODE === 'work' || PROJ_MODE === 'closeout'){
         options:(typeof _snapshotOptions === 'function') ? _snapshotOptions(t) : [],
       };
     });
+    if(window.__KAI_SHOP && typeof WORK_TRACK !== 'undefined' && WORK_TRACK === 'change_order') _seedCoReviewDemo();
     // Add co-mode body class so the "CHANGE ORDER" pill CSS lights up on
     // any task whose fields diverge from its snapshot. Existing logic added
     // this class only for context=construction URL param; broadening here
     // so closeout mode gets the same treatment.
     document.body.classList.add('co-mode');
   });
+}
+// The panel draws once as its scripts load, before the seeds above run, so
+// Shop with Kai draws again with the cents and the change order in place.
+if(window.__KAI_SHOP) document.addEventListener('DOMContentLoaded', () => { if(typeof renderAll === 'function') renderAll(); });
+/* Shop with Kai, step 6 (change order review): a change order with more in
+   it than one edit — a whole room taken out (Garage), single tasks taken
+   out, and prices moved both ways — submitted and waiting on review. Made
+   after the approved snapshot, so every change reads against it. Mock. */
+function _seedCoReviewDemo(){
+  const T = id => TASKS.find(t => t.id === id);
+  // A task's price moves through its products where it has them, so the
+  // option and the line items agree; otherwise on the task itself.
+  const reprice = (id, f) => {
+    const t = T(id); if(!t) return;
+    const hit = (typeof taskOptions === 'function' ? taskOptions(t) : []).flatMap(o => (o.products || []).filter(p => typeof productIsPicked === 'function' && productIsPicked(p)).map(p => ({o, p})))[0];
+    if(hit && typeof recomputeOptionFromProducts === 'function'){
+      hit.p.qty = String(Math.max(1, Math.round(_parseDollars(hit.p.qty) * f)));
+      recomputeOptionFromProducts(t, hit.o);
+    } else {
+      t.cost = money(Math.round(_parseDollars(t.cost) * f));
+    }
+  };
+  reprice(1, 1.3);    // Kitchen › Cabinets — two more boxes
+  reprice(2, 1.25);   // Kitchen › Countertops — the island top
+  reprice(12, 0.75);  // Bathroom › Flooring — the tub alcove left as is
+  reprice(10, 1.6);   // Master Bath › Toilet — comfort height
+  // The whole Garage, and two paint tasks.
+  TASKS.filter(t => t.room === 'Garage').forEach(t => __CO_REMOVED.add(t.id));
+  [6, 19].forEach(id => { if(T(id)) __CO_REMOVED.add(id); });
+  // The job manager reviews it; the field agent is the one still putting it
+  // together, so for them it is a draft.
+  if(typeof USER_ROLE !== 'undefined' && USER_ROLE === 'field_agent') return;
+  TASKS.filter(t => __CO_REMOVED.has(t.id) || computeCostDelta(t) !== 0).forEach(t => __CO_SUBMITTED.add(t.id));
 }
 // Which task descriptions are currently expanded (unfolded) in the Task
 // tab card. Long descriptions collapse by default so the card stays
@@ -647,14 +721,17 @@ function taskRow(t, opts){
   const amtHtml = (opts && opts.amtHtml != null) ? opts.amtHtml
     : isMissing
       ? `<span class="task-amt">$--</span>`
-      : `<span class="task-amt">${t.cost}</span>${deltaChipHtml(taskDelta(t))}`;
+      : window.__KAI_SHOP
+        // The change sits left of the price, so the latest prices line up.
+        ? _shopAmtHtml(shopSide(t, 'room'))
+        : `<span class="task-amt">${t.cost}</span>${deltaChipHtml(taskDelta(t))}`;
   return `<div class="task${selId===t.id?' sel':''}${isApproved?' approved':''}${needs?' needs-product':''}${hasCo?' co-pending':''}${(typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id))?' co-removed':''}${isMissing?' is-missing':''}" data-tid="${t.id}">
     <div class="task-row" onclick="${(opts && opts.onRow) || `selectTask(${t.id})`}">
       <div class="task-mid">
         <div class="task-mid-top">
           ${typeof flagMarkHtml === 'function' ? flagMarkHtml(t, 'task-flag') : ''}<span class="task-name">${(opts && opts.ctx) ? `<span class="task-ctx">${esc(opts.ctx)} ›</span> ` : ''}${t.name}</span>
         </div>
-        <div class="task-mid-status">${taskStatus(t)}${modChipsHtml}</div>
+        <div class="task-mid-status">${taskStatus(t)}${modChipsHtml}${(typeof ALLOW_ON !== 'undefined' && ALLOW_ON) ? allowMarkHtml(taskAllowFlag(t), 'task') : ''}</div>
         ${(() => {
           // Only emitted when there's something in it. It used to always
           // render and lean on :empty to collapse, which never matched —
@@ -689,13 +766,33 @@ function renderSidebar(){
   // If the shell has pushed a version-specific scope total (via postMessage), show
   // that number instead of the summed task total — so versions read consistently
   // between the version dropdown and the sidebar rollup.
-  const totalDisplay = (typeof __KAI_SCOPE_TOTAL_OVERRIDE !== 'undefined' && __KAI_SCOPE_TOTAL_OVERRIDE) ? __KAI_SCOPE_TOTAL_OVERRIDE : money(ruCost);
+  const totalDisplay = (typeof __KAI_SCOPE_TOTAL_OVERRIDE !== 'undefined' && __KAI_SCOPE_TOTAL_OVERRIDE) ? __KAI_SCOPE_TOTAL_OVERRIDE : sbMoney(ruCost);
   const scopeDeltaChip = deltaChipHtml(scopeDelta());
   // The count sits left of the title now; the rollup keeps the money.
   const _hc = document.getElementById('sbHdrCount');
   if(_hc) _hc.textContent = `${ruCount} ${ruCount===1?'task':'tasks'}`;
-  document.getElementById('sbRollup').innerHTML=
-    `<span class="total">${totalDisplay}</span>${scopeDeltaChip}`;
+  /* The bar names what the view adds up: the whole scope by room, or one
+     side of it — the labour paid to contractors, the materials ordered —
+     each the same figure the Record tab's bar shows for that segment, so
+     the two never disagree. */
+  const _ht = document.querySelector('#sbHdr .sb-hdr-title');
+  const _cls = (groupBy !== 'room' && typeof _regClassify === 'function') ? _regClassify() : null;
+  let _sideTotal = null;
+  if(_cls && groupBy === 'dept') _sideTotal = _cls.onPos;
+  else if(_cls && groupBy === 'contractor'){
+    const live = TASKS.reduce((a, t) => a + dollars(t.cost), 0);
+    _sideTotal = Math.max(0, live - _cls.onPos - _cls.deferredAll);
+  }
+  if(_ht) _ht.textContent = _sideTotal == null ? 'All scope' : (groupBy === 'dept' ? 'All materials' : 'All labor');
+  // Shop with Kai: the total after the change order — removals out, price
+  // changes in — with what it moved by on its left, in every view.
+  const _shopScope = !!window.__KAI_SHOP && !(typeof __KAI_SCOPE_TOTAL_OVERRIDE !== 'undefined' && __KAI_SCOPE_TOTAL_OVERRIDE);
+  const _sc = _shopScope ? _shopSum(tasks, _shopMode()) : null;
+  document.getElementById('sbRollup').innerHTML = _shopScope
+    ? `${deltaChipHtml(_sc.delta)}<span class="total">${sbMoney(_sc.now)}</span>`
+    : _sideTotal == null
+    ? (window.__KAI_SHOP ? `${scopeDeltaChip}<span class="total">${totalDisplay}</span>` : `<span class="total">${totalDisplay}</span>${scopeDeltaChip}`)
+    : `<span class="total">${sbMoney(_sideTotal)}</span>`;
   if(!groups.length){
     // Distinguish "the whole scope is empty" (Step 1 · Empty draft — offer
     // an add-your-first-group CTA) from "you filtered everything out"
@@ -715,11 +812,26 @@ function renderSidebar(){
     // A department totals what its products cost — it's the shopping view,
     // and labour on top would make the figure useless for a budget at the
     // till. Rooms and contractors total the task, as before.
+    /* Materials and Labour total only their side of each task, and only
+       what is on the job now: deferred work waits for a change order, as
+       the Record's bar keeps it apart. So the groups add up to the header
+       above them, and the header to the Record's bar. Room totals the task. */
     const cost = groupBy === 'dept'
-      ? deptLines(g.items).reduce((a, l) => a + deptLineCost(l), 0)
-      : g.items.reduce((s,t)=>s+dollars(t.cost),0);
+      ? g.items.reduce((a, t) => a + _taskMatSplit(t).now, 0)
+      : groupBy === 'contractor'
+        ? g.items.reduce((a, t) => a + (_taskIsDeferred(t) ? 0 : _taskLabor(t)), 0)
+        : g.items.reduce((s,t)=>s+dollars(t.cost),0);
     const isCollapsed=collapsedGrps.has(g.key);
     const allApproved=g.items.every(t=>approved.has(t.id));
+    /* Shop with Kai, under a change order, by room: a room whose every task
+       is being taken out is struck through whole; otherwise a total that
+       moves reads approved (struck) → after the change order. */
+    const _isRm = t => typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id);
+    const grpRemoved = !!window.__KAI_SHOP && g.items.length > 0 && g.items.every(_isRm);
+    const coRoom = !!window.__KAI_SHOP && groupBy === 'room' && g.items.some(t => __TASK_ORIGINALS[t.id]);
+    const grpWas = coRoom ? g.items.reduce((s, t) => s + (__TASK_ORIGINALS[t.id] ? originalTaskCost(t.id) : dollars(t.cost)), 0) : cost;
+    const grpNow = coRoom ? g.items.filter(t => !_isRm(t)).reduce((s, t) => s + dollars(t.cost), 0) : cost;
+    const _gs = window.__KAI_SHOP ? _shopSum(g.items, _shopMode()) : null;
     // In draft mode we surface an "Add task" affordance INSIDE each group
     // (see draftAddTaskRow below) rather than a "+" button in the header —
     // the block-level dashed row matches the "+ New group" pattern at the
@@ -737,7 +849,7 @@ function renderSidebar(){
     // SHOP-EDIT VARIANT: sidebar is view-only. No "+ Update" affordance on
     // group headers — updates get posted from the Task / Progress tabs.
     const progressAdd = '';
-    return `<div class="grp${g.pinned?' pinned':''}${isCollapsed?' collapsed':''}${approvedGroupsExplicit.has(g.key)?' allapproved':''}${selGroupKey===g.key?' is-selgrp':''}${g.items.length?'':' is-empty'}" data-grp="${g.key}">
+    return `<div class="grp${grpRemoved?' co-removed':''}${g.pinned?' pinned':''}${isCollapsed?' collapsed':''}${approvedGroupsExplicit.has(g.key)?' allapproved':''}${selGroupKey===g.key?' is-selgrp':''}${g.items.length?'':' is-empty'}" data-grp="${g.key}">
       <div class="grp-hdr" onclick="selectGroup('${g.key}')">
         <button class="grp-caret-btn" onclick="event.stopPropagation();toggleGrp(this)" aria-label="Toggle group" title="Expand / collapse">
           <svg class="grp-caret" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5l3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -750,9 +862,14 @@ function renderSidebar(){
           const n = g.items.length;
           return `<span class="grp-approve-caption" title="${n} ${n===1?'task':'tasks'}">${n} ${n===1?'task':'tasks'}</span>`;
         })()}
-        <span class="grp-total">${money(cost)}</span>
+        ${(typeof ALLOW_ON !== 'undefined' && ALLOW_ON && groupBy === 'dept') ? allowMarkHtml(deptAllowFlag(g.key), 'department') : ''}
+        ${_gs ? `${_leadChip(_gs.delta)}<span class="grp-total">${sbMoney(_gs.now)}</span>`
+          : grpRemoved ? `<span class="grp-total">${sbMoney(grpWas)}</span>`
+          : (coRoom && Math.round(grpWas) !== Math.round(grpNow))
+            ? `<span class="grp-total-was">${sbMoney(grpWas)}</span><span class="grp-total">${sbMoney(grpNow)}</span>`
+            : `<span class="grp-total">${sbMoney(cost)}</span>`}
         ${groupDecisionHtml(g)}
-        ${deltaChipHtml(groupDelta(g.items))}
+        ${(coRoom || window.__KAI_SHOP) ? '' : deltaChipHtml(groupDelta(g.items))}
         ${(IS_DRAFT_STAGE && !g.pinned && sbToolsVisible)?`<button class="grp-dup" onclick="event.stopPropagation();duplicateGroup('${g.key}')" title="Duplicate ${esc(g.name)} group">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="11" height="11" rx="1"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></svg></button>`:''}
         ${progressAdd}
@@ -775,6 +892,9 @@ function renderSidebar(){
             ? g.items.map(t => taskRow(t, {
                 onRow: `toggleGcTask(${t.id})`,
                 after: gcTaskOpen.has(t.id) ? _gcTaskLaborHtml(t) : '',
+                amtHtml: window.__KAI_SHOP
+                  ? _shopAmtHtml(shopSide(t, 'contractor'), _sbSideAmtHtml(t, _taskLabor(t), _taskIsDeferred(t) ? _taskLabor(t) : 0))
+                  : _sbSideAmtHtml(t, _taskLabor(t), _taskIsDeferred(t) ? _taskLabor(t) : 0),
               })).join('')
             : g.items.map(t => taskRow(t)).join('')}
       </div>
@@ -814,7 +934,16 @@ function deptLinesHtml(g){
         </button>
         <span class="dline-name">${esc(l.name)}</span>
         <span class="dline-need">${esc(isLabor ? `${l.items.length} ${l.items.length === 1 ? 'task' : 'tasks'}` : deptLineNeed(l.items))}</span>
-        <span class="dline-amt">${isLabor ? '' : money(Math.round(deptLineCost(l)))}</span>
+        ${(() => {
+          // What the line puts on the orders now; what waits for a change
+          // order is said beside it, not added in.
+          const ls = window.__KAI_SHOP ? _shopSum(l.items, 'dept') : null;
+          const now = ls ? ls.now : l.items.reduce((a, t) => a + _taskMatSplit(t).now, 0);
+          const later = l.items.reduce((a, t) => a + _taskMatSplit(t).later, 0);
+          return (ls ? _leadChip(ls.delta) : '')
+            + `<span class="dline-amt">${now ? sbMoney(now) : (later ? '—' : (isLabor ? '' : sbMoney(0)))}</span>`
+            + (later && !window.__KAI_SHOP ? `<span class="dline-later" title="Waiting on a change order">+${money(Math.round(later))} deferred</span>` : '');
+        })()}
       </div>
       <div class="dline-body">${l.items.map(t => {
         // A task row here can open to show what it's buying from this line —
@@ -825,7 +954,12 @@ function deptLinesHtml(g){
           ctx: t.room,
           onRow: `toggleDeptTask('${k}',${t.id})`,
           after: open ? _deptTaskProductsHtml(l, t) : '',
-          amtHtml: isLabor ? null : _deptTaskAmtHtml(l, t),
+          amtHtml: (() => {
+            const sp = _taskMatSplit(t);
+            if(isLabor && !sp.now && !sp.later) return null;
+            const amt = _sbSideAmtHtml(t, sp.now + sp.later, sp.later);
+            return window.__KAI_SHOP ? _shopAmtHtml(shopSide(t, 'dept'), amt) : amt;
+          })(),
         });
       }).join('')}</div>
     </div>`;
@@ -851,7 +985,7 @@ function _gcTaskLaborHtml(t){
     const labor = _num(p.qty) * _num(p.labor);
     return `<div class="dtask-prod" title="${esc(name)} · ${esc(String(p.qty))} × ${esc(p.labor || '$0')} labor">
       <span class="dtask-prod-name">${esc(name)}</span>
-      <span class="dtask-prod-amt${labor ? '' : ' is-zero'}">${labor ? money(Math.round(labor)) : 'No labor'}</span>
+      <span class="dtask-prod-amt${labor ? '' : ' is-zero'}">${labor ? sbMoney(labor) : 'No labor'}</span>
     </div>`;
   }).join('')}</div>`;
 }
@@ -859,6 +993,40 @@ function _gcTaskLaborHtml(t){
    parts rate). A task with no catalogue rows at all falls back to its own
    product cost. Every figure in the Departments view is built from this, so
    task rows add up to their line and lines to their department. */
+/* A task's two sides, as the Record's bar splits the job: the materials it
+   has picked (on options in the job), apart into what is on the orders now
+   and what is deferred — the task's or the row's Deferred modifier — and the
+   labour, which is the rest of the task. Summed over the scope these are the
+   bar's Materials and Labour exactly. */
+function _taskMatSplit(t){
+  let now = 0, later = 0;
+  const td = (t.mods || []).indexOf('deferred') !== -1;
+  taskOptions(t).forEach(o => {
+    if(!optionIsAdded(o)) return;
+    (o.products || []).forEach(p => {
+      if(!productIsPicked(p)) return;
+      const a = _num(p.qty) * _num(p.parts);
+      if(td || (p.mods || []).indexOf('deferred') !== -1) later += a; else now += a;
+    });
+  });
+  return {now, later};
+}
+function _taskIsDeferred(t){ return (t.mods || []).indexOf('deferred') !== -1; }
+function _taskLabor(t){ const sp = _taskMatSplit(t); return Math.max(0, dollars(t.cost) - sp.now - sp.later); }
+/* A task's figure in the Materials or Labour view: its side ("$1,620"),
+   then the whole task muted ("of $3,520"); what is deferred says so instead
+   of counting. */
+function _sbSideAmtHtml(t, side, later){
+  const r = n => window.__KAI_SHOP ? Math.round(n * 100) / 100 : Math.round(n);
+  const whole = r(dollars(t.cost || 0));
+  const part = r(side), wait = r(later || 0);
+  const of = (whole && whole !== part) ? `<span class="task-amt-of">of ${sbMoney(whole)}</span>` : '';
+  // All of it waits: the grey amount says so, and the row's Deferred tag
+  // names it — no second "deferred" under the figure.
+  if(wait && wait >= part) return `<span class="task-amt is-later">${sbMoney(part)}</span>`;
+  if(!part) return `<span class="task-amt is-none">—</span>${of}`;
+  return `<span class="task-amt">${sbMoney(part - wait)}</span>${wait ? `<span class="task-amt-of">+${sbMoney(wait)} deferred</span>` : of}`;
+}
 function taskLineCost(l, t){
   const picked = _lineTaskPicked(l, t);
   if(picked.length) return picked.reduce((a, h) => a + _num(h.p.qty) * _num(h.p.parts), 0);
@@ -867,17 +1035,6 @@ function taskLineCost(l, t){
 }
 function deptLineCost(l){
   return l.items.reduce((a, t) => a + taskLineCost(l, t), 0);
-}
-/* "$1,620 of $3,520": the line's share first, in the row's amount style so
-   it's what adds up to the line, then the whole task's cost, muted, as
-   context. Just the share when it is the whole task; a dash when nothing's
-   picked yet. */
-function _deptTaskAmtHtml(l, t){
-  const part = Math.round(taskLineCost(l, t));
-  const whole = Math.round(dollars(t.cost || 0));
-  const of = (whole && whole !== part) ? `<span class="task-amt-of">of ${money(whole)}</span>` : '';
-  if(!part) return `<span class="task-amt is-none">—</span>${of}`;
-  return `<span class="task-amt">${money(part)}</span>${of}`;
 }
 let deptTaskOpen = new Set();   // `${lineKey}|${taskId}` rows showing their products
 /* Clicking a task under a product line opens the task, as anywhere else,
@@ -902,7 +1059,7 @@ function _deptTaskProductsHtml(l, t){
     const amt = _num(h.p.qty) * _num(h.p.parts);
     return `<div class="dtask-prod" title="${esc(name)} · ${esc(String(h.p.qty))}">
       <span class="dtask-prod-name">${esc(name)}</span>
-      <span class="dtask-prod-amt">${money(Math.round(amt))}</span>
+      <span class="dtask-prod-amt">${sbMoney(amt)}</span>
     </div>`;
   }).join('')}</div>`;
 }
@@ -1186,6 +1343,77 @@ function setLineTaskProduct(key, id, sku){
   }
   renderAll();
 }
+/* Adding and removing (ShopwithKai_layout): a line can buy more than one
+   product. Add puts a product on every task in the line beside what each
+   already has, at the task's own need; Remove takes that one product off
+   every task and leaves the rest. */
+// ids: only these tasks; every task in the line when left out. qty: task id →
+// how many each gets, else the task's own need.
+function addLineProduct(key, sku, ids, qty){
+  const l = deptLineByKey(key); if(!l) return;
+  const cat = _lineCat(l, sku); if(!cat) return;
+  const sup = lineSupplierFor(l, cat.sku);
+  const offer = offersForSku(cat.sku).find(o => o.supplier === sup);
+  const targets = ids ? l.items.filter(t => ids.includes(t.id)) : l.items;
+  targets.forEach(t => {
+    const h = _ensureLineProductRow(t, cat); if(!h) return;
+    if(qty && qty[t.id] != null) h.p.qty = String(qty[t.id]);
+    else if(!productIsPicked(h.p)) h.p.qty = _taskNeedQty(t, cat);
+    if(offer){ h.p.supplier = offer.supplier; h.p.parts = _fmtDollars(offer.price); }
+    if(!optionIsAdded(h.o)) h.o.added = true;
+    recomputeOptionFromProducts(t, h.o);
+    _syncTaskProduct(t);
+  });
+  toast(`${cat.brand} ${cat.name} added to ${targets.length === 1 ? `${targets[0].room} › ${targets[0].name}` : `${targets.length} tasks`}`);
+  renderAll();
+}
+/* One task, one of its products: swap it for another (or, with no sku, take
+   it off). The task's other products stay; the quantity carries over. */
+function _swapTaskProduct(l, t, fromSku, toSku){
+  const from = _lineTaskPicked(l, t).filter(h => h.p.sku === fromSku);
+  const keepQty = from.length ? from[0].p.qty : null;
+  const touched = new Set();
+  from.forEach(h => { h.p.qty = '0'; touched.add(h.o); });
+  let cat = null;
+  if(toSku){
+    cat = _lineCat(l, toSku);
+    const h = cat && _ensureLineProductRow(t, cat);
+    if(h){
+      const offer = offersForSku(cat.sku).find(o => o.supplier === lineSupplierFor(l, cat.sku));
+      h.p.qty = String(_num(h.p.qty) + _num(keepQty || _taskNeedQty(t, cat)));
+      if(offer){ h.p.supplier = offer.supplier; h.p.parts = _fmtDollars(offer.price); }
+      if(!optionIsAdded(h.o)) h.o.added = true;
+      touched.add(h.o);
+    }
+  }
+  touched.forEach(o => recomputeOptionFromProducts(t, o));
+  _syncTaskProduct(t);
+  return cat;
+}
+// Every task on one product, onto another.
+function swapLineProduct(key, fromSku, toSku){
+  const l = deptLineByKey(key); if(!l) return;
+  const on = l.items.filter(t => _lineTaskPicked(l, t).some(h => h.p.sku === fromSku));
+  let cat = null;
+  on.forEach(t => { cat = _swapTaskProduct(l, t, fromSku, toSku) || cat; });
+  if(cat) toast(`${cat.brand} ${cat.name} on ${on.length === 1 ? `${on[0].room} › ${on[0].name}` : `${on.length} tasks`}`);
+  renderAll();
+}
+function removeLineProduct(key, sku){
+  const l = deptLineByKey(key); if(!l) return;
+  let name = '';
+  l.items.forEach(t => {
+    const touched = new Set();
+    _lineTaskPicked(l, t).filter(h => h.p.sku === sku).forEach(h => {
+      name = [h.p.brand, h.p.product].filter(Boolean).join(' ');
+      h.p.qty = '0'; touched.add(h.o);
+    });
+    touched.forEach(o => recomputeOptionFromProducts(t, o));
+    if(touched.size) _syncTaskProduct(t);
+  });
+  toast(`${name || 'Product'} removed`);
+  renderAll();
+}
 function clearLineProduct(key){
   const l = deptLineByKey(key); if(!l) return;
   const targets = l.items.slice();
@@ -1195,12 +1423,23 @@ function clearLineProduct(key){
 }
 /* One task's own quantity. On its picked product once it has one; before
    that, on the task itself, which is what the first apply will use. */
-function bumpLineTaskQty(key, id, dir){
+// sku: which of the task's products to step, when it carries more than one;
+// optId: in which of the task's options.
+function bumpLineTaskQty(key, id, dir, sku, optId){
   const l = deptLineByKey(key); if(!l) return;
   const t = l.items.find(x => x.id === id); if(!t) return;
   const picked = _lineTaskPicked(l, t);
   if(picked.length){
-    const h = picked[0];
+    const h = (sku && picked.find(x => x.p.sku === sku && (!optId || x.o.id === optId))) || picked[0];
+    // Stepping a product down past 1 takes it off that option.
+    if(sku && _num(h.p.qty) + dir < 1){
+      h.p.qty = '0';
+      recomputeOptionFromProducts(t, h.o);
+      _syncTaskProduct(t);
+      toast(`${[h.p.brand, h.p.product].filter(Boolean).join(' ')} taken off ${t.room} › ${t.name}`);
+      renderAll();
+      return;
+    }
     h.p.qty = String(Math.max(1, _num(h.p.qty) + dir));
     recomputeOptionFromProducts(t, h.o);
     renderAll();
@@ -1281,6 +1520,8 @@ const NEW_TASK_TEMPLATES = [
   {name:'Deck Repair',                   cat:'Exterior'},
 ];
 function addTaskToGroup(key){
+  // Shop with Kai picks from a modal instead, and adds on a button.
+  if(window.__KAI_SHOP){ openTaskModal(key); return; }
   addingTaskFor = key;
   addTaskSearch = '';
   // Make sure the group is expanded so the picker is visible.
@@ -1341,6 +1582,101 @@ function _ntpListRowsHtml(){
     <span class="ntp-custom-cat">CUSTOM</span>
   </button>`;
   return rows + customBtn;
+}
+/* ── New task modal (Shop with Kai) ──
+   The same catalogue as the inline picker, in a modal over the panel: search
+   at the top, the tasks as a plain list under it, and nothing added until
+   Add is pressed. A row is picked by clicking it; the custom row at the end
+   picks whatever has been typed. */
+let _ntmGroup = null;   // group key the task goes into
+let _ntmSel = null;     // {name, cat} picked, or null
+let _ntmCat = null;     // category the list is narrowed to, or null for all
+// The catalogue's categories, in the order it lists them.
+function _ntmCats(){ return [...new Set(NEW_TASK_TEMPLATES.map(t => t.cat))]; }
+function openTaskModal(key){
+  _ntmGroup = key; _ntmSel = null; _ntmCat = null; addTaskSearch = '';
+  let host = document.getElementById('ntmHost');
+  if(!host){ host = document.createElement('div'); host.id = 'ntmHost'; document.body.appendChild(host); }
+  const g = (typeof groupTasks === 'function' ? groupTasks(TASKS) : []).find(x => x.key === key);
+  host.innerHTML = `<div class="se-modal-scrim open" onclick="closeTaskModal()"></div>
+    <div class="se-modal open ntm" role="dialog" aria-modal="true" aria-labelledby="ntmTitle"
+         onkeydown="if(event.key==='Escape'){event.preventDefault();closeTaskModal()}">
+      <div class="se-modal-title" id="ntmTitle">Add a task to ${esc(g ? g.name : key)}</div>
+      <label class="ntm-search">
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.4"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <input type="text" id="ntmSearch" placeholder="Search tasks to add…" autocomplete="off"
+          oninput="ntmSearch(this.value)"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();ntmAdd()}">
+      </label>
+      <div class="ntm-cats" id="ntmCats" role="tablist" aria-label="Categories">${_ntmCatsHtml()}</div>
+      <div class="ntm-list" id="ntmList" role="listbox" aria-label="Tasks">${_ntmRowsHtml()}</div>
+      <div class="se-modal-actions ntm-acts">
+        <button type="button" class="se-btn se-btn-secondary" onclick="closeTaskModal()">Cancel</button>
+        <button type="button" class="se-btn ntm-add" id="ntmAddBtn" onclick="ntmAdd()" disabled>Add task</button>
+      </div>
+    </div>`;
+  requestAnimationFrame(() => { const i = document.getElementById('ntmSearch'); if(i) i.focus(); });
+}
+function closeTaskModal(){
+  _ntmGroup = null; _ntmSel = null; addTaskSearch = '';
+  const host = document.getElementById('ntmHost');
+  if(host) host.innerHTML = '';
+}
+/* Browse by category: a chip per category narrows the list to it, and the
+   list itself is sectioned by category under headers that stay put while
+   their tasks scroll. Search works across whichever is showing. */
+function _ntmMatches(){
+  const q = (addTaskSearch || '').toLowerCase().trim();
+  return NEW_TASK_TEMPLATES.filter(t => (!q || t.name.toLowerCase().includes(q) || t.cat.toLowerCase().includes(q)));
+}
+function _ntmCatsHtml(){
+  const m = _ntmMatches();
+  const chip = (cat, label, n) => `<button type="button" class="ntm-chip${_ntmCat === cat ? ' is-on' : ''}" role="tab" aria-selected="${_ntmCat === cat}"
+      onclick="ntmCat(${cat == null ? 'null' : JSON.stringify(cat).replace(/"/g, '&quot;')})"${n ? '' : ' disabled'}>${esc(label)}<span class="ntm-chip-n">${n}</span></button>`;
+  return chip(null, 'All', m.length) + _ntmCats().map(c => chip(c, c, m.filter(t => t.cat === c).length)).join('');
+}
+function _ntmRowsHtml(){
+  const items = _ntmMatches().filter(t => !_ntmCat || t.cat === _ntmCat);
+  const on = t => _ntmSel && _ntmSel.cat !== 'Custom' && _ntmSel.name === t.name;
+  const rows = _ntmCats().map(c => {
+    const its = items.filter(t => t.cat === c);
+    if(!its.length) return '';
+    return `<div class="ntm-sec" role="group" aria-label="${esc(c)}">
+      <div class="ntm-sec-h">${esc(c)}<span class="ntm-sec-n">${its.length}</span></div>
+      ${its.map(t => `<button type="button" class="ntm-row${on(t) ? ' is-sel' : ''}" role="option" aria-selected="${on(t)}"
+        onclick="ntmPick(${NEW_TASK_TEMPLATES.indexOf(t)})"><span class="ntm-name">${esc(t.name)}</span></button>`).join('')}
+    </div>`;
+  }).join('') || `<div class="ntm-empty">No matching tasks</div>`;
+  const typed = (addTaskSearch || '').trim();
+  const customOn = _ntmSel && _ntmSel.cat === 'Custom';
+  const custom = `<button type="button" class="ntm-row is-custom${customOn ? ' is-sel' : ''}" role="option" aria-selected="${!!customOn}" onclick="ntmPickCustom()">
+      <span class="ntm-name">${typed ? `Add “${esc(typed)}” as a custom task` : 'A task that isn\u2019t listed'}</span><span class="ntm-cat">Custom</span>
+    </button>`;
+  return rows + custom;
+}
+function _ntmRefresh(){
+  const list = document.getElementById('ntmList'); if(list) list.innerHTML = _ntmRowsHtml();
+  const cats = document.getElementById('ntmCats'); if(cats) cats.innerHTML = _ntmCatsHtml();
+  const btn = document.getElementById('ntmAddBtn'); if(btn) btn.disabled = !_ntmSel;
+}
+function ntmCat(c){
+  _ntmCat = c;
+  _ntmRefresh();
+  const list = document.getElementById('ntmList'); if(list) list.scrollTop = 0;
+}
+function ntmSearch(v){
+  addTaskSearch = v;
+  // A custom pick follows what's typed; a catalogue pick stays put.
+  if(_ntmSel && _ntmSel.cat === 'Custom') _ntmSel = {name: v.trim() || 'Untitled task', cat:'Custom'};
+  _ntmRefresh();
+}
+function ntmPick(i){ _ntmSel = {name: NEW_TASK_TEMPLATES[i].name, cat: NEW_TASK_TEMPLATES[i].cat}; _ntmRefresh(); }
+function ntmPickCustom(){ _ntmSel = {name: (addTaskSearch || '').trim() || 'Untitled task', cat:'Custom'}; _ntmRefresh(); }
+function ntmAdd(){
+  if(!_ntmSel || _ntmGroup == null) return;
+  const key = _ntmGroup, sel = _ntmSel;
+  closeTaskModal();
+  pickTaskTemplate(key, sel.name, sel.cat);
 }
 /* A task created after the scope was published has no snapshot to diff
    against, so it's recorded outright. */
@@ -2000,6 +2336,7 @@ function selectTask(id, opts){
     return;
   }
   scopeView = false;   // drilling into a task leaves the scope view
+  _carryTaskId = id;   // where a product line goes back to (layout file)
   // Any pending approve-confirm state belongs to the previously selected
   // task — clear it so switching tasks doesn't carry a stale confirm.
   taskApproveConfirmId = null;
@@ -2337,7 +2674,9 @@ function productLineDelta(t, o, p){
 // change-order / snapshot-delta plumbing commitTaskOption used to own.
 function recomputeOptionFromProducts(t, opt){
   const total = (Array.isArray(opt.products) ? opt.products : []).reduce((sum, p) => sum + productLineTotal(p), 0);
-  opt.cost = (typeof _fmtDollars === 'function') ? _fmtDollars(total) : '$' + total;
+  // Shop with Kai keeps the cents; the other prototypes store whole dollars.
+  const _store = n => window.__KAI_SHOP ? sbMoney(n) : (typeof _fmtDollars === 'function') ? _fmtDollars(n) : '$' + n;
+  opt.cost = _store(total);
   const tTotal = (t.options||[]).reduce((sum, o) => {
     // Un-added options are candidates, not scope — their money doesn't
     // count until someone adds them.
@@ -2345,7 +2684,7 @@ function recomputeOptionFromProducts(t, opt){
     const c = (typeof _parseDollars === 'function') ? _parseDollars(o.cost) : (parseFloat(String(o.cost || '0').replace(/[^0-9.-]/g,'')) || 0);
     return sum + c;
   }, 0);
-  t.cost = (typeof _fmtDollars === 'function') ? _fmtDollars(tTotal) : '$' + tTotal;
+  t.cost = _store(tTotal);
   if(typeof _reportCoEditMode === 'function') _reportCoEditMode();
 }
 function commitOptionProduct(id, oid, pid, field, value){
@@ -2531,6 +2870,63 @@ function computeCostDelta(t){
 function taskDelta(t){
   if(!__TASK_ORIGINALS[t.id]) return 0;
   return computeCostDelta(t);
+}
+/* Shop with Kai: what a task counts in the view on screen — the whole task
+   by room, its materials or its labor — now and as approved, and the change
+   between them. A task the change order takes out counts nothing now, so its
+   change is everything it used to count. */
+function _shopMode(){ return groupBy === 'dept' ? 'dept' : groupBy === 'contractor' ? 'contractor' : 'room'; }
+// The approved materials, from the snapshot, split as _taskMatSplit splits
+// today's: products are matched by id to read whether each is deferred.
+function _origMatSplit(t){
+  const o = __TASK_ORIGINALS[t.id];
+  let now = 0, later = 0;
+  if(!o || !Array.isArray(o.options)) return {now, later};
+  const cur = {};
+  taskOptions(t).forEach(co => (co.products || []).forEach(p => { cur[p.id] = p; }));
+  const td = _taskIsDeferred(t);
+  o.options.forEach(so => {
+    if(so.added === false) return;
+    (so.products || []).forEach(sp => {
+      if(!(_num(sp.qty) > 0)) return;
+      const p = cur[sp.id];
+      const a = _num(sp.qty) * _num(sp.parts);
+      if(td || (p && (p.mods || []).indexOf('deferred') !== -1)) later += a; else now += a;
+    });
+  });
+  return {now, later};
+}
+function shopSide(t, mode){
+  const o = __TASK_ORIGINALS[t.id];
+  let now, was;
+  if(mode === 'dept'){
+    now = _taskMatSplit(t).now;
+    was = o ? _origMatSplit(t).now : now;
+  } else if(mode === 'contractor'){
+    now = _taskIsDeferred(t) ? 0 : _taskLabor(t);
+    if(o){ const sp = _origMatSplit(t); was = _taskIsDeferred(t) ? 0 : Math.max(0, _parseDollars(o.cost) - sp.now - sp.later); }
+    else was = now;
+  } else {
+    now = dollars(t.cost);
+    was = o ? originalTaskCost(t.id) : now;
+  }
+  const removed = typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id);
+  if(removed) now = 0;
+  const delta = now - was;
+  return {now, was, delta: Math.abs(delta) < 0.005 ? 0 : delta, removed};
+}
+function _shopSum(items, mode){
+  return items.reduce((a, t) => { const s = shopSide(t, mode); a.now += s.now; a.delta += s.delta; return a; }, {now:0, delta:0});
+}
+// A group or line's change, set to sit left of its total.
+function _leadChip(d){ return d ? deltaChipHtml(d).replace('cost-delta ', 'cost-delta is-lead ') : ''; }
+// A task row's figure: the change, then the price. A removed task reads $0.00;
+// otherwise the view's own figure (with its "of" or deferred note) stays.
+function _shopAmtHtml(s, amt){
+  const fig = s.removed ? `<span class="task-amt">${sbMoney(0)}</span>`
+    : amt != null ? `<span class="tal-stack">${amt}</span>`
+    : `<span class="task-amt">${sbMoney(s.now)}</span>`;
+  return `${deltaChipHtml(s.delta)}${fig}`;
 }
 function groupDelta(items){
   if(!items || !items.length) return 0;
@@ -3421,6 +3817,10 @@ function setWorkMode(m){
     if(wb) wb.innerHTML = '<div class="shop-empty"><span class="shop-empty-title">'+m+'</span><span class="shop-empty-desc">Something went wrong rendering this view.</span></div>';
   }
   if(m==='shop') renderSidebar();   // re-render to apply needs-product highlights
+  // Leaving the Record leaves its order document: the turn buttons go back.
+  if(typeof _poSyncFocus === 'function') _poSyncFocus();
+  // The order beside it lights whichever of its rows this tab is showing.
+  if(typeof _renderPoSide === 'function') _renderPoSide();
 }
 
 /* ── Scope copies model ─────────────────────────────────────────────────
@@ -3473,15 +3873,25 @@ function toggleWorkExpand(){
    Departments view — the view products are picked in, so the orders they
    end up on are one step away. Opens the orders on the Record tab. */
 function _sbPoLinkHtml(){
+  // A demo setting, off by default (Demo menu → Shop with Kai).
+  let shown = false;
+  try{ shown = !!(window.parent && window.parent !== window && window.parent.kaiShowPoLink && window.parent.kaiShowPoLink()); }catch(e){}
+  if(!shown) return '';
   if(!window.__KAI_SHOP || groupBy !== 'dept' || typeof _poOrders !== 'function'
      || !WORK_MODES.some(m => m.id === 'artifact')) return '';
   const {orders, total} = _poOrders();
   if(!orders.length) return '';
   const n = orders.filter(o => !o.cancel).length;
-  return `<button type="button" class="sb-po-link" onclick="openPurchaseOrder()" title="Open the purchase orders on the Record tab">
+  const layout = typeof SHOP_LAYOUT !== 'undefined' && SHOP_LAYOUT;
+  // The layout file opens only the current order, so the link names it.
+  const cur = layout ? _poOrderById(_poFocusOrderId()) : null;
+  const meta = cur
+    ? `${cur.draft ? 'Draft · ' + _poTurnTxt(cur) : 'Approved'} · ${artMoney(cur.amt)}`
+    : `${n} order${n === 1 ? '' : 's'} · ${artMoney(total)} at cost`;
+  return `<button type="button" class="sb-po-link" onclick="${layout ? 'openPoSide()' : 'openPurchaseOrder()'}" title="Open the purchase order${layout ? '' : 's'}">
     <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M3 2.5h8v9l-1.5-1-1.5 1-1-1-1 1-1.5-1-1.5 1z"/><path d="M5 5.5h4M5 7.5h4" stroke-linecap="round"/></svg>
-    <span class="sb-po-link-t">Purchase orders</span>
-    <span class="sb-po-link-m">${n} order${n === 1 ? '' : 's'} · ${artMoney(total)} at cost</span>
+    <span class="sb-po-link-t">${cur ? 'Purchase order' : 'Purchase orders'}</span>
+    <span class="sb-po-link-m">${esc(meta)}</span>
     <span class="sb-po-link-go" aria-hidden="true">›</span>
   </button>`;
 }
@@ -3683,7 +4093,8 @@ function lineTotalForTask(taskId){
   return c.product.price * (c.qty||defaultQty(TASKS.find(x=>x.id===taskId)));
 }
 function isOverBudget(t, product, qty){
-  const budget=dollars(t.cost||0);
+  // ShopwithKai.html: a task with an allowance is read against that instead.
+  const budget=(typeof ALLOW_ON!=='undefined' && ALLOW_ON && taskAllowance(t)!=null) ? taskAllowance(t) : dollars(t.cost||0);
   if(!budget) return false;
   const lineQty=qty!=null?qty:(cart[t.id]?cart[t.id].qty:defaultQty(t, product));
   return (product.price * lineQty) > budget;

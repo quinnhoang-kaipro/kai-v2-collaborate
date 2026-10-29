@@ -1326,7 +1326,9 @@ function renderOverview(){
      moved. A fixed grid rather than a wrapping row, because mixed sizes in a
      row that wraps stagger into uneven lines. */
   const _ts = _ovTurnStats();
-  const budget = _ovStat('Budget', _ovBudget(), null, 'is-lead');
+  // ShopwithKai.html sets a job budget and reads the scope against it
+  // (allowances.js); elsewhere the figure is the scope total itself.
+  const budget = ALLOW_ON ? ovBudgetHtml() : _ovStat('Budget', _ovBudget(), null, 'is-lead');
   const stats = `<div class="ov-stats">
     <div class="ov-stats-rest">
       ${_ovStat('Scope due', S.scopeDue)}
@@ -1430,7 +1432,7 @@ function renderOverview(){
       ${jobFields}
       ${propBand}
     </section>
-    ${_ovCrewHtml()}${trailSec}
+    ${ALLOW_ON ? _ovSec('Allowances', ovAllowancesHtml(), 'ov-alw-sec') : ''}${_ovCrewHtml()}${trailSec}
   </div>`;
 }
 

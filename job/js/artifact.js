@@ -36,9 +36,11 @@ function renderArtifact(){
   }
   body.innerHTML = _renderArtifactIndex();
 }
+/* The turn buttons follow whichever draft order is on screen. */
+const _renderArtifactBase = renderArtifact;
+renderArtifact = function(){ _renderArtifactBase(); if(typeof _poSyncFocus === 'function') _poSyncFocus(); };
 function _renderArtifactIndex(){
   return `<div class="art-index">
-    ${SHOP_WITH_KAI ? _regViewAsHtml() : ''}
     ${_renderRegisterSection()}
     ${SHOP_WITH_KAI ? (regViewAs === 'shared' ? '' : _renderPurchaseOrderSection()) : _renderHistoricalSection()}
     ${_renderCopiesSection()}
@@ -368,22 +370,191 @@ function _poOrders(){
   orders.forEach(o => {
     o.supName = (typeof supplierName === 'function' ? supplierName(o.sup) : '') || o.sup;
     o.srcLabel = _poSourceLabel(o.src);
-    o.status = o.cancel ? 'Sent' : (_PO_STATUS[o.sup + '|' + o.src] || 'Sent');
+    const rec = _poRec(o.id);
+    o.draft = rec.state === 'draft';
+    o.holderRole = rec.holderRole; o.holderName = rec.holderName;
+    o.approvedAt = rec.approvedAt || '';
+    // Sending only starts once an order is approved; a draft has no send state.
+    o.status = o.draft ? 'Draft' : (rec.sendStatus || (o.cancel ? 'Sent' : (_PO_STATUS[o.sup + '|' + o.src] || 'Sent')));
     o.date = dateFor(o.src);
     o.docId = 'PO-' + _sowIdFor(_sowIdFor(o.id) + '|purchase-order|' + o.id).slice(4);
     o.amt = o.lines.reduce((s, L) => s + L.amt, 0);
     o.name = o.supName + ' · ' + o.srcLabel + (o.cancel ? ' · Cancellation' : '');
+    o.lines.forEach(L => { L.ok = !o.draft || rec.ok.has(_poLineKey(L)); });
+    o.okN = o.lines.filter(L => L.ok).length;
   });
   const supRank = s => { const i = _PO_SUPPLIER_ORDER.indexOf(s); return i < 0 ? 99 : i; };
   orders.sort((a, b) => supRank(a.sup) - supRank(b.sup) || a.src - b.src || (a.cancel ? 1 : 0) - (b.cancel ? 1 : 0));
   return {orders, held, total:orders.reduce((s, o) => s + o.amt, 0)};
 }
+/* ── An order's life: Draft, then Approved ───────────────────────────
+   Draft while someone holds it — the person whose turn it is works it and
+   hands it off with the Hand off button, top right. Approved once the job
+   manager has approved each item and then the order itself, the way step 3
+   approves each task and then the scope. Only an approved order is sent, so
+   the send states (Ready to send, Sent, Confirmed, Delivered) come after.
+   Prototype mock: Change Order 2's Home Depot order is the draft, with the
+   job manager; every earlier order is approved and on its way. */
+const _PO_DRAFT_IDS = ['po-hd-3'];
+const PO_STATE = {};
+function _poCtx(){
+  try{ if(window.parent && window.parent !== window && window.parent.kaiPoContext) return window.parent.kaiPoContext(); }catch(e){}
+  return {role:'manager', me:'T. Okafor', people:{manager:{name:'T. Okafor'}}};
+}
+function _poRec(id){
+  if(!PO_STATE[id]){
+    const ppl = _poCtx().people || {};
+    PO_STATE[id] = {state:_PO_DRAFT_IDS.indexOf(id) !== -1 ? 'draft' : 'approved',
+      holderRole:'manager', holderName:(ppl.manager || {}).name || 'T. Okafor', ok:new Set()};
+  }
+  return PO_STATE[id];
+}
+function _poLineKey(L){ return L.sku || ((L.brand || '') + '|' + (L.product || '')); }
+function _poMine(o){ return !!o && o.holderRole === _poCtx().role; }
+function _poCanApprove(o){ return !!o && o.draft && _poMine(o) && _poCtx().role === 'manager'; }
+/* Whose turn, said the way the ledger's draft row says it. */
+function _poTurnTxt(o){ return _poMine(o) ? 'Your turn' : `${o.holderName}'s turn`; }
+
+function poApproveLine(id, key){
+  poApMenu = null;
+  _poRec(id).ok.add(key);
+  if(typeof toast === 'function') toast('Item approved');
+  _poRerender();
+}
+function poApproveAllLines(id){
+  poApMenu = null;
+  const o = _poOrderById(id); if(!o) return;
+  const rec = _poRec(id);
+  const n = o.lines.filter(L => !rec.ok.has(_poLineKey(L))).length;
+  o.lines.forEach(L => rec.ok.add(_poLineKey(L)));
+  if(typeof toast === 'function') toast(`${n} item${n === 1 ? '' : 's'} approved`);
+  _poRerender();
+}
+/* With a note: the note goes on the line's task, and saving it is the
+   approval — the same arrangement the scope's Approve with note uses. */
+function poApproveLineWithNote(id, key, code){
+  poApMenu = null;
+  const t = TASKS.find(x => x.code === code);
+  if(!t || typeof openDrawer !== 'function'){ poApproveLine(id, key); return; }
+  apPendingApproval = () => poApproveLine(id, key);
+  openDrawer(t.id, 'notes');
+  if(typeof dwNoteHidden !== 'undefined') dwNoteHidden = false;
+  if(typeof dwTab === 'function') dwTab('notes');
+  if(typeof toast === 'function') toast('Write a note to approve');
+}
+function poApproveOrder(id){
+  const rec = _poRec(id);
+  rec.state = 'approved';
+  rec.sendStatus = 'Ready to send';
+  rec.approvedAt = new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+  if(typeof toast === 'function') toast('Purchase order approved');
+  _poRerender();
+}
+function poHandedOff(id, name, roleId){
+  const rec = _poRec(id);
+  rec.holderName = name; rec.holderRole = roleId;
+  _poRerender();
+}
+function poTakeTurn(id){
+  const c = _poCtx(), rec = _poRec(id);
+  rec.holderRole = c.role; rec.holderName = c.me;
+  if(typeof toast === 'function') toast('Purchase order is yours');
+  _poRerender();
+}
+function _poRerender(){
+  if(workMode === 'artifact') renderArtifact();
+  if(workMode === 'shop' && typeof selLineKey !== 'undefined' && selLineKey && typeof renderWork === 'function') renderWork();
+  if(typeof _renderPoSide === 'function') _renderPoSide();
+  if(typeof renderSidebar === 'function') renderSidebar();
+  _poSyncFocus();
+}
+/* The draft order on screen, if any: the order document on the Record tab,
+   else (ShopwithKai_layout.html) the one in the left panel. */
+function _poFocusedDraft(){
+  let id = null;
+  if(workMode === 'artifact' && openPoDoc) id = openPoDoc;
+  else if(typeof SHOP_LAYOUT !== 'undefined' && SHOP_LAYOUT && (typeof poSide !== 'undefined' && poSide)) id = _poFocusOrderId();
+  const o = id ? _poOrderById(id) : null;
+  return o && o.draft ? o : null;
+}
+function _poSyncFocus(){
+  if(!SHOP_WITH_KAI) return;
+  const o = _poFocusedDraft();
+  const f = o ? {id:o.id, name:o.name, supplier:o.supName, holder:o.holderName, holderRole:o.holderRole,
+    done:o.okN, total:o.lines.length,
+    onTake:() => poTakeTurn(o.id), onHandedOff:(n, r) => poHandedOff(o.id, n, r), onApprove:() => poApproveOrder(o.id)} : null;
+  try{ if(window.parent && window.parent !== window && window.parent.kaiPoFocus) window.parent.kaiPoFocus(f); }catch(e){}
+}
+// A reloaded panel starts with nothing on screen; drop any focus the last
+// one left with the shell, whose callbacks died with it.
+try{ if(SHOP_WITH_KAI && window.parent && window.parent !== window && window.parent.kaiPoFocus) window.parent.kaiPoFocus(null); }catch(e){}
+/* The latest order: the draft being worked if there is one, else the most
+   recent approved one. The layout file's left panel shows only this. */
+function _poFocusOrderId(){
+  const {orders} = _poOrders();
+  const rank = o => o.src * 2 + (o.cancel ? 0 : 1);
+  const pick = list => list.slice().sort((a, b) => rank(b) - rank(a))[0];
+  const o = pick(orders.filter(x => x.draft)) || pick(orders.filter(x => !x.draft));
+  return o ? o.id : null;
+}
+
+/* The approve control, in the scope's own shape: a button with a menu, and
+   a done state it never leaves. */
+let poApMenu = null;
+function poApToggle(key){ poApMenu = poApMenu === key ? null : key; _poRerender(); }
+document.addEventListener('click', () => { if(poApMenu){ poApMenu = null; _poRerender(); } });
+function _poApproveCtrl(done, menuKey, onConfirm, onNote, doneTxt, label){
+  if(done) return `<span class="ap-ctrl is-done"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7"/></svg>${doneTxt || 'Approved'}</span>`;
+  const open = poApMenu === menuKey;
+  return `<span class="ap-wrap">
+    <button type="button" class="ap-ctrl${open ? ' is-open' : ''}" aria-haspopup="menu" aria-expanded="${open}"
+      onclick="event.stopPropagation();poApToggle('${esc(menuKey)}')">${label || 'Approve'}
+      <svg class="ap-caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
+    </button>
+    ${open ? `<div class="ap-menu" role="menu" onclick="event.stopPropagation()">
+      <button type="button" class="ap-item" role="menuitem" onclick="event.stopPropagation();${onConfirm}">
+        <svg class="ap-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3.5 3.5L13 4"/></svg>Confirm approve
+      </button>
+      ${onNote ? `<button type="button" class="ap-item" role="menuitem" onclick="event.stopPropagation();${onNote}">
+        <svg class="ap-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 1.5H3.5v13h9V4z"/><path d="M9.5 1.5V4.5h3"/></svg>Approve with note
+      </button>` : ''}
+    </div>` : ''}
+  </span>`;
+}
+/* A line's control, or nothing where approving isn't this viewer's move. */
+function _poLineCtrl(o, L){
+  if(!o.draft) return '';
+  const key = _poLineKey(L);
+  if(!_poCanApprove(o)) return L.ok ? _poApproveCtrl(true) : '<span class="po-line-pending">Pending</span>';
+  const k = key.replace(/'/g, "\\'");
+  return _poApproveCtrl(L.ok, 'line:' + o.id + ':' + key,
+    `poApproveLine('${o.id}','${k}')`, `poApproveLineWithNote('${o.id}','${k}','${esc(L.tasks[0] || '')}')`);
+}
+/* The order's own line: who holds it, how far the approvals have got, and
+   for the manager whose turn it is, Approve all. */
+function _poDraftBarHtml(o){
+  if(!o.draft) return '';
+  const all = o.okN === o.lines.length;
+  const can = _poCanApprove(o);
+  return `<div class="po-draft-bar">
+    <div class="po-draft-l">
+      <span class="po-status is-draft">Draft</span>
+      <span class="po-draft-turn">${esc(_poTurnTxt(o))}</span>
+      <span class="po-draft-n">${o.okN} of ${o.lines.length} item${o.lines.length === 1 ? '' : 's'} approved</span>
+    </div>
+    <div class="po-draft-r">${can
+      ? (all ? '<span class="po-draft-next">Approve the order, top right</span>'
+             : _poApproveCtrl(false, 'order:' + o.id, `poApproveAllLines('${o.id}')`, '', '', 'Approve all items'))
+      : `<span class="po-draft-next">${_poMine(o) ? 'Hand it off when you’re done' : 'Take the turn to work on it'}</span>`}</div>
+  </div>`;
+}
+
 function _poOrderById(id){
   const {orders} = _poOrders();
   return orders.find(o => o.id === id) || orders[0] || null;
 }
 function _poStatusCls(s){
-  return {'Ready to send':'is-ready', 'Sent':'is-sent', 'Confirmed':'is-confirmed', 'Delivered':'is-delivered'}[s] || '';
+  return {'Draft':'is-draft', 'Ready to send':'is-ready', 'Sent':'is-sent', 'Confirmed':'is-confirmed', 'Delivered':'is-delivered'}[s] || '';
 }
 /* One order as a table — the body of its document. Grouped by category, the
    way a supplier picks it, never by room. */
@@ -395,12 +566,14 @@ function _poTableHtml(order){
   const rank = c => { const i = _PO_CATEGORY_ORDER.indexOf(c); return i < 0 ? 99 : i; };
   const cats = Object.keys(byCat).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
   const nLines = order.lines.length;
+  const ap = order.draft;   // a draft carries an approval per item
+  const apTd = L => ap ? `<td class="po-ord-ap">${_poLineCtrl(order, L)}</td>` : '';
   const body = cats.map(c => {
     const lines = byCat[c].sort((a, b) => Math.abs(b.amt) - Math.abs(a.amt));
     const sub = lines.reduce((x, L) => x + L.amt, 0);
     return `<tr class="po-ord-dept"><td colspan="4">${esc(c)}</td>
-        <td class="reg-num">${fmt(sub)}</td></tr>`
-      + lines.map(L => `<tr class="reg-row">
+        <td class="reg-num">${fmt(sub)}</td>${ap ? '<td></td>' : ''}</tr>`
+      + lines.map(L => `<tr class="reg-row${ap && L.ok ? ' is-approved' : ''}">
         <td class="po-ord-thumb"><div class="sec-taskcard-product-thumb">${L.image
           ? `<img src="${esc(L.image)}" alt="" loading="lazy" onerror="this.replaceWith(document.createRange().createContextualFragment(_PO_THUMB_SVG))">`
           : _PO_THUMB_SVG}</div></td>
@@ -411,19 +584,19 @@ function _poTableHtml(order){
         </td>
         <td class="reg-num">${order.cancel ? '−' : ''}${esc(qtyTxt(L))}</td>
         <td class="reg-num">${fmt(L.price)}${L.unit ? '<span class="po-ord-per"> / ' + esc(L.unit) + '</span>' : ''}</td>
-        <td class="reg-num reg-total">${fmt(L.amt)}</td>
+        <td class="reg-num reg-total">${fmt(L.amt)}</td>${apTd(L)}
       </tr>`).join('');
   }).join('');
   return `<table class="reg-table po-ord">
       <thead><tr>
-        <th class="po-ord-itemh" colspan="2">Item</th><th class="reg-num">Qty</th><th class="reg-num">Unit price</th><th class="reg-num">Amount</th>
+        <th class="po-ord-itemh" colspan="2">Item</th><th class="reg-num">Qty</th><th class="reg-num">Unit price</th><th class="reg-num">Amount</th>${ap ? '<th class="po-ord-ap">Approval</th>' : ''}
       </tr></thead>
       <tbody>
-        ${body || `<tr><td colspan="5" class="po-ord-empty">Nothing on this order.</td></tr>`}
+        ${body || `<tr><td colspan="${ap ? 6 : 5}" class="po-ord-empty">Nothing on this order.</td></tr>`}
         ${nLines ? `<tr class="reg-row is-grand">
           <td colspan="2">Order amount<span class="po-ord-sub">${nLines} product${nLines === 1 ? '' : 's'} · at cost, never includes markup</span></td>
           <td></td><td></td>
-          <td class="reg-num reg-total"><span class="po-at-cost">At cost</span>${fmt(order.amt)}</td>
+          <td class="reg-num reg-total"><span class="po-at-cost">At cost</span>${fmt(order.amt)}</td>${ap ? '<td></td>' : ''}
         </tr>` : ''}
       </tbody>
     </table>`;
@@ -436,10 +609,13 @@ function _renderPurchaseOrderSection(){
   const regular = orders.filter(o => !o.cancel);
   const nCancel = orders.length - regular.length;
   const notSent = orders.filter(o => o.status === 'Ready to send').length;
+  const drafts = orders.filter(o => o.draft).length;
   const summary = [
     `${regular.length} order${regular.length === 1 ? '' : 's'}`,
     nCancel ? `${nCancel} cancellation${nCancel === 1 ? '' : 's'}` : '',
-    notSent ? `${notSent} not sent yet` : 'all sent',
+    drafts ? `${drafts} draft` : '',
+    notSent ? `${notSent} approved, not sent yet` : '',
+    !drafts && !notSent ? 'all sent' : '',
   ].filter(Boolean).join(' · ');
   const sups = [];
   orders.forEach(o => { if(sups.indexOf(o.sup) === -1) sups.push(o.sup); });
@@ -447,14 +623,15 @@ function _renderPurchaseOrderSection(){
     const list = orders.filter(o => o.sup === s);
     return `<tr class="po-sup-row"><td colspan="5">${esc(list[0].supName)}<span class="po-sup-n">${list.length} order${list.length === 1 ? '' : 's'}</span></td></tr>`
       + list.map(o => `<tr class="reg-row is-openable${o.cancel ? ' is-cancel' : ''}" data-po-src="${o.src}"
-          onclick="openPoDocView('${o.id}')" title="View ${esc(o.name)}">
+          onclick="${_poOpenCall(o.id)}" title="View ${esc(o.name)}">
         <td class="reg-doc">
           <span class="reg-doc-name">${esc(o.name)}</span>
-          <button type="button" class="reg-doc-view" onclick="event.stopPropagation();openPoDocView('${o.id}')" aria-label="View ${esc(o.name)}">View</button>
+          <button type="button" class="reg-doc-view" onclick="event.stopPropagation();${_poOpenCall(o.id)}" aria-label="View ${esc(o.name)}">View</button>
           <span class="po-row-id">${esc(o.docId)}</span>
         </td>
         <td class="po-c-src"><span class="po-src-tag">${esc(o.srcLabel)}</span></td>
-        <td class="po-c-status"><span class="po-status ${_poStatusCls(o.status)}">${esc(o.status)}</span></td>
+        <td class="po-c-status"><span class="po-status ${_poStatusCls(o.status)}">${esc(o.status)}</span>
+          <span class="po-status-sub">${o.draft ? esc(_poTurnTxt(o)) + ` · ${o.okN}/${o.lines.length}` : 'Approved'}</span></td>
         <td class="reg-num po-c-n">${o.lines.length}</td>
         <td class="reg-num reg-total po-c-amt"><span class="po-at-cost">At cost</span>${artMoney(o.amt)}</td>
       </tr>`).join('');
@@ -486,6 +663,9 @@ function _renderPurchaseOrderSection(){
       ? ` ${held.n} deferred product${held.n === 1 ? '' : 's'} (${artMoney(held.amt)}) wait for a change order.` : ''}</div>
   </section>`;
 }
+/* How an order opens: on its own page, or (ShopwithKai_layout.html) in the
+   left panel beside the Editor. */
+function _poOpenCall(id){ return `openPoDocView('${id}')`; }
 /* One order on its own page: the document that goes to the supplier. */
 function _renderPoDoc(id){
   const o = _poOrderById(id);
@@ -499,6 +679,7 @@ function _renderPoDoc(id){
       <span class="copy-crumb-div"></span>
       <span class="copy-crumb-name">${esc(o.name)}</span>
       <span class="copy-crumb-sp"></span>
+      ${typeof SHOP_LAYOUT !== 'undefined' && SHOP_LAYOUT && o.id === _poFocusOrderId() ? `<button type="button" class="reg-doc-view is-strong" onclick="openPoSide()">Review beside the Editor</button>` : ''}
     </div>
     <div class="copy-paper po-paper${o.cancel ? ' is-cancel' : ''}">
       <div class="art-head">
@@ -509,7 +690,9 @@ function _renderPoDoc(id){
         </div>
         <div class="po-head-r">
           <div class="art-meta"><div class="art-meta-k">Status</div>
-            <div class="art-meta-v"><span class="po-status ${_poStatusCls(o.status)}">${esc(o.status)}</span></div></div>
+            <div class="art-meta-v"><span class="po-status ${_poStatusCls(o.status)}">${esc(o.status)}</span>${o.draft
+              ? `<span class="po-meta-sub">${esc(_poTurnTxt(o))}</span>`
+              : `<span class="po-meta-sub">Approved${o.approvedAt ? ' ' + esc(o.approvedAt) : ''}</span>`}</div></div>
           <div class="art-meta"><div class="art-meta-k">Source</div>
             <div class="art-meta-v">From ${esc(o.srcLabel)}</div></div>
           <div class="art-meta"><div class="art-meta-k">Prepared</div>
@@ -520,9 +703,10 @@ function _renderPoDoc(id){
       </div>
       <div class="po-doc-notes">
         ${orig ? `<div class="po-doc-note is-cancel">Cancels part of ${esc(orig.docId)} (${esc(orig.name)}). That order was sent, so it stays as it was.</div>` : ''}
-        <div class="po-doc-note">Materials only. Labour for these tasks is paid to the contractor.</div>
+        <div class="po-doc-note">Materials only. Labor for these tasks is paid to the contractor.</div>
         <button type="button" class="po-doc-job" onclick="closePoDocView()">Part of the job at 3484 South Main Street<span aria-hidden="true">›</span></button>
       </div>
+      ${_poDraftBarHtml(o)}
       <div class="po-ord-paper">${_poTableHtml(o)}</div>
     </div>
   </div>`;
@@ -559,6 +743,7 @@ function regShowOrders(src){
 /* The tab bar's and the Departments line page's link: to the orders on the
    Record tab. */
 function openPurchaseOrder(){
+  if(typeof SHOP_LAYOUT !== 'undefined' && SHOP_LAYOUT){ openPoSide(); return; }
   if(typeof setWorkMode === 'function') setWorkMode('artifact');
   if(openPoDoc || openCopyId || openHistoricalId){
     openPoDoc = false; openCopyId = null; openHistoricalId = null;
@@ -606,7 +791,10 @@ function _regLedger(){
    and the customer the org shares it with, who sees a price with the
    markup folded in and never named. */
 const REG_MARKUP = {pct:20, setAt:'approval'};
-let regViewAs = 'markup';          // 'markup' | 'plain' | 'shared'
+/* Parked: the demo toggle is off and the Record reads as an org without
+   markup. Set this to 'markup' or 'shared' (and put _regViewAsHtml() back at
+   the top of the index) to bring the other two views back. */
+let regViewAs = 'plain';           // 'markup' | 'plain' | 'shared'
 function setRegViewAs(v){
   regViewAs = v; _regLabOpen = false;
   if(typeof renderArtifact === 'function') renderArtifact();
@@ -658,13 +846,13 @@ function _regLabourByContractor(){
 function _regLabourPopHtml(){
   const rows = _regLabourByContractor();
   const tot = rows.reduce((s, r) => s + r.amt, 0);
-  return `<div class="reg-lab-pop" role="dialog" aria-label="Labour by contractor" onclick="event.stopPropagation()">
-    <div class="reg-lab-pop-hd">Labour by contractor
+  return `<div class="reg-lab-pop" role="dialog" aria-label="Labor by contractor" onclick="event.stopPropagation()">
+    <div class="reg-lab-pop-hd">Labor by contractor
       <button type="button" class="reg-lab-pop-x" onclick="toggleRegLabour(event)" aria-label="Close">×</button></div>
     <ul class="reg-lab-pop-list">${rows.map(r => `<li${r.who === 'Not yet assigned' ? ' class="is-none"' : ''}>
       <span class="reg-lab-pop-who">${esc(r.who)}<span class="reg-lab-pop-n">${r.n} task${r.n === 1 ? '' : 's'}</span></span>
       <span class="reg-lab-pop-amt">${artMoney(r.amt)}</span></li>`).join('')}
-      <li class="is-total"><span class="reg-lab-pop-who">Labour</span><span class="reg-lab-pop-amt">${artMoney(tot)}</span></li>
+      <li class="is-total"><span class="reg-lab-pop-who">Labor</span><span class="reg-lab-pop-amt">${artMoney(tot)}</span></li>
     </ul>
     <div class="reg-lab-pop-note">Rates from the Cost Book, copied at approval.</div>
   </div>`;
@@ -735,9 +923,9 @@ function _renderRegisterSection(){
         two totals read the same. */
   const fmtc = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
   const clsRows = [
-    {name:'Ready to order',    chip:'',                      note:'Materials go on the purchase order; labour is paid to the contractor', val:cls.ready, all:cls.readyAll, n:cls.readyN},
-    {name:'Tenant responsible',chip:'Tracked cost',          note:'On the purchase order, reported separately, with materials and labour', val:cls.tenant, all:cls.tenantAll, n:cls.tenantN, chipCls:'is-quiet'},
-    {name:'Deferred',          chip:'Procure on Change Order', note:'Materials and labour held until a Change Order is approved', val:cls.deferred, all:cls.deferredAll, n:cls.deferredN, chipCls:'is-quiet'},
+    {name:'Ready to order',    chip:'',                      note:'Materials go on the purchase order; labor is paid to the contractor', val:cls.ready, all:cls.readyAll, n:cls.readyN},
+    {name:'Tenant responsible',chip:'Tracked cost',          note:'On the purchase order, reported separately, with materials and labor', val:cls.tenant, all:cls.tenantAll, n:cls.tenantN, chipCls:'is-quiet'},
+    {name:'Deferred',          chip:'Procure on Change Order', note:'Materials and labor held until a Change Order is approved', val:cls.deferred, all:cls.deferredAll, n:cls.deferredN, chipCls:'is-quiet'},
   ].filter(r => r.n > 0).map(r => `<tr>
       <th>${esc(r.name)}${r.chip?`<span class="reg-chip ${r.chipCls||''}">${esc(r.chip)}</span>`:''}</th>
       <td class="reg-cls-note">${esc(r.note)}</td>
@@ -751,7 +939,7 @@ function _renderRegisterSection(){
   const classify = !SHOP_WITH_KAI ? classifyJob : `<table class="reg-cls">
     <thead><tr>
       <th colspan="2">How the scope is classified</th>
-      <th class="reg-num">Materials</th><th class="reg-num">Materials + labour</th>
+      <th class="reg-num">Materials</th><th class="reg-num">Materials + labor</th>
     </tr></thead>
     <tbody>
       ${clsRows}
@@ -801,7 +989,7 @@ function _renderRegisterSection(){
   }
   const segs = [
     {key:'mat', icon:'cart', label:'Materials, ordered through Kai', amt:matShown, tenant:shared ? 0 : tenMat, link:shared ? '' : 'regGoToPo()'},
-    {key:'lab', icon:'hardhat', label:'Labour, paid to contractors', amt:labShown, tenant:shared ? 0 : tenLab, link:shared ? '' : 'toggleRegLabour(event)', pop:true},
+    {key:'lab', icon:'hardhat', label:'Labor, paid to contractors', amt:labShown, tenant:shared ? 0 : tenLab, link:shared ? '' : 'toggleRegLabour(event)', pop:true},
     {key:'later', icon:'', label:'Not yet ordered', amt:laterShown, sub:'Waiting on a change order', split:laterSplit},
     view === 'markup' ? {key:'mk', icon:'', label:'Your markup', amt:markupAmt, sub:'Seen only by your org'} : null,
   ].filter(sg => sg && sg.amt > 0);
@@ -811,14 +999,14 @@ function _renderRegisterSection(){
   // carries it when there's room, else one line under the whole bar.
   const resParts = segs.filter(sg => sg.tenant > 0);
   const resLine = resParts.length
-    ? `<div class="reg-res-line">Includes ${resParts.map(sg => `${whole(sg.tenant)} resident responsible in ${sg.key === 'mat' ? 'materials' : 'labour'}`).join(' and ')}</div>`
+    ? `<div class="reg-res-line">Includes ${resParts.map(sg => `${whole(sg.tenant)} resident responsible in ${sg.key === 'mat' ? 'materials' : 'labor'}`).join(' and ')}</div>`
     : '';
   const totalBar = segs.reduce((a, sg) => a + sg.amt, 0) || 1;
   const lead = `<div class="reg-lead">
     <div class="reg-lead-lbl">${leadLbl}</div>
     <div class="reg-lead-top">
     <div class="reg-lead-val">${whole(livePrice)}</div>
-    <div class="reg-lead-sub">Started at ${whole(firstShown)}<span class="sep">·</span>${coCount} approved change order${coCount === 1 ? '' : 's'}${changeShown ? ` (${changeShown > 0 ? '+' : '−'}${whole(Math.abs(changeShown))})` : ''}</div>
+    <div class="reg-lead-sub">Initial scope: ${whole(firstShown)}<span class="sep">·</span>${coCount} approved change order${coCount === 1 ? '' : 's'}${changeShown ? ` (${changeShown > 0 ? '+' : '−'}${whole(Math.abs(changeShown))})` : ''}</div>
     </div>
     <div class="reg-bar" role="img" aria-label="${esc(segs.map(sg => `${sg.label} ${whole(sg.amt)}`).join(', '))}">
       ${segs.map(sg => `<span class="reg-bar-seg is-${sg.key}" style="flex-grow:${sg.amt}" title="${esc(sg.label)} · ${whole(sg.amt)} · ${Math.round(sg.amt / totalBar * 100)}%"></span>`).join('')}
@@ -827,11 +1015,11 @@ function _renderRegisterSection(){
       ${segs.map(sg => `<div class="reg-bar-key is-${sg.key}">
         <div class="reg-bar-key-lbl"><span class="reg-bar-swatch is-${sg.key}" aria-hidden="true"></span>${sg.link
           ? `<button type="button" class="reg-bar-link" onclick="${sg.link}"${sg.pop ? ` aria-expanded="${_regLabOpen}"` : ''}
-              title="${sg.pop ? 'See who is paid for the labour' : 'Go to the purchase orders'}">${esc(sg.label)}<span aria-hidden="true">›</span></button>`
+              title="${sg.pop ? 'See who is paid for the labor' : 'Go to the purchase orders'}">${esc(sg.label)}<span aria-hidden="true">›</span></button>`
           : `<span>${esc(sg.label)}</span>`}${sg.pop && sg.link && _regLabOpen ? _regLabourPopHtml() : ''}</div>
         <div class="reg-bar-key-amt">${whole(sg.amt)}</div>
         ${sg.tenant ? `<div class="reg-bar-key-note is-res">Includes ${whole(sg.tenant)} resident responsible</div>`
-          : sg.sub ? `<div class="reg-bar-key-note">${esc(sg.sub)}</div>${sg.split ? `<div class="reg-bar-key-note is-split">${whole(sg.split[0])} materials + ${whole(sg.split[1])} labour</div>` : ''}` : ''}
+          : sg.sub ? `<div class="reg-bar-key-note">${esc(sg.sub)}</div>${sg.split ? `<div class="reg-bar-key-note is-split">${whole(sg.split[0])} materials + ${whole(sg.split[1])} labor</div>` : ''}` : ''}
       </div>`).join('')}
     </div>
     ${resParts.length ? resLine : ''}
@@ -878,7 +1066,7 @@ function _renderRegisterSection(){
         <span class="reg-doc-name">${esc(docName(v))}</span>
         <button type="button" class="reg-doc-view" onclick="event.stopPropagation();openHistorical('${v.id}')"
           aria-label="View ${esc(docName(v))}">View</button>
-        ${SHOP_WITH_KAI ? `<span class="po-row-id">${esc(_sowIdFor(v.id))}${regViewAs === 'shared' ? '' : ordersLink(v, i)}</span>` : ''}
+        ${SHOP_WITH_KAI ? `${regViewAs === 'shared' ? '' : ordersLink(v, i)}<span class="po-row-id">${esc(_sowIdFor(v.id))}</span>` : ''}
       </td>
       <td class="reg-status">${tag.tag?`<span class="hist-card-tag hist-tag-${esc(tag.tagCls||'')}">${esc(tag.tag)}</span>`:''}</td>
       <td class="reg-num reg-items">${items != null ? items : '—'}</td>

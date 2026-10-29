@@ -46,7 +46,7 @@ function productPool(t, catOverride){
       {tier:'other',brand:'JK Cabinetry',name:'Mocha Shaker Maple',sku:'JK-MS-MAP',unit:'LF',price:455,stock:'in'},
     ],
     counter:[
-      {tier:'team',brand:'Hardwood Reflections',name:'5 ft. Saman Butcher Block with Live Edge & Blue Epoxy River',sku:'1530RIVBLSAM-60',unit:'ea',price:480,listPrice:564,stock:'in',tags:['Recommended','Designer pick'],coveragePerUnit:5,
+      {tier:'team',brand:'Hardwood Reflections',name:'5 ft. Saman Butcher Block with Live Edge & Blue Epoxy River',sku:'1530RIVBLSAM-60',unit:'ea',price:480,listPrice:564,stock:'in',tags:['Recommended','Template'],coveragePerUnit:5,
         image:'butcher_hero.png',
         photos:[
           'butcher_hero.png',
@@ -63,7 +63,7 @@ function productPool(t, catOverride){
         specs:{'Actual size':'60 × 30 × 1.5 in.','Material':'Saman solid wood','Finish':'UV cured, factory','Edge':'Live edge with blue epoxy river','Model #':'1530RIVBLSAM-60','Internet #':'313896119','Warranty':'Manufacturer 1-year limited'},
       },
       {tier:'team',brand:'MSI',name:'Calacatta Laza Quartz Slab (Polished)',sku:'CALAZA-PRE',unit:'SF',price:74,stock:'in',tags:['Template pick']},
-      {tier:'team',brand:'Silestone',name:'Eternal Calacatta Gold',sku:'SI-CALG-PRE',unit:'SF',price:82,stock:'in',tags:['Designer pick']},
+      {tier:'team',brand:'Silestone',name:'Eternal Calacatta Gold',sku:'SI-CALG-PRE',unit:'SF',price:82,stock:'in',tags:['Template']},
       {tier:'similar',brand:'Q Premium',name:'Aurora Quartz',sku:'QP-AUR',unit:'SF',price:68,stock:'in',tags:['Under budget']},
       {tier:'similar',brand:'Stonemark',name:'Frost N Quartz',sku:'SM-FRN',unit:'SF',price:71,stock:'in'},
       {tier:'other',brand:'Caesarstone',name:'Pure White 1141',sku:'CAS-1141',unit:'SF',price:96,stock:'in'},
@@ -99,14 +99,14 @@ function productPool(t, catOverride){
       {tier:'other',brand:'Glidden',name:'Diamond Pure White Satin',sku:'GL-DP-WS',unit:'gal',price:48,stock:'in'},
     ],
     vanity:[
-      {tier:'team',brand:'Home Decorators',name:'Sonoma 48" Double Vanity Pebble Grey',sku:'HD-SON48-PG',unit:'ea',price:1620,stock:'in',tags:['Designer pick']},
+      {tier:'team',brand:'Home Decorators',name:'Sonoma 48" Double Vanity Pebble Grey',sku:'HD-SON48-PG',unit:'ea',price:1620,stock:'in',tags:['Template']},
       {tier:'team',brand:'James Martin',name:'Brookfield 48" Double Vanity Burnished Mahogany',sku:'JM-BRK48-BM',unit:'ea',price:2160,stock:'in'},
       {tier:'similar',brand:'OVE Decors',name:'Edenderry 48" Double Vanity Dove Gray',sku:'OV-ED48-DG',unit:'ea',price:1180,stock:'in',tags:['Under budget']},
       {tier:'other',brand:'Avanity',name:'Loft 48" Double Vanity Dark Walnut',sku:'AV-LOFT48-DW',unit:'ea',price:1840,stock:'in'},
     ],
     shower:[
-      {tier:'team',brand:'Daltile',name:'Modern Hex Carbon Black Mosaic Floor',sku:'1002-301-200',unit:'SF',price:28,stock:'in',tags:['Designer pick']},
-      {tier:'team',brand:'MSI',name:'Calacatta Gold 12x24 Polished Wall',sku:'MS-CG-1224P',unit:'SF',price:36,stock:'in',tags:['Designer pick']},
+      {tier:'team',brand:'Daltile',name:'Modern Hex Carbon Black Mosaic Floor',sku:'1002-301-200',unit:'SF',price:28,stock:'in',tags:['Template']},
+      {tier:'team',brand:'MSI',name:'Calacatta Gold 12x24 Polished Wall',sku:'MS-CG-1224P',unit:'SF',price:36,stock:'in',tags:['Template']},
       {tier:'similar',brand:'Florida Tile',name:'Pietra Art Carrara 12x24 Honed',sku:'FT-PAC-1224H',unit:'SF',price:24,stock:'in',tags:['Under budget']},
       {tier:'other',brand:'Marazzi',name:'Travisano Bianco 12x24 Polished',sku:'MZ-TV-BL1224',unit:'SF',price:42,stock:'in'},
     ],

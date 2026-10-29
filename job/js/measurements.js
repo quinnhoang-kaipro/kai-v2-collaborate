@@ -1082,13 +1082,32 @@ function _pgdRowFilesHtml(t){
     ><span class="${notes ? '' : 'is-none'}">${notes}</span></button>`;
 }
 
+/* ShopwithKai_materials.html: the task table names each task's product type
+   (its department line) in place of the product, and keeps a type's tasks
+   together, the type said once at the top of its run. */
+const _PGD_BY_TYPE = !!window.__KAI_SHOP_MATERIALS;
+function _pgdTaskType(t){
+  const tl = (typeof taskLine === 'function') ? taskLine(t) : null;
+  return tl ? {key:`${tl.dept}|${tl.line}`, name:tl.line} : {key:'', name:''};
+}
+// Rows in product-type order (the Departments view's order), keeping the
+// order they came in within a type.
+function _pgdRowsHtml(items, taskOnClick){
+  if(!_PGD_BY_TYPE) return items.map(t => _pgdTaskRowHtml(t, taskOnClick)).join('');
+  const order = new Map(deptLines(items).map((l, i) => [l.key, i]));
+  let prev = null;
+  return items.map((t, i) => ({t, i, k:_pgdTaskType(t).key}))
+    .sort((a, b) => order.get(a.k) - order.get(b.k) || a.i - b.i)
+    .map(({t, k}) => { const first = k !== prev; prev = k; return _pgdTaskRowHtml(t, taskOnClick, first); })
+    .join('');
+}
 function _pgdTaskHeadHtml(){
   return `<div class="pgd-tk-head">
     <span>Task</span>
     <span>Status</span>
     <span>Contractor</span>
     <span>Modifier</span>
-    <span>Product</span>
+    <span>${_PGD_BY_TYPE ? 'Product type' : 'Product'}</span>
     <span class="num">Qty</span>
     <span class="num">Rate</span>
     <span class="num"><span class="files-lgd"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h2.4l1-1.6h5.2l1 1.6H14v8H2z"/><circle cx="8" cy="8.4" r="2.2"/></svg>/<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2.5h10v11H3z"/><path d="M5.5 6h5M5.5 8.5h5M5.5 11h3"/></svg></span></span>
@@ -1265,7 +1284,7 @@ function _pgdSortTasksForGroup(items){
     .map(x => x.t);
 }
 
-function _pgdTaskRowHtml(t, taskOnClick){
+function _pgdTaskRowHtml(t, taskOnClick, typeFirst){
     const _st = _pgdRowStatusMeta(t);
     const statusPill = _st ? `<span class="pgd-tk-status task-status ${_st.cls||''}">${esc(_st.label)}</span>` : '<span></span>';
     // Gutter marks, left of the name.
@@ -1334,12 +1353,14 @@ function _pgdTaskRowHtml(t, taskOnClick){
     // the parser closes the outer one at the inner tag, which threw the
     // last three cells out of the grid and onto their own lines. role +
     // tabindex + Enter/Space keep it operable from the keyboard.
-    return `<div class="pgd-tk-rowwrap"><div class="pgd-tk-row${_unready}" data-tid="${t.id}" role="button" tabindex="0" onclick="pgdRowOpen(event,${t.id},'${esc(taskOnClick)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="${esc(fullName)}">
+    return `<div class="pgd-tk-rowwrap${_PGD_BY_TYPE && typeFirst ? ' is-type-start' : ''}"><div class="pgd-tk-row${_unready}" data-tid="${t.id}" role="button" tabindex="0" onclick="pgdRowOpen(event,${t.id},'${esc(taskOnClick)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="${esc(fullName)}">
       <span class="pgd-tk-name" title="${esc(fullName)}">${flg}${chk}<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;flex:1">${esc(displayName)}</span></span>
       ${statusPill}
       <span class="pgd-tk-gc${t.gc ? '' : ' is-none'}" title="${esc(t.gc || 'Unassigned')}">${esc(t.gc || 'Unassigned')}</span>
       <span class="pgd-tk-mod${modLbl ? '' : ' is-none'}" title="${esc(modFull || 'No modifier')}">${esc(modLbl || '—')}</span>
-      <span class="pgd-tk-prod${prodName ? '' : ' is-none'}" title="${esc(fullProd)}">${esc(prodName || '—')}</span>
+      ${_PGD_BY_TYPE ? (() => { const ty = _pgdTaskType(t).name;
+        return `<span class="pgd-tk-prod pgd-tk-type" title="${esc(ty)}">${typeFirst ? esc(ty) : ''}</span>`; })()
+      : `<span class="pgd-tk-prod${prodName ? '' : ' is-none'}" title="${esc(fullProd)}">${esc(prodName || '—')}</span>`}
       <span class="pgd-tk-qty" title="${esc(t.qty || '')}">${prodName && qtyNum ? esc(qtyNum) : '—'}</span>
       <span class="pgd-tk-rate">${prodName ? esc(t.rate || '—') : '—'}</span>
       ${_pgdRowFilesHtml(t)}
@@ -2038,9 +2059,16 @@ function _pgdPhotoFigHtml(p, i, labelName, hideTag){
     walk ? esc(walk.label) : '',
     p.by ? `${isUploaded ? 'Uploaded' : 'Captured on site'} by ${esc(p.by)}` : '',
   ].filter(Boolean).join(' · ');
+  /* The date sits on the photo and the name under it: the name is what you
+     read to know what a tile shows, so it gets the caption's room (not cut at
+     18 characters), and the date becomes the small tag in the corner. A tile
+     whose name would only repeat the page keeps an empty caption line, so the
+     strip's tiles stay one height. */
+  const dateTxt = walk && walk.date ? walk.date : _added;
+  const nameTxt = tagChip ? (p.kind === 'task' ? (taskName || 'Task') : tag) : '';
   return `<figure class="pgd-photo-fig">
-          <button class="pgd-photo${kindCls}" style="background:${bg}" onclick="openGalleryPhoto(${p.id||0})" aria-label="${tip}">${tagChip}${metaOverlay}</button>
-          ${dateLbl}
+          <button class="pgd-photo${kindCls}" style="background:${bg}" onclick="openGalleryPhoto(${p.id||0})" aria-label="${tip}">${dateTxt ? `<span class="pgd-photo-groupbadge is-date">${esc(dateTxt)}</span>` : ''}${metaOverlay}</button>
+          <span class="pgd-photo-date pgd-photo-name" title="${esc(nameTxt)}">${nameTxt ? esc(nameTxt) : '&nbsp;'}</span>
         </figure>`;
 }
 
@@ -2253,7 +2281,7 @@ function _renderScopePageHtml(opts){
     const n = g.items.length;
     const gCost = g.items.reduce((s,t) => s + dollars(t.cost), 0);
     const key = String(g.key).replace(/'/g, "\\'");
-    const rows = g.items.map(t => _pgdTaskRowHtml(t, taskOnClick)).join('');
+    const rows = _pgdRowsHtml(g.items, taskOnClick);
     return `<div class="pgd-details-sec">
       <div class="pgd-sec-hd">
         <button class="pgd-scope-grp" onclick="selectGroup('${key}')" title="Open ${esc(g.name)}">
@@ -2278,8 +2306,9 @@ function _renderScopePageHtml(opts){
         </div>
       </div>
     </div>
-    <div class="pgd-details-sec">
+    <div class="pgd-details-sec pgd-mediasec is-sticky">
       <div class="pgd-sec-hd">
+        <div class="pgd-media-ctx" aria-hidden="true"><span class="pgd-media-ctx-name">All scope</span><span class="pgd-media-ctx-amt">${totalDisplay}</span><span class="pgd-media-ctx-n">${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}</span></div>
         <div class="pgd-details-title">Group and Task Photos${scopePhotos.length ? ` <span class="sec-mod-count is-static">&bull; ${scopePhotos.length} total ${scopePhotos.length === 1 ? 'photo' : 'photos'}</span>` : ''}</div>
         <div class="pgd-sec-hd-r">
           <button class="sec-mod-add" onclick="event.stopPropagation();goToProgressPhotos()" title="View every photo in Progress and add more">View all &amp; add</button>
@@ -2345,6 +2374,12 @@ function _groupNotesHtml(g){
     : '';
   const title = `Notes${latest ? countSuffix : ''}`;
   const addBtn = `<button class="sec-mod-add" onclick="event.stopPropagation();${open}" title="${latest ? 'View every note and add one' : 'Add the first note'}">${latest ? 'View all &amp; add' : 'Add'}</button>`;
+  if(!latest) return `<div class="pgd-hdr-box sec-tasknotes pgd-groupnotes is-empty">
+    <div class="pgd-sec-hd">
+      <div class="pgd-details-title">Notes<span class="sec-notes-none">No notes yet</span></div>
+      <div class="pgd-sec-hd-r">${addBtn}</div>
+    </div>
+  </div>`;
   const body = latest
     ? `<div class="shop-notes-card">
         <div class="shop-notes-head">
@@ -2508,8 +2543,7 @@ function _renderGroupPageHtml(opts){
   const contractorsSet = new Set(g.items.map(t => t.gc).filter(Boolean));
   // Task rows — mini cards that route into the task drill-in on click.
   // Row markup lives in _pgdTaskRowHtml, shared with the scope page.
-  const taskRowsHtml = _pgdSortTasksForGroup(g.items)
-    .map(t => _pgdTaskRowHtml(t, taskOnClick)).join('');
+  const taskRowsHtml = _pgdRowsHtml(_pgdSortTasksForGroup(g.items), taskOnClick);
   // Activity below the tasks. The Activity tab has its own feed with the
   // filter bar; this is the Editor's, merged and rolled up.
   const groupActHtml = includeActivity ? '' : _pgdGroupActivityHtml(g);
@@ -2530,10 +2564,39 @@ function _renderGroupPageHtml(opts){
   return `<div class="pgd">
     ${ctrlBarHtml}
     <div class="pgd-hdr-box">
+      ${(() => {
+        /* Shop with Kai: a group with changes in a draft change order says
+           so at the top, as a task does — a removed room included. */
+        if(!window.__KAI_SHOP || !(PROJ_MODE === 'work' || PROJ_MODE === 'closeout')) return '';
+        if(!g.items.some(t => typeof taskHasDraftChangeOrder === 'function' && taskHasDraftChangeOrder(t))) return '';
+        return `<div class="sec-taskcard-co-banner has-changes">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.5L14.5 5v6L8 14.5 1.5 11V5z"/><path d="M8 8v3.5M8 5.2v.2"/></svg>
+          <span class="sec-taskcard-co-banner-body"><b>Change order is in draft.</b> Submit it for review and approval before it's finalized and shareable to contractors.</span>
+        </div>`;
+      })()}
       <div class="sec-taskcard-hdr">
         <div class="sec-taskcard-hdr-l">
+          ${window.__KAI_SHOP_LAYOUT && groupBy === 'dept' ? (() => {
+            /* A department's breadcrumbs, as on a product type and a task:
+               the product types in it, and the rooms its tasks are in — each
+               a way into that page. */
+            const q = v => esc(String(v)).replace(/'/g, "\\'");
+            const lines = deptLines(g.items);
+            const rooms = [...new Set(g.items.map(t => t.room))];
+            const links = (arr, fn) => arr.map((x, i) => `${i ? '<span class="sec-taskcard-sep" aria-hidden="true">·</span>' : ''}${fn(x)}`).join('');
+            return `<div class="lnp-eyebrow"><span class="sec-taskcard-eyebrow task-crumbs">
+              <span class="page-kind">Department</span><span>${esc(g.name)}</span>
+              <span class="task-crumbs-div" aria-hidden="true"></span>
+              <span class="page-kind">${lines.length === 1 ? 'Product type' : 'Product types'}</span>
+              <nav class="task-crumb" aria-label="Product types">${links(lines, l => `<button type="button" class="task-crumb-a" onclick="goUpMaterials('${q(l.dept)}','${_lineKeyArg(l.key)}')" title="Open ${esc(l.name)}">${esc(l.name)}</button>`)}</nav>
+              <span class="task-crumbs-div" aria-hidden="true"></span>
+              <span class="page-kind">${rooms.length === 1 ? 'Room' : 'Rooms'}</span>
+              <nav class="task-crumb" aria-label="Rooms">${links(rooms, r => `<button type="button" class="task-crumb-a" onclick="goUpRoom('${q(r)}')" title="Open ${esc(r)}">${esc(r)}</button>`)}</nav>
+            </span></div>`;
+          })() : ''}
           <div class="pgd-title-l">
             <div class="pgd-title">${esc(g.name)}</div>
+            ${window.__KAI_SHOP && g.items.length && g.items.every(t => typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id)) ? '<span class="co-pill" title="Removal after approval">Change</span>' : ''}
           ${editingGroupLabelFor === g.key
             ? `<input class="pgd-label-input" maxlength="40" value="${esc(groupLabels[g.key]||'')}" placeholder="e.g. Kitchen (including Pantry)"
                  onclick="event.stopPropagation()"
@@ -2545,17 +2608,19 @@ function _renderGroupPageHtml(opts){
                ${groupLabels[g.key] ? `<span class="pgd-label-chip" onclick="event.stopPropagation();openGroupLabelEdit('${g.key}')" title="Edit label">${esc(groupLabels[g.key])}</span>` : ''}`
           }
           </div>
-          <div class="pgd-grp-meta">Group ${gIdx + 1} of ${groups.length}<span class="sep">&middot;</span>${g.items.length} ${g.items.length === 1 ? 'task' : 'tasks'}</div>
+          <div class="pgd-grp-meta">${(() => { const k = groupKindNoun(), K = k.charAt(0).toUpperCase() + k.slice(1); return !window.__KAI_SHOP_LAYOUT ? K + ' ' : groupBy === 'dept' ? '' : `<span class="page-kind">${K}</span>`; })()}${gIdx + 1} of ${groups.length}<span class="sep">&middot;</span>${g.items.length} ${g.items.length === 1 ? 'task' : 'tasks'}</div>
         </div>
         <div class="sec-taskcard-hdr-r">
           <span class="sec-taskcard-amt-line">
-            <span class="sec-taskcard-amt">${money(gCost)}</span>
+            <span class="sec-taskcard-amt">${(window.__KAI_SHOP ? sbMoney(gCost) : money(gCost))}</span>
           </span>
         </div>
       </div>
+      ${ALLOW_ON && groupBy === 'dept' && g.key !== NO_PRODUCT_DEPT ? deptAllowanceHtml(g.key) : ''}
     </div>
-    <div class="pgd-details-sec">
+    <div class="pgd-details-sec pgd-mediasec is-sticky">
       <div class="pgd-sec-hd">
+        <div class="pgd-media-ctx" aria-hidden="true"><span class="pgd-media-ctx-name">${esc(g.name)}</span><span class="pgd-media-ctx-amt">${(window.__KAI_SHOP ? sbMoney(gCost) : money(gCost))}</span><span class="pgd-media-ctx-n">${g.items.length} ${g.items.length === 1 ? 'task' : 'tasks'}</span></div>
         <div class="pgd-details-title">Group and Task Photos${allGroupPhotos.length ? ` <span class="sec-mod-count is-static">&bull; ${allGroupPhotos.length} total ${allGroupPhotos.length === 1 ? 'photo' : 'photos'}</span>` : ''}</div>
         <div class="pgd-sec-hd-r">
           <button class="sec-mod-add" onclick="event.stopPropagation();goToProgressPhotos()" title="View every photo in Progress and add more">View all &amp; add</button>
