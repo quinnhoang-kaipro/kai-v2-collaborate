@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kai — Templates</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1d1d1d;
+    --bar:#1d1d1d;
+    --rail:#262626;
+    --nav:#1a1a1a;
+    --line:#3a3a3a;
+    --muted:#9a9a9a;
+    --green:#7fc79a;
+    --green-btn:#5cb87a;
+    --yellow:#f5d90a;
+    --page:#efefef;
+    --card:#fff;
+    --card-line:#e2e2e2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:'Hanken Grotesk',sans-serif;font-size:13px;background:var(--page);color:var(--ink);display:grid;grid-template-rows:52px 1fr;overflow:hidden}
+
+  /* TOP BAR */
+  .tb{display:flex;align-items:center;background:var(--bar);color:#fff;border-bottom:1px solid #000}
+  .tb-logo{width:62px;height:52px;background:#fff;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:23px;font-weight:500;color:var(--ink);letter-spacing:-.5px}
+  .tb-title{font-size:17px;font-weight:600;padding:0 18px 0 12px}
+  .tb-sep{width:1px;height:20px;background:#555}
+  .tb-dl{background:none;border:0;color:#fff;padding:0 20px;cursor:pointer;display:flex}
+  .tb-sp{flex:1}
+  .tb-org{font-weight:600;font-size:12px;letter-spacing:.2px;margin-right:30px}
+  .tb-ic{background:none;border:0;color:#fff;cursor:pointer;margin-right:26px;display:flex}
+  .tb-av{width:28px;height:28px;border-radius:50%;background:#cfc8bd;color:var(--ink);font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;margin-right:14px}
+
+  .app{display:grid;grid-template-columns:62px 240px 1fr;min-height:0}
+
+  /* PRIMARY NAV */
+  .pnav{background:var(--nav);display:flex;flex-direction:column;align-items:center;padding-top:14px;gap:8px;overflow-y:auto}
+  .pnav a{display:flex;flex-direction:column;align-items:center;gap:5px;color:#d0d0d0;text-decoration:none;font-size:10px;width:100%;padding:5px 0}
+  .pnav a:hover{color:#fff}
+  .pnav .ic{width:21px;height:21px;background:currentColor;-webkit-mask:var(--i) center/contain no-repeat;mask:var(--i) center/contain no-repeat}
+  .pnav a.on{color:var(--yellow);font-weight:600}
+  .pnav a.on .ic{width:30px;height:30px}
+
+  /* SECONDARY RAIL — light panel, matched to the scope dashboard's list styling */
+  .rail{--r-bg:#FFFDF8;--r-stroke:#DDD6C8;--r-hair:#EDE9DE;--r-sunken:#F4F0E6;--r-mid:#7D7469;--r-ink:#1A1A1A;--r-ok:#2E9048;--r-accent:#FDFF86;--r-wash:#FDFDEA;
+    background:var(--r-bg);border-right:1px solid var(--r-stroke);overflow-y:auto;color:var(--r-ink);padding-bottom:20px}
+  .r-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 12px 14px}
+  /* Groups / Trades / Departments + Search — the dashboard's All / Labor / Materials and Search controls.
+     Three labels don't fit beside Search in this width, so the toggle takes the first row. */
+  .r-seg{display:flex;gap:2px;padding:3px;background:var(--r-sunken);flex:1 1 100%}
+  .r-seg button{flex:1 1 auto;height:26px;padding:0 6px;background:none;border:0;font:inherit;font-size:12px;color:#5C5750;cursor:pointer;white-space:nowrap}
+  .r-seg button:hover{color:var(--r-ink)}
+  .r-seg button.on{background:#fff;color:var(--r-ink);font-weight:500}
+  .search{display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;flex:1 1 100%;background:#fff;border:1px solid var(--r-stroke);color:#5C5750;font-size:12px;cursor:pointer}
+  .search:hover{border-color:var(--r-mid)}
+  .search svg{flex-shrink:0}
+  .search input{display:none;flex:1;min-width:0;background:none;border:0;outline:0;color:var(--r-ink);font:inherit;font-size:12.5px}
+  .search input::placeholder{color:var(--r-mid)}
+  .search.open{flex:1 1 auto;cursor:text;border-color:var(--r-ink)}
+  .search.open input{display:block}
+  .search.open .lbl{display:none}
+  .sec{display:flex;align-items:center;gap:7px;height:38px;padding:0 12px 0 14px;background:var(--r-sunken);border-top:1px solid var(--r-stroke);border-bottom:1px solid var(--r-stroke);font-family:'Space Grotesk',sans-serif;font-size:12.5px;font-weight:500;letter-spacing:.2px;text-transform:uppercase}
+  .sec .c{flex:1;color:var(--r-mid);font-size:10.5px;letter-spacing:.4px}
+  .add{width:22px;height:22px;border:1px solid var(--r-ok);background:#fff;color:var(--r-ok);font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .add:hover{background:#DDF1E1}
+  .grp{display:flex;align-items:center;height:34px;padding:0 10px 0 14px;background:#fff;border-bottom:1px solid var(--r-hair);font-size:12.5px;cursor:pointer;position:relative}
+  .grp .n{flex:1;color:var(--r-ink)}
+  .grp .t{color:var(--r-mid);font-size:11px;margin-right:8px}
+  .grp .h{width:8px;height:12px;background:radial-gradient(circle,#B5AC9C 1.1px,transparent 1.3px) 0 0/4px 4px;cursor:grab;opacity:0}
+  .grp:hover{background:#FBF9F3}
+  .grp:hover .h{opacity:1}
+  .grp.on{background:var(--r-wash)}
+  .grp.on::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--r-ink)}
+  .grp.on .n{font-weight:500}
+  /* Category › product type › task */
+  .grp .cv{width:10px;height:10px;margin-right:8px;flex-shrink:0;fill:none;stroke:var(--r-mid);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;transform:rotate(-90deg);transition:transform .12s}
+  .grp .cv.open{transform:none}
+  .cat-row .n{font-weight:500}
+  .cat.is-open > .cat-row{background:#FBF9F3}
+  .type-row{padding-left:30px;height:32px;background:#fff}
+  .type-row .n{font-size:12.5px}
+  .task-row{padding-left:50px;height:30px;font-size:12px}
+  .task-row .n{color:#4A4540;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .task-row .t{flex-shrink:0;margin-left:8px}
+  .rail-empty{padding:8px 14px 10px 32px;font-size:12px;font-style:italic;color:var(--r-mid);background:#fff;border-bottom:1px solid var(--r-hair)}
+  .tile.flash{outline:2px solid var(--r-accent, #FDFF86);outline-offset:-2px}
+  .sh .c{font-weight:500;color:#888;font-size:11px;margin-left:8px;letter-spacing:.4px}
+  /* A department's allowance, on its heading at the right */
+  .sh-dept{display:flex;align-items:baseline}
+  .alw{margin-left:auto;display:inline-flex;align-items:baseline;gap:8px;font-size:12.5px;font-weight:400;letter-spacing:0;text-transform:none}
+  .alw-k{font-size:10.5px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:#888}
+  .alw-v{font-weight:600;color:#1A1A1A;font-variant-numeric:tabular-nums}
+  .alw-btn{padding:0;background:none;border:0;border-bottom:1px solid #CFC7B5;font:inherit;font-size:12px;color:#6B6455;cursor:pointer;line-height:1.2}
+  .alw-btn:hover{color:#1A1A1A;border-bottom-color:#1A1A1A}
+  .alw-btn.is-set{color:#1A1A1A;border-bottom-color:#1A1A1A}
+  .alw-edit{display:inline-flex;align-items:baseline;gap:2px;border-bottom:1.5px solid #1A1A1A;color:#888}
+  .alw-in{width:110px;border:0;outline:none;background:transparent;font:inherit;font-weight:600;color:#1A1A1A;font-variant-numeric:tabular-nums;padding:1px 0}
+  .tile .also{margin-top:8px;font-size:11px;color:#888}
+  .empty-note{font-size:12.5px;color:#888;font-style:italic;padding:4px 0 6px}
+
+  /* MAIN */
+  .main{display:flex;flex-direction:column;min-height:0;min-width:0}
+  /* Tab bar — matches the scope dashboard's OVERVIEW / EDITOR row */
+  .mh{background:#fff;color:#1A1A1A;height:52px;display:flex;align-items:stretch;padding:0 26px 0 22px;border-bottom:1px solid #DDD6C8;flex-shrink:0}
+  .mh-tabs{display:flex;gap:6px;flex:1}
+  .mh-tab{position:relative;background:none;border:0;padding:0 12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:500;letter-spacing:.1px;text-transform:uppercase;color:#8a8470;cursor:pointer;white-space:nowrap}
+  .mh-tab:hover{color:#1A1A1A}
+  .mh-tab.on{color:#1A1A1A}
+  .mh-tab.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;background:#1A1A1A}
+  .mh .cost{align-self:center;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:500;text-transform:uppercase}
+  .mh .cost b{color:#2E9048;font-weight:600}
+  .body{flex:1;overflow-y:auto;padding:17px 17px 28px}
+  .top{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:860px;margin:0 auto 0 52px}
+  .card{background:var(--card);border:1px solid var(--card-line)}
+  .card>h2{font-size:17px;font-weight:600;padding:15px 18px;border-bottom:1px solid var(--card-line)}
+  .stats{display:grid;grid-template-columns:1fr 1fr;row-gap:19px;padding:18px 18px 17px}
+  .stat b{display:block;font-size:14px;font-weight:700}
+  .stat span{font-size:10.5px;letter-spacing:.4px;color:#444}
+  .card.details{align-self:start}
+  /* Department allowances, across both columns, in a tight grid */
+  .card.allow{grid-column:1 / -1}
+  .card.allow[hidden]{display:none}
+  .card.allow>h2{display:flex;align-items:baseline;padding:11px 18px}
+  .allow-sum{margin-left:auto;font-size:12px;font-weight:400;color:#666}
+  .allow-sum b{color:#1A1A1A;font-weight:600}
+  .allow-body{padding:4px 18px 12px}
+  .allow-grid{display:grid;grid-template-columns:1fr 1fr;column-gap:32px}
+  .alw-pen{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linejoin:round;margin-right:4px;vertical-align:-1px}
+  .alw-v.is-none{font-weight:400;color:#999}
+  .alw-btn{display:inline-flex;align-items:center;border-bottom:0 !important;color:#6B6455}
+  .alw-btn:hover{color:#1A1A1A;text-decoration:underline;text-underline-offset:2px}
+  /* Departments without one, folded into a line */
+  .allow-rest{margin-top:2px}
+  .allow-rest-hd{display:flex;align-items:center;gap:8px;width:100%;padding:9px 0;background:none;border:0;border-bottom:1px solid #F0ECE3;font:inherit;font-size:12.5px;color:#1A1A1A;cursor:pointer;text-align:left}
+  .allow-rest-n{font-weight:600;flex-shrink:0}
+  .allow-rest-hd .cv{width:10px;height:10px;fill:none;stroke:#888;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;transform:rotate(-90deg);transition:transform .12s;flex-shrink:0}
+  .allow-rest-hd .cv.open{transform:none}
+  .allow-rest-names{color:#888;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:8px}
+  .allow-rest.is-open .allow-rest-names{display:none}
+  .allow-it{display:flex;align-items:baseline;gap:8px;padding:6px 0;border-bottom:1px solid #F0ECE3;font-size:12.5px;min-width:0}
+  .allow-it .alw-go{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .allow-it.is-unset .alw-go{color:#888}
+  .allow-it .alw{margin-left:auto;flex-shrink:0;gap:6px}
+  .allow-it .alw-in{width:80px}
+  .alw-go{padding:0;background:none;border:0;font:inherit;color:inherit;cursor:pointer;text-align:left}
+  .alw-go:hover{text-decoration:underline}
+  .fields{padding:21px 17px 16px}
+  .fld{position:relative;border:1px solid #999;padding:10px 16px}
+  .fld label{position:absolute;top:-8px;left:12px;background:#fff;padding:0 5px;font-size:11.5px;color:#555}
+  .fld input,.fld textarea{width:100%;border:0;outline:0;font:inherit;font-size:13.5px;color:var(--ink);resize:vertical;background:none}
+  .fld textarea{min-height:48px}
+  .fld:focus-within{border-color:var(--ink)}
+  .cnt{text-align:right;font-size:10px;color:#444;margin:18px 0 20px}
+  .cnt:last-child{margin-bottom:0}
+  .sh{font-size:13.5px;font-weight:700;letter-spacing:.4px;margin:36px 0 9px}
+  .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:17px}
+  .tile{background:var(--card);padding:17px 17px 20px;min-height:104px;cursor:pointer;border:1px solid transparent}
+  .tile:hover{border-color:#cfcfcf}
+  .tile h3{font-size:13.5px;font-weight:700;margin-bottom:9px}
+  .tile p{font-size:12px;line-height:1.35;color:#333}
+  .tile.new{border:1.5px dashed #aaa;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:13.5px;color:#333}
+  .tile.new .plus{font-size:28px;font-weight:300;line-height:1}
+  .tile.new:hover{background:#f7f7f7}
+
+  /* ROOM MEASUREMENTS */
+  .card.meas{margin-top:18px}
+  .meas-body{padding:22px 17px 20px}
+  .floor{display:flex;align-items:stretch;gap:9px}
+  .floor .fld{width:275px}
+  .fld input::placeholder{color:#888}
+  .btn-add{border:0;background:var(--ink);color:#fff;font:inherit;font-weight:700;font-size:10.5px;letter-spacing:.3px;padding:0 17px;cursor:pointer}
+  .btn-add:disabled{background:#ddd;color:#888;cursor:default}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .chips:empty{display:none}
+  .chip{background:#f0f0f0;border:1px solid #ddd;padding:3px 10px;font-size:12px}
+  .mt{border-collapse:collapse;width:345px;margin-top:26px;font-size:12.5px}
+  .mt th{font-weight:700;font-size:12px;text-align:left;padding:0 18px 8px;vertical-align:bottom;border-bottom:1px solid #ccc}
+  .mt th:last-child,.mt td:last-child{text-align:center;width:120px;padding-left:0;padding-right:0}
+  .mt td{padding:0 18px;height:35px;border-bottom:1px solid #ddd;color:#2f7a4b}
+  .mt tr.mt-sec td{background:#ececec;color:var(--ink);font-weight:600;letter-spacing:.3px;padding-left:35px;border-bottom-color:#ccc}
+  .mt input{width:17px;height:17px;accent-color:#1a73e8;cursor:pointer;vertical-align:middle}
+  .foot{font-size:12px;color:#333;margin-top:24px}
+
+  /* GROUP DRAWER */
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:min(500px,100vw);background:#fff;z-index:51;display:flex;flex-direction:column;transform:translateX(100%);visibility:hidden;transition:transform .25s ease,visibility 0s .25s;box-shadow:-8px 0 24px rgba(0,0,0,.18)}
+  body.dr-open .scrim{opacity:1;pointer-events:auto}
+  body.dr-open .drawer{transform:none;visibility:visible;transition:transform .25s ease}
+  .dr-head{display:flex;align-items:center;justify-content:space-between;margin:0 20px;padding:20px 0 18px;border-bottom:1px solid #ccc;flex-shrink:0}
+  .dr-head h2{font-size:18px;font-weight:700}
+  .dr-x{background:none;border:0;cursor:pointer;display:flex;padding:2px;color:var(--ink)}
+  .dr-body{flex:1;overflow-y:auto;padding:24px 20px 30px}
+  .dr-body .fld{margin-bottom:0}
+  .dr-body .cnt{margin:14px 0 18px}
+  .dr-body .fld + .fld,.dr-body .cnt + .fld.sel{margin-top:0}
+  .fld.sel{margin-bottom:18px}
+  .fld select{width:100%;border:0;outline:0;font:inherit;font-size:13.5px;color:var(--ink);background:none;appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:20px}
+  .fld.sel::after{content:"";position:absolute;right:16px;top:50%;margin-top:-2px;border:5px solid transparent;border-top-color:var(--ink);border-bottom:0;pointer-events:none}
+  .fld select.empty{font-style:italic}
+  .drawer [hidden]{display:none !important}
+  .dr-sec{display:flex;align-items:center;gap:12px;margin:32px 0 18px;padding-bottom:14px;border-bottom:1.5px solid var(--ink)}
+  .dr-sec h3{flex:1;font-size:15.5px;font-weight:700}
+  .tog{display:flex;align-items:center;gap:10px;font-weight:700;font-size:12.5px;cursor:pointer;user-select:none}
+  .tog input{display:none}
+  .tog .sw{width:40px;height:20px;border:1px solid #bbb;background:#fff;position:relative}
+  .tog .sw::before{content:"";position:absolute;top:0;bottom:0;left:0;width:50%;background:#ddd;transition:all .15s}
+  .tog input:checked + .sw::before{left:0;background:#86b58f}
+  .tog input:not(:checked) + .sw::before{left:50%}
+  .std{display:flex;align-items:center;gap:12px;font-size:14px;color:#555;cursor:pointer;margin-bottom:22px}
+  .std input{width:20px;height:20px;accent-color:#1a73e8;cursor:pointer}
+  .mgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px 12px;margin-bottom:22px}
+  .mgrid .fld{padding:9px 14px}
+  .mgrid .fld label{font-size:10.5px;font-style:italic;color:#666}
+  .mgrid .fld input{font-size:13px;font-style:italic}
+  .mgrid .fld input:disabled{color:#999;-webkit-text-fill-color:#999;cursor:not-allowed}
+  .mgrid.locked .fld{border-color:#ccc}
+  .tagbox{position:relative;border:1px solid #999;padding:14px 16px 16px}
+  .tagbox > label{position:absolute;top:-8px;left:12px;background:#fff;padding:0 5px;font-size:13.5px;color:#444}
+  .tagbox > input{width:100%;border:0;outline:0;font:inherit;font-size:13px;color:var(--ink);background:none;margin-top:4px}
+  .tagbox > input::placeholder{color:#666}
+  .tags{display:flex;flex-wrap:wrap;gap:9px 10px;margin-top:14px}
+  .tags:empty{display:none}
+  /* Add or remove tasks: a checklist of every task the template knows, under
+     the field — ticked ones are in the list; typing narrows it. */
+  .tdd{position:absolute;left:-1px;right:-1px;top:calc(100% - 1px);z-index:30;max-height:320px;overflow-y:auto;background:#fff;border:1px solid #999;box-shadow:0 10px 24px -12px rgba(0,0,0,.35)}
+  .tdd-row{display:flex;align-items:center;gap:14px;padding:9px 16px;border-top:1px solid #ddd;font-size:13px;color:var(--ink);cursor:pointer}
+  .tdd-row:first-child{border-top:0}
+  .tdd-row:hover{background:#f6f6f6}
+  .tdd-row input{width:16px;height:16px;margin:0;flex-shrink:0;accent-color:var(--ink);cursor:pointer}
+  .tdd-n{flex:1;min-width:0}
+  .tdd-grp{flex-shrink:0;margin-left:12px;font-size:12px;color:#888;white-space:nowrap}
+  .tdd-row mark{background:#FDFF86;color:inherit}
+  .tdd-none{padding:12px 16px;font-size:12.5px;color:#888}
+  .tag{display:inline-flex;align-items:center;gap:8px;background:#e6e6e6;border:1px solid #ccc;padding:5px 10px;font-size:12.5px}
+  .tag button{background:none;border:0;cursor:pointer;font-size:15px;line-height:1;color:#444;padding:0}
+  .tag button:hover{color:var(--ink)}
+  .dr-btn{display:block;width:100%;border:0;font:inherit;font-weight:700;font-size:12.5px;letter-spacing:.3px;padding:15px;margin-top:20px;cursor:pointer}
+  .dr-btn.add-task{background:#86b58f;color:#1d4a2a}
+  .dr-btn.add-task:hover{background:#79ab83}
+  .dr-btn.danger{background:#7f231f;color:#fff;margin-top:0}
+  .dr-btn.danger:hover{background:#6c1d1a}
+
+  @media (max-width:1150px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}.top{margin-left:0}}
+  @media (max-width:900px){.top{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+  <header class="tb">
+    <div class="tb-logo">kai</div>
+    <div class="tb-title">Scan Template: Atlanta (REHAB) Template 3.25 (Beta)</div>
+    <span class="tb-sep"></span>
+    <button class="tb-dl" aria-label="Download template">
+      <svg width="14" height="16" viewBox="0 0 22 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M11 1v15M4 9.5l7 7 7-7M2 22.5h18"/></svg>
+    </button>
+    <span class="tb-sp"></span>
+    <span class="tb-org">Kaiizen Engineering</span>
+    <button class="tb-ic" aria-label="Notifications">
+      <svg width="16" height="17" viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V11a8 8 0 0 1 16 0v8l2 2H2l2-2ZM9.5 23.5a2.5 2.5 0 0 0 5 0M12 1v2"/></svg>
+    </button>
+    <button class="tb-ic" aria-label="Assistant">
+      <svg width="22" height="18" viewBox="0 0 34 28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 22a7 7 0 0 1-1-13.9A9 9 0 0 1 25 7a7.5 7.5 0 0 1 0 15H9Z"/><circle cx="17" cy="15" r="4.5"/><path d="M17 8v2.5M17 19.5V22M10 15h2.5M21.5 15H24"/></svg>
+    </button>
+    <div class="tb-av">QH</div>
+  </header>
+
+  <div class="app">
+    <nav class="pnav">
+      <a href="#"><span class="ic" style="--i:url('icons/Dashboard.svg')"></span>Dashboard</a>
+      <a href="#"><span class="ic" style="--i:url('icons/Markets.svg')"></span>Markets</a>
+      <a href="#"><span class="ic" style="--i:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 24' fill='none' stroke='black' stroke-width='1.2'%3E%3Cpath d='M9.2 9.6 15.6 4l6.3 5.6v7.1H16.4'/%3E%3Cpath d='M3.7 11.9 10.1 6.3l6.3 5.6v7.2H3.7Z'/%3E%3C/svg%3E&quot;)"></span>Properties</a>
+      <a href="#"><span class="ic" style="--i:url('icons/Contractors-Hammer-Trade-Icon.svg')"></span>Contractors</a>
+      <a href="#"><span class="ic" style="--i:url('icons/Product-Delivery-Package-Icon.svg')"></span>Products</a>
+      <a href="#" class="on"><span class="ic" style="--i:url('icons/Template-Icon.svg')"></span>Templates</a>
+      <a href="#"><span class="ic" style="--i:url('icons/Users-Icon.svg')"></span>Users</a>
+      <a href="#"><span class="ic" style="--i:url('icons/Settings.svg')"></span>Org Settings</a>
+    </nav>
+
+    <aside class="rail">
+      <div class="r-tools">
+        <div class="r-seg" id="railMode" role="tablist">
+          <button data-mode="group" class="on" role="tab" aria-selected="true">Groups</button>
+          <button data-mode="trade" role="tab" aria-selected="false">Trades</button>
+          <button data-mode="category" role="tab" aria-selected="false">Departments</button>
+        </div>
+        <label class="search" id="search">
+          <svg width="14" height="14" viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="14" cy="14" r="11.5"/><path d="M22.5 22.5 32 32"/></svg>
+          <span class="lbl">Search</span>
+          <input id="filter" placeholder="Search groups" autocomplete="off">
+        </label>
+      </div>
+
+      <div id="railGroups"></div>
+    </aside>
+
+    <main class="main">
+      <div class="mh">
+        <nav class="mh-tabs" role="tablist">
+          <button class="mh-tab on" role="tab" aria-selected="true">Overview</button>
+          <button class="mh-tab" role="tab" aria-selected="false">All Tasks (176)</button>
+        </nav>
+        <span class="cost">Cost: <b>$--</b></span></div>
+      <div class="body">
+        <div class="top">
+          <section class="card">
+            <h2>Template Information</h2>
+            <div class="stats">
+              <div class="stat"><b>23</b><span>GROUPS</span></div>
+              <div class="stat"><b>176</b><span>TASKS</span></div>
+              <div class="stat"><b id="statDepts">—</b><span>DEPARTMENTS</span></div>
+              <div class="stat"><b id="statTypes">—</b><span>PRODUCT TYPES</span></div>
+              <div class="stat"><b>164</b><span>OPTIONS</span></div>
+              <div class="stat"><b>503</b><span>LINE ITEMS</span></div>
+              <div class="stat"><b>09-16-26</b><span>CREATED</span></div>
+              <div class="stat"><b>09-16-26</b><span>UPDATED</span></div>
+            </div>
+          </section>
+          <section class="card details">
+            <h2>Template Details</h2>
+            <div class="fields">
+              <div class="fld"><label for="tName">Name</label><input id="tName" maxlength="200" value="Atlanta (REHAB) Template 3.25"></div>
+              <div class="cnt" id="nameCnt"></div>
+              <div class="fld"><label for="tDesc">Description</label><textarea id="tDesc" maxlength="1000">3.25: Sewer Clean out Added</textarea></div>
+              <div class="cnt" id="descCnt"></div>
+            </div>
+          </section>
+          <section class="card allow" id="allowCard" hidden>
+            <h2>Department Allowances<span class="allow-sum" id="allowSum"></span></h2>
+            <div class="allow-body" id="allowRows"></div>
+          </section>
+        </div>
+
+        <div id="groupTiles"></div>
+
+        <section class="card meas">
+          <h2>Room Measurements</h2>
+          <div class="meas-body">
+            <form class="floor" id="floorForm">
+              <div class="fld"><label for="floorIn">New Flooring Type</label><input id="floorIn" placeholder="e.g. hardwood" autocomplete="off"></div>
+              <button class="btn-add" id="floorBtn" disabled>ADD FLOORING TYPE</button>
+            </form>
+            <div class="chips" id="floorChips"></div>
+            <table class="mt">
+              <thead><tr><th>Group</th><th>Standard<br>Measurements*</th></tr></thead>
+              <tbody id="measRows"></tbody>
+            </table>
+            <p class="foot">* Standard measurements: width, length, height, area, perimeter, and wall area.</p>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-hidden="true">
+    <div class="dr-head">
+      <h2 id="drTitle"></h2>
+      <button class="dr-x" id="drClose" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 18 18" stroke="currentColor" stroke-width="2.2"><path d="M2 2l14 14M16 2 2 16"/></svg>
+      </button>
+    </div>
+    <div class="dr-body">
+      <div class="fld"><label for="drName">Name</label><input id="drName" maxlength="200"></div>
+      <div class="cnt" id="drNameCnt"></div>
+      <div class="fld"><label for="drDesc">Description</label><textarea id="drDesc" maxlength="1000"></textarea></div>
+      <div class="cnt" id="drDescCnt"></div>
+      <div class="fld sel"><label for="drCat" id="drCatLbl">Category</label><select id="drCat"></select></div>
+      <div class="fld sel" id="drTypeFld"><label for="drType">Group Type</label>
+        <select id="drType">
+          <option value="">No special group type</option>
+          <option>Room</option>
+          <option>Whole House</option>
+          <option>Utilities</option>
+        </select>
+      </div>
+
+      <div class="dr-sec">
+        <h3 id="drMeasH">Group's Custom Values (Measurements)</h3>
+        <label class="tog"><input type="checkbox" id="drStdTog"><span class="sw"></span>Standard</label>
+      </div>
+      <label class="std"><input type="checkbox" id="drStd"><span id="drStdLbl">Use standard Room Group measurements</span></label>
+      <div class="mgrid" id="drMeas"></div>
+      <div class="tagbox" id="drFloorBox">
+        <label for="drFloor">Flooring Areas</label>
+        <input id="drFloor" placeholder="Add flooring types (e.g. carpetArea, tileArea)..." autocomplete="off">
+        <div class="tags" id="drFloorTags"></div>
+      </div>
+
+      <div class="dr-sec"><h3 id="drTasksH">Group's Tasks</h3></div>
+      <div class="tagbox">
+        <label for="drTask" id="drTaskLbl">Tasks in Group</label>
+        <input id="drTask" placeholder="add or remove..." autocomplete="off" role="combobox" aria-expanded="false" aria-controls="drTaskDd">
+        <div class="tdd" id="drTaskDd" role="listbox" aria-multiselectable="true" hidden></div>
+        <div class="tags" id="drTaskTags"></div>
+      </div>
+      <button class="dr-btn add-task" id="drAddTask">ADD NEW TASK TO THIS GROUP</button>
+
+      <div class="dr-sec"><h3>Danger Section</h3></div>
+      <button class="dr-btn danger" id="drDelete">DELETE THIS GROUP TEMPLATE</button>
+    </div>
+  </aside>
+
+<script>
+  // `active` = tasks switched on, shown as "active / total"; `meas` = standard measurements on
+  const SECTIONS = [
+    { kind: 'Exterior', groups: [
+      { name: 'Front Exterior', tasks: 31, options: 32, lines: 88, meas: true },
+      { name: 'Left Exterior',  tasks: 30, options: 30, lines: 82, meas: true },
+      { name: 'Rear Exterior',  tasks: 29, options: 29, lines: 81, meas: true },
+      { name: 'Right Exterior', tasks: 30, options: 30, lines: 82, meas: true },
+      { name: 'HOA Items',      tasks: 10, active: 8, options: 8, lines: 13, meas: false },
+    ]},
+    { kind: 'Interior', groups: [
+      { name: 'Entry',             tasks: 37, options: 41, lines: 184, meas: true },
+      { name: 'Living Room',       tasks: 39, options: 43, lines: 198, meas: true },
+      { name: 'Family Room',       tasks: 39, options: 43, lines: 198, meas: true },
+      { name: 'Dining Room',       tasks: 39, options: 43, lines: 198, meas: true },
+      { name: 'Kitchen',           tasks: 56, options: 60, lines: 265, meas: true },
+      { name: 'Master Bedroom',    tasks: 38, options: 42, lines: 187, meas: true },
+      { name: 'Master Bathroom',   tasks: 54, options: 74, lines: 253, meas: true },
+      { name: 'Bedroom',           tasks: 37, options: 41, lines: 183, meas: true },
+      { name: 'Bathroom',          tasks: 52, options: 72, lines: 242, meas: true },
+      { name: 'Hallway',           tasks: 36, options: 40, lines: 174, meas: true },
+      { name: 'Stairwell',         tasks: 35, options: 39, lines: 173, meas: true },
+      { name: 'Laundry Room',      tasks: 41, options: 44, lines: 199, meas: true },
+      { name: 'Bonus Room',        tasks: 40, options: 44, lines: 199, meas: false },
+      { name: 'Sun Room',          tasks: 40, options: 44, lines: 199, meas: false },
+      { name: 'Basement',          tasks: 41, options: 46, lines: 198, meas: true, known: true },
+      { name: 'Garage or Carport', tasks: 35, options: 39, lines: 176, meas: true },
+    ]},
+    { kind: 'Other', groups: [
+      { name: 'Whole House', tasks: 46, active: 44, options: 44, lines: 98, meas: false },
+    ]},
+    { kind: 'Utilities General', groups: [
+      { name: 'General Assets', tasks: 23, active: 1, options: 1, lines: 1, meas: false },
+    ]},
+  ];
+
+  const $ = id => document.getElementById(id);
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+  // The rail's three views, as the scope dashboard's All / Labor / Materials:
+  // 'group' = groups split by section, 'trade' = tasks by the contractor trade
+  // that does them, 'category' = tasks by department (what they buy).
+  // A task lives in exactly one group but can sit in several departments, so it repeats there.
+  let railMode = 'group';
+  const SEARCH_HINT = { group: 'Search groups', trade: 'Search trades', category: 'Search departments' };
+  const openTrades = new Set();
+
+  // Contractor trades, and the one trade that does each task. Tasks not mapped fall into "No trade".
+  const TRADES = [
+    'Carpentry', 'Cleaning', 'Drywall', 'Electrical', 'Flooring', 'General Labor', 'Handyman',
+    'HVAC', 'Masonry', 'Paint', 'Plumbing',
+  ];
+  const TASK_TRADE = {
+    'Bifold Door Hardware (Per Door)': 'Carpentry', 'Blinds': 'Handyman', 'Cabinet - Paint': 'Paint',
+    'Ceiling Tiles': 'Drywall', 'Charlie Bar': 'Handyman', 'Demo (General)': 'General Labor',
+    'Doors & Accessories (Exterior)': 'Carpentry', 'Doors & Accessories (Interior)': 'Carpentry',
+    'Door adjustment': 'Carpentry', 'Door Knobs & Deadbolts': 'Handyman', 'Door Stop': 'Handyman',
+    'Drywall Repair': 'Drywall', 'Exterior Lighting': 'Electrical', 'Fireplace': 'Masonry',
+    'Fireplace Stone Paint': 'Paint', 'Handrail Hardware': 'Carpentry', 'HVAC Accessories': 'HVAC',
+    'HVAC Vent': 'HVAC', 'Light Bulbs': 'Handyman', 'Light Fixtures / Fans': 'Electrical',
+    'Mouldings and Trim': 'Carpentry', 'Paint - Corner to Corner': 'Paint', 'Paint - Touchup': 'Paint',
+    'Shelving & Hardware': 'Carpentry', 'French Doors and Sliding Glass Doors': 'Carpentry',
+    'Sliding Door Accessories': 'Handyman', 'Switches & Outlets': 'Electrical',
+    'Switch/outlet plates': 'Electrical', 'Smoke/CO Detector Batteries': 'Handyman',
+    'Smoke and CO Detectors': 'Electrical', 'Wall/Ceiling Hardware removal': 'Handyman',
+    'Window Accessories': 'Handyman', 'Windows Replacement / Repair': 'Carpentry',
+    'Window Screens': 'Handyman', 'Door Knob/Deadbolts Adjustment': 'Handyman',
+    'Wallpaper Removal': 'Paint', 'Cleaning and Remediation': 'Cleaning',
+    'Flooring Repairs/Replacement': 'Flooring', 'Carpet Repair': 'Flooring',
+    'Trash Out': 'General Labor', 'Non Standard Task': 'General Labor',
+  };
+
+  // Like categoryTasks: only groups with a real task list (`known`) feed it.
+  function tradeTasks() {
+    const by = Object.fromEntries([...TRADES, 'No trade'].map(t => [t, []]));
+    SECTIONS.forEach((s, si) => s.groups.forEach((g, gi) => {
+      if (!g.known) return;
+      g.taskList ??= TASK_CATALOG.slice(0, g.tasks);
+      g.taskList.forEach(task => by[TASK_TRADE[task] || 'No trade'].push({ task, group: g.name, si, gi }));
+    }));
+    return Object.entries(by)
+      .filter(([t, list]) => t !== 'No trade' || list.length)
+      .map(([name, tasks]) => ({ name, tasks }));
+  }
+  // Category view: which categories and product types are folded open.
+  const openCats = new Set(), openTypes = new Set();
+
+  // Trade categories, as in the scope dashboard. Tasks not mapped below fall into Uncategorized.
+  const CATEGORIES = [
+    'Appliances', 'Bathroom', 'Electrical', 'Flooring', 'Hardware', 'Heating & Cooling', 'Kitchen',
+    'Lighting & Ceiling Fans', 'Moulding & Millwork', 'Paint', 'Storage & Organization',
+    'Windows & Doors', 'No Products Needed',
+  ];
+  // What each task buys, as [category, product type] — a product type is the
+  // kind of thing bought (Smoke & CO detectors), the same names the scope
+  // dashboard's Materials view uses. A task can buy in more than one category.
+  const TASK_TYPES = {
+    'Bifold Door Hardware (Per Door)': [['Hardware', 'Door hardware'], ['Windows & Doors', 'Interior doors']],
+    'Blinds': [['Windows & Doors', 'Blinds & shades']],
+    'Cabinet - Paint': [['Paint', 'Cabinet paint'], ['Kitchen', 'Cabinets']],
+    'Ceiling Tiles': [['Moulding & Millwork', 'Ceiling tiles']],
+    'Charlie Bar': [['Windows & Doors', 'Patio door security'], ['Hardware', 'Door hardware']],
+    'Demo (General)': [['No Products Needed', 'Labor only']],
+    'Doors & Accessories (Exterior)': [['Windows & Doors', 'Exterior doors']],
+    'Doors & Accessories (Interior)': [['Windows & Doors', 'Interior doors']],
+    'Door adjustment': [['Windows & Doors', 'Interior doors'], ['No Products Needed', 'Labor only']],
+    'Door Knobs & Deadbolts': [['Hardware', 'Door knobs & locks'], ['Windows & Doors', 'Door knobs & locks']],
+    'Door Stop': [['Hardware', 'Door stops']],
+    'Drywall Repair': [['Paint', 'Drywall & patching']],
+    'Exterior Lighting': [['Lighting & Ceiling Fans', 'Exterior light fixtures'], ['Electrical', 'Exterior light fixtures']],
+    'Fireplace': [['Heating & Cooling', 'Fireplaces']],
+    'Fireplace Stone Paint': [['Paint', 'Specialty paint'], ['Heating & Cooling', 'Fireplaces']],
+    'Handrail Hardware': [['Hardware', 'Handrail brackets'], ['Moulding & Millwork', 'Handrails']],
+    'HVAC Accessories': [['Heating & Cooling', 'HVAC filters & accessories']],
+    'HVAC Vent': [['Heating & Cooling', 'Vents & registers']],
+    'Light Bulbs': [['Lighting & Ceiling Fans', 'Light bulbs']],
+    'Light Fixtures / Fans': [['Lighting & Ceiling Fans', 'Light fixtures & ceiling fans'], ['Electrical', 'Light fixtures & ceiling fans']],
+    'Mouldings and Trim': [['Moulding & Millwork', 'Moulding & trim']],
+    'Paint - Corner to Corner': [['Paint', 'Interior paint']],
+    'Paint - Touchup': [['Paint', 'Interior paint']],
+    'Shelving & Hardware': [['Storage & Organization', 'Closet systems'], ['Hardware', 'Shelf brackets']],
+    'French Doors and Sliding Glass Doors': [['Windows & Doors', 'Patio & French doors']],
+    'Sliding Door Accessories': [['Windows & Doors', 'Sliding door parts'], ['Hardware', 'Sliding door parts']],
+    'Switches & Outlets': [['Electrical', 'Switches & outlets']],
+    'Switch/outlet plates': [['Electrical', 'Wall plates']],
+    'Smoke/CO Detector Batteries': [['Electrical', 'Smoke & CO detectors']],
+    'Smoke and CO Detectors': [['Electrical', 'Smoke & CO detectors']],
+    'Wall/Ceiling Hardware removal': [['No Products Needed', 'Labor only']],
+    'Window Accessories': [['Windows & Doors', 'Window hardware']],
+    'Windows Replacement / Repair': [['Windows & Doors', 'Windows']],
+    'Window Screens': [['Windows & Doors', 'Window screens']],
+    'Door Knob/Deadbolts Adjustment': [['Hardware', 'Door knobs & locks'], ['No Products Needed', 'Labor only']],
+    'Wallpaper Removal': [['Paint', 'Wall prep'], ['No Products Needed', 'Labor only']],
+    'Cleaning and Remediation': [['No Products Needed', 'Labor only']],
+    'Flooring Repairs/Replacement': [['Flooring', 'Vinyl plank & tile']],
+    'Carpet Repair': [['Flooring', 'Carpet']],
+    'Trash Out': [['No Products Needed', 'Labor only']],
+    'Non Standard Task': [['No Products Needed', 'Labor only']],
+  };
+
+  // Only groups with a real task list (`known`) feed the category view.
+  function categoryTasks() {
+    const by = Object.fromEntries([...CATEGORIES, 'No department'].map(c => [c, []]));
+    SECTIONS.forEach((s, si) => s.groups.forEach((g, gi) => {
+      if (!g.known) return;
+      g.taskList ??= TASK_CATALOG.slice(0, g.tasks);
+      g.taskList.forEach(task => {
+        const cats = (TASK_TYPES[task] || [['No department', 'Unsorted']]).map(([c]) => c);
+        (TASK_TYPES[task] || [['No department', 'Unsorted']]).forEach(([c, type]) =>
+          by[c].push({ task, type, group: g.name, si, gi, cats }));
+      });
+    }));
+    return Object.entries(by)
+      .filter(([c, list]) => c !== 'No department' || list.length)
+      .map(([name, tasks]) => ({ name, tasks, types: productTypes(name, tasks) }));
+  }
+  // A category's tasks gathered by product type: one card per type, with the
+  // tasks that buy it, the groups they sit in, and the other categories the
+  // same type also shows under.
+  /* Options and line items for a product type's tasks, the figures a group
+     card shows. The template keeps no per-task counts yet, so each task gets
+     mock ones — steady per task name, near this template's averages (about
+     1.1 options and 4–5 line items a task). */
+  function taskCounts(task) {
+    let h = 0; for (const ch of task) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return { options: 1 + (h % 9 === 0 ? 1 : 0), lines: 3 + (h % 4) };
+  }
+  /* Trades view: a task can sit in many groups, so a tile counts the copies
+     of it across the template — tasks — and their options and line items,
+     rather than naming one group. Only Basement lists its tasks, so the
+     spread is mock, steady per task. */
+  function tradeTaskCounts(task) {
+    let h = 0; for (const ch of task) h = (h * 33 + ch.charCodeAt(0)) >>> 0;
+    const n = 1 + (h % 4), c = taskCounts(task);
+    return { tasks: n, options: c.options * n, lines: c.lines * n };
+  }
+  function typeCounts(tasks) {
+    return tasks.reduce((a, t) => { const c = taskCounts(t); a.options += c.options; a.lines += c.lines; return a; }, { options: 0, lines: 0 });
+  }
+  function productTypes(cat, tasks) {
+    const by = new Map();
+    tasks.forEach(t => {
+      if (!by.has(t.type)) by.set(t.type, { name: t.type, tasks: [], groups: new Set(), si: t.si, gi: t.gi, also: new Set() });
+      const p = by.get(t.type);
+      if (!p.tasks.includes(t.task)) p.tasks.push(t.task);
+      p.groups.add(t.group);
+      (TASK_TYPES[t.task] || []).forEach(([c, ty]) => { if (ty === t.type && c !== cat) p.also.add(c); });
+    });
+    return [...by.values()];
+  }
+
+  function renderRail(q = '') {
+    const row = g => `<div class="grp"><span class="n">${g.name}</span><span class="t">${g.tasks} tasks</span><span class="h"></span></div>`;
+    const match = g => g.name.toLowerCase().includes(q.toLowerCase());
+    if (railMode === 'trade') {
+      // Trade › task, folding like the Departments view; a search opens what it found.
+      const ql = q.toLowerCase();
+      const hit = v => !ql || v.toLowerCase().includes(ql);
+      const caret = open => `<svg class="cv${open ? ' open' : ''}" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>`;
+      const trades = tradeTasks()
+        .map(t => ({ ...t, shown: t.tasks.filter(x => hit(t.name) || hit(x.task)) }))
+        .filter(t => hit(t.name) || t.shown.length);
+      $('railGroups').innerHTML = `
+        <div class="sec"><span>Trades</span><span class="c">${plural(trades.length, 'trade')}</span></div>
+        <div>${trades.map(t => {
+          const open = ql ? true : openTrades.has(t.name);
+          return `<div class="cat${open ? ' is-open' : ''}">
+            <div class="grp cat-row trade-row" data-trade="${esc(t.name)}">${caret(open)}<span class="n">${esc(t.name)}</span><span class="t">${plural(t.tasks.length, 'task')}</span></div>
+            ${open ? (t.shown.length
+              ? t.shown.map(x => `<div class="grp task-row trade-task" data-s="${x.si}" data-g="${x.gi}"><span class="n">${esc(x.task)}</span><span class="t">${plural(tradeTaskCounts(x.task).tasks, 'task')}</span></div>`).join('')
+              : '<div class="rail-empty">No tasks yet</div>') : ''}
+          </div>`;
+        }).join('')}</div>`;
+      return;
+    }
+    if (railMode === 'category') {
+      /* Category › product type › task, as the scope dashboard's Materials
+         list: a category folds open on its product types, a product type on
+         the tasks that buy it, each task with the group it sits in. A search
+         matches at any level and opens the way to what it found. */
+      const ql = q.toLowerCase();
+      const hit = v => !ql || v.toLowerCase().includes(ql);
+      const caret = open => `<svg class="cv${open ? ' open' : ''}" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>`;
+      const cats = categoryTasks().map(c => {
+        const types = c.types.map(p => {
+          const tasks = p.tasks.filter(t => hit(c.name) || hit(p.name) || hit(t));
+          return { ...p, shown: tasks };
+        }).filter(p => p.shown.length);
+        return { ...c, shownTypes: types };
+      }).filter(c => hit(c.name) || c.shownTypes.length);
+      $('railGroups').innerHTML = `
+        <div class="sec"><span>Departments</span><span class="c">${plural(cats.length, 'department')}</span></div>
+        <div>${cats.map(c => {
+          const k = c.name, open = ql ? true : openCats.has(k);
+          return `<div class="cat${open ? ' is-open' : ''}">
+            <div class="grp cat-row" data-cat="${esc(k)}">${caret(open)}<span class="n">${esc(c.name)}</span><span class="t">${plural(c.types.length, 'type')}</span></div>
+            ${open ? (c.shownTypes.length ? c.shownTypes.map(p => {
+              const tk = `${k}|${p.name}`, popen = ql ? true : openTypes.has(tk);
+              return `<div class="grp type-row" data-cat="${esc(k)}" data-type="${esc(p.name)}">${caret(popen)}<span class="n">${esc(p.name)}</span><span class="t">${plural(p.tasks.length, 'task')}</span></div>
+                ${popen ? p.shown.map(t => `<div class="grp task-row" data-s="${p.si}" data-g="${p.gi}"><span class="n">${esc(t)}</span><span class="t">${[...p.groups].map(esc).join(', ')}</span></div>`).join('') : ''}`;
+            }).join('') : '<div class="rail-empty">No product types yet</div>') : ''}
+          </div>`;
+        }).join('')}</div>`;
+      return;
+    }
+    $('railGroups').innerHTML = SECTIONS.map(s => `
+      <div class="sec"><span>${s.kind}</span><span class="c">${plural(s.groups.length, 'group')}</span><button class="add" aria-label="Add ${s.kind.toLowerCase()} group">+</button></div>
+      <div>${s.groups.filter(match).map(row).join('')}</div>`).join('');
+  }
+
+  /* Department allowances. Set here, once per department, and carried into
+     every job built from this template, where the department's materials
+     are read against them. They're a point of comparison, not a deduction
+     from the job budget. Mock values; edits last until reload. */
+  const DEPT_ALLOWANCES = { 'Bathroom': 3500, 'Flooring': 4400, 'Kitchen': 11000 };
+  /* They show in two places — the Allowances card at the top of the page,
+     and each department's heading in the Departments view — and either one
+     edits the same number. One field is open at a time, keyed by where it
+     sits and which department: 'card|Kitchen', 'tiles|Kitchen'. */
+  let allowEditing = null;
+  const usd = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const NO_ALLOW = ['No Products Needed', 'No department'];
+  function allowHtml(dept, where = 'tiles') {
+    if (NO_ALLOW.includes(dept)) return '';
+    const v = DEPT_ALLOWANCES[dept];
+    const label = where === 'tiles' ? '<span class="alw-k">Allowance</span>' : '';
+    if (allowEditing === `${where}|${dept}`) {
+      return `<span class="alw" data-dept="${esc(dept)}" data-where="${where}">${label}<span class="alw-edit">$<input class="alw-in" inputmode="decimal" value="${v != null ? v.toFixed(2) : ''}" placeholder="0.00" aria-label="${esc(dept)} allowance"></span></span>`;
+    }
+    // One control for both setting and changing it: a pencil and Edit.
+    return `<span class="alw" data-dept="${esc(dept)}" data-where="${where}">${label}${v != null
+      ? `<span class="alw-v">${usd(v)}</span>` : '<span class="alw-v is-none">None</span>'}<button type="button" class="alw-btn" data-alw="${esc(dept)}" aria-label="Edit ${esc(dept)} allowance">${PENCIL}Edit</button></span>`;
+  }
+  const PENCIL = '<svg class="alw-pen" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.2 2.3l2.5 2.5-8.4 8.4-3.1.6.6-3.1z"/><path d="M9.6 3.9l2.5 2.5"/></svg>';
+  // Departments and product types in the Information card, counted the way
+  // the Departments view counts them.
+  function renderStats() {
+    const cats = categoryTasks();
+    $('statDepts').textContent = cats.length;
+    $('statTypes').textContent = cats.reduce((a, c) => a + c.types.length, 0);
+  }
+  /* Only in the Departments view, where allowances belong: a compact grid,
+     each department with its number or a way to set one, the count and the
+     total on the heading. */
+  function renderAllowCard() {
+    $('allowCard').hidden = railMode !== 'category';
+    if (railMode !== 'category') return;
+    const depts = categoryTasks().filter(c => !NO_ALLOW.includes(c.name));
+    const total = depts.reduce((a, c) => a + (DEPT_ALLOWANCES[c.name] || 0), 0);
+    const nSet = depts.filter(c => DEPT_ALLOWANCES[c.name] != null).length;
+    $('allowSum').innerHTML = `<b>${usd(total)}</b> · ${nSet} of ${depts.length} set`;
+    /* The departments with an allowance, each on its own line; the rest
+       folded into one line — how many, which — that opens on them, the way
+       the Overview folds a job's trades under its general contractor. A
+       department being edited stays open whichever side it's on. */
+    const row = c => `<div class="allow-it${DEPT_ALLOWANCES[c.name] == null ? ' is-unset' : ''}">
+        <button type="button" class="alw-go" data-go="${esc(c.name)}">${esc(c.name)}</button>${allowHtml(c.name, 'card')}
+      </div>`;
+    const set = depts.filter(c => DEPT_ALLOWANCES[c.name] != null);
+    const unset = depts.filter(c => DEPT_ALLOWANCES[c.name] == null);
+    const open = allowUnsetOpen || unset.some(c => allowEditing === `card|${c.name}`);
+    $('allowRows').innerHTML = (set.length ? `<div class="allow-grid">${set.map(row).join('')}</div>` : '')
+      + (unset.length ? `<div class="allow-rest${open ? ' is-open' : ''}">
+          <button type="button" class="allow-rest-hd" data-rest aria-expanded="${open}">
+            <span class="allow-rest-n">Missing allowance: ${plural(unset.length, 'department')}</span>
+            <svg class="cv${open ? ' open' : ''}" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
+            <span class="allow-rest-names">${unset.map(c => esc(c.name)).join(' · ')}</span>
+          </button>
+          ${open ? `<div class="allow-grid">${unset.map(row).join('')}</div>` : ''}
+        </div>` : '');
+  }
+  let allowUnsetOpen = false;
+  function allowOpen(where, dept) {
+    allowEditing = `${where}|${dept}`;
+    renderTiles(); renderAllowCard();
+    const i = document.querySelector('.alw-in');
+    if (i) { i.focus(); i.select(); }
+  }
+  function allowCommit(where, dept, raw) {
+    if (allowEditing !== `${where}|${dept}`) return;   // Enter took it; this is the blur
+    allowEditing = null;
+    const n = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+    if (String(raw).trim() === '' || isNaN(n)) delete DEPT_ALLOWANCES[dept];
+    else DEPT_ALLOWANCES[dept] = Math.round(n * 100) / 100;
+    renderTiles(); renderAllowCard();
+  }
+  function allowCancel() { allowEditing = null; renderTiles(); renderAllowCard(); }
+
+  function renderTiles() {
+    if (railMode === 'trade') {
+      $('groupTiles').innerHTML = tradeTasks().map(t => `
+        <h2 class="sh" id="trade-${t.name.replace(/\W+/g, '-')}">${esc(t.name.toUpperCase())}<span class="c">${plural(t.tasks.length, 'TASK').toUpperCase()}</span></h2>
+        ${t.tasks.length ? `<div class="tiles">${t.tasks.map(x => {
+          const n = tradeTaskCounts(x.task);
+          return `<div class="tile" data-s="${x.si}" data-g="${x.gi}">
+            <h3>${esc(x.task)}</h3>
+            <p>${plural(n.tasks, 'task')}<br>${plural(n.options, 'option')}<br>${plural(n.lines, 'line item')}</p>
+          </div>`;
+        }).join('')}
+        </div>` : '<p class="empty-note">No tasks for this trade yet.</p>'}`).join('');
+      return;
+    }
+    if (railMode === 'category') {
+      $('groupTiles').innerHTML = categoryTasks().map(c => `
+        <h2 class="sh sh-dept" id="cat-${c.name.replace(/\W+/g, '-')}">${esc(c.name.toUpperCase())}<span class="c">${plural(c.types.length, 'PRODUCT TYPE').toUpperCase()}</span>${allowHtml(c.name)}</h2>
+        ${c.types.length ? `<div class="tiles">${c.types.map(p => `
+          <div class="tile" id="type-${(c.name + '|' + p.name).replace(/\W+/g, '-')}" data-cat="${esc(c.name)}" data-type="${esc(p.name)}">
+            <h3>${esc(p.name)}</h3>
+            <p>${(() => { const n = typeCounts(p.tasks); return `${plural(p.tasks.length, 'task')}<br>${plural(n.options, 'option')}<br>${plural(n.lines, 'line item')}`; })()}</p>
+          </div>`).join('')}
+        </div>` : '<p class="empty-note">No product types in this department yet.</p>'}`).join('');
+      return;
+    }
+    $('groupTiles').innerHTML = SECTIONS.map(s => {
+      const sorted = [...s.groups].sort((a, b) => a.name.localeCompare(b.name));
+      return `<h2 class="sh">${s.kind.toUpperCase()} GROUPS</h2>
+        <div class="tiles">${sorted.map(g => `
+          <div class="tile" data-s="${SECTIONS.indexOf(s)}" data-g="${s.groups.indexOf(g)}">
+            <h3>${g.name}</h3>
+            <p>${g.active != null ? `${g.active} / ` : ''}${g.tasks} tasks<br>${plural(g.options, 'option')}<br>${plural(g.lines, 'line item')}</p>
+          </div>`).join('')}
+          <div class="tile new"><span class="plus">+</span>Add ${s.kind} Group</div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderMeas() {
+    $('measRows').innerHTML = SECTIONS.map((s, si) => {
+      const on = s.groups.filter(g => g.meas).length;
+      const state = on === 0 ? '' : on === s.groups.length ? 'checked' : 'mixed';
+      return `<tr class="mt-sec"><td>${s.kind.toUpperCase()}</td><td><input type="checkbox" data-s="${si}" ${state === 'checked' ? 'checked' : ''} ${state === 'mixed' ? 'data-mixed' : ''}></td></tr>` +
+        s.groups.map((g, gi) => `<tr><td>${g.name}</td><td><input type="checkbox" data-s="${si}" data-g="${gi}" ${g.meas ? 'checked' : ''}></td></tr>`).join('');
+    }).join('');
+    $('measRows').querySelectorAll('[data-mixed]').forEach(cb => cb.indeterminate = true);
+  }
+
+  $('measRows').addEventListener('change', e => {
+    const s = SECTIONS[e.target.dataset.s];
+    if (e.target.dataset.g != null) s.groups[e.target.dataset.g].meas = e.target.checked;
+    else s.groups.forEach(g => g.meas = e.target.checked);
+    renderMeas();
+  });
+
+  const floorTypes = [];
+  $('floorIn').addEventListener('input', e => $('floorBtn').disabled = !e.target.value.trim());
+  $('floorForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const v = $('floorIn').value.trim();
+    if (!v) return;
+    floorTypes.push(v);
+    $('floorChips').innerHTML = floorTypes.map(t => `<span class="chip">${t}</span>`).join('');
+    $('floorIn').value = '';
+    $('floorBtn').disabled = true;
+  });
+
+  function counter(input, out) {
+    const upd = () => out.textContent = `${input.value.length} / ${input.maxLength}`;
+    input.addEventListener('input', upd); upd();
+  }
+
+  $('filter').addEventListener('input', e => renderRail(e.target.value));
+  $('search').addEventListener('click', () => {
+    $('search').classList.add('open');
+    $('filter').focus();
+  });
+  const closeSearch = () => {
+    if ($('filter').value) return;
+    $('search').classList.remove('open');
+  };
+  $('filter').addEventListener('blur', closeSearch);
+  $('filter').addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    e.stopPropagation();
+    $('filter').value = '';
+    renderRail();
+    $('filter').blur();
+  });
+  $('railMode').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    railMode = b.dataset.mode;
+    $('filter').placeholder = SEARCH_HINT[railMode];
+    renderTiles();
+    $('railMode').querySelectorAll('button').forEach(x => {
+      x.classList.toggle('on', x === b);
+      x.setAttribute('aria-selected', x === b);
+    });
+    renderRail($('filter').value);
+    renderAllowCard();
+  });
+  const slug = v => v.replace(/\W+/g, '-');
+  document.querySelector('.rail').addEventListener('click', e => {
+    const g = e.target.closest('.grp');
+    if (!g) return;
+    // A task opens its group, as its card does.
+    if (g.classList.contains('task-row')) { openDrawer(+g.dataset.s, +g.dataset.g); return; }
+    if (g.classList.contains('trade-row')) {
+      const k = g.dataset.trade;
+      openTrades.has(k) ? openTrades.delete(k) : openTrades.add(k);
+      renderRail($('filter').value);
+      document.getElementById(`trade-${slug(k)}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    // A category or product type folds open (or shut) and brings its cards
+    // into view.
+    if (g.classList.contains('type-row')) {
+      const tk = `${g.dataset.cat}|${g.dataset.type}`;
+      openTypes.has(tk) ? openTypes.delete(tk) : openTypes.add(tk);
+      renderRail($('filter').value);
+      const el = document.getElementById(`type-${slug(tk)}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.querySelectorAll('.tile.flash').forEach(x => x.classList.remove('flash'));
+      el?.classList.add('flash');
+      return;
+    }
+    if (g.classList.contains('cat-row')) {
+      const k = g.dataset.cat;
+      openCats.has(k) ? openCats.delete(k) : openCats.add(k);
+      renderRail($('filter').value);
+      document.getElementById(`cat-${slug(k)}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    document.querySelectorAll('.grp.on').forEach(el => el.classList.remove('on'));
+    g.classList.add('on');
+  });
+  document.querySelector('.mh-tabs').addEventListener('click', e => {
+    const t = e.target.closest('.mh-tab');
+    if (!t) return;
+    document.querySelectorAll('.mh-tab').forEach(el => {
+      el.classList.toggle('on', el === t);
+      el.setAttribute('aria-selected', el === t);
+    });
+  });
+
+  // ---- Group drawer -------------------------------------------------------
+  // Only Basement's task list is known; other groups borrow from it until real lists exist.
+  const TASK_CATALOG = [
+    'Bifold Door Hardware (Per Door)', 'Blinds', 'Cabinet - Paint', 'Ceiling Tiles', 'Charlie Bar',
+    'Demo (General)', 'Doors & Accessories (Exterior)', 'Doors & Accessories (Interior)', 'Door adjustment',
+    'Door Knobs & Deadbolts', 'Door Stop', 'Drywall Repair', 'Exterior Lighting', 'Fireplace',
+    'Fireplace Stone Paint', 'Handrail Hardware', 'HVAC Accessories', 'HVAC Vent', 'Light Bulbs',
+    'Light Fixtures / Fans', 'Mouldings and Trim', 'Paint - Corner to Corner', 'Paint - Touchup',
+    'Shelving & Hardware', 'French Doors and Sliding Glass Doors', 'Sliding Door Accessories',
+    'Switches & Outlets', 'Switch/outlet plates', 'Smoke/CO Detector Batteries', 'Smoke and CO Detectors',
+    'Wall/Ceiling Hardware removal', 'Window Accessories', 'Windows Replacement / Repair', 'Window Screens',
+    'Door Knob/Deadbolts Adjustment', 'Wallpaper Removal', 'Cleaning and Remediation',
+    'Flooring Repairs/Replacement', 'Carpet Repair', 'Trash Out', 'Non Standard Task',
+  ];
+  const MEAS_FIELDS = [
+    ['roomLength', 'TBD'], ['roomWidth', 'TBD'], ['roomHeight', 'TBD'],
+    ['roomArea', 'roomLength * roomWidth'], ['roomPerimeter', '2 * (roomLength + roomWidth)'],
+    ['roomWallArea', 'roomPerimeter * roomHeight'],
+  ];
+  const esc = t => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  let cur = null; // { s, g } — the section and group the drawer is editing
+
+
+  function rerenderAll() {
+    renderRail($('filter').value);
+    renderTiles();
+    renderMeas();
+    renderAllowCard();
+    renderStats();
+  }
+
+  function setField(el, v) { el.value = v; el.dispatchEvent(new Event('input')); }
+
+  /* The drawer edits a group or, from Category view, a product type. Same
+     fields; the wording says which, and a product type drops what only a
+     room has (group type, flooring areas). */
+  const DR_WORDS = {
+    group: { title: 'Group', meas: "Group's Custom Values (Measurements)", std: 'Use standard Room Group measurements',
+             tasksH: "Group's Tasks", tasks: 'Tasks in Group', add: 'ADD NEW TASK TO THIS GROUP', del: 'DELETE THIS GROUP TEMPLATE' },
+    type:  { title: 'Product type', meas: "Product type's Custom Values (Measurements)", std: 'Use standard Product type measurements',
+             tasksH: "Product type's Tasks", tasks: 'Tasks in Product type', add: 'ADD NEW TASK TO THIS PRODUCT TYPE', del: 'DELETE THIS PRODUCT TYPE' },
+  };
+  function setDrawerKind(kind) {
+    const w = DR_WORDS[kind];
+    $('drMeasH').textContent = w.meas;
+    $('drStdLbl').textContent = w.std;
+    $('drTasksH').textContent = w.tasksH;
+    $('drTaskLbl').textContent = w.tasks;
+    $('drAddTask').textContent = w.add;
+    $('drDelete').textContent = w.del;
+    // A product type sits in a department; a group's category is interior /
+    // exterior, which is a different thing and keeps its name.
+    $('drCatLbl').textContent = kind === 'type' ? 'Department' : 'Category';
+    // A product type has no measurements of its own — those belong to rooms.
+    [$('drTypeFld'), $('drFloorBox'), $('drMeasH').parentElement, $('drStd').closest('label'), $('drMeas')]
+      .forEach(el => { el.hidden = kind === 'type'; });
+    $('drCat').innerHTML = kind === 'type'
+      ? CATEGORIES.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')
+      : SECTIONS.map((s, i) => `<option value="${i}">${s.kind.toLowerCase()}</option>`).join('');
+  }
+  const drTitle = () => `${DR_WORDS[cur.kind].title}: ${cur.g.name}`;
+
+  /* A product type lives in TASK_TYPES as [category, type] on each task that
+     buys it, so editing one rewrites those pairs: every task in its list gets
+     the pair (under its current name and category), and no other task has it. */
+  const PT_EXTRA = {};   // `${cat}|${name}` → {desc, meas, custom} kept across opens
+  function openTypeDrawer(cat, name) {
+    const tasks = Object.keys(TASK_TYPES).filter(t => TASK_TYPES[t].some(([c, ty]) => c === cat && ty === name));
+    const key = `${cat}|${name}`;
+    const x = PT_EXTRA[key] ??= { desc: name, meas: true, custom: Object.fromEntries(MEAS_FIELDS) };
+    cur = { kind: 'type', s: null, from: { cat, name }, g: { name, desc: x.desc, cat, meas: x.meas, custom: x.custom, floors: [], taskList: tasks } };
+    setDrawerKind('type');
+    $('drTitle').textContent = drTitle();
+    setField($('drName'), name);
+    setField($('drDesc'), x.desc);
+    $('drCat').value = cat;
+    renderDrawerMeas();
+    renderTags();
+    $('drawer').querySelector('.dr-body').scrollTop = 0;
+    document.body.classList.add('dr-open');
+    $('drawer').setAttribute('aria-hidden', 'false');
+  }
+  function applyType() {
+    if (!cur || cur.kind !== 'type') return;
+    const { from, g } = cur;
+    Object.keys(TASK_TYPES).forEach(t => {
+      TASK_TYPES[t] = TASK_TYPES[t].filter(([c, ty]) => !(c === from.cat && ty === from.name));
+      if (!TASK_TYPES[t].length) delete TASK_TYPES[t];
+    });
+    g.taskList.forEach(t => { (TASK_TYPES[t] ??= []).push([g.cat, g.name]); });
+    const oldKey = `${from.cat}|${from.name}`, newKey = `${g.cat}|${g.name}`;
+    PT_EXTRA[newKey] = { desc: g.desc, meas: g.meas, custom: g.custom };
+    if (oldKey !== newKey) delete PT_EXTRA[oldKey];
+    cur.from = { cat: g.cat, name: g.name };
+    rerenderAll();
+  }
+
+  function openDrawer(si, gi) {
+    const g = SECTIONS[si].groups[gi];
+    cur = { kind: 'group', s: SECTIONS[si], g };
+    setDrawerKind('group');
+    g.desc ??= g.name;
+    g.type ??= '';
+    g.floors ??= [];
+    g.taskList ??= TASK_CATALOG.slice(0, g.tasks);
+    g.custom ??= Object.fromEntries(MEAS_FIELDS);
+    $('drTitle').textContent = drTitle();
+    setField($('drName'), g.name);
+    setField($('drDesc'), g.desc);
+    $('drCat').value = si;
+    $('drType').value = g.type;
+    $('drType').classList.toggle('empty', !g.type);
+    renderDrawerMeas();
+    renderTags();
+    $('drawer').querySelector('.dr-body').scrollTop = 0;
+    document.body.classList.add('dr-open');
+    $('drawer').setAttribute('aria-hidden', 'false');
+  }
+
+  function closeDrawer() {
+    document.body.classList.remove('dr-open');
+    $('drawer').setAttribute('aria-hidden', 'true');
+    cur = null;
+  }
+
+  function renderDrawerMeas() {
+    const { g } = cur;
+    $('drStd').checked = $('drStdTog').checked = g.meas;
+    $('drMeas').classList.toggle('locked', g.meas);
+    $('drMeas').innerHTML = MEAS_FIELDS.map(([k, def]) =>
+      `<div class="fld"><label>${k}</label><input data-k="${k}" value="${esc(g.meas ? def : g.custom[k])}" ${g.meas ? 'disabled' : ''}></div>`).join('');
+  }
+
+  function renderTags() {
+    const tag = (t, i, kind) => `<span class="tag">${esc(t)}<button data-kind="${kind}" data-i="${i}" aria-label="Remove ${esc(t)}">×</button></span>`;
+    $('drFloorTags').innerHTML = cur.g.floors.map((t, i) => tag(t, i, 'floor')).join('');
+    $('drTaskTags').innerHTML = cur.g.taskList.map((t, i) => tag(t, i, 'task')).join('');
+  }
+
+  function syncTaskCount() {
+    if (cur.kind === 'type') { applyType(); return; }
+    const g = cur.g;
+    if (g.active != null) g.active = Math.min(g.active, g.taskList.length);
+    g.tasks = g.taskList.length;
+    rerenderAll();
+  }
+
+  $('groupTiles').addEventListener('click', e => {
+    if (e.target.closest('.alw')) return;
+    const pt = e.target.closest('.tile[data-type]');
+    if (pt) { openTypeDrawer(pt.dataset.cat, pt.dataset.type); return; }
+    const t = e.target.closest('.tile[data-s]');
+    if (t) openDrawer(+t.dataset.s, +t.dataset.g);
+  });
+  // Allowance fields, wherever they sit: the card or a department heading.
+  document.addEventListener('click', e => {
+    if (e.target.closest('[data-rest]')) { allowUnsetOpen = !allowUnsetOpen; renderAllowCard(); return; }
+    const ab = e.target.closest('[data-alw]');
+    if (ab) { allowOpen(ab.closest('.alw').dataset.where, ab.dataset.alw); return; }
+    const go = e.target.closest('[data-go]');
+    if (go) {
+      // A department's name goes to it in the Departments view.
+      if (railMode !== 'category') document.querySelector('#railMode [data-mode="category"]').click();
+      const h = document.getElementById('cat-' + go.dataset.go.replace(/\W+/g, '-'));
+      if (h) h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+  document.addEventListener('keydown', e => {
+    const i = e.target.closest && e.target.closest('.alw-in'); if (!i) return;
+    const box = i.closest('.alw');
+    if (e.key === 'Enter') { e.preventDefault(); allowCommit(box.dataset.where, box.dataset.dept, i.value); }
+    else if (e.key === 'Escape') { e.preventDefault(); allowCancel(); }
+  });
+  document.addEventListener('focusout', e => {
+    const i = e.target.closest && e.target.closest('.alw-in'); if (!i) return;
+    const box = i.closest('.alw'); allowCommit(box.dataset.where, box.dataset.dept, i.value);
+  });
+  $('scrim').addEventListener('click', closeDrawer);
+  $('drClose').addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && cur) closeDrawer(); });
+
+  $('drName').addEventListener('input', e => {
+    if (!cur) return;
+    cur.g.name = e.target.value;
+    $('drTitle').textContent = drTitle();
+    if (cur.kind === 'type') { if (cur.g.name.trim()) applyType(); return; }
+    rerenderAll();
+  });
+  $('drDesc').addEventListener('input', e => { if (!cur) return; cur.g.desc = e.target.value; if (cur.kind === 'type') PT_EXTRA[`${cur.g.cat}|${cur.g.name}`] = { desc: cur.g.desc, meas: cur.g.meas, custom: cur.g.custom }; });
+  $('drType').addEventListener('change', e => {
+    cur.g.type = e.target.value;
+    e.target.classList.toggle('empty', !e.target.value);
+  });
+  $('drCat').addEventListener('change', e => {
+    if (cur.kind === 'type') { cur.g.cat = e.target.value; applyType(); return; }
+    const to = SECTIONS[e.target.value];
+    cur.s.groups.splice(cur.s.groups.indexOf(cur.g), 1);
+    to.groups.push(cur.g);
+    cur.s = to;
+    rerenderAll();
+  });
+
+  const setStd = on => { cur.g.meas = on; renderDrawerMeas(); if (cur.kind === 'type') PT_EXTRA[`${cur.g.cat}|${cur.g.name}`] = { desc: cur.g.desc, meas: on, custom: cur.g.custom }; else renderMeas(); };
+  $('drStd').addEventListener('change', e => setStd(e.target.checked));
+  $('drStdTog').addEventListener('change', e => setStd(e.target.checked));
+  $('drMeas').addEventListener('input', e => { cur.g.custom[e.target.dataset.k] = e.target.value; });
+
+  $('drFloor').addEventListener('keydown', e => {
+    const v = e.target.value.trim();
+    if (e.key !== 'Enter' || !v) return;
+    if (!cur.g.floors.includes(v)) cur.g.floors.push(v);
+    e.target.value = '';
+    renderTags();
+  });
+  // Every task the template can draw on: the catalog plus the rest of the
+  // master list (mock), A–Z.
+  const ALL_TASKS = [...new Set([...TASK_CATALOG,
+    '(4) Keys Present?', 'Able to install Rently?', 'Acid Wash', 'Aid', 'Appliance Installation', 'Appliance Power',
+    'Attic', 'Attic Access', 'Condensation Line Extension', 'Door Bell', 'Dryer Vent Hood',
+    'Exterior Lock Replacement (individual)', 'Exterior Weatherproof GFCI Outlets', 'Fence Replacement (Metal Post)',
+    'Gutter Accessories', 'Gutter Cleaning', 'Hose Bib', 'Insulation (Attic)', 'Mailbox', 'Pressure Wash', 'Roof Repair',
+    'Sewer Clean Out', 'Smoke Detector (Hardwired)', 'Toilet Replacement', 'Vanity Replacement', 'Water Heater'])]
+    .sort((a, b) => a.replace(/^\W+/, '').localeCompare(b.replace(/^\W+/, '')));
+  /* The group a task lives in (a task lives in exactly one). Groups with a
+     real task list answer for theirs; the rest of the master list is given a
+     steady mock home group, picked from the template's groups by name. */
+  function taskGroupOf(task) {
+    for (const s of SECTIONS) for (const g of s.groups) if (g.known && (g.taskList || []).includes(task)) return g.name;
+    const all = SECTIONS.flatMap(s => s.groups.map(g => g.name));
+    let h = 0; for (const ch of task) h = (h * 33 + ch.charCodeAt(0)) >>> 0;
+    return all[h % all.length];
+  }
+  function renderTaskDd() {
+    const dd = $('drTaskDd');
+    if (!cur) return;
+    const q = $('drTask').value.trim().toLowerCase();
+    const have = new Set(cur.g.taskList.map(t => t.toLowerCase()));
+    const list = ALL_TASKS.filter(t => !q || t.toLowerCase().includes(q));
+    const hl = t => { if (!q) return esc(t); const i = t.toLowerCase().indexOf(q); return esc(t.slice(0, i)) + '<mark>' + esc(t.slice(i, i + q.length)) + '</mark>' + esc(t.slice(i + q.length)); };
+    const top = dd.scrollTop;
+    dd.innerHTML = list.map(t => `<label class="tdd-row" role="option" aria-selected="${have.has(t.toLowerCase())}">
+        <input type="checkbox" data-task="${esc(t)}" ${have.has(t.toLowerCase()) ? 'checked' : ''}><span class="tdd-n">${hl(t)}</span>${cur.kind === 'type' ? `<span class="tdd-grp">${esc(taskGroupOf(t))}</span>` : ''}</label>`).join('')
+      || `<div class="tdd-none">No task matches. Press Enter to add “${esc($('drTask').value.trim())}”.</div>`;
+    dd.scrollTop = top;
+  }
+  const showTaskDd = on => { $('drTaskDd').hidden = !on; $('drTask').setAttribute('aria-expanded', on); if (on) renderTaskDd(); };
+  $('drTask').addEventListener('focus', () => showTaskDd(true));
+  $('drTask').addEventListener('input', () => { showTaskDd(true); $('drTaskDd').scrollTop = 0; });
+  $('drTaskDd').addEventListener('mousedown', e => e.preventDefault());   // keep the field focused
+  $('drTaskDd').addEventListener('change', e => {
+    const t = e.target.dataset.task; if (!t || !cur) return;
+    const i = cur.g.taskList.findIndex(x => x.toLowerCase() === t.toLowerCase());
+    if (e.target.checked && i < 0) cur.g.taskList.push(t);
+    if (!e.target.checked && i >= 0) cur.g.taskList.splice(i, 1);
+    renderTags();
+    syncTaskCount();
+    renderTaskDd();
+  });
+  $('drTask').addEventListener('blur', () => setTimeout(() => showTaskDd(false), 120));
+  $('drTask').addEventListener('keyup', e => { if (e.key === 'Enter' && !$('drTaskDd').hidden) renderTaskDd(); });
+  $('drTask').addEventListener('keydown', e => { if (e.key === 'Escape' && !$('drTaskDd').hidden) { e.stopPropagation(); showTaskDd(false); } });
+  $('drTask').addEventListener('keydown', e => {
+    const v = e.target.value.trim();
+    if (e.key !== 'Enter' || !v) return;
+    const i = cur.g.taskList.findIndex(t => t.toLowerCase() === v.toLowerCase());
+    if (i >= 0) cur.g.taskList.splice(i, 1); // typing an existing task removes it — "add or remove"
+    else cur.g.taskList.push(v);
+    e.target.value = '';
+    renderTags();
+    syncTaskCount();
+  });
+  $('drawer').addEventListener('click', e => {
+    const b = e.target.closest('.tag button');
+    if (!b) return;
+    const list = b.dataset.kind === 'floor' ? cur.g.floors : cur.g.taskList;
+    list.splice(+b.dataset.i, 1);
+    renderTags();
+    if (b.dataset.kind === 'task') syncTaskCount();
+  });
+  $('drAddTask').addEventListener('click', () => {
+    $('drTask').scrollIntoView({ block: 'center', behavior: 'smooth' });
+    $('drTask').focus();
+  });
+  $('drDelete').addEventListener('click', () => {
+    if (cur.kind === 'type') {
+      if (!confirm(`Delete the "${cur.g.name}" product type? Its tasks stay in their groups.`)) return;
+      cur.g.taskList = [];
+      applyType();
+      closeDrawer();
+      return;
+    }
+    if (!confirm(`Delete the "${cur.g.name}" group from this template?`)) return;
+    cur.s.groups.splice(cur.s.groups.indexOf(cur.g), 1);
+    closeDrawer();
+    rerenderAll();
+  });
+
+  counter($('drName'), $('drNameCnt'));
+  counter($('drDesc'), $('drDescCnt'));
+
+  renderRail();
+  renderTiles();
+  renderAllowCard();
+  renderStats();
+  renderMeas();
+  counter($('tName'), $('nameCnt'));
+  counter($('tDesc'), $('descCnt'));
+</script>
+</body>
+</html>
