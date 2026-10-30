@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>iPad Turn CTAs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;700&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap">
 <style>
 /* Same font files as the rest of figma-kai; local() covers machines with Circular installed. */
 @font-face{font-family:'Circular XX';src:local('Circular XX'),url('../../../../fonts/Circular/CircularXX-Regular.otf') format('opentype');font-weight:400}
@@ -369,6 +372,226 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .dlg .facts{font-size:12.5px;color:var(--mid);line-height:1.6;margin:4px 0 6px}
 .seg-btn{background:#fff;border-radius:8px;padding:9px 12px;font-size:13px;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.15)}
 .seg-btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* ---------- 1 · dashboard: the portrait iPad design (figma-kai/ipad/Kai Progress Walk - Portrait.html) ----------
+   Copied as-is, with its tokens scoped to .pd so they don't change the rest of the mock. */
+.pd{--body:'Hanken Grotesk','Helvetica Neue',Arial,sans-serif;--mono:'Space Mono',ui-monospace,Menlo,monospace;
+  --disp:'Space Grotesk','Hanken Grotesk',Arial,sans-serif;--circ:'Circular XX','Hanken Grotesk','Helvetica Neue',sans-serif;
+  --app:#FFFDF8;--white:#FFFFFF;--accent:#FDFF86;--mid:#7D7469;--err:#C0443A;--ok:#2E9048;
+  --nav:#141414;--nav-2:#1E1E1E;--nav-line:#2E2E2E;--nav-dim:#8C8C8C;
+  position:relative;display:flex;flex-direction:column;height:100%;background:var(--app);font-family:var(--body);color:var(--ink)}
+.pd .av-r{font-size:15px;color:var(--ink)}
+.pd .db-f .ann{left:-24px;top:-3px}
+.brand{display:flex;align-items:center;gap:8px}
+.brand .word{font-family:var(--disp);font-size:20px;font-weight:500;letter-spacing:-.02em}
+.iconbtn{width:26px;height:26px;display:grid;place-items:center;color:#D8D8D8}
+.iconbtn:hover{color:#fff}
+.abar{
+  background:var(--nav);color:#fff;display:flex;align-items:center;gap:18px;
+  padding:0 24px;flex:0 0 auto;
+}
+.abar .brand .word{font-size:30px;font-weight:400;letter-spacing:-.03em;text-transform:lowercase}
+.abar .ttl{font-family:var(--disp);font-size:24px;font-weight:700;letter-spacing:-.01em;padding-right:16px;border-right:1px solid #3A3A3A}
+.abar .right{margin-left:auto;display:flex;align-items:center;gap:18px}
+.bell{position:relative;width:34px;height:34px;display:grid;place-items:center;color:#fff}
+.bell .bdg{position:absolute;top:-4px;right:-8px;background:#D2443A;color:#fff;font-size:9.5px;font-weight:700;padding:2px 5px;border-radius:7px}
+.helpb{width:34px;height:34px;display:grid;place-items:center;color:#fff}
+.av-r{width:46px;height:46px;border-radius:50%;background:#5E5850;color:#fff;display:grid;place-items:center;font-family:var(--disp);font-weight:700;font-size:18px}
+.av-s{width:36px;height:36px;border:1.5px solid #fff;color:#fff;display:grid;place-items:center;font-family:var(--disp);font-weight:700;font-size:20px}
+.back{width:34px;height:34px;display:grid;place-items:center;color:#D8D8D8}
+.back:hover{color:#fff}
+.gold{color:var(--gold)}
+.pd{--gold:#EDBE4A;--page:#ECECEA;--line:#E2E0DB}
+/* dashboard — ported from the web dashboard (kai-v2-collaborate-property/dashboard.html):
+   white modules on the app's cream, bordered once, mono eyebrows over display-type
+   addresses. Colour means two things only: yellow is waiting on you, red is late.
+   Sized up for touch — controls are 36px rather than the web's 29px. */
+.pd{--sunken:#F4F0E6;--t2:#5C5750;--t3:#8A8470;--stroke:#DDD6C8}
+/* bar — production iPad size: 84px, 28px ☰, 24px title, tabs big enough to hit */
+.db-top{height:84px;gap:18px;padding:0 24px}
+.db-burger{width:44px;height:44px;color:#fff}
+.db-burger[aria-expanded="true"]{color:var(--accent)}
+.db-title{font-family:var(--disp);font-size:24px;font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+.db-top .right{gap:18px}
+.db-org{font-family:var(--disp);font-size:15px;font-weight:700;color:#fff;white-space:nowrap}
+
+/* the ☰ drawer — slides over the list from the left, like the walk's nav */
+.pd{position:relative}
+.dnav{position:absolute;left:0;top:84px;bottom:0;width:340px;z-index:46;background:var(--nav);color:#fff;
+  display:flex;flex-direction:column;border-right:1px solid var(--nav-line);
+  transform:translateX(-100%);transition:transform .22s ease}
+.dnav.open{transform:none;box-shadow:14px 0 34px rgba(0,0,0,.28)}
+@media (prefers-reduced-motion:reduce){.dnav{transition:none}}
+.dnav-scrim{position:absolute;left:0;right:0;top:84px;bottom:0;z-index:45;background:rgba(10,10,10,.32)}
+.dnav-body{flex:1;overflow-y:auto;min-height:0;padding-bottom:12px}
+.dnav-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--nav-dim);
+  padding:20px 20px 9px;border-bottom:1px solid var(--nav-line)}
+.db-mk{width:100%;display:flex;align-items:center;gap:12px;min-height:56px;padding:0 20px;border-bottom:1px solid var(--nav-line);
+  color:#E8E8E8;font-size:16px;text-align:left}
+.db-mk:hover{background:var(--nav-2)}
+.db-mk .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.db-mk .ct{font-family:var(--mono);font-size:13px;color:var(--nav-dim);font-variant-numeric:tabular-nums}
+.db-mk .late{width:8px;height:8px;border-radius:50%;background:#D9675C;flex-shrink:0}
+.db-mk.on{background:rgba(253,255,134,.18);color:#fff;font-weight:600;box-shadow:inset 4px 0 0 var(--accent)}
+.db-mk.on .ct{color:#fff}
+.dnav-foot{padding:16px 20px 20px;border-top:1px solid var(--nav-line)}
+.dnav-add{width:100%;height:48px;border:1px solid var(--nav-line);font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#D8D8D8}
+.dnav-add:hover{border-color:#6A6A6A;color:#fff}
+/* the overview sentence — three of its phrases are dropdowns, so it does the
+   toolbar's who/where job in the line it was already taking */
+.overview .sub{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px}
+.inlw{position:relative;display:inline-flex}
+.inl{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 10px 0 12px;border:1px solid #C9C3B7;background:var(--white);
+  font-size:18px;font-weight:600;color:var(--ink);white-space:nowrap}
+.inl svg{color:var(--t2);transition:transform .15s}
+.inl:hover,.inl[aria-expanded="true"]{border-color:var(--ink)}
+.inl[aria-expanded="true"] svg{transform:rotate(180deg)}
+.inlmenu{position:absolute;top:calc(100% + 6px);left:0;min-width:260px;background:var(--white);border:1px solid var(--stroke);
+  box-shadow:0 8px 24px rgba(26,26,26,.14);z-index:40;padding:6px}
+.inlmenu .af-opt{font-size:15px;height:46px}
+
+/* overview — the production line, worded live from the state, view and market */
+.overview{display:flex;align-items:center;gap:16px;padding:18px 24px;background:#F3F3F1;border-bottom:1px solid var(--stroke);flex:0 0 auto}
+.overview .sub{font-size:18px;color:#2A2A2A}
+.overview .cnt{font-weight:700;color:var(--ink);font-size:20px}
+
+/* One row for the sentence and the tools (was two): the sentence a size
+   down so the row holds Filters, Sort and Search beside it; on a screen too
+   narrow for all of it the tools wrap under the sentence rather than overflow. */
+.overview{flex-wrap:wrap;row-gap:10px;column-gap:10px;padding:12px 20px}
+.overview .sub{gap:6px}
+.overview .inl{padding:0 8px 0 10px;gap:6px}
+.overview .db-sel{width:136px;text-overflow:ellipsis}
+.overview .sub{font-size:16px}
+.overview .cnt{font-size:18px}
+.overview .inl{height:36px;font-size:16px}
+.overview .db-bar{flex:0 0 auto;margin-left:auto;padding:0;background:none;border:0;gap:8px}
+.overview .db-note{margin-left:auto}
+.overview .db-note:not(:empty) + .db-bar{margin-left:0}
+.overview .af-btn,.overview .db-sel{height:36px}
+.overview .db-search,.overview .db-search-ico{height:36px}
+.overview .db-search{flex-basis:36px;width:36px}
+.overview .db-search-ico{width:36px}
+.overview .db-search input{height:36px}
+/* Opening search keeps the row where it is: the box grows left over the
+   Filters and Sort buttons instead of widening the row and wrapping it. */
+.overview .db-search:focus-within,.overview .db-search.has-query{flex-basis:36px;width:36px}
+.overview .db-search:focus-within input,.overview .db-search.has-query input{left:auto;right:0;width:300px;z-index:2}
+.overview .db-search:focus-within .db-search-ico,.overview .db-search.has-query .db-search-ico{left:auto;right:264px;z-index:3}
+/* Sort reads as a sort control without the word: an icon, then the order. */
+.overview .db-sel{padding:0 28px 0 32px;-webkit-appearance:none;appearance:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14' fill='none' stroke='%23141413' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 2.5v9M1.8 9.3 4 11.5l2.2-2.2M10 11.5v-9M7.8 4.7 10 2.5l2.2 2.2'/%3E%3C/svg%3E") no-repeat 11px 50%/13px 13px,
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23141413' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E") no-repeat right 10px center/11px 11px,var(--white)}
+/* filter, note, sort, search */
+.db-bar{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 24px;background:var(--app);border-bottom:1px solid var(--stroke);flex:0 0 auto}
+.db-note{margin-left:auto;font-size:15px;color:var(--t3);white-space:nowrap}
+.db-note .late{color:var(--err);font-weight:600}
+.db-note:empty{display:none}
+.db-clear{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t2);
+  background:var(--sunken);border:1px solid var(--stroke);height:36px;padding:0 12px;font-size:10.5px}
+.db-clear:hover{border-color:var(--ink);color:var(--ink)}
+.db-clear[hidden]{display:none}
+.db-sel{font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink);background:var(--white);border:1px solid var(--stroke);height:44px;padding:0 12px;outline:none;border-radius:0}
+.db-sel:hover{border-color:var(--ink)}
+.af{position:relative;flex-shrink:0}
+.af-btn{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 14px;border:1px solid var(--stroke);background:var(--white);
+  color:var(--t2);font-family:var(--body);font-size:15px;font-weight:600;position:relative}
+.af-btn:hover,.af.open .af-btn{border-color:var(--ink);color:var(--ink)}
+.af.active .af-btn{background:rgba(192,68,58,.08);border-color:var(--err);color:var(--err)}
+.af-btn svg{width:14px;height:14px}
+.af.open .af-caret{transform:rotate(180deg)}
+.af-count{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 3px;background:var(--err);color:#fff;
+  font-family:var(--mono);font-size:9px;font-weight:700;line-height:16px;text-align:center;border-radius:8px;border:1.5px solid var(--app)}
+.af-count:empty{display:none}
+.af-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;width:320px;background:var(--white);border:1px solid var(--stroke);
+  box-shadow:0 8px 24px rgba(26,26,26,.14);z-index:30;padding:6px}
+.af.open .af-menu{display:block}
+.af-menu-h{font-family:var(--disp);font-size:16px;font-weight:700;padding:8px 10px 2px}
+.af-grouplabel{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);padding:12px 10px 4px}
+.af-rule{height:1px;background:var(--stroke);margin:8px 10px 0}
+.af-opt{display:flex;align-items:center;gap:10px;width:100%;height:46px;padding:0 10px;font-size:15px;color:var(--ink);text-align:left}
+.af-opt:hover{background:var(--sunken)}
+.af-opt .lbl{flex:1;min-width:0}
+.af-opt .n{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--t2)}
+.af-opt .ck{width:14px;height:14px;color:var(--err);opacity:0}
+.af-opt.on{font-weight:600;background:rgba(253,255,134,.38)}
+.af-opt.on .ck{opacity:1}
+.af-opt.is-empty{color:var(--t3)}
+.af-opt.is-empty .n{color:var(--t3);opacity:.6}
+.af-opt .gl i{width:7px;height:7px;border-radius:50%;display:block}
+.af-foot{display:flex;align-items:center;justify-content:space-between;padding:10px 10px 4px;margin-top:8px;border-top:1px solid var(--stroke)}
+.af-showing{font-family:var(--mono);font-size:10px;color:var(--t3)}
+.af-clear{font-size:13px;font-weight:600;color:var(--err)}
+.af-clear:disabled{color:var(--t3);cursor:default}
+/* an icon until it is wanted, then a field — the input itself is the icon-sized box */
+.db-search{position:relative;flex:0 0 44px;width:44px;height:44px;transition:width .18s ease-out,flex-basis .18s ease-out}
+.db-search:focus-within,.db-search.has-query{flex:0 1 280px;width:280px}
+.db-search-ico{position:absolute;left:0;top:0;z-index:1;width:44px;height:44px;display:grid;place-items:center;color:var(--t2);pointer-events:none}
+.db-search input{position:absolute;inset:0;width:100%;height:44px;font-family:var(--body);font-size:16px;color:var(--ink);background:var(--white);
+  border:1px solid var(--stroke);border-radius:0;padding:0;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none}
+.db-search:focus-within input,.db-search.has-query input{padding:0 12px 0 42px}
+.db-search input::placeholder{color:transparent}
+.db-search:focus-within input::placeholder{color:var(--t3)}
+.db-search input:focus{cursor:text;border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.db-search input::-webkit-search-cancel-button{display:none}
+
+/* the list */
+.dlist{flex:1;overflow-y:auto;min-height:0;background:var(--app);padding:18px 24px 40px}
+.dlist::-webkit-scrollbar{width:0}
+.db-row{display:grid;grid-template-columns:220px minmax(0,1fr);background:var(--white);border:1px solid var(--stroke);
+  margin-bottom:10px;cursor:pointer;text-align:left}
+.db-row:hover{border-color:var(--ink)}
+/* drawn above the photo — as an inset shadow (the web's way) the photo covers it */
+.db-row{position:relative}
+.db-row.is-mine::before{content:"";position:absolute;left:-1px;top:-1px;bottom:-1px;width:4px;background:var(--accent);z-index:2}
+.db-thumb{position:relative;overflow:hidden;background:var(--sunken);border-right:1px solid var(--stroke);margin:0;min-height:176px}
+.db-thumb-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;
+  font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.db-body{min-width:0;padding:16px 18px 18px;display:flex;flex-direction:column}
+.db-hdr{display:flex;align-items:flex-start;gap:14px}
+.db-hdr-l{min-width:0;flex:1;display:flex;flex-direction:column;gap:6px}
+.db-row-title{font-family:var(--disp);font-size:21px;font-weight:700;letter-spacing:-.005em;line-height:1.25;display:flex;align-items:center;gap:8px;min-width:0}
+.db-row-addr{flex-shrink:0;white-space:nowrap;font-family:var(--circ);font-weight:700;letter-spacing:-.01em}
+.db-row-name{font-family:var(--body);font-size:16px;font-weight:400;color:var(--t3);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.db-specs{font-size:15px;color:var(--t2);line-height:1.35;font-variant-numeric:tabular-nums}
+.db-specs .sep{margin:0 5px;color:var(--stroke)}
+.db-hdr-r{flex-shrink:0;display:flex;align-items:flex-start;gap:8px}
+.db-amt-w{display:flex;flex-direction:column;align-items:flex-end;gap:1px;min-width:78px}
+.db-amt{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.db-amt.is-unset{color:var(--t3);font-weight:400}
+.db-lbl{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+/* two even rows of four at portrait width: job (two wide), market, ID / due, updated, waiting on, assignees */
+.db-facts{margin:14px 0 0;padding:13px 36px 0 0;border-top:1px solid var(--stroke);display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 18px}
+.db-f{min-width:0;display:flex;flex-direction:column;gap:5px}
+.db-f dt{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.db-f dd{margin:0;font-size:15.5px;line-height:1.35;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.db-f.is-job{grid-column:span 2}
+.db-job{display:inline-flex;align-items:stretch;max-width:100%}
+.db-job > span{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:5px 9px;
+  line-height:1.35;border:1px solid transparent;white-space:nowrap}
+.db-job > span + span{margin-left:-1px}
+.db-job .j-type{background:#6E6A64;border-color:#6E6A64;color:#fff}
+.db-job .j-art{background:var(--ink);border-color:var(--ink);color:#fff}
+.db-f dd.dim,.db-f dd .dim{color:var(--t2)}
+.db-f .db-you{background:var(--accent);box-shadow:0 0 0 2px var(--accent);font-weight:600}
+.db-f dd.is-late{color:var(--err);font-weight:600}
+/* no hover on a tablet, so the ⋮ is always there and a tap opens it */
+.db-kebab-wrap{position:relative}
+.db-kebab{width:40px;height:40px;display:grid;place-items:center;color:var(--t3)}
+.db-kebab:hover,.db-kebab[aria-expanded="true"]{color:var(--ink)}
+.db-kebab-menu{position:absolute;top:100%;right:0;min-width:180px;background:var(--white);border:1px solid var(--stroke);
+  box-shadow:0 8px 24px rgba(26,26,26,.14);padding:4px;z-index:20}
+.db-kebab-item{display:block;width:100%;height:40px;padding:0 12px;font-size:14px;text-align:left}
+.db-kebab-item:hover{background:var(--sunken)}
+.db-empty{background:var(--white);border:1px solid var(--stroke);padding:34px 18px;font-size:16px;color:var(--t3);font-style:italic}
+.db-notice{display:flex;align-items:center;gap:12px;margin-top:16px;padding:13px 16px;background:var(--sunken);border:1px solid var(--stroke)}
+.db-notice-t{font-size:15px;color:var(--t2);line-height:1.4;flex:1}
+.db-notice-t b{color:var(--ink);font-weight:600}
+.db-notice-x{width:30px;height:30px;display:grid;place-items:center;color:var(--t3)}
+.db-notice-x:hover{color:var(--ink)}
+
 </style>
 </head>
 <body>
@@ -469,35 +692,264 @@ function appHdr(menu, t, n){
 }
 
 /* ---------- screens ---------- */
-function dash(t){
-  const n = t.mine ? 1 : 0;
-  return `<div class="dash">
-    <div class="dash-side">${LOGO}
-      <h4>DASHBOARD</h4>
-      <div class="side-item sel">Overview <span class="cnt anc ${n ? '' : 'zero'}">${A(3)}<i></i>${n}</span></div>
-      <div class="side-sub">MARKETS (1)</div>
-      <div class="side-item">Austin <span class="cnt ${n ? '' : 'zero'}"><i></i>${n}</span></div>
-      <div class="side-foot"><b>Missing a market?</b>Tap to learn why &amp; how to get access</div>
-    </div>
-    <div class="dash-main">
-      <div class="dash-top"><h1>Dashboard</h1><span class="tab on">ACTIVE (1)</span><span class="tab">COMPLETED (0)</span><span class="tab">ARCHIVED (0)</span>
-        <div class="right">${IC.bell}${IC.help}${meBadge()}</div></div>
-      <div class="ovr"><h2>Overview</h2><p>${n ? '1 project is your turn' : 'Nothing is your turn'} · 1 active across all markets</p>
-        <span class="sch">${IC.search}</span><div class="sort anc">${A(1)}<b>Your Turn</b><span>▾</span></div></div>
-      <div class="dash-body">
-        <div class="jcard"><img src="house.jpg" alt="">
-          <div>
-            <div class="tags"><span class="t1">Acquisition</span><span class="t2">Scope</span><span class="anc" style="padding:0">${A(2)}${chip(t)}</span></div>
-            <div class="jaddr"><b>10724 Defender Trl, Austin, TX 78754, USA</b><span>3 bed | 1½ bath | 2,032 sqft | Austin</span></div>
-            <dl class="jmeta"><div><dt>TEST ID</dt><dd>827346287346</dd></div><div><dt>Due Date</dt><dd>04-15-26</dd></div>
-              <div><dt>Last Updated</dt><dd>09-09-26</dd></div><div><dt>Project Name</dt><dd>Untitled project</dd></div>
-              <div><dt>Availability</dt><dd class="avail"><i></i>Online Only</dd></div></dl>
+/* The portrait design's jobs, filters, sort and card. Its people are the
+   demo's: whose turn each job is stays fixed, except 10724 Defender Trl, which
+   follows "The scope is with" above and is the one card that opens. */
+const DB_TODAY = '2026-10-30';
+const DB_JOBS = [
+  {live:true, addr:'10724 Defender Trl', city:'Austin, TX 78754', market:'Austin', id:'827346287346',
+   type:'Acquisition', phase:'Scope', status:'progress', beds:3, baths:'1½', sqft:2032,
+   due:'2026-11-15', updated:'2026-09-09', amount:null, team:['M. Alvarez','G. Han','T. Okafor','A. Novak','R. Ibarra'], turn:null, name:'', state:'active'},
+  {addr:'1463 Metropolitan Pkwy SW', city:'Atlanta, GA 30310', market:'Atlanta', id:'7A31C9F2',
+   type:'Turn', phase:'Progress', status:'progress', beds:3, baths:'2', sqft:1488,
+   due:'2026-11-30', updated:'2026-10-20', amount:5233, team:['T. Okafor','G. Han'], turn:'G. Han', name:'Training Project', state:'active'},
+  {addr:'10912 Pilgrimage Drive', city:'Austin, TX 78754', market:'Austin', id:'1234',
+   type:'Turn', phase:'Scope', status:'progress', beds:3, baths:'3½', sqft:1590,
+   due:'2026-10-03', updated:'2026-08-21', amount:null, team:['M. Alvarez','G. Han'], turn:'M. Alvarez', name:'', state:'active'},
+  {addr:'10800 Gonzales Ranger Pass', city:'Austin, TX 78754', market:'Austin', id:'111222',
+   type:'Turn', phase:'Close out', status:'progress', beds:4, baths:'3½', sqft:1666,
+   due:'2026-11-23', updated:'2026-10-21', amount:null, team:['M. Alvarez','G. Han','J. Duarte','S. Kwon','T. Okafor'],
+   turn:'T. Okafor', name:'Project Name Example Placeholder', state:'active'},
+  {addr:'2525 McDonald Way', city:'Austin, TX 78754', market:'Austin', id:'9876',
+   type:'Acquisition', phase:'Change order', status:'progress', beds:3, baths:'2', sqft:1346,
+   due:'2026-11-02', updated:'2026-10-12', amount:68242, team:['G. Han','S. Kwon','T. Okafor'], turn:'T. Okafor', name:'Project Name Example Placeholder', state:'active'},
+  {addr:'1408 Cedar Bend Dr', city:'Austin, TX 78753', market:'Austin', id:'4417',
+   type:'Renovation', phase:'Scope', status:'progress', beds:3, baths:'2', sqft:1512,
+   due:'2026-11-30', updated:'2026-10-11', amount:26434, team:['M. Alvarez','T. Okafor'], turn:'M. Alvarez', name:'Project Name Example Placeholder', state:'active'},
+  {addr:'715 Wheless Ln', city:'Austin, TX 78723', market:'New Market', id:'5520',
+   type:'Maintenance', phase:'Scope', status:'approved', beds:2, baths:'1', sqft:980,
+   due:'2026-11-19', updated:'2026-10-08', amount:9800, team:['J. Duarte'], turn:'J. Duarte', name:'Project Name Example Placeholder', state:'active'},
+  {addr:'6120 Manchaca Rd', city:'Austin, TX 78745', market:'Austin', id:'3390',
+   type:'Renovation', phase:'Change order', status:'progress', beds:3, baths:'2', sqft:1610,
+   due:'2026-10-20', updated:'2026-09-14', amount:52310, team:['S. Kwon','G. Han','T. Okafor'], turn:'S. Kwon', name:'Project Name Example Placeholder', state:'active'},
+  {addr:'3484 South Main Street', city:'Austin, TX 78704', market:'Test new staging market', id:'7781',
+   type:'Turn', phase:'Close out', status:'approved', beds:4, baths:'2½', sqft:2140,
+   due:'2026-09-12', updated:'2026-09-13', amount:41200, team:['M. Alvarez','G. Han','S. Kwon'], turn:null, name:'', state:'completed'},
+  {addr:'4105 Duval St', city:'Austin, TX 78751', market:'Austin', id:'2210',
+   type:'Renovation', phase:'Close out', status:'approved', beds:2, baths:'1', sqft:1120,
+   due:'2026-07-14', updated:'2026-08-01', amount:38900, team:['G. Han','T. Okafor'], turn:null, name:'', state:'completed'},
+  {addr:'9002 Tallwood Dr', city:'Austin, TX 78759', market:'Test new staging market', id:'6640',
+   type:'Acquisition', phase:'Close out', status:'approved', beds:3, baths:'2', sqft:1744,
+   due:'2026-08-28', updated:'2026-09-02', amount:14750, team:['M. Alvarez','J. Duarte'], turn:null, name:'', state:'completed'},
+  {addr:'2525 McDonald Way', city:'Austin, TX 78754', market:'Austin', id:'9876',
+   type:'Turn', phase:'Close out', status:'approved', beds:3, baths:'2', sqft:1346,
+   due:'2025-11-20', updated:'2026-01-14', amount:41200, team:['M. Alvarez'], turn:null, name:'Project Name Example Placeholder', state:'archived'},
+];
+const DB_MARKETS = ['Atlanta','Austin','Example Market','New Market','Test new staging market'];
+const DB_FILTERS = {
+  'type:Acquisition':{band:'type',label:'Acquisition',test:p=>p.type==='Acquisition'},
+  'type:Turn':       {band:'type',label:'Turn',       test:p=>p.type==='Turn'},
+  'type:Renovation': {band:'type',label:'Renovation', test:p=>p.type==='Renovation'},
+  'type:Maintenance':{band:'type',label:'Maintenance',test:p=>p.type==='Maintenance'},
+  'ph:Scope':        {band:'phase',label:'Scope',       test:p=>p.phase==='Scope'},
+  'ph:Progress':     {band:'phase',label:'Progress',    test:p=>p.phase==='Progress'},
+  'ph:Change order': {band:'phase',label:'Change order',test:p=>p.phase==='Change order'},
+  'ph:Close out':    {band:'phase',label:'Close out',   test:p=>p.phase==='Close out'},
+  'st:approved':{band:'status',dot:'var(--ok)', label:'Approved',   test:p=>p.status==='approved'},
+  'st:progress':{band:'status',dot:'var(--ink)',label:'In progress',test:p=>p.status==='progress'}
+};
+const DB_BANDS = [{key:'type',label:'Type'},{key:'phase',label:'Artifact'},{key:'status',label:'Status'}];
+const D = {inl:null, navOpen:false, state:'active', view:'mine', mkt:'', filters:{}, sort:'turn', q:'', afOpen:false, kebab:null, notice:true};
+const CHEV = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+
+const dbFmtDate = iso => { const [y,m,d] = iso.split('-'); return `${m}-${d}-${y.slice(2)}`; };
+const dbIsLate  = p => p.state==='active' && p.due < DB_TODAY;
+const dbMine    = p => p.team.includes(me().name);
+const dbTurn    = p => p.live ? (p.state==='active' ? PEOPLE[S.holder].name : null) : p.turn;
+const dbMyTurn  = p => dbTurn(p) === me().name;
+function dbScope(p){
+  if(p.state !== D.state) return false;
+  if(D.view === 'mine' && !dbMine(p)) return false;
+  if(D.mkt && p.market !== D.mkt) return false;
+  const q = D.q.trim().toLowerCase();
+  return !q || `${p.addr} ${p.city} ${p.id} ${p.name} ${p.type} ${p.phase}`.toLowerCase().includes(q);
+}
+// Alternatives within a band, narrowing across bands.
+function dbPasses(p){
+  return dbScope(p) && DB_BANDS.every(b => {
+    const on = Object.keys(D.filters).filter(k => DB_FILTERS[k].band === b.key);
+    return !on.length || on.some(k => DB_FILTERS[k].test(p));
+  });
+}
+// Your turn leads under its own sort; under every other sort lateness does.
+function dbSortFn(a, b){
+  const late = (x, y) => (dbIsLate(x)?0:1) - (dbIsLate(y)?0:1);
+  if(D.sort === 'turn') return ((dbMyTurn(a)?0:1) - (dbMyTurn(b)?0:1)) || late(a,b) || a.due.localeCompare(b.due);
+  const l = late(a,b); if(l) return l;
+  switch(D.sort){
+    case 'addr':    return a.addr.localeCompare(b.addr) || a.due.localeCompare(b.due);
+    case 'updated': return b.updated.localeCompare(a.updated);
+    case 'market':  return a.market.localeCompare(b.market) || a.due.localeCompare(b.due);
+    case 'propid':  return String(a.id).localeCompare(String(b.id), undefined, {numeric:true});
+    default:        return a.due.localeCompare(b.due);
+  }
+}
+function dbRow(p){
+  const i = DB_JOBS.indexOf(p), late = dbIsLate(p), mine = dbMyTurn(p), turnOf = dbTurn(p);
+  const who = p.team.length ? `${p.team.length} assignee${p.team.length===1?'':'s'}` : '<span class="dim">Unassigned</span>';
+  const waiting = turnOf ? (mine ? '<span class="db-you">You</span>' : turnOf) : '<span class="dim">&mdash;</span>';
+  const amt = p.amount == null ? '<span class="db-amt is-unset">&mdash;</span>' : `<span class="db-amt">$${p.amount.toLocaleString('en-US')}</span>`;
+  return `<article class="db-row${mine?' is-mine':''}" data-djob="${i}">
+    <figure class="db-thumb">${p.live
+      ? `<span style="position:absolute;inset:0;background:url('house.jpg') center/cover"></span>`
+      : `<span class="db-thumb-empty">No photo</span>`}</figure>
+    <div class="db-body">
+      <div class="db-hdr">
+        <div class="db-hdr-l">
+          <div class="db-row-title"><span class="db-row-addr">${p.addr}</span>${p.name?`<span class="db-row-name">&middot; ${p.name}</span>`:''}</div>
+          <div class="db-specs">${p.city}<span class="sep">&middot;</span>${p.beds} bed<span class="sep">&middot;</span>${p.baths} bath<span class="sep">&middot;</span>${p.sqft.toLocaleString('en-US')} sqft</div>
+        </div>
+        <div class="db-hdr-r">
+          <div class="db-amt-w">${amt}<span class="db-lbl">Amount</span></div>
+          <div class="db-kebab-wrap">
+            <button class="db-kebab" data-kebab="${i}" aria-expanded="${D.kebab===i}" aria-label="More actions for ${p.addr}">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><circle cx="7" cy="3" r="1.4"/><circle cx="7" cy="7" r="1.4"/><circle cx="7" cy="11" r="1.4"/></svg></button>
+            ${D.kebab===i ? `<div class="db-kebab-menu"><button class="db-kebab-item" data-archive="${i}">Archive project</button></div>` : ''}
           </div>
         </div>
-        ${n ? '' : `<div class="empty-turn">Sorted by Your Turn: this job sits below anything you need to act on.</div>`}
       </div>
-    </div></div>`;
+      <dl class="db-facts">
+        <div class="db-f is-job"><dt>Job</dt><dd><span class="db-job"><span class="j-type">${p.type}</span><span class="j-art">${p.phase}</span></span></dd></div>
+        <div class="db-f"><dt>Market</dt><dd>${p.market}</dd></div>
+        <div class="db-f"><dt>Test ID</dt><dd>${p.id}</dd></div>
+        <div class="db-f"><dt>Due date</dt><dd class="${late?'is-late':''}">${dbFmtDate(p.due)}</dd></div>
+        <div class="db-f"><dt>Last updated</dt><dd class="dim">${dbFmtDate(p.updated)}</dd></div>
+        <div class="db-f anc">${p.live ? A(2) : ''}<dt>Waiting on</dt><dd>${waiting}</dd></div>
+        <div class="db-f"><dt>Assignees</dt><dd>${who}</dd></div>
+      </dl>
+    </div>
+  </article>`;
 }
+function dash(t){
+  const here   = p => !D.mkt || p.market === D.mkt;
+  const inView = p => D.view !== 'mine' || dbMine(p);
+  const inState = p => p.state === D.state && here(p);
+  const rows = DB_JOBS.filter(dbPasses).sort(dbSortFn);
+  const all  = DB_JOBS.filter(p => p.state === D.state && inView(p));
+  const navRow = (attr, val, on, label, ct, late) =>
+    `<button class="db-mk${on?' on':''}" ${attr}="${val}"><span class="nm">${label}</span>${late?`<span class="late" title="${late} past due"></span>`:''}<span class="ct">${ct||'&mdash;'}</span></button>`;
+  const opt = (attr, val, on, label, ct, late) => `<button class="af-opt${on?' on':''}${ct?'':' is-empty'}" ${attr}="${val}">
+      <span class="lbl">${label}</span>${late?`<span title="${late} past due" style="width:7px;height:7px;border-radius:50%;background:var(--err)"></span>`:''}<span class="n">${ct}</span>
+      <svg class="ck" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5l3 3 6-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+  const field = (id, label, menu) => `<span class="inlw"><button class="inl" data-inl="${id}" aria-expanded="${D.inl===id}">${label}${CHEV}</button>${D.inl===id?`<div class="inlmenu">${menu}</div>`:''}</span>`;
+  const n = rows.length;
+  const whatMenu = [['active','Active'],['completed','Completed'],['archived','Archived']].map(([id,l]) =>
+    opt('data-dstate', id, D.state===id, l, DB_JOBS.filter(p => p.state===id && inView(p) && here(p)).length)).join('');
+  const whoMenu = opt('data-dview','mine',D.view==='mine','You',DB_JOBS.filter(p => inState(p) && dbMine(p)).length)
+    + opt('data-dview','all',D.view==='all','Your team',DB_JOBS.filter(inState).length);
+  const whereMenu = opt('data-dmkt','',!D.mkt,'All markets',all.length)
+    + DB_MARKETS.map(m => { const ms = all.filter(p => p.market===m); return opt('data-dmkt',m,D.mkt===m,m,ms.length,ms.filter(dbIsLate).length); }).join('');
+  const late = rows.filter(dbIsLate).length;
+  const nOn = Object.keys(D.filters).length;
+  const pool = DB_JOBS.filter(dbScope).length;
+  let afMenu = '';
+  if(D.afOpen){
+    const scoped = DB_JOBS.filter(dbScope);
+    afMenu = '<div class="af-menu-h">Filters</div>';
+    DB_BANDS.forEach((b, bi) => {
+      if(bi) afMenu += '<div class="af-rule"></div>';
+      afMenu += `<div class="af-grouplabel">${b.label}</div>`;
+      Object.keys(DB_FILTERS).filter(k => DB_FILTERS[k].band === b.key).forEach(k => {
+        const f = DB_FILTERS[k], c = scoped.filter(f.test).length, on = !!D.filters[k];
+        afMenu += `<button class="af-opt${on?' on':''}${c?'':' is-empty'}" data-daf="${k}">
+          ${f.dot?`<span class="gl"><i style="background:${f.dot}"></i></span>`:''}<span class="lbl">${f.label}</span><span class="n">${c}</span>
+          <svg class="ck" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5l3 3 6-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+      });
+    });
+    afMenu += `<div class="af-foot"><span class="af-showing">${nOn?`Showing ${n} of ${pool}`:`${pool} jobs`}</span>
+      <button class="af-clear" data-dafclear="1" ${nOn?'':'disabled'}>Clear</button></div>`;
+  }
+  const sorts = [['addr','Address'],['due','Due date'],['updated','Last updated'],['market','Market name'],['turn','Your turn'],['propid','Org property ID']];
+  const p = me();
+  return `<div class="pd" id="dashView">
+    <div class="abar db-top">
+      <div class="brand"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M3 12 12 4l9 8"/><path d="M5 19h14"/></svg><span class="word">kai</span></div>
+      <button class="iconbtn db-burger" data-dburger="1" aria-expanded="${D.navOpen}" title="Assigned to and markets"><svg width="28" height="28" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+      <span class="db-title">Dashboard</span>
+      <div class="right">
+        <span class="db-org">Kaiizen Testing</span>
+        <span class="bell"><svg width="26" height="26" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span class="bdg">135</span></span>
+        <span class="av-r anc" style="background:${p.color}" title="${p.name} · ${p.role}">${A('R')}${p.initials}</span>
+      </div>
+    </div>
+    <div class="dnav${D.navOpen?' open':''}" aria-label="Assigned to and markets">
+      <div class="dnav-body">
+        <div class="dnav-h">Assigned to</div>
+        ${navRow('data-dview','mine',D.view==='mine','You',DB_JOBS.filter(p => inState(p) && dbMine(p)).length)}
+        ${navRow('data-dview','all',D.view==='all','Your team',DB_JOBS.filter(inState).length)}
+        <div class="dnav-h">Markets</div>
+        ${navRow('data-dmkt','',!D.mkt,'All markets',all.length)}
+        ${DB_MARKETS.map(m => { const ms = all.filter(p => p.market===m); return navRow('data-dmkt',m,D.mkt===m,m,ms.length,ms.filter(dbIsLate).length); }).join('')}
+      </div>
+      <div class="dnav-foot"><button class="dnav-add" data-soon="Add market">+ Add market</button></div>
+    </div>
+    <div class="dnav-scrim" data-dnavscrim="1" ${D.navOpen?'':'hidden'}></div>
+    <div class="overview">
+      <span class="sub anc">${A(3)}<span>There ${n===1?'is':'are'} <b class="cnt">${n}</b></span>${field('what', D.state, whatMenu)}<span>project${n===1?'':'s'}</span>${field('who', D.view==='mine'?'assigned to you':'assigned to your team', whoMenu)}${field('where', D.mkt?'in '+D.mkt:'across all markets', whereMenu)}</span>
+      <span class="db-note">${late?`<span class="late">${late} past due</span>`:''}</span>
+      <div class="db-bar">
+        <button class="db-clear" data-dclear="1" ${(nOn || D.q.trim() || D.mkt)?'':'hidden'}>Clear all</button>
+        <div class="af${D.afOpen?' open':''}${nOn?' active':''}">
+          <button class="af-btn" data-dafbtn="1" aria-expanded="${D.afOpen}">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 2.5h11L8.2 7.6v4.2L5.8 12.5V7.6z"/></svg>
+            <span>Filters</span><svg class="af-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="width:11px;height:11px"><path d="M3 4.5l3 3 3-3"/></svg>
+            <span class="af-count">${nOn||''}</span>
+          </button>
+          <div class="af-menu">${afMenu}</div>
+        </div>
+        <span class="anc" style="display:flex">${A(1)}<select class="db-sel" id="dSort" aria-label="Sort by" onchange="D.sort=this.value;render()">
+          ${sorts.map(([v,l]) => `<option value="${v}"${D.sort===v?' selected':''}>${l}</option>`).join('')}</select></span>
+        <div class="db-search${D.q.trim()?' has-query':''}">
+          <span class="db-search-ico"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="M10.4 10.4L14 14"/></svg></span>
+          <input id="dQ" type="search" placeholder="Search address, ID, job name" aria-label="Search jobs" value="${D.q}" oninput="dSearch(this)">
+        </div>
+      </div>
+    </div>
+    <div class="dlist">${rows.length ? rows.map(dbRow).join('') : '<div class="db-empty">No jobs match what you have asked for.</div>'}
+      ${D.notice ? `<div class="db-notice">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="var(--t2)" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.2v4M8 4.9v.1"/></svg>
+        <span class="db-notice-t"><b>You&rsquo;re viewing the new Kai experience.</b> Switch to the original experience anytime in your profile.</span>
+        <button class="db-notice-x" data-dnotice="1" aria-label="Dismiss"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 2l8 8M10 2L2 10"/></svg></button>
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+// Re-rendering replaces the field, so put the caret back where it was.
+function dSearch(el){
+  D.q = el.value; const pos = el.selectionStart; render();
+  const q = document.getElementById('dQ'); if(q){ q.focus(); q.setSelectionRange(pos, pos); }
+}
+/* Dashboard taps, delegated like the portrait file's own handler. */
+document.addEventListener('click', e => {
+  if(S.screen !== 'dash' || !e.target.closest('#screen')) return;
+  const T = sel => e.target.closest(sel);
+  let closed = false;
+  if(D.afOpen && !T('.af')){ D.afOpen = false; closed = true; }
+  if(D.kebab !== null && !T('.db-kebab-wrap')){ D.kebab = null; closed = true; }
+  if(D.inl && !T('.inlw')){ D.inl = null; closed = true; }
+  let el;
+  if((el = T('[data-inl]'))){ D.inl = D.inl === el.dataset.inl ? null : el.dataset.inl; D.afOpen = false; render(); return; }
+  if((el = T('[data-dstate]'))){ D.state = el.dataset.dstate; D.inl = null; render(); return; }
+  if(T('[data-dburger]')){ D.navOpen = !D.navOpen; D.afOpen = false; render(); return; }
+  if(T('[data-dnavscrim]')){ D.navOpen = false; render(); return; }
+  if((el = T('[data-dview]'))){ D.view = el.dataset.dview; D.navOpen = false; D.inl = null; render(); return; }
+  if((el = T('[data-dmkt]'))){ D.mkt = el.dataset.dmkt; D.navOpen = false; D.inl = null; render(); return; }
+  if(T('[data-dafbtn]')){ D.afOpen = !D.afOpen; render(); return; }
+  if((el = T('[data-daf]'))){ const k = el.dataset.daf; if(D.filters[k]) delete D.filters[k]; else D.filters[k] = true; render(); return; }
+  if(T('[data-dafclear]')){ D.filters = {}; render(); return; }
+  if(T('[data-dclear]')){ D.filters = {}; D.q = ''; D.mkt = ''; render(); return; }
+  if((el = T('[data-kebab]'))){ const i = +el.dataset.kebab; D.kebab = D.kebab === i ? null : i; render(); return; }
+  if((el = T('[data-archive]'))){ const j = DB_JOBS[+el.dataset.archive]; j.state = 'archived'; j.turn = null; D.kebab = null; render(); toast(`${j.addr} archived`); return; }
+  if(T('[data-dnotice]')){ D.notice = false; render(); return; }
+  if((el = T('[data-soon]'))){ toast(`${el.dataset.soon} isn't part of this mock`); return; }
+  if(T('#dQ, #dSort')) return;
+  if((el = T('[data-djob]'))){
+    if(DB_JOBS[+el.dataset.djob].live) go('proj');
+    else toast('Only 10724 Defender Trl opens in this mock');
+    return;
+  }
+  if(closed) render();
+});
 
 function proj(t){
   const last = t.review
@@ -877,9 +1329,9 @@ function notes(t){
   const holder = first(t.holder);
   const N = {
     dash: [
-      [1,'Sort','Needs Review','Your Turn','The default sort you chose: late jobs that are your turn come first, then the rest of your turn.'],
-      [2,'Third tag','Review in progress', t.mine ? 'Your turn (yellow)' : `${holder}'s turn`,'Keeps the Acquisition and Scope tags; only the status tag becomes whose turn it is.'],
-      [3,'Red dot counts','Unclear count', t.mine ? '1 · this job is your turn' : '0 · nothing is your turn','The dot only appears when you need to act.'],
+      [1,'Sort','Needs Review','Your turn',"The portrait design's default sort: jobs that are your turn first, late ones leading, then the rest by due date."],
+      [2,'Waiting on','Review in progress tag', t.mine ? 'You (yellow), with a yellow edge on the card' : `${holder}`,'Whose turn it is, as a field on every card. Your turn is the only yellow on the screen.'],
+      [3,'Overview sentence','“1 active project across all markets”','There are N active projects assigned to you across all markets','Active, assigned to and markets are dropdowns in the sentence; ☰ opens the same choices as a drawer.'],
     ],
     proj: [
       [4,'Scope status','Review in progress (red)', t.mine ? 'Your turn' : `${holder}'s turn`,'Red read as an error. The chip says who has it.'],
