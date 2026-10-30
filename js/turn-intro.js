@@ -36,9 +36,7 @@ const TURN_INTRO_STEPS = [
     title: 'Pass it on when you are done',
     body: () => `Choose who gets it next and leave a note on what is still open.
       They can edit it, and a ${rn('manager')} can approve it.`
-      + (state.role === 'manager'
-          ? ` As the ${rn('manager')}, you can edit, hand off and approve at any time.`
-          : ` Once it is handed off, you edit again when it comes back to you.`),
+      + ` Once it is handed off, you edit again when it comes back to you, or when you take the turn.`,
     img: {src:'img/turn-intro/handoff.png', alt:'The Hand off the scope dialogue', w:430, x:62, y:26},
   },
   {
