@@ -1,0 +1,893 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iPad Turn CTAs</title>
+<style>
+/* Same font files as the rest of figma-kai; local() covers machines with Circular installed. */
+@font-face{font-family:'Circular XX';src:local('Circular XX'),url('../../../../fonts/Circular/CircularXX-Regular.otf') format('opentype');font-weight:400}
+@font-face{font-family:'Circular XX';src:local('Circular XX Medium'),url('../../../../fonts/Circular/CircularXX-Medium.otf') format('opentype');font-weight:500}
+@font-face{font-family:'Circular XX';src:local('Circular XX Bold'),url('../../../../fonts/Circular/CircularXX-Bold.otf') format('opentype');font-weight:700}
+
+:root{
+  --ink:#1A1A1A; --nav:#1E1D1A; --nav-2:#2A2926; --nav-line:#3A3936; --nav-dim:#9A968E;
+  --page:#ECEBE8; --card:#FFFFFF; --line:#DEDCD7; --mid:#7D7469; --soft:#F5F4F1;
+  --yellow:#FDFF86; --gold:#F2C94C; --err:#C0443A; --ok:#2E9048; --ok-t:#DDF1E1; --info-t:#E1EFFA;
+  --tag:#5E5A53; --tag-2:#3F3C37;
+  --body:'Circular XX', -apple-system, 'Helvetica Neue', Arial, sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#C9C6BF;color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+
+/* ---------- demo controls (outside the iPad) ---------- */
+.stage{display:flex;gap:24px;padding:20px 24px 32px;align-items:flex-start;justify-content:center;min-width:1380px}
+.ctrl{display:flex;gap:28px;align-items:flex-end;padding:18px 24px 0;justify-content:center;flex-wrap:wrap;min-width:1380px}
+.ctrl-group{display:flex;flex-direction:column;gap:6px}
+.ctrl-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#4A463F;font-weight:500}
+.seg{display:inline-flex;background:#B5B1A9;border-radius:8px;padding:3px}
+.seg button{padding:7px 12px;border-radius:6px;font-size:13px;color:#2A2926;white-space:nowrap}
+.seg button.on{background:#fff;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.toggle{display:flex;gap:8px;align-items:center;font-size:13px;padding:7px 0}
+.toggle input{width:16px;height:16px;accent-color:#1A1A1A}
+
+/* Who is looking: sits above the frame so the role is never in doubt. */
+.viewer{width:1000px;display:flex;align-items:center;gap:14px;background:var(--ink);color:#fff;border-radius:12px 12px 0 0;padding:12px 18px}
+.viewer .av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;color:var(--ink)}
+.viewer .who{display:flex;flex-direction:column;gap:2px}
+.viewer .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--nav-dim)}
+.viewer .n{font-size:16px;font-weight:500}
+.viewer .n b{font-weight:700}
+.viewer .can{margin-left:auto;font-size:13px;color:#D8D5CE;max-width:430px;text-align:right;line-height:1.35}
+.role-pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:4px;margin-left:8px;vertical-align:2px;color:var(--ink)}
+
+.device{width:1000px;height:695px;background:#000;border-radius:0 0 12px 12px;overflow:hidden;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.screen{position:absolute;inset:0;overflow:auto;background:var(--page)}
+
+/* ---------- change notes (beside the iPad) ---------- */
+.notes{width:340px;background:#fff;border-radius:12px;padding:18px 18px 8px;box-shadow:0 10px 30px rgba(0,0,0,.12);max-height:775px;overflow:auto}
+.notes h2{font-size:15px;font-weight:700;margin-bottom:4px}
+.notes .sub{font-size:12.5px;color:var(--mid);margin-bottom:14px;line-height:1.4}
+.note{display:grid;grid-template-columns:24px 1fr;gap:10px;padding:12px 0;border-top:1px solid var(--line)}
+.note .t{font-size:13.5px;font-weight:500;margin-bottom:5px}
+.note .row{font-size:12.5px;line-height:1.4;margin-top:3px}
+.note .row s{color:var(--mid)}
+.note .row em{font-style:normal;font-weight:500;background:var(--yellow);padding:0 3px}
+.note .why{font-size:12px;color:var(--mid);margin-top:5px;line-height:1.4}
+.note.q .t::after{content:'Open question';margin-left:6px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--err);border:1px solid var(--err);padding:1px 4px;border-radius:3px;vertical-align:1px}
+.ann{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#FF5A1F;color:#fff;font-size:11px;font-weight:700;font-style:normal;flex:none;box-shadow:0 0 0 2px #fff}
+.screen .ann{position:absolute;z-index:5;top:-8px;left:-8px}
+.hide-ann .screen .ann{display:none}
+/* Markers sit above the header's stacking context, so they would poke through an open card or modal. */
+.pop-open .screen .ann{display:none}
+.anc{position:relative}
+
+/* ---------- shared app chrome ---------- */
+.kai-logo{display:flex;align-items:center;gap:8px;color:#fff;font-size:30px;font-weight:500;letter-spacing:-.02em}
+.kai-logo svg{width:22px;height:22px}
+.hdr{height:78px;background:var(--nav);display:flex;align-items:center;padding:0 22px;gap:22px;color:#fff;position:sticky;top:0;z-index:4}
+.hdr .addr{font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr .box{border:1.5px solid #fff;padding:6px 9px;font-size:12px;font-weight:500}
+.hdr-turn{margin-left:-10px}
+.hdr-turn.solo{margin-left:0}
+.hdr-turn .turn{height:22px;font-size:10px;padding:0 8px 0 3px}
+.hdr-turn .turn .dot{width:15px;height:15px;font-size:7.5px}
+/* The header chip is tappable: it opens the same card as the web prototype's
+   turn chip. The caret is what says so. */
+.hdr-turn{position:relative}
+.hdr-turn > button{display:flex;align-items:stretch;padding:0}
+.hdr-turn .car{display:grid;place-items:center;width:20px;font-size:8px;border-left:1px solid rgba(0,0,0,.15);margin-left:-1px}
+.hdr-turn .turn.mine + .car{background:var(--yellow);color:var(--ink)}
+.hdr-turn .turn.theirs + .car{background:var(--nav-2);color:#fff;border:1px solid var(--nav-line);border-left:0}
+.hdr-turn.open .car{transform:none}
+.pop-scrim{position:fixed;inset:0;z-index:3}
+.turn-pop{position:absolute;top:calc(100% + 10px);left:0;width:290px;background:#FFFDF8;border:1px solid #E6E39A;box-shadow:0 10px 30px rgba(0,0,0,.25);color:var(--ink);padding:14px 16px 12px;z-index:9;text-transform:none;letter-spacing:0;font-weight:400;cursor:default}
+.turn-pop .lockh{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+.turn-pop .p{font-size:12.5px;line-height:1.4;margin:7px 0;color:#4A463F}
+.turn-pop .lbl{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);margin-right:4px}
+.turn-pop .sub{display:block;color:var(--mid);font-size:11.5px;margin-top:2px}
+.turn-pop .hist{border-top:1px solid var(--line);margin-top:10px;padding-top:4px}
+.turn-pop .ev{margin:8px 0;font-size:12.5px;color:#4A463F}
+.turn-pop .ev small{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--mid);margin-bottom:2px}
+.turn-pop .ev b{color:var(--ink);font-weight:500}
+.turn-pop .ev i{font-style:normal;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mid);margin:0 2px}
+.turn-pop .how{display:inline-block;border-top:1px solid var(--line);width:100%;text-align:left;padding-top:10px;margin-top:4px;font-size:13px;font-weight:500}
+.turn-pop .how span{border-bottom:1px solid var(--ink)}
+.hdr .right{margin-left:auto;display:flex;align-items:center;gap:18px;font-size:12.5px;font-weight:500}
+.ico{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:1.6}
+.me{display:flex;align-items:center;gap:8px}
+.me .av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:var(--ink);font-weight:700;font-size:12px}
+.me .lbl{display:flex;flex-direction:column;line-height:1.15}
+.me .lbl small{font-size:10px;color:var(--nav-dim);font-weight:400;text-transform:uppercase;letter-spacing:.06em}
+
+/* Turn chip: the one place every screen says who holds the scope. */
+.turn{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px 0 4px;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.turn .dot{width:17px;height:17px;border-radius:50%;display:grid;place-items:center;font-size:8.5px;color:var(--ink);background:#fff;letter-spacing:0}
+.turn.mine{background:var(--yellow);color:var(--ink)}
+.turn.mine .dot{background:var(--ink);color:var(--yellow)}
+.turn.theirs{background:#D9D5CC;color:var(--ink)}
+.on-dark .turn.theirs{background:var(--nav-2);color:#fff;border:1px solid var(--nav-line)}
+
+/* ---------- 1 · dashboard ---------- */
+.dash{display:grid;grid-template-columns:254px 1fr;min-height:100%}
+.dash-side{background:var(--nav);color:#fff;padding:22px 14px;display:flex;flex-direction:column}
+.dash-side h4{font-size:13px;font-weight:700;letter-spacing:.04em;margin:30px 0 14px}
+.side-item{display:flex;align-items:center;justify-content:space-between;padding:10px 10px;font-size:15px}
+.side-item.sel{background:#000;border-left:3px solid var(--gold);font-weight:500}
+.side-item .cnt{display:flex;align-items:center;gap:6px;font-weight:500}
+.side-item .cnt i{width:6px;height:6px;border-radius:50%;background:#E5483B}
+.side-item .cnt.zero{color:var(--nav-dim)}
+.side-item .cnt.zero i{display:none}
+.side-sub{font-size:12px;letter-spacing:.04em;color:var(--nav-dim);margin:24px 0 6px;font-weight:500}
+.side-foot{margin-top:auto;background:var(--nav-2);padding:12px;font-size:11.5px;color:#D8D5CE;line-height:1.4}
+.side-foot b{display:block;color:#fff;font-size:12.5px}
+.dash-main{display:flex;flex-direction:column}
+.dash-top{height:100px;background:var(--nav);display:flex;align-items:center;padding:0 18px;gap:26px;color:#fff}
+.dash-top h1{font-size:17px;font-weight:700;padding-right:18px;border-right:1px solid var(--nav-line)}
+.dash-top .tab{font-size:13px;font-weight:500;letter-spacing:.04em;color:#CFCBC3;padding:8px 0}
+.dash-top .tab.on{color:var(--gold);border-bottom:2px solid var(--gold)}
+.dash-top .right{margin-left:auto;display:flex;gap:18px;align-items:center}
+.ovr{display:flex;align-items:center;background:#E4E3E0;padding:9px 12px 9px 17px;gap:14px}
+.ovr h2{font-size:15px;font-weight:700;padding-right:14px;border-right:1px solid #BDBAB3}
+.ovr p{font-size:14.5px}
+.ovr .sch{margin-left:auto;width:34px;height:34px;background:#fff;display:grid;place-items:center}
+.ovr .sch .ico{stroke:var(--ink)}
+.sort{width:153px;height:34px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:12.5px}
+.sort b{font-weight:500}
+.dash-body{padding:17px;background:#DCDBD8;flex:1}
+.jcard{background:#fff;display:grid;grid-template-columns:122px 1fr;gap:14px;padding:12px}
+.jcard img{width:122px;height:85px;object-fit:cover}
+.tags{display:flex}
+.tags span{font-size:9px;font-weight:700;letter-spacing:.04em;padding:5px 9px;text-transform:uppercase}
+.tags .t1{background:var(--tag);color:#fff}
+.tags .t2{background:var(--tag-2);color:#fff}
+.tags .turn{height:auto;padding:3px 9px 3px 4px;font-size:9px}
+.tags .turn .dot{width:14px;height:14px;font-size:7px}
+.jaddr{display:flex;align-items:baseline;gap:20px;margin:8px 0 12px}
+.jaddr b{font-size:13.5px;font-weight:700}
+.jaddr span{font-size:10.5px;color:#3F3C37}
+.jmeta{display:grid;grid-template-columns:repeat(5,1fr);font-size:10.5px}
+.jmeta dt{color:#5E5A53;margin-bottom:4px}
+.jmeta dd{font-weight:700}
+.jmeta .avail{display:flex;align-items:center;gap:6px}
+.jmeta .avail i{width:12px;height:12px;background:#D8C67A}
+.empty-turn{margin-top:14px;font-size:12.5px;color:#5E5A53;text-align:center;padding:24px;border:1px dashed #B5B1A9}
+
+/* ---------- 2 · project overview ---------- */
+.proj{padding:18px 21px 30px;display:flex;flex-direction:column;gap:17px}
+.media{display:grid;grid-template-columns:305px 1fr;gap:9px;height:228px}
+.media img{width:100%;height:100%;object-fit:cover;border:2px solid var(--ink)}
+.map{border:2px solid var(--ink);background:
+  linear-gradient(115deg,transparent 46%,#C8D3E0 46.5%,#C8D3E0 49%,transparent 49.5%),
+  linear-gradient(28deg,transparent 40%,#C8D3E0 40.5%,#C8D3E0 42.5%,transparent 43%),
+  repeating-linear-gradient(28deg,#EEF0F2 0 18px,#E3E6EA 18px 20px),#E9ECEF;position:relative}
+.map::after{content:'';position:absolute;right:16%;top:0;bottom:0;width:30%;background:#D4F2DC}
+.map i{position:absolute;left:46%;top:36%;width:18px;height:18px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#E7B21E;border:2px solid #B88A0F;z-index:2}
+.duo{display:grid;grid-template-columns:2fr 1fr;gap:9px}
+.panel{background:#fff}
+.panel h5{font-size:10px;font-weight:500;letter-spacing:.06em;color:#7D7469;padding:14px 17px;border-bottom:1px solid var(--line)}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:0 26px;padding:13px 17px;font-size:10.5px}
+.kv div{display:flex;justify-content:space-between;padding:5px 0}
+.kv b{font-weight:700}
+.kv.one{grid-template-columns:1fr}
+.stages{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}
+.st{background:#fff;border:1px solid var(--line);padding:16px 17px;min-height:158px;display:flex;flex-direction:column}
+.st.cur{border:2px solid var(--ink)}
+.st h3{display:flex;align-items:center;gap:9px;font-size:16px;font-weight:500}
+.st.off h3{color:#B9B5AD;font-weight:400}
+.st .upd{font-size:10.5px;color:#7D7469;margin:12px 0 10px;line-height:1.35}
+.st .upd b{color:var(--ink);font-weight:500}
+.st .acts{margin-top:auto;display:flex;flex-direction:column;gap:7px}
+.btn{height:38px;display:grid;place-items:center;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:0 14px;white-space:nowrap}
+.btn.pri{background:var(--ink);color:#fff}
+.btn.sec{border:1.5px solid var(--ink);color:var(--ink);background:#fff}
+.btn.yel{background:var(--yellow);color:var(--ink)}
+.trio{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.trio .btns{background:#fff;display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:9px}
+.trio .btns div{border:1.5px solid var(--ink);height:38px;display:grid;place-items:center;font-size:11.5px;letter-spacing:.04em;color:#7D7469}
+.trio .btns .act{color:var(--ink);font-weight:500}
+
+/* ---------- 3 · scope editor ---------- */
+.ed{min-height:100%;background:var(--nav);color:#fff;display:grid;grid-template-columns:305px 1fr;grid-template-rows:auto 1fr}
+.ed .hdr{grid-column:1/-1}
+.ed-left{padding:0 17px 20px;display:flex;flex-direction:column;gap:9px}
+.filter{height:38px;border:1px solid var(--nav-line);background:var(--nav-2);display:flex;align-items:center;justify-content:space-between;padding:0 10px;color:var(--nav-dim);font-size:13px}
+.proj-box{border:1px solid var(--nav-line);padding:12px 10px}
+.proj-box small{font-size:10.5px;font-weight:700;letter-spacing:.04em}
+.proj-box .amt{color:#7CC48A;font-size:17px;margin:4px 0}
+.proj-box .sq{font-size:13px}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.three div{border:1px solid var(--nav-line);height:37px;display:grid;place-items:center;font-size:12px}
+.three .on{border-color:var(--gold)}
+.ed-left h6{font-size:11.5px;color:var(--nav-dim);letter-spacing:.04em;margin-top:10px;font-weight:500}
+.ed-left .li{font-size:13.5px;padding:9px 0;border-top:1px solid var(--nav-line);display:flex;justify-content:space-between}
+.ed-left .li span{color:#7CC48A}
+.ed-main{display:flex;flex-direction:column;min-width:0}
+.ed-tabs{display:flex;align-items:center;gap:18px;padding:0 9px 0 9px;height:46px}
+.ed-tabs .t{font-size:15px;color:#CFCBC3;padding:10px 0;white-space:nowrap}
+.ed-tabs .t.on{color:#fff;font-weight:500;border-bottom:2px solid var(--gold)}
+.ed-tabs .t.off{color:#77736C}
+.ed-tabs .t .lock{font-size:10px;color:var(--nav-dim);margin-left:4px;font-weight:400}
+.ed-tabs .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.dl{width:34px;height:34px;background:var(--nav-2);display:grid;place-items:center}
+.ed-btn{height:34px;padding:0 14px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;display:grid;place-items:center;white-space:nowrap}
+.ed-btn.pri{background:var(--yellow);color:var(--ink)}
+.ed-btn.sec{border:1.5px solid #fff;color:#fff}
+.banner{padding:12px 18px;font-size:13.5px;text-align:center;display:flex;align-items:center;justify-content:center;gap:12px;color:var(--ink)}
+.banner.ok{background:var(--ok-t)}
+.banner.wait{background:#EFEAE0}
+.banner.mine{background:var(--yellow)}
+.banner b{font-weight:700}
+.banner .bb{border:1.5px solid var(--ink);padding:5px 10px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:transparent}
+.doc{background:#fff;color:var(--ink);padding:18px 17px;flex:1}
+.doc .tag{display:inline-block;background:#8C8882;color:#fff;font-size:11px;font-weight:700;padding:5px 9px;letter-spacing:.04em}
+.doc .tag.rev{background:#2C6FB0}
+.doc-head{display:flex;justify-content:space-between;align-items:flex-start}
+.doc-head .org{font-size:15px;font-weight:700}
+.doc h1{font-size:20px;font-weight:700;margin:12px 0 6px;letter-spacing:.01em}
+.doc .lu{font-size:12px;color:#7D7469;margin-bottom:14px}
+.acc{background:#EEEDEA;display:flex;align-items:center;justify-content:space-between;padding:6px 9px 6px 12px;margin-bottom:9px;font-size:13.5px;font-weight:500}
+.acc .e{background:#fff;border:1px solid var(--line);padding:7px 13px;font-size:11px;font-weight:700}
+.acc .e.lk{color:#9A968E;display:flex;gap:5px;align-items:center;font-weight:500}
+.tot{background:var(--ink);color:#fff;text-align:right;padding:16px 20px;font-size:14px;font-weight:700;margin-top:18px}
+.grp{border:3px solid var(--ink);border-top:0;padding:16px 18px}
+.grp-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.grp-h b{font-size:16px}
+.grp table{width:100%;border-collapse:collapse;font-size:10.5px}
+.grp th{text-align:left;background:#F2F1EE;padding:7px;border:1px solid var(--line);font-weight:500}
+.grp td{padding:7px;border:1px solid var(--line);vertical-align:top}
+.rr{display:inline-block;background:#8C7B6A;color:#fff;font-size:9px;font-weight:700;padding:3px 6px;margin-left:6px}
+.radio{display:inline-block;width:10px;height:10px;border:1px solid #8C8882;border-radius:50%;margin-right:5px;vertical-align:-1px}
+
+/* Edit Scope tab body */
+.tasks{color:#fff;padding:0 0 30px}
+.tasks .th{display:flex;justify-content:space-between;padding:14px 9px 8px;font-size:15px}
+.tasks .th b{font-weight:700}
+.tasks .th span{color:#7CC48A;font-weight:700}
+.tasks .gh{display:flex;justify-content:space-between;padding:10px 9px;font-size:14px}
+.tasks .gh span{color:#7CC48A}
+.tasks .cat{background:#2C2B28;font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:9px 17px}
+.task{background:#fff;color:var(--ink);display:grid;grid-template-columns:34px 101px 1fr;gap:9px;padding:9px}
+.task .h{background:#D7EBDD;display:grid;place-items:center;font-size:10px}
+.task .ph{background:#EEE;height:101px;display:grid;place-items:center;color:#9A968E;font-size:10.5px;text-align:center}
+.task .ph.img{background:#8E7A6E url('house.jpg') center/cover}
+.task .nm{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700}
+.task .badge{background:#8C7B6A;color:#fff;font-size:9.5px;padding:4px 8px;letter-spacing:.03em}
+.task .field{margin-top:16px;border:1px solid #BDBAB3;width:170px;padding:8px;font-size:12px;position:relative;color:#7D7469}
+.task .field::before{content:'Contractor';position:absolute;top:-7px;left:8px;background:#fff;padding:0 3px;font-size:9.5px;color:var(--ink)}
+.task .field.lk{background:#F5F4F1}
+.task .amt{float:right;color:var(--ok);font-weight:700;font-size:13px;margin-top:-20px}
+.locked-cover{position:relative}
+.locked-cover .lockmsg{position:absolute;inset:0;display:grid;place-items:center;background:rgba(30,29,26,.55);z-index:3}
+.lockmsg div{background:#fff;color:var(--ink);padding:14px 18px;font-size:13px;max-width:380px;text-align:center;line-height:1.4}
+.lockmsg b{display:block;margin-bottom:4px}
+
+/* ---------- dialogs ---------- */
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:10}
+.dlg{background:#fff;width:470px;padding:22px 24px;color:var(--ink)}
+.dlg h3{font-size:18px;font-weight:700;margin-bottom:8px}
+.dlg p{font-size:13px;line-height:1.45;color:#3F3C37;margin-bottom:6px}
+.dlg .hist{margin:12px 0;font-size:12.5px}
+.dlg .hist div{display:flex;gap:8px;padding:3px 0;color:#3F3C37}
+.dlg .hist div::before{content:'✓';color:var(--ok);font-weight:700}
+.dlg .ppl{border-top:1px solid var(--line);margin:10px 0}
+.dlg .ppl button{display:flex;width:100%;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid var(--line);font-size:13px;text-align:left}
+.dlg .ppl button.sel{background:var(--yellow)}
+.dlg .ppl small{color:var(--mid);margin-left:auto;font-size:11.5px}
+.dlg textarea{width:100%;height:58px;border:1px solid var(--line);padding:8px;font:inherit;font-size:12.5px;resize:none}
+.dlg .ft{display:flex;justify-content:flex-end;gap:10px;margin-top:14px}
+.toast{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;font-size:13px;z-index:11}
+
+/* ---------- turn intro (the web's js/turn-intro.js, on the iPad) ----------
+   Same card, steps and copy. The pictures are drawn from this mock's own
+   pieces rather than the web screenshots, so they show the iPad screens. */
+.ti{position:absolute;inset:0;z-index:12;background:rgba(0,0,0,.45)}
+.ti-card{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:540px;background:#fff;border:1px solid var(--ink);padding:18px;box-shadow:0 30px 70px rgba(0,0,0,.35);color:var(--ink)}
+.ti-x{position:absolute;top:28px;right:28px;z-index:2;width:30px;height:30px;display:grid;place-items:center;background:#fff;border:1px solid var(--ink)}
+.ti-x svg{width:12px;height:12px;stroke:var(--ink);stroke-width:1.8;fill:none;stroke-linecap:round}
+.ti-pic{position:relative;height:214px;overflow:hidden;border:1px solid var(--ink);background-color:var(--yellow);
+  background-image:repeating-radial-gradient(circle at 0% 100%,transparent 0 13px,rgba(26,26,26,.13) 13px 14px)}
+.ti-shot{position:absolute;border:1px solid var(--ink);background:#fff;box-shadow:0 18px 40px rgba(26,26,26,.22);transform-origin:top left}
+.ti-body{padding:18px 4px 2px}
+.ti-kicker{display:flex;align-items:center;gap:10px;font-size:9.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--mid);margin-bottom:8px}
+.ti-badge{background:var(--ink);color:var(--yellow);padding:3px 7px 2px}
+.ti-title{font-size:21px;font-weight:700;line-height:1.2;margin-bottom:8px}
+.ti-lead{font-size:14.5px;line-height:1.5;margin-bottom:8px}
+.ti-text{font-size:13.5px;line-height:1.55;color:#5C5750;min-height:4.65em}
+.ti-foot{display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding:14px 4px 0;border-top:1px solid var(--line)}
+.ti-dots{display:flex;gap:8px}
+.ti-dot{width:8px;height:8px;border:1px solid var(--ink);background:#fff;transition:width .15s}
+.ti-dot.on{width:22px;background:var(--ink)}
+.ti-acts{display:flex;gap:10px}
+.ti-acts .btn{min-width:90px;height:36px}
+/* Mini activity list for the record step. */
+.ti-act{width:520px;font-size:11.5px}
+.ti-act h6{font-size:10px;letter-spacing:.06em;color:var(--mid);padding:12px 14px;border-bottom:1px solid var(--line);font-weight:500}
+.ti-act div{display:grid;grid-template-columns:70px 1fr 70px;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line)}
+.ti-act small{color:var(--mid)}
+.ti-act em{font-style:normal;text-align:right}
+.ti-act .up{color:var(--err)}
+
+/* ---------- all activity (a modal: the full record, where the popover is the glance) ---------- */
+.turn-pop .all{display:block;font-size:12px;font-weight:500;margin:2px 0 6px;color:var(--ink)}
+.turn-pop .all span{border-bottom:1px solid var(--mid)}
+.acts-m{position:absolute;inset:0;z-index:12;background:rgba(0,0,0,.45)}
+.acts-card{position:absolute;top:40px;bottom:40px;left:50%;transform:translateX(-50%);width:760px;background:#fff;border:1px solid var(--ink);display:flex;flex-direction:column;box-shadow:0 30px 70px rgba(0,0,0,.35);color:var(--ink)}
+.acts-hd{display:flex;align-items:flex-start;gap:14px;padding:18px 20px 14px;border-bottom:1px solid var(--line)}
+.acts-hd h3{font-size:19px;font-weight:700}
+.acts-hd p{font-size:12.5px;color:var(--mid);margin-top:4px;display:flex;align-items:center;gap:8px}
+.acts-hd .ti-x{position:static;margin-left:auto}
+.acts-tbl{overflow:auto;flex:1}
+.acts-tbl table{width:100%;border-collapse:collapse;font-size:12.5px}
+.acts-tbl th{position:sticky;top:0;background:#F5F4F1;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mid);padding:9px 12px;border-bottom:1px solid var(--line)}
+.acts-tbl td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.4}
+.acts-tbl td.d{white-space:nowrap;color:var(--mid);width:92px}
+.acts-tbl td.n{color:#5C5750}
+.acts-tbl td.n:empty::before{content:'—';color:#C9C6BF}
+.acts-tbl td.m{text-align:right;white-space:nowrap;width:110px}
+.acts-tbl td.m small{display:block;font-size:11px}
+.acts-tbl .up{color:var(--err)} .acts-tbl .dn{color:var(--ok)}
+.acts-tbl b{font-weight:500}
+.acts-tbl i{font-style:normal;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mid);margin-left:4px}
+.acts-tbl tr.new td{background:#FFFEE0}
+.acts-ft{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:1px solid var(--line);font-size:12px;color:var(--mid)}
+.st .act{cursor:pointer}
+
+/* ---------- hand-off dialog (matches the web's renderCoHandoff) ---------- */
+.ho{width:560px;max-height:640px;overflow:auto;padding:22px 26px 20px}
+.ho .ic{width:52px;height:52px;border-radius:50%;background:var(--yellow);display:grid;place-items:center;margin:0 auto 10px}
+.ho .ic svg{width:22px;height:22px;fill:none;stroke:var(--ink);stroke-width:1.6;stroke-linejoin:round}
+.ho h3{text-align:center;font-size:20px;margin-bottom:12px}
+.ho .ex{color:var(--mid);font-size:13px;line-height:1.5}
+.ho .lead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:14px 0 6px;font-size:13px}
+.ho .lead button{font-size:12px;border-bottom:1px solid var(--ink);white-space:nowrap}
+.ho .hrow{display:grid;grid-template-columns:20px 1fr auto;gap:10px;align-items:center;padding:5px 0;font-size:13px}
+.ho .hrow i{width:18px;height:18px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:10px;font-style:normal}
+.ho .hrow small{color:var(--mid);font-size:12px}
+.ho .lbl{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5C5750;margin:16px 0 6px}
+.ho .lbl span{color:var(--mid);margin-left:8px}
+.ho input[type=text]{width:100%;height:38px;border:1.5px solid var(--ink);padding:0 12px;font:inherit;font-size:13px;outline:none}
+.ho .res{max-height:210px;overflow:auto;border-top:1px solid var(--line);margin-top:8px}
+.ho .grp{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);padding:10px 4px 4px}
+.ho .row{display:grid;grid-template-columns:28px 1fr auto 18px;gap:10px;align-items:center;width:100%;padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;font-size:13.5px}
+.ho .row.on{background:var(--yellow)}
+.ho .row .av{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:700;color:var(--ink)}
+.ho .row .nm small{display:block;font-size:11px;color:var(--mid)}
+.ho .row .pm{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mid)}
+.ho .row .pm.add{color:var(--ink);font-weight:700}
+.ho .row .tk{font-size:13px;visibility:hidden}
+.ho .row.on .tk{visibility:visible}
+.ho .none{font-size:12.5px;color:var(--mid);padding:12px 4px}
+.ho .addnote{font-size:12px;color:#5C5750;background:#F5F4F1;border-left:3px solid var(--yellow);padding:8px 10px;margin-top:8px;line-height:1.4}
+.ho textarea{width:100%;height:70px;border:1px solid var(--line);padding:9px;font:inherit;font-size:12.5px;resize:none}
+.ho .ft{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+</style>
+</head>
+<body>
+
+<div class="ctrl">
+  <div class="ctrl-group"><span class="ctrl-label">Viewing as</span><div class="seg" id="c-role"></div></div>
+  <div class="ctrl-group"><span class="ctrl-label">The scope is with</span><div class="seg" id="c-holder"></div></div>
+  <div class="ctrl-group"><span class="ctrl-label">Screen</span><div class="seg" id="c-screen"></div></div>
+  <label class="toggle"><input type="checkbox" id="c-ann" checked> Show numbered changes</label>
+</div>
+
+<div class="stage">
+  <div>
+    <div class="viewer" id="viewer"></div>
+    <div class="device"><div class="screen" id="screen"></div></div>
+  </div>
+  <aside class="notes" id="notes"></aside>
+</div>
+
+<script>
+/* The prototype's demo team (js/shell.js ROLE_PEOPLE on job-overview), so the
+   iPad and the web prototype talk about the same people. */
+const PEOPLE = {
+  field_agent:    {name:'M. Alvarez', initials:'MA', role:'Field agent',  color:'#9FD3FF'},
+  field_agent_nr: {name:'G. Han',     initials:'GH', role:'Field agent',  color:'#B9E6B0'},
+  manager:        {name:'T. Okafor',  initials:'TO', role:'Job manager',  color:'#FFC48A'},
+  // On the job, but not one of the demo's viewing roles.
+  novak:          {name:'A. Novak',   initials:'AN', role:'Field agent',  color:'#E4D2FF'},
+  ibarra:         {name:'R. Ibarra',  initials:'RI', role:'Field agent',  color:'#FFD9E2'},
+  // In Kaiizen Testing but not on this job. Only a job manager can reach them,
+  // by searching; handing off to one adds them to the job.
+  brooks:         {name:'D. Brooks',  initials:'DB', role:'Job manager',  color:'#FFE2A8', org:true},
+  mensah:         {name:'K. Mensah',  initials:'KM', role:'Field agent',  color:'#C9F0E8', org:true},
+  patel:          {name:'S. Patel',   initials:'SP', role:'Ops',          color:'#E0E0E0', org:true},
+  whitfield:      {name:'J. Whitfield', initials:'JW', role:'Field agent', color:'#D6E6C3', org:true},
+};
+const ROLES = [
+  {id:'field_agent',    label:'M. Alvarez · Field agent'},
+  {id:'field_agent_nr', label:'G. Han · Field agent'},
+  {id:'manager',        label:'T. Okafor · Job manager'},
+];
+const HOLDERS = [
+  {id:'field_agent', label:'M. Alvarez (drafting)'},
+  {id:'field_agent_nr', label:'G. Han (drafting)'},
+  {id:'manager',     label:'T. Okafor (reviewing)'},
+];
+const SCREENS = [
+  {id:'dash', label:'1 · Dashboard'},
+  {id:'proj', label:'2 · Project'},
+  {id:'scope', label:'3 · Review Scope'},
+  {id:'edit', label:'4 · Edit Scope'},
+];
+
+let S = {role:'field_agent', holder:'field_agent', screen:'scope', ann:true, dialog:null, toast:null, pick:'manager', pop:false, log:[], intro:null, acts:false, added:[], hoQ:'', hoHist:false};
+try{ Object.assign(S, JSON.parse(localStorage.getItem('ipad-turn') || '{}'), {dialog:null, toast:null, pop:false, log:[]}); }catch(e){}
+
+/* One answer to "whose turn", read by every screen, like whoseTurn() in the
+   web prototype. */
+function turn(){
+  const h = PEOPLE[S.holder];
+  const mine = S.role === S.holder;
+  const isMgr = S.role === 'manager';
+  // The job manager takes the turn like anyone else before editing or approving.
+  return {mine, isMgr, holder:h, review:h.role === 'Job manager', canEdit: mine};
+}
+const me = () => PEOPLE[S.role];
+const A = n => S.ann ? `<i class="ann">${n}</i>` : '';
+const first = p => p.name;
+
+function chip(t, dark){
+  return t.mine
+    ? `<span class="turn mine"><span class="dot">${me().initials}</span>Your turn</span>`
+    : `<span class="turn theirs"><span class="dot">${t.holder.initials}</span>${first(t.holder)}'s turn</span>`;
+}
+const LOGO = `<div class="kai-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6"><path d="M2 13 12 4l10 9"/><path d="M3 20h18"/></svg>kai</div>`;
+const IC = {
+  help:`<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="15"/><path d="M10 18l2 3 2-3"/><path d="M9.5 8.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5"/><circle cx="12" cy="15" r=".3"/></svg>`,
+  bell:`<svg class="ico" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg>`,
+  search:`<svg class="ico" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>`,
+  back:`<svg class="ico" viewBox="0 0 24 24"><path d="M12 5 5 12l7 7M19 5l-7 7 7 7"/></svg>`,
+  menu:`<svg class="ico" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>`,
+  dl:`<svg class="ico" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18"/><path d="M12 8v7M9 12l3 3 3-3"/></svg>`,
+  lock:`<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`,
+  doc:`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5" y="3" width="14" height="18"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>`,
+};
+function meBadge(){
+  const p = me();
+  return `<div class="me anc">${A('R')}<span class="av" style="background:${p.color}" title="${p.name} · ${p.role}">${p.initials}</span></div>`;
+}
+function appHdr(menu, t, n){
+  // Whose turn sits in the header, small and beside the address, so it reads as
+  // a status and never as a button next to the turn action.
+  const hc = t ? `<span class="anc hdr-turn on-dark ${menu ? 'solo' : ''}">${A(n)}<button type="button" onclick="togglePop()" aria-expanded="${S.pop}">${chip(t)}<span class="car">${S.pop ? '▲' : '▼'}</span></button>${S.pop ? turnPop(t) : ''}</span>` : '';
+  return `<div class="hdr">${LOGO}${menu ? IC.menu : ''}${IC.back}
+    <span class="addr">10724 Defender Trl, Austin, Tx 78754, Usa</span>${menu ? '' : '<span class="box">Active</span>'}${hc}
+    <div class="right">${IC.help}${IC.bell}${meBadge()}</div></div>`;
+}
+
+/* ---------- screens ---------- */
+function dash(t){
+  const n = t.mine ? 1 : 0;
+  return `<div class="dash">
+    <div class="dash-side">${LOGO}
+      <h4>DASHBOARD</h4>
+      <div class="side-item sel">Overview <span class="cnt anc ${n ? '' : 'zero'}">${A(3)}<i></i>${n}</span></div>
+      <div class="side-sub">MARKETS (1)</div>
+      <div class="side-item">Austin <span class="cnt ${n ? '' : 'zero'}"><i></i>${n}</span></div>
+      <div class="side-foot"><b>Missing a market?</b>Tap to learn why &amp; how to get access</div>
+    </div>
+    <div class="dash-main">
+      <div class="dash-top"><h1>Dashboard</h1><span class="tab on">ACTIVE (1)</span><span class="tab">COMPLETED (0)</span><span class="tab">ARCHIVED (0)</span>
+        <div class="right">${IC.bell}${IC.help}${meBadge()}</div></div>
+      <div class="ovr"><h2>Overview</h2><p>${n ? '1 project is your turn' : 'Nothing is your turn'} · 1 active across all markets</p>
+        <span class="sch">${IC.search}</span><div class="sort anc">${A(1)}<b>Your Turn</b><span>▾</span></div></div>
+      <div class="dash-body">
+        <div class="jcard"><img src="house.jpg" alt="">
+          <div>
+            <div class="tags"><span class="t1">Acquisition</span><span class="t2">Scope</span><span class="anc" style="padding:0">${A(2)}${chip(t)}</span></div>
+            <div class="jaddr"><b>10724 Defender Trl, Austin, TX 78754, USA</b><span>3 bed | 1½ bath | 2,032 sqft | Austin</span></div>
+            <dl class="jmeta"><div><dt>TEST ID</dt><dd>827346287346</dd></div><div><dt>Due Date</dt><dd>04-15-26</dd></div>
+              <div><dt>Last Updated</dt><dd>09-09-26</dd></div><div><dt>Project Name</dt><dd>Untitled project</dd></div>
+              <div><dt>Availability</dt><dd class="avail"><i></i>Online Only</dd></div></dl>
+          </div>
+        </div>
+        ${n ? '' : `<div class="empty-turn">Sorted by Your Turn: this job sits below anything you need to act on.</div>`}
+      </div>
+    </div></div>`;
+}
+
+function proj(t){
+  const last = t.review
+    ? `Handed to <b>${t.mine ? 'you' : 'T. Okafor'}</b> by M. Alvarez · Sep 9, 5:16pm`
+    : `Last worked on by <b>${t.mine ? 'you' : first(t.holder)}</b> · Sep 9, 5:16pm`;
+  let acts;
+  if(t.mine) acts = `<button class="btn pri" onclick="go('${t.review ? 'scope' : 'edit'}')">${t.review ? 'Review scope' : 'Continue editing'}</button>`;
+  else acts = `<button class="btn sec" onclick="go('scope')">View scope</button><button class="btn pri" onclick="dlg('take')">Take the turn</button>`;
+  return `${appHdr(false, t, 15)}<div class="proj">
+    <div class="media"><img src="house.jpg" alt=""><div class="map"><i></i></div></div>
+    <div class="duo">
+      <div class="panel"><h5>PROPERTY DETAILS</h5><div class="kv">
+        <div><b>TEST ID</b>827346287346</div><div><b>Acreage</b>0.14</div><div><b>Beds</b>3</div><div><b>Year Built</b>2021</div>
+        <div><b>Baths</b>1½</div><div><b>Market</b>Austin</div><div><b>Garage</b>Yes</div><div><b>Gate Code</b></div></div></div>
+      <div class="panel"><h5>PROJECT DETAILS</h5><div class="kv one">
+        <div><b>Budget</b>-</div><div><b>Project Due Date</b>04-15-26</div><div><b>Last Updated</b>24 days ago</div><div><b>Availability</b>Product photos… 71%</div></div></div>
+    </div>
+    <div class="stages">
+      <div class="st cur">
+        <h3>${IC.doc}Scope</h3>
+        <div class="upd anc">${A(5)}${last}</div>
+        <div class="anc" style="margin-bottom:12px">${A(4)}${chip(t)}</div>
+        <div class="acts anc">${A(6)}${acts}</div>
+      </div>
+      <div class="st off"><h3>△ Change Order</h3></div>
+      <div class="st off"><h3>◁ Punch List</h3></div>
+      <div class="st off"><h3>◇ Close Out</h3></div>
+    </div>
+    <div class="trio"><div class="panel"><h5>PROJECT DESCRIPTION</h5></div>
+      <div class="btns"><div>2 PHOTOS</div><div>3 NOTES</div><div class="act anc" onclick="openActs()">${A(7)}ACTIVITY</div></div></div>
+  </div>`;
+}
+
+function edTop(t, tab){
+  // The header action is the turn action. Nothing here is a disabled status.
+  let r;
+  if(t.isMgr && t.mine) r = `<button class="ed-btn sec" onclick="dlg('handoff')">Hand off</button><button class="ed-btn pri" onclick="dlg('approve')">Approve</button>`;
+  else if(t.mine) r = `<button class="ed-btn pri" onclick="dlg('handoff')">Hand off</button>`;
+  else r = `<button class="ed-btn pri" onclick="dlg('take')">Take the turn</button>`;
+  const editLbl = t.canEdit ? 'Edit Scope' : `Scope <span class="lock">${IC.lock} view only</span>`;
+  return `<div class="ed-tabs">
+    <span class="t anc ${tab === 'edit' ? 'on' : ''}" onclick="go('edit')" style="cursor:pointer">${tab === 'edit' ? A(13) : ''}${editLbl}</span>
+    <span class="t ${tab === 'scope' ? 'on' : ''}" onclick="go('scope')" style="cursor:pointer">Review Scope</span>
+    <span class="t off">Progress</span>
+    <div class="r"><span class="dl">${IC.dl}</span><span class="anc" style="display:flex;gap:8px">${A(8)}${r}</span></div>
+  </div>`;
+}
+function banner(t){
+  if(t.mine && !t.review) return `<div class="banner mine anc">${A(10)}<span><b>You have the scope.</b> Hand it off for review when you're done.</span><button class="bb" onclick="dlg('handoff')">Hand off for review</button></div>`;
+  if(t.mine && t.review) return `<div class="banner mine anc">${A(10)}<span><b>M. Alvarez handed you the scope</b> on Sep 9. Approve it to publish, or hand it back.</span></div>`;
+  if(t.isMgr) return `<div class="banner wait anc">${A(10)}<span><b>${first(t.holder)} is drafting the scope.</b> Take the turn to edit or approve it.</span><button class="bb" onclick="dlg('take')">Take the turn</button></div>`;
+  return `<div class="banner wait anc">${A(10)}<span><b>${first(t.holder)} has the scope.</b> You can view it, or take the turn to edit.</span><button class="bb" onclick="dlg('take')">Take the turn</button></div>`;
+}
+function leftPanel(){
+  return `<div class="ed-left">
+    <div class="filter">filter all ${IC.search.replace('class="ico"','class="ico" style="stroke:#9A968E"')}</div>
+    <div class="proj-box"><small>ACQUISITION PROJECT</small><div class="amt">$56</div><div class="sq">- sqft <span style="color:#9A968E">(2,032 listed)</span></div></div>
+    <div class="three"><div class="on">☑ 3</div><div>◎ 2</div><div>▢ 3</div></div>
+    <div class="three" style="grid-template-columns:1fr 1fr"><div>1 Deferred</div><div>1 Resident Resp.</div></div>
+    <h6>CONTRACTORS (3)</h6><div class="li">Ed the Electrician</div><div class="li">Gary the GC</div><div class="li">Test 5</div>
+    <h6>EXTERIOR (12)</h6><div class="li">Exterior General <span>$55</span></div><div class="li">Roof</div><div class="li">Ext Lighting/Electrical</div><div class="li">Landscape</div>
+  </div>`;
+}
+function scope(t){
+  const edit = t.canEdit
+    ? `<button class="e">EDIT</button>`
+    : `<span class="e lk">${IC.lock} With ${first(t.holder)}</span>`;
+  return `<div class="ed">${appHdr(true, t, 9)}${leftPanel()}
+    <div class="ed-main">${edTop(t, 'scope')}${banner(t)}
+      <div class="doc">
+        <div class="doc-head"><span class="tag anc ${t.review ? 'rev' : ''}">${A(11)}${t.review ? 'IN REVIEW' : 'DRAFT'}</span><span class="org">Kaiizen Testing</span></div>
+        <h1>SCOPE OF WORK</h1><div class="lu">Last updated: 09/09/2026</div>
+        <div class="acc anc">${A(12)}10724 Defender Trl, Austin, TX 78754, USA <span>${edit} ⌄</span></div>
+        <div class="acc">Contractor Assignments <span>${edit} ⌄</span></div>
+        <div class="tot">Total Amount: $56.00</div>
+        <div class="grp"><div class="grp-h"><b>Exterior General <span style="font-weight:400;color:#7D7469;font-size:12px">- 0 sqft</span></b><span style="font-size:12px">Group Amount: <b>$55.00</b></span></div>
+          <table><tr><th>Status</th><th>Contractor</th><th>Task Description</th><th>Product</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>
+          <tr><td colspan="7"><b>Trashout Exterior</b><span class="rr">RESIDENT RESPONSIBLE</span></td></tr>
+          <tr><td><span class="radio"></span>Not Started</td><td>Gary the GC</td><td>Exterior Trash Removal (Not Landscape Debris) per CuYd</td><td>-</td><td>1</td><td>$30.00 cuyd</td><td>$30.00</td></tr></table></div>
+      </div>
+    </div></div>`;
+}
+function editTab(t){
+  const task = (nm, badge, who, amt, img) => `<div class="task"><div class="h">▸</div><div class="ph ${img ? 'img' : ''}">${img ? '' : '＋<br>Add Photo'}</div>
+    <div><div class="nm">${nm}<span class="badge">${badge}</span></div><div class="field ${t.canEdit ? '' : 'lk'}">${who}</div><div class="amt">${amt}</div></div></div>`;
+  const body = `<div class="tasks">
+      <div class="th"><b>All Scoped Tasks</b><span><span style="color:#fff;font-weight:400">Total Amount: </span>$56.00</span></div>
+      <div class="gh">Group: Exterior General <span><span style="color:#fff">Group Amount: </span>$55.00</span></div>
+      <div class="cat">CLEANUP</div>${task('Trashout Exterior','RESIDENT RESPONSIBLE','Gary the GC','$30.00',true)}
+      <div class="cat">DRYWALL</div>${task('Drywall Repair','DEFERRED','Ed the Electrician','$25.00',false)}
+    </div>`;
+  const cover = t.canEdit ? body
+    : `<div class="locked-cover">${body}<div class="lockmsg anc"><div>${A(14)}<b>${first(t.holder)} has the scope</b>Take the turn to edit. ${first(t.holder)} will be told you took it.<br><br><button class="btn pri" style="display:inline-grid" onclick="dlg('take')">Take the turn</button></div></div></div>`;
+  return `<div class="ed">${appHdr(true, t, 9)}${leftPanel()}<div class="ed-main">${edTop(t, 'edit')}${banner(t)}${cover}</div></div>`;
+}
+
+/* ---------- dialogs: same copy as the web prototype's hand-off and take-turn ---------- */
+function dialog(t){
+  if(!S.dialog) return '';
+  if(S.dialog === 'take') return `<div class="scrim"><div class="dlg">
+    <h3>Take the turn from ${first(t.holder)}?</h3>
+    <p>${first(t.holder)} may still be working on the scope. You'll get the turn, and ${first(t.holder)} will be notified.</p>
+    <div class="ft"><button class="btn sec" onclick="dlg(null)">Cancel</button><button class="btn pri" onclick="takeTurn()">Take the turn</button></div></div></div>`;
+  if(S.dialog === 'approve') return `<div class="scrim"><div class="dlg">
+    <h3>Approve the scope?</h3><p>Approving publishes the scope and releases it to the field.${t.mine ? '' : ` ${first(t.holder)} still has it and will be notified.`}</p>
+    <div class="ft"><button class="btn sec" onclick="dlg(null)">Cancel</button><button class="btn pri" onclick="approve()">Approve</button></div></div></div>`;
+  return handoffDialog(t);
+}
+
+/* ---------- hand-off: who it can go to ----------
+   Everyone sees the people on this job. A job manager can also search the rest
+   of Kaiizen Testing and hand off to someone who is not on the job yet; doing
+   so adds them to it. Field agents only ever see the job team. */
+const onJob = id => !PEOPLE[id].org || S.added.includes(id);
+function hoPeople(){
+  const q = S.hoQ.trim().toLowerCase();
+  const match = ([, p]) => !q || p.name.toLowerCase().includes(q) || p.role.toLowerCase().includes(q);
+  const all = Object.entries(PEOPLE).filter(([id]) => id !== S.role);
+  // Job manager first: theirs is the only row that can end in an approval.
+  const rank = ([, p]) => p.role === 'Job manager' ? 0 : 1;
+  const team = all.filter(([id]) => onJob(id)).filter(match).sort((a, b) => rank(a) - rank(b));
+  // The rest of the company only shows once a manager starts typing: a list of
+  // everyone would bury the job team, who are almost always the answer.
+  const org = (me().role === 'Job manager' && q) ? all.filter(([id]) => !onJob(id)).filter(match) : [];
+  return {team, org};
+}
+function hoRow([id, p], outside){
+  const on = S.pick === id;
+  const perm = outside ? 'Add to job' : p.role === 'Job manager' ? 'Can edit and approve' : 'Can edit';
+  return `<button type="button" class="row ${on ? 'on' : ''}" onclick="hoPick('${id}')" aria-pressed="${on}">
+    <span class="av" style="background:${p.color}">${p.initials}</span>
+    <span class="nm">${p.name}${outside ? `<small>${p.role} · not on this job</small>` : ''}</span>
+    <span class="pm ${outside ? 'add' : ''}">${outside ? '＋ ' : ''}${perm}</span><span class="tk">✓</span></button>`;
+}
+function hoResults(){
+  const {team, org} = hoPeople();
+  const isMgr = me().role === 'Job manager';
+  let h = team.map(r => hoRow(r, false)).join('');
+  if(!team.length) h += `<div class="none">No one by that name on this job.</div>`;
+  if(org.length) h += `<div class="grp">Others in Kaiizen Testing</div>` + org.map(r => hoRow(r, true)).join('');
+  else if(isMgr && S.hoQ.trim() && !team.length) h += `<div class="none">No one by that name in Kaiizen Testing either.</div>`;
+  const picked = PEOPLE[S.pick];
+  if(picked && !onJob(S.pick)) h += `<div class="addnote"><b>${picked.name}</b> isn't on this job yet. Handing off adds them to it, with ${picked.role === 'Job manager' ? 'edit and approve' : 'edit'} access.</div>`;
+  return h;
+}
+// Repaint only the list, so the search box keeps its caret.
+function hoPaint(){ const r = document.getElementById('hoRes'); if(r) r.innerHTML = hoResults(); }
+function hoFilter(v){ S.hoQ = v; hoPaint(); }
+function hoPick(id){ S.pick = id; hoPaint(); }
+function hoHistory(t){
+  return activity(t).filter(e => /handed off|took the turn|created/.test(e.act));
+}
+function handoffDialog(t){
+  const isMgr = me().role === 'Job manager';
+  const {team} = hoPeople();
+  if(!PEOPLE[S.pick] || S.pick === S.role) S.pick = (team[0] || [])[0];
+  const hist = hoHistory(t);
+  const last = hist[0];
+  const lead = last.who === me().name ? 'You were the last person who worked on the scope.' : `<b>${last.who}</b> was the last person who worked on the scope.`;
+  const shown = S.hoHist ? hist : hist.slice(0, 2);
+  return `<div class="scrim"><div class="dlg ho" role="dialog" aria-modal="true" aria-label="Hand off the scope">
+    <div class="ic"><svg viewBox="0 0 24 24"><path d="M21 3L3 10.5l7 3 3 7L21 3z"/></svg></div>
+    <h3>Hand off the scope</h3>
+    <p class="ex">Handing off allows the receiver to edit the scope, or approve it if they are a job manager. You can only edit while the scope is with you, and you can ask for it back anytime.</p>
+    <div class="lead"><span>${lead}</span>${hist.length > 2 ? `<button type="button" onclick="S.hoHist=!S.hoHist;render()">${S.hoHist ? 'Hide hand off history' : 'View hand off history'}</button>` : ''}</div>
+    ${shown.map(e => `<div class="hrow"><i>✓</i><span><b>${e.who}</b> ${e.act}${e.to ? ` <b>${e.to}</b>` : ''}${e.after || ''}</span><small>${e.d}</small></div>`).join('')}
+    <div class="lbl">Select the person to hand off</div>
+    <input type="text" id="hoQ" autocomplete="off" value="${S.hoQ}" oninput="hoFilter(this.value)"
+      placeholder="${isMgr ? 'Search by name, or anyone in Kaiizen Testing' : 'Search by name'}" aria-label="Search for a teammate">
+    <div class="res" id="hoRes">${hoResults()}</div>
+    <div class="lbl">Add a comment<span>Optional</span></div>
+    <textarea id="hoNote" placeholder="What have you left open, or what should they look at first?"></textarea>
+    <div class="ft"><button class="btn sec" onclick="dlg(null)">Cancel</button><button class="btn pri" onclick="handOff()">Hand off</button></div>
+  </div></div>`;
+}
+function dlg(k){ S.dialog = k; if(k === 'handoff'){ S.hoQ = ''; S.hoHist = false; } render(); }
+
+/* ---------- turn intro ---------- */
+function introShots(){
+  const ma = PEOPLE.field_agent, to = PEOPLE.manager;
+  const theirs = `<span class="turn theirs"><span class="dot">${ma.initials}</span>${ma.name}'s turn</span>`;
+  return [
+    // 1 · the header chip, open on its card
+    `<div class="ti-shot" style="left:24px;top:22px;width:600px;transform:scale(.82)">
+      <div class="hdr" style="position:static;height:58px">${LOGO}<span class="addr" style="font-size:15px">10724 Defender Trl, Austin…</span><span class="box">Active</span>
+        <span class="hdr-turn on-dark" style="margin-left:0"><button type="button">${theirs}<span class="car">▲</span></button></span></div>
+      <div style="position:relative;height:200px;background:var(--page)">
+        <div class="turn-pop" style="top:8px;left:318px">
+          <div class="lockh">Draft</div>
+          <div class="p"><span class="lbl">Responsible:</span> ${ma.name} (Field agent)</div>
+          <div class="p"><span class="lbl">Editing:</span> Only ${ma.name} can edit while it is with them.</div>
+        </div></div></div>`,
+    // 2 · the hand-off dialog
+    `<div class="ti-shot" style="left:70px;top:24px;transform:scale(.8)"><div class="dlg" style="width:470px">
+      <h3>Hand off the scope</h3>
+      <p>Handing off allows the receiver to edit the scope, or approve it if they are a job manager.</p>
+      <p>You can only edit while the scope is with you, and you can ask for it back anytime.</p>
+      <div class="ppl"><button class="sel"><span class="me"><span class="av" style="background:${to.color};width:26px;height:26px;font-size:10.5px">${to.initials}</span></span>${to.name}<small>Job manager</small></button>
+        <button><span class="me"><span class="av" style="background:${PEOPLE.field_agent_nr.color};width:26px;height:26px;font-size:10.5px">GH</span></span>G. Han<small>Field agent</small></button></div>
+      <div class="ft"><span class="btn sec">Cancel</span><span class="btn pri">Hand off</span></div></div></div>`,
+    // 3 · take the turn
+    `<div class="ti-shot" style="left:84px;top:34px;transform:scale(.82)"><div class="dlg" style="width:440px">
+      <h3>Take the turn from ${ma.name}?</h3>
+      <p>${ma.name} may still be working on the scope. You'll get the turn, and ${ma.name} will be notified.</p>
+      <div class="ft"><span class="btn sec">Cancel</span><span class="btn pri">Take the turn</span></div></div></div>`,
+    // 4 · the record
+    `<div class="ti-shot ti-act" style="left:24px;top:26px;transform:scale(.86)">
+      <h6>ACTIVITY</h6>
+      <div><small>Sep 9</small><span><b>${to.name}</b> took the turn from ${ma.name}</span><em>—</em></div>
+      <div><small>Sep 9</small><span><b>${ma.name}</b> handed off to ${to.name} · “Kitchen lines still open”</span><em class="up">+$1,240</em></div>
+      <div><small>Sep 9</small><span><b>G. Han</b> marked as done</span><em>—</em></div>
+      <div><small>Apr 8</small><span><b>${ma.name}</b> created the scope</span><em>$22,694</em></div></div>`,
+  ];
+}
+const INTRO = [
+  {kicker:'Turn-based workflow', badge:'New', title:'Introducing the turn-based workflow',
+   lead:'Scopes, change orders and closeouts now move between your team one turn at a time, so it is always clear who is working on what.',
+   body:'One person holds each document. The chip at the top of the screen says who has it. Tap it to see who is responsible and where it has been.'},
+  {kicker:'Hand off', title:'Pass it on when you are done',
+   body:'Choose who gets it next and leave a note on what is still open. They can edit it, and a job manager can approve it. Once it is handed off, you edit again when it comes back to you, or when you take the turn.'},
+  {kicker:'Take the turn', title:'Need it now? You do not have to wait',
+   body:'If someone else has the document, you can start editing anyway. We will let them know, and you hand it back, or on to the next person, when you are finished.'},
+  {kicker:'The record', title:'Every turn is on the record',
+   body:'Activity on the project page lists each turn: who had the document, what they changed, the note they left, and what it did to the job total.'},
+];
+
+/* ---------- activity: one list for the popover's glance and the modal ----------
+   Newest first. The demo's history depends on where the scope is; moves made
+   in this session sit on top as "Just now". Totals follow ACT-rules on the
+   web: the job total after the turn, and its change, green when it went down. */
+function activity(t){
+  const draft = [
+    {d:'Apr 10, 2026', who:'G. Han', tag:'Field agent', act:'added 4 lines on site', note:'Back bath vanity is cracked; added a replacement.', total:'$23,114', delta:'+$1,180'},
+    {d:'Apr 9, 2026',  who:'M. Alvarez', act:'walked the property and built the scope', total:'$21,934'},
+    {d:'Apr 8, 2026',  who:'M. Alvarez', act:'created the scope'},
+  ];
+  const review = [
+    {d:'Sep 9, 2026', who:'M. Alvarez', act:'handed off to', to:'T. Okafor', note:'Kitchen lines are priced; the roof quote is still open.', total:'$26,434', delta:'+$3,740'},
+    {d:'Sep 9, 2026', who:'G. Han', tag:'Field agent', act:'marked as done'},
+    {d:'Sep 2, 2026', who:'M. Alvarez', act:'edited 12 lines', total:'$22,694', delta:'−$420', down:true},
+  ];
+  const base = (t.review ? review : []).concat(draft);
+  if(S.holder === 'field_agent_nr') base.unshift({d:'Apr 10, 2026', who:'G. Han', tag:'Field agent', act:'took the turn from', to:'M. Alvarez'});
+  return S.log.map(e => ({d:'Just now', fresh:true, ...e})).concat(base);
+}
+function openActs(){ S.pop = false; S.acts = true; render(); }
+function actsModal(t){
+  if(!S.acts) return '';
+  const rows = activity(t).map(e => `<tr class="${e.fresh ? 'new' : ''}">
+    <td class="d">${e.d}</td>
+    <td><b>${e.who}</b>${e.tag ? `<i>${e.tag}</i>` : ''} ${e.act}${e.to ? ` <b>${e.to}</b>` : ''}${e.after || ''}</td>
+    <td class="n">${e.note || ''}</td>
+    <td class="m">${e.total || '—'}${e.delta ? `<small class="${e.down ? 'dn' : 'up'}">${e.delta}</small>` : ''}</td></tr>`).join('');
+  return `<div class="acts-m" onclick="if(event.target===this){S.acts=false;render()}"><div class="acts-card" role="dialog" aria-modal="true" aria-label="Scope activity">
+    <div class="acts-hd"><div><h3>Scope activity</h3><p>10724 Defender Trl · ${t.review ? 'In review' : 'Draft'} · ${chip(t)}</p></div>
+      <button type="button" class="ti-x" onclick="S.acts=false;render()" aria-label="Close"><svg viewBox="0 0 16 16"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></button></div>
+    <div class="acts-tbl"><table><thead><tr><th>When</th><th>What happened</th><th>Note</th><th style="text-align:right">Job total</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="acts-ft"><span>${activity(t).length} entries · newest first</span><button type="button" class="btn sec" style="height:32px" onclick="S.acts=false;render()">Close</button></div>
+  </div></div>`;
+}
+function openIntro(i){ S.pop = false; S.intro = i; render(); }
+function introGo(d){ const n = S.intro + d; S.intro = n >= INTRO.length ? null : Math.max(0, n); render(); }
+function intro(){
+  if(S.intro == null) return '';
+  const i = S.intro, st = INTRO[i], last = i === INTRO.length - 1;
+  return `<div class="ti" onclick="if(event.target===this){S.intro=null;render()}"><div class="ti-card" role="dialog" aria-modal="true" aria-label="${st.title}">
+    <button type="button" class="ti-x" onclick="S.intro=null;render()" aria-label="Close"><svg viewBox="0 0 16 16"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></button>
+    <div class="ti-pic">${introShots()[i]}</div>
+    <div class="ti-body">
+      <div class="ti-kicker">${st.badge ? `<span class="ti-badge">${st.badge}</span>` : ''}${i + 1} of ${INTRO.length} · ${st.kicker}</div>
+      <div class="ti-title">${st.title}</div>
+      ${st.lead ? `<p class="ti-lead">${st.lead}</p>` : ''}
+      <p class="ti-text">${st.body}</p>
+    </div>
+    <div class="ti-foot">
+      <div class="ti-dots">${INTRO.map((x, k) => `<button type="button" class="ti-dot ${k === i ? 'on' : ''}" aria-label="Step ${k + 1}" onclick="openIntro(${k})"></button>`).join('')}</div>
+      <div class="ti-acts">${i > 0 ? `<button type="button" class="btn sec" onclick="introGo(-1)">Back</button>` : ''}<button type="button" class="btn pri" onclick="introGo(1)">${last ? 'Got it' : 'Next'}</button></div>
+    </div></div></div>`;
+}
+document.addEventListener('keydown', e => {
+  if(S.acts && e.key === 'Escape'){ S.acts = false; render(); return; }
+  if(S.intro == null) return;
+  if(e.key === 'Escape'){ S.intro = null; render(); }
+  else if(e.key === 'ArrowRight') introGo(1);
+  else if(e.key === 'ArrowLeft') introGo(-1);
+});
+
+function toast(msg){ S.toast = msg; render(); setTimeout(() => { S.toast = null; render(); }, 2200); }
+function takeTurn(){ const from = first(PEOPLE[S.holder]); S.log.unshift({who:me().name, act:'took the turn from', to:from}); S.holder = S.role; S.dialog = null; toast(`You have the turn. ${from} was notified.`); }
+function handOff(){
+  const to = S.pick, p = PEOPLE[to];
+  const n = document.getElementById('hoNote'), note = n ? n.value.trim() : '';
+  const joining = !onJob(to);
+  if(joining){ S.added.push(to); S.log.unshift({who:me().name, act:'added', to:p.name, after:' to the job'}); }
+  S.log.unshift({who:me().name, act:'handed off to', to:p.name, note});
+  S.holder = to; S.dialog = null;
+  toast(joining ? `${p.name} added to the job and handed the scope` : `Handed off to ${p.name}`);
+}
+function approve(){ S.dialog = null; toast('Scope approved and published'); }
+function go(s){ S.screen = s; S.dialog = null; S.pop = false; render(); }
+function togglePop(){ S.pop = !S.pop; render(); }
+
+/* The web prototype's turn card (renderTurnPop in js/shell.js), same rows and
+   wording. Everyone gets the document card (state, who is responsible, who may
+   edit, where it has been) except the job manager on their own turn, who gets
+   the move card: what they owe, and what follows. */
+function turnPop(t){
+  const row = (l, v, sub) => `<div class="p"><span class="lbl">${l}:</span> ${v}${sub ? `<span class="sub">${sub}</span>` : ''}</div>`;
+  const resp = `${t.mine ? 'You' : t.holder.name} (${t.holder.role})`;
+  const how = `<button type="button" class="all" onclick="event.stopPropagation();openActs()"><span>View all activity (${activity(t).length})</span></button>`
+    + `<button type="button" class="how" onclick="event.stopPropagation();openIntro(0)"><span>How turns work</span></button>`;
+  if(t.isMgr && t.mine){
+    return `<div class="turn-pop" onclick="event.stopPropagation()">
+      ${row('Responsible', resp, 'Review every task, then approve or hand it back.')}
+      ${row('Then', 'Approving publishes the scope and releases it to the field.')}
+      ${how}</div>`;
+  }
+  const lock = t.review ? 'In review' : 'Draft';
+  const edit = t.mine ? 'You can edit until you hand it off.' : `Only ${first(t.holder)} can edit while it is with them.`;
+  // Session moves first, newest on top, then the demo's own history.
+  const all = activity(t), evs = all.slice(0, 3);
+  const lockSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="10"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>`;
+  return `<div class="turn-pop" onclick="event.stopPropagation()">
+    <div class="lockh">${lockSvg}${lock}</div>
+    ${row('Responsible', resp)}
+    ${row('Editing', edit)}
+    <div class="hist">${evs.map(e => `<div class="ev"><small>${e.d}</small><b>${e.who}</b>${e.tag ? ` <i>${e.tag}</i>` : ''} ${e.act}${e.to ? ` <b>${e.to}</b>` : ''}${e.after || ''}</div>`).join('')}</div>
+    ${how}</div>`;
+}
+
+/* ---------- change notes ---------- */
+function notes(t){
+  const holder = first(t.holder);
+  const N = {
+    dash: [
+      [1,'Sort','Needs Review','Your Turn','The default sort you chose: late jobs that are your turn come first, then the rest of your turn.'],
+      [2,'Third tag','Review in progress', t.mine ? 'Your turn (yellow)' : `${holder}'s turn`,'Keeps the Acquisition and Scope tags; only the status tag becomes whose turn it is.'],
+      [3,'Red dot counts','Unclear count', t.mine ? '1 · this job is your turn' : '0 · nothing is your turn','The dot only appears when you need to act.'],
+    ],
+    proj: [
+      [4,'Scope status','Review in progress (red)', t.mine ? 'Your turn' : `${holder}'s turn`,'Red read as an error. The chip says who has it.'],
+      [5,'Last updated','Last updated: 09-09-2026 5:16pm', t.review ? 'Handed to … by M. Alvarez · Sep 9' : 'Last worked on by … · Sep 9','Matches the history line in the hand-off dialog.'],
+      [6,'Scope button','Review scope (for everyone)',
+        t.mine ? (t.review ? 'Review scope' : 'Continue editing') : 'View scope + Take the turn',
+        'Depends on the role and whose turn it is.'],
+      [7,'Activity','Generic log','Hand-off history, in a modal','Opens the full record: who had the scope, what they did, their note, and the job total after. Same as View all activity in the turn card.'],
+      [15,'Turn beside Active','Nothing', t.mine ? 'Your turn' : `${holder}'s turn`,'A small chip in the header, so whose turn it is shows without scrolling to the Scope card. Tap it for the turn card: who is responsible, who can edit, the hand-off history and How turns work, as on the web.'],
+    ],
+    scope: [
+      [8,'Header action','In review (greyed, not tappable)',
+        t.mine ? (t.isMgr ? 'Approve + Hand off' : 'Hand off') : 'Take the turn',
+        'A status dressed as a button becomes the turn action. Even the job manager takes the turn before approving.'],
+      [9,'Turn chip','Nothing', t.mine ? 'Your turn' : `${holder}'s turn`,'Small, in the header beside the address, so it reads as a status and not as a button next to Hand off. Tap it for the turn card, as on the web.'],
+      [10,'Banner','“This Scope Of Work is in progress. Project work can begin once approved.”',
+        t.mine ? (t.review ? 'Handed to you · approve or hand it back' : 'You have the scope · Hand off for review') : t.isMgr ? `${holder} is drafting · take the turn to edit or approve` : `${holder} has the scope · view or take the turn`,
+        'Says who has it and what this viewer can do.'],
+      [11,'Document tag','Draft, while the header said In review', t.review ? 'In review' : 'Draft','One state, which follows the turn.'],
+      [12,'Edit buttons','Edit, for everyone', t.canEdit ? 'Edit' : `Locked · With ${holder}`,'Only whoever has the turn can edit, the job manager included.'],
+    ],
+    edit: [
+      [8,'Header action','In review (greyed, not tappable)', t.mine ? (t.isMgr ? 'Approve + Hand off' : 'Hand off') : 'Take the turn',''],
+      [13,'Tab name','Edit Scope, for everyone', t.canEdit ? 'Edit Scope' : 'Scope · view only','The tab no longer promises editing to someone who can\'t.'],
+      [14,'Editing without the turn','Fields editable', t.canEdit ? '(not shown: this viewer can edit)' : 'Read-only, with a Take the turn prompt',''],
+    ],
+  }[S.screen];
+  const extra = [];
+  if(S.screen !== 'dash' && t.isMgr && !t.mine) extra.push(`<div class="note"><span class="ann">!</span><div><div class="t">Job manager without the turn</div><div class="row">T. Okafor takes the turn before editing or approving, like everyone else. The web prototype still lets the manager act any time, so it needs the same change.</div></div></div>`);
+  if(S.screen !== 'dash' && !t.canEdit) extra.push(`<div class="note q"><span class="ann">?</span><div><div class="t">Take the turn vs Request edit</div><div class="row">The web prototype has both. This mock uses <em>Take the turn</em>, which matches the intro modal.</div></div></div>`);
+  return `<h2>What changes on this screen</h2>
+    <div class="sub">Shown for <b>${me().name}</b> (${me().role}${t.mine ? ', has the turn' : ', without the turn'}) while the scope is with <b>${holder}</b>. Switch the role above to compare.</div>
+    <div class="note"><span class="ann">R</span><div><div class="t">Viewer in the header</div><div class="row">The signed-in person's initials sit in the app header on every screen. Their name and role are in the Viewing as bar above the iPad.</div></div></div>
+    ${N.map(([n,tt,was,now,why]) => `<div class="note"><span class="ann">${n}</span><div><div class="t">${tt}</div><div class="row"><s>${was}</s></div><div class="row">→ <em>${now}</em></div>${why ? `<div class="why">${why}</div>` : ''}</div></div>`).join('')}
+    ${extra.join('')}`;
+}
+
+/* ---------- controls + render ---------- */
+function seg(el, items, key){
+  document.getElementById(el).innerHTML = items.map(i => `<button class="${S[key] === i.id ? 'on' : ''}" data-v="${i.id}">${i.label}</button>`).join('');
+  document.getElementById(el).onclick = e => { const b = e.target.closest('button'); if(!b) return; S[key] = b.dataset.v; S.dialog = null; S.pop = false; render(); };
+}
+function render(){
+  try{ localStorage.setItem('ipad-turn', JSON.stringify({role:S.role, holder:S.holder, screen:S.screen, ann:S.ann})); }catch(e){}
+  seg('c-role', ROLES, 'role'); seg('c-holder', HOLDERS, 'holder'); seg('c-screen', SCREENS, 'screen');
+  document.getElementById('c-ann').checked = S.ann;
+  document.body.classList.toggle('hide-ann', !S.ann);
+  document.body.classList.toggle('pop-open', S.pop || S.acts || S.intro != null);
+  const t = turn(), p = me();
+  const can = t.mine ? (t.isMgr ? 'Has the turn: can edit, hand off and approve.' : 'Has the turn: can edit and hand off.')
+    : `Without the turn: can view, or take the turn from ${first(t.holder)}${t.isMgr ? ' to edit or approve' : ''}.`;
+  document.getElementById('viewer').innerHTML = `<span class="av" style="background:${p.color}">${p.initials}</span>
+    <div class="who"><span class="k">Viewing as</span><span class="n"><b>${p.name}</b><span class="role-pill" style="background:${p.color}">${p.role}</span></span></div>
+    <span class="can">${can}</span>`;
+  const view = {dash, proj, scope, edit:editTab}[S.screen](t);
+  document.getElementById('screen').innerHTML = (S.pop ? '<div class="pop-scrim" onclick="togglePop()"></div>' : '') + view + dialog(t) + intro() + actsModal(t) + (S.toast ? `<div class="toast">${S.toast}</div>` : '');
+  document.getElementById('notes').innerHTML = notes(t);
+}
+document.getElementById('c-ann').onchange = e => { S.ann = e.target.checked; render(); };
+render();
+</script>
+</body>
+</html>
