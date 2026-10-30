@@ -362,6 +362,13 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .ho .addnote{font-size:12px;color:#5C5750;background:#F5F4F1;border-left:3px solid var(--yellow);padding:8px 10px;margin-top:8px;line-height:1.4}
 .ho textarea{width:100%;height:70px;border:1px solid var(--line);padding:9px;font:inherit;font-size:12.5px;resize:none}
 .ho .ft{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+
+.ho-s{width:470px}
+.dlg .ic.sm{width:44px;height:44px;border-radius:50%;background:var(--yellow);display:grid;place-items:center;margin-bottom:12px}
+.dlg .ic.sm svg{width:20px;height:20px;fill:none;stroke:var(--ink);stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
+.dlg .facts{font-size:12.5px;color:var(--mid);line-height:1.6;margin:4px 0 6px}
+.seg-btn{background:#fff;border-radius:8px;padding:9px 12px;font-size:13px;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.seg-btn:disabled{opacity:.45;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -370,6 +377,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   <div class="ctrl-group"><span class="ctrl-label">Viewing as</span><div class="seg" id="c-role"></div></div>
   <div class="ctrl-group"><span class="ctrl-label">The scope is with</span><div class="seg" id="c-holder"></div></div>
   <div class="ctrl-group"><span class="ctrl-label">Screen</span><div class="seg" id="c-screen"></div></div>
+  <div class="ctrl-group"><span class="ctrl-label">Demo</span><button type="button" class="seg-btn" id="c-take" onclick="simulateTakeover()">Someone takes my turn</button></div>
   <label class="toggle"><input type="checkbox" id="c-ann" checked> Show numbered changes</label>
 </div>
 
@@ -415,7 +423,7 @@ const SCREENS = [
   {id:'edit', label:'4 · Edit Scope'},
 ];
 
-let S = {role:'field_agent', holder:'field_agent', screen:'scope', ann:true, dialog:null, toast:null, pick:'manager', pop:false, log:[], intro:null, acts:false, added:[], hoQ:'', hoHist:false};
+let S = {role:'field_agent', holder:'field_agent', screen:'scope', ann:true, dialog:null, toast:null, pick:'manager', pop:false, log:[], intro:null, acts:false, added:[], hoQ:'', hoHist:false, lockout:null};
 try{ Object.assign(S, JSON.parse(localStorage.getItem('ipad-turn') || '{}'), {dialog:null, toast:null, pop:false, log:[]}); }catch(e){}
 
 /* One answer to "whose turn", read by every screen, like whoseTurn() in the
@@ -497,7 +505,7 @@ function proj(t){
     : `Last worked on by <b>${t.mine ? 'you' : first(t.holder)}</b> · Sep 9, 5:16pm`;
   let acts;
   if(t.mine) acts = `<button class="btn pri" onclick="go('${t.review ? 'scope' : 'edit'}')">${t.review ? 'Review scope' : 'Continue editing'}</button>`;
-  else acts = `<button class="btn sec" onclick="go('scope')">View scope</button><button class="btn pri" onclick="dlg('take')">Take the turn</button>`;
+  else acts = `<button class="btn sec" onclick="go('scope')">View scope</button><button class="btn pri" onclick="dlg('take')">Request to edit</button>`;
   return `${appHdr(false, t, 15)}<div class="proj">
     <div class="media"><img src="house.jpg" alt=""><div class="map"><i></i></div></div>
     <div class="duo">
@@ -526,9 +534,11 @@ function proj(t){
 function edTop(t, tab){
   // The header action is the turn action. Nothing here is a disabled status.
   let r;
-  if(t.isMgr && t.mine) r = `<button class="ed-btn sec" onclick="dlg('handoff')">Hand off</button><button class="ed-btn pri" onclick="dlg('approve')">Approve</button>`;
+  if(t.isMgr && t.mine) r = gotIt(t).how === 'took'
+    ? `<button class="ed-btn sec" onclick="dlg('approve')">Approve</button><button class="ed-btn pri" onclick="dlg('handoff')">Hand off</button>`
+    : `<button class="ed-btn pri" onclick="dlg('approve')">Approve</button><button class="ed-btn sec" onclick="dlg('handoff')">Hand off</button>`;
   else if(t.mine) r = `<button class="ed-btn pri" onclick="dlg('handoff')">Hand off</button>`;
-  else r = `<button class="ed-btn pri" onclick="dlg('take')">Take the turn</button>`;
+  else r = `<button class="ed-btn pri" onclick="dlg('take')">Request to edit</button>`;
   const editLbl = t.canEdit ? 'Edit Scope' : `Scope <span class="lock">${IC.lock} view only</span>`;
   return `<div class="ed-tabs">
     <span class="t anc ${tab === 'edit' ? 'on' : ''}" onclick="go('edit')" style="cursor:pointer">${tab === 'edit' ? A(13) : ''}${editLbl}</span>
@@ -540,8 +550,8 @@ function edTop(t, tab){
 function banner(t){
   if(t.mine && !t.review) return `<div class="banner mine anc">${A(10)}<span><b>You have the scope.</b> Hand it off for review when you're done.</span><button class="bb" onclick="dlg('handoff')">Hand off for review</button></div>`;
   if(t.mine && t.review) return `<div class="banner mine anc">${A(10)}<span><b>M. Alvarez handed you the scope</b> on Sep 9. Approve it to publish, or hand it back.</span></div>`;
-  if(t.isMgr) return `<div class="banner wait anc">${A(10)}<span><b>${first(t.holder)} is drafting the scope.</b> Take the turn to edit or approve it.</span><button class="bb" onclick="dlg('take')">Take the turn</button></div>`;
-  return `<div class="banner wait anc">${A(10)}<span><b>${first(t.holder)} has the scope.</b> You can view it, or take the turn to edit.</span><button class="bb" onclick="dlg('take')">Take the turn</button></div>`;
+  if(t.isMgr) return `<div class="banner wait anc">${A(10)}<span><b>${first(t.holder)} is drafting the scope.</b> Request to edit before you edit or approve it.</span><button class="bb" onclick="dlg('take')">Request to edit</button></div>`;
+  return `<div class="banner wait anc">${A(10)}<span><b>${first(t.holder)} has the scope.</b> You can view it, or request to edit.</span><button class="bb" onclick="dlg('take')">Request to edit</button></div>`;
 }
 function leftPanel(){
   return `<div class="ed-left">
@@ -582,20 +592,29 @@ function editTab(t){
       <div class="cat">DRYWALL</div>${task('Drywall Repair','DEFERRED','Ed the Electrician','$25.00',false)}
     </div>`;
   const cover = t.canEdit ? body
-    : `<div class="locked-cover">${body}<div class="lockmsg anc"><div>${A(14)}<b>${first(t.holder)} has the scope</b>Take the turn to edit. ${first(t.holder)} will be told you took it.<br><br><button class="btn pri" style="display:inline-grid" onclick="dlg('take')">Take the turn</button></div></div></div>`;
+    : `<div class="locked-cover">${body}<div class="lockmsg anc"><div>${A(14)}<b>${first(t.holder)} has the scope</b>Request to edit to start working on it. We will let ${first(t.holder)} know.<br><br><button class="btn pri" style="display:inline-grid" onclick="dlg('take')">Request to edit</button></div></div></div>`;
   return `<div class="ed">${appHdr(true, t, 9)}${leftPanel()}<div class="ed-main">${edTop(t, 'edit')}${banner(t)}${cover}</div></div>`;
 }
 
 /* ---------- dialogs: same copy as the web prototype's hand-off and take-turn ---------- */
 function dialog(t){
   if(!S.dialog) return '';
-  if(S.dialog === 'take') return `<div class="scrim"><div class="dlg">
-    <h3>Take the turn from ${first(t.holder)}?</h3>
-    <p>${first(t.holder)} may still be working on the scope. You'll get the turn, and ${first(t.holder)} will be notified.</p>
-    <div class="ft"><button class="btn sec" onclick="dlg(null)">Cancel</button><button class="btn pri" onclick="takeTurn()">Take the turn</button></div></div></div>`;
-  if(S.dialog === 'approve') return `<div class="scrim"><div class="dlg">
-    <h3>Approve the scope?</h3><p>Approving publishes the scope and releases it to the field.${t.mine ? '' : ` ${first(t.holder)} still has it and will be notified.`}</p>
-    <div class="ft"><button class="btn sec" onclick="dlg(null)">Cancel</button><button class="btn pri" onclick="approve()">Approve</button></div></div></div>`;
+  const n = first(t.holder);
+  // Same body for asking and for being taken from: the web design says "same as left".
+  const takeBody = `<p>${n} may still be working on this. You can choose to start working on this scope anyways, and we will notify ${n}.</p>
+    <p>You may hand off back to ${n} or to the next person once you're finished.</p>`;
+  const warn = `<div class="ic sm"><svg viewBox="0 0 24 24"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.3"/></svg></div>`;
+  if(S.dialog === 'take') return `<div class="scrim"><div class="dlg ho-s">${warn}
+    <h3>Take the turn from ${n}?</h3>${takeBody}
+    <div class="ft"><button class="btn sec" onclick="dlg(null)">Nevermind</button><button class="btn yel" onclick="takeTurn()">Start editing</button></div></div></div>`;
+  if(S.dialog === 'lockedout') return `<div class="scrim"><div class="dlg ho-s">${warn}
+    <h3>${n} took over your turn!</h3>${takeBody}
+    <div class="ft"><button class="btn sec" onclick="S.lockout=null;dlg(null)">Nevermind</button><button class="btn yel" onclick="S.lockout=null;takeTurn()">Start editing</button></div></div></div>`;
+  if(S.dialog === 'approve') return `<div class="scrim"><div class="dlg ho-s">
+    <div class="ic sm"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <h3>Confirm your approval</h3>
+    <div class="facts"><div>Scope</div><div>Document ID: SOW-4609B127</div><div>Budget: ${(activity(t).find(e => e.total) || {}).total || '—'}</div></div>
+    <div class="ft"><button class="btn sec" onclick="dlg(null)">Cancel</button><button class="btn yel" onclick="approve()">Approve</button></div></div></div>`;
   return handoffDialog(t);
 }
 
@@ -618,11 +637,11 @@ function hoPeople(){
 }
 function hoRow([id, p], outside){
   const on = S.pick === id;
-  const perm = outside ? 'Add to job' : p.role === 'Job manager' ? 'Can edit and approve' : 'Can edit';
+  const perm = outside ? 'Not in this project' : p.role === 'Job manager' ? 'Can edit, approve' : 'Can edit';
   return `<button type="button" class="row ${on ? 'on' : ''}" onclick="hoPick('${id}')" aria-pressed="${on}">
     <span class="av" style="background:${p.color}">${p.initials}</span>
-    <span class="nm">${p.name}${outside ? `<small>${p.role} · not on this job</small>` : ''}</span>
-    <span class="pm ${outside ? 'add' : ''}">${outside ? '＋ ' : ''}${perm}</span><span class="tk">✓</span></button>`;
+    <span class="nm">${p.name}${outside ? `<small>${p.role}</small>` : ''}</span>
+    <span class="pm">${perm}</span><span class="tk">✓</span></button>`;
 }
 function hoResults(){
   const {team, org} = hoPeople();
@@ -632,7 +651,7 @@ function hoResults(){
   if(org.length) h += `<div class="grp">Others in Kaiizen Testing</div>` + org.map(r => hoRow(r, true)).join('');
   else if(isMgr && S.hoQ.trim() && !team.length) h += `<div class="none">No one by that name in Kaiizen Testing either.</div>`;
   const picked = PEOPLE[S.pick];
-  if(picked && !onJob(S.pick)) h += `<div class="addnote"><b>${picked.name}</b> isn't on this job yet. Handing off adds them to it, with ${picked.role === 'Job manager' ? 'edit and approve' : 'edit'} access.</div>`;
+  if(picked && !onJob(S.pick)) h += `<div class="addnote">${picked.name} will automatically be added to this project.</div>`;
   return h;
 }
 // Repaint only the list, so the search box keeps its caret.
@@ -694,7 +713,7 @@ function introShots(){
     `<div class="ti-shot" style="left:84px;top:34px;transform:scale(.82)"><div class="dlg" style="width:440px">
       <h3>Take the turn from ${ma.name}?</h3>
       <p>${ma.name} may still be working on the scope. You'll get the turn, and ${ma.name} will be notified.</p>
-      <div class="ft"><span class="btn sec">Cancel</span><span class="btn pri">Take the turn</span></div></div></div>`,
+      <div class="ft"><span class="btn sec">Nevermind</span><span class="btn yel">Start editing</span></div></div></div>`,
     // 4 · the record
     `<div class="ti-shot ti-act" style="left:24px;top:26px;transform:scale(.86)">
       <h6>ACTIVITY</h6>
@@ -734,6 +753,22 @@ function activity(t){
   const base = (t.review ? review : []).concat(draft);
   if(S.holder === 'field_agent_nr') base.unshift({d:'Apr 10, 2026', who:'G. Han', tag:'Field agent', act:'took the turn from', to:'M. Alvarez'});
   return S.log.map(e => ({d:'Just now', fresh:true, ...e})).concat(base);
+}
+/* How the holder came to have it: the newest event that put it in their hands. */
+function gotIt(t){
+  const n = t.holder.name;
+  for(const e of activity(t)){
+    if(e.act === 'handed off to' && e.to === n) return {how:'received', from:e.who, d:e.d};
+    if(e.act === 'took the turn from' && e.who === n) return {how:'took', from:e.to, d:e.d};
+    if(e.act === 'created the scope' && e.who === n) return {how:'created', d:e.d};
+  }
+  return {how:'received', from:'M. Alvarez', d:'Just now'};
+}
+// The demo's "today" is Oct 30, 2026.
+function ago(d){
+  if(d === 'Just now') return 'today';
+  const days = Math.round((new Date('2026-10-30') - new Date(d)) / 864e5);
+  return days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
 }
 function openActs(){ S.pop = false; S.acts = true; render(); }
 function actsModal(t){
@@ -778,7 +813,21 @@ document.addEventListener('keydown', e => {
 });
 
 function toast(msg){ S.toast = msg; render(); setTimeout(() => { S.toast = null; render(); }, 2200); }
-function takeTurn(){ const from = first(PEOPLE[S.holder]); S.log.unshift({who:me().name, act:'took the turn from', to:from}); S.holder = S.role; S.dialog = null; toast(`You have the turn. ${from} was notified.`); }
+function takeTurn(){
+  const prev = S.holder, from = first(PEOPLE[prev]);
+  S.log.unshift({who:me().name, act:'took the turn from', to:from});
+  // The person it was taken from sees the locked-out dialog next time they look.
+  S.lockout = {victim:prev, by:S.role};
+  S.holder = S.role; S.dialog = null; toast(`You have the turn. ${from} was notified.`);
+}
+/* Demo only: someone else takes the viewer's turn, so the locked-out dialog
+   can be seen without switching roles. */
+function simulateTakeover(){
+  if(S.holder !== S.role) return;
+  const by = S.role === 'manager' ? 'field_agent' : S.role === 'field_agent' ? 'manager' : 'field_agent';
+  S.log.unshift({who:PEOPLE[by].name, act:'took the turn from', to:me().name});
+  S.holder = by; S.lockout = {victim:S.role, by}; S.pop = false; render();
+}
 function handOff(){
   const to = S.pick, p = PEOPLE[to];
   const n = document.getElementById('hoNote'), note = n ? n.value.trim() : '';
@@ -798,24 +847,27 @@ function togglePop(){ S.pop = !S.pop; render(); }
    the move card: what they owe, and what follows. */
 function turnPop(t){
   const row = (l, v, sub) => `<div class="p"><span class="lbl">${l}:</span> ${v}${sub ? `<span class="sub">${sub}</span>` : ''}</div>`;
-  const resp = `${t.mine ? 'You' : t.holder.name} (${t.holder.role})`;
   const how = `<button type="button" class="all" onclick="event.stopPropagation();openActs()"><span>View all activity (${activity(t).length})</span></button>`
     + `<button type="button" class="how" onclick="event.stopPropagation();openIntro(0)"><span>How turns work</span></button>`;
-  if(t.isMgr && t.mine){
-    return `<div class="turn-pop" onclick="event.stopPropagation()">
-      ${row('Responsible', resp, 'Review every task, then approve or hand it back.')}
-      ${row('Then', 'Approving publishes the scope and releases it to the field.')}
-      ${how}</div>`;
-  }
   const lock = t.review ? 'In review' : 'Draft';
-  const edit = t.mine ? 'You can edit until you hand it off.' : `Only ${first(t.holder)} can edit while it is with them.`;
+  // The three rows from the web design: who has it, how they came to, what follows.
+  const who = t.mine ? '<b>you</b>' : `<b>${t.holder.name}</b>`;
+  const g = gotIt(t), name = t.mine ? 'You' : t.holder.name;
+  const when = g.how === 'took' ? `${name} requested to edit this scope from ${g.from} ${ago(g.d)}.`
+    : g.how === 'received' ? `${name} received this scope from ${g.from} ${ago(g.d)}.`
+    : `${name} created this scope ${ago(g.d)}.`;
+  const appr = t.holder.role === 'Job manager' ? ' or approve it' : '';
+  const next = t.mine
+    ? `Only you can edit it currently. Then, you can hand off to the next person to continue building this scope${appr}.`
+    : `Only ${t.holder.name} can edit it currently. Then, ${t.holder.name} can hand off to the next person to continue building this scope${appr}.`;
   // Session moves first, newest on top, then the demo's own history.
   const all = activity(t), evs = all.slice(0, 3);
   const lockSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="10"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>`;
   return `<div class="turn-pop" onclick="event.stopPropagation()">
     <div class="lockh">${lockSvg}${lock}</div>
-    ${row('Responsible', resp)}
-    ${row('Editing', edit)}
+    ${row('Who', `the scope is with ${who}.`)}
+    ${row('When', when)}
+    ${row("What's next", next)}
     <div class="hist">${evs.map(e => `<div class="ev"><small>${e.d}</small><b>${e.who}</b>${e.tag ? ` <i>${e.tag}</i>` : ''} ${e.act}${e.to ? ` <b>${e.to}</b>` : ''}${e.after || ''}</div>`).join('')}</div>
     ${how}</div>`;
 }
@@ -833,14 +885,14 @@ function notes(t){
       [4,'Scope status','Review in progress (red)', t.mine ? 'Your turn' : `${holder}'s turn`,'Red read as an error. The chip says who has it.'],
       [5,'Last updated','Last updated: 09-09-2026 5:16pm', t.review ? 'Handed to … by M. Alvarez · Sep 9' : 'Last worked on by … · Sep 9','Matches the history line in the hand-off dialog.'],
       [6,'Scope button','Review scope (for everyone)',
-        t.mine ? (t.review ? 'Review scope' : 'Continue editing') : 'View scope + Take the turn',
+        t.mine ? (t.review ? 'Review scope' : 'Continue editing') : 'View scope + Request to edit',
         'Depends on the role and whose turn it is.'],
       [7,'Activity','Generic log','Hand-off history, in a modal','Opens the full record: who had the scope, what they did, their note, and the job total after. Same as View all activity in the turn card.'],
       [15,'Turn beside Active','Nothing', t.mine ? 'Your turn' : `${holder}'s turn`,'A small chip in the header, so whose turn it is shows without scrolling to the Scope card. Tap it for the turn card: who is responsible, who can edit, the hand-off history and How turns work, as on the web.'],
     ],
     scope: [
       [8,'Header action','In review (greyed, not tappable)',
-        t.mine ? (t.isMgr ? 'Approve + Hand off' : 'Hand off') : 'Take the turn',
+        t.mine ? (t.isMgr ? 'Approve + Hand off' : 'Hand off') : 'Request to edit',
         'A status dressed as a button becomes the turn action. Even the job manager takes the turn before approving.'],
       [9,'Turn chip','Nothing', t.mine ? 'Your turn' : `${holder}'s turn`,'Small, in the header beside the address, so it reads as a status and not as a button next to Hand off. Tap it for the turn card, as on the web.'],
       [10,'Banner','“This Scope Of Work is in progress. Project work can begin once approved.”',
@@ -850,14 +902,15 @@ function notes(t){
       [12,'Edit buttons','Edit, for everyone', t.canEdit ? 'Edit' : `Locked · With ${holder}`,'Only whoever has the turn can edit, the job manager included.'],
     ],
     edit: [
-      [8,'Header action','In review (greyed, not tappable)', t.mine ? (t.isMgr ? 'Approve + Hand off' : 'Hand off') : 'Take the turn',''],
+      [8,'Header action','In review (greyed, not tappable)', t.mine ? (t.isMgr ? 'Approve + Hand off' : 'Hand off') : 'Request to edit',''],
       [13,'Tab name','Edit Scope, for everyone', t.canEdit ? 'Edit Scope' : 'Scope · view only','The tab no longer promises editing to someone who can\'t.'],
-      [14,'Editing without the turn','Fields editable', t.canEdit ? '(not shown: this viewer can edit)' : 'Read-only, with a Take the turn prompt',''],
+      [14,'Editing without the turn','Fields editable', t.canEdit ? '(not shown: this viewer can edit)' : 'Read-only, with a Request to edit prompt',''],
     ],
   }[S.screen];
   const extra = [];
   if(S.screen !== 'dash' && t.isMgr && !t.mine) extra.push(`<div class="note"><span class="ann">!</span><div><div class="t">Job manager without the turn</div><div class="row">T. Okafor takes the turn before editing or approving, like everyone else. The web prototype still lets the manager act any time, so it needs the same change.</div></div></div>`);
-  if(S.screen !== 'dash' && !t.canEdit) extra.push(`<div class="note q"><span class="ann">?</span><div><div class="t">Take the turn vs Request edit</div><div class="row">The web prototype has both. This mock uses <em>Take the turn</em>, which matches the intro modal.</div></div></div>`);
+  if(S.screen !== 'dash' && !t.canEdit) extra.push(`<div class="note"><span class="ann">!</span><div><div class="t">Request to edit</div><div class="row">The button says <em>Request to edit</em>, as in the web design. It opens <em>Take the turn from ${holder}?</em> with Nevermind and Start editing.</div></div></div>`);
+  if(S.screen !== 'dash' && t.mine) extra.push(`<div class="note"><span class="ann">!</span><div><div class="t">Locked out</div><div class="row">Tap <em>Someone takes my turn</em> above. The person whose turn was taken gets <em>[name] took over your turn!</em> automatically.</div></div></div>`);
   return `<h2>What changes on this screen</h2>
     <div class="sub">Shown for <b>${me().name}</b> (${me().role}${t.mine ? ', has the turn' : ', without the turn'}) while the scope is with <b>${holder}</b>. Switch the role above to compare.</div>
     <div class="note"><span class="ann">R</span><div><div class="t">Viewer in the header</div><div class="row">The signed-in person's initials sit in the app header on every screen. Their name and role are in the Viewing as bar above the iPad.</div></div></div>
@@ -874,8 +927,12 @@ function render(){
   try{ localStorage.setItem('ipad-turn', JSON.stringify({role:S.role, holder:S.holder, screen:S.screen, ann:S.ann})); }catch(e){}
   seg('c-role', ROLES, 'role'); seg('c-holder', HOLDERS, 'holder'); seg('c-screen', SCREENS, 'screen');
   document.getElementById('c-ann').checked = S.ann;
+  const tk = document.getElementById('c-take');
+  tk.disabled = S.holder !== S.role;
+  tk.title = tk.disabled ? 'Only when the viewer has the turn' : '';
   document.body.classList.toggle('hide-ann', !S.ann);
   document.body.classList.toggle('pop-open', S.pop || S.acts || S.intro != null);
+  if(S.lockout && S.lockout.victim === S.role && S.holder !== S.role && !S.dialog) S.dialog = 'lockedout';
   const t = turn(), p = me();
   const can = t.mine ? (t.isMgr ? 'Has the turn: can edit, hand off and approve.' : 'Has the turn: can edit and hand off.')
     : `Without the turn: can view, or take the turn from ${first(t.holder)}${t.isMgr ? ' to edit or approve' : ''}.`;
