@@ -71,18 +71,22 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .kai-logo svg{width:22px;height:22px}
 .hdr{height:78px;background:var(--nav);display:flex;align-items:center;padding:0 22px;gap:22px;color:#fff;position:sticky;top:0;z-index:4}
 .hdr .addr{font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hdr .box{border:1.5px solid #fff;padding:6px 9px;font-size:12px;font-weight:500}
-.hdr-turn{margin-left:-10px}
+/* Active and the turn chip sit side by side in the header, so they share one
+   box: 28px tall, 1.5px edge, the same type. */
+.hdr .box{box-sizing:border-box;height:28px;display:inline-flex;align-items:center;padding:0 10px;border:1.5px solid #fff;
+  font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.hdr-turn{margin-left:-12px}
 .hdr-turn.solo{margin-left:0}
-.hdr-turn .turn{height:22px;font-size:10px;padding:0 8px 0 3px}
-.hdr-turn .turn .dot{width:15px;height:15px;font-size:7.5px}
+.hdr-turn .turn{box-sizing:border-box;height:28px;font-size:11px;letter-spacing:.06em;padding:0 10px 0 5px;border:1.5px solid transparent;border-right:0}
+.hdr-turn .turn .dot{width:18px;height:18px;font-size:8px}
 /* The header chip is tappable: it opens the same card as the web prototype's
    turn chip. The caret is what says so. */
 .hdr-turn{position:relative}
 .hdr-turn > button{display:flex;align-items:stretch;padding:0}
-.hdr-turn .car{display:grid;place-items:center;width:20px;font-size:8px;border-left:1px solid rgba(0,0,0,.15);margin-left:-1px}
+.hdr-turn .car{box-sizing:border-box;display:grid;place-items:center;width:26px;height:28px;font-size:8px;border:1.5px solid transparent;border-left:1px solid rgba(0,0,0,.15)}
 .hdr-turn .turn.mine + .car{background:var(--yellow);color:var(--ink)}
-.hdr-turn .turn.theirs + .car{background:var(--nav-2);color:#fff;border:1px solid var(--nav-line);border-left:0}
+.hdr-turn .turn.theirs{border-color:#5A5A5A}
+.hdr-turn .turn.theirs + .car{background:var(--nav-2);color:#fff;border-color:#5A5A5A;border-left-color:#3A3A3A}
 .hdr-turn.open .car{transform:none}
 .pop-scrim{position:fixed;inset:0;z-index:3}
 .turn-pop{position:absolute;top:calc(100% + 10px);left:0;width:290px;background:#FFFDF8;border:1px solid #E6E39A;box-shadow:0 10px 30px rgba(0,0,0,.25);color:var(--ink);padding:14px 16px 12px;z-index:9;text-transform:none;letter-spacing:0;font-weight:400;cursor:default}
