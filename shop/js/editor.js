@@ -138,6 +138,17 @@ function _shopTaskHeaderHtml(t){
     const descText = t.desc || '';
     const isExpanded = _taskDetailsOpen(t);
     const body = descText ? esc(descText) : `<span class="sec-taskcard-desc-empty">No description</span>`;
+    /* Layout file: the description alone, on one line — cut off where it runs
+       out of room, the whole of it on hover. The contractor has moved up
+       beside the status. */
+    // One line, cut off, with See all to open the rest in place (and Show less
+    // to fold it back). The button only shows once the text runs long.
+    if(window.__KAI_SHOP_LAYOUT) return `<div class="tk-band"><h3 class="tk-band-h">Description</h3>
+      <div class="tk-desc${isExpanded ? ' is-open' : ''}">
+        <div class="sec-taskdesc-trunc">${body}</div>
+        ${descText.length > 80 ? `<button type="button" class="tk-desc-more" onclick="event.stopPropagation();toggleDescExpanded(${t.id})" aria-expanded="${isExpanded}">${isExpanded ? 'Show less' : 'See all'}</button>` : ''}
+      </div>${wDesc}
+    </div>`;
     return `<div class="sec-taskcard-section sec-taskdesc${isExpanded ? ' is-open' : ''}">
       <button class="sec-taskdesc-hd" type="button" aria-expanded="${isExpanded}"
         onclick="event.stopPropagation();toggleDescExpanded(${t.id})"
@@ -145,7 +156,7 @@ function _shopTaskHeaderHtml(t){
         <span class="sec-taskcard-lbl sec-taskdesc-title">Task info</span>
         <svg class="sec-taskdesc-caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
       </button>
-      ${isExpanded ? `<div class="sec-taskdesc-body">
+      ${isExpanded ? `<div class="sec-taskdesc-body${window.__KAI_SHOP_LAYOUT ? ' is-stack' : ''}">
         <div class="sec-taskdesc-gc">
         <span class="sec-taskcard-lbl">Contractor</span>
         ${hdrDdHtml('ddGc-' + t.id, t.gc || '', [{value:'', label:'Unassigned'}].concat(CONTRACTORS.map(c => ({value:c, label:c}))), 'setTaskContractor(' + t.id + ', __V__);requestSecTaskcardRerender()', (t.gc ? '' : 'is-un') + ch('gc', t.gc))}
@@ -205,7 +216,9 @@ function _shopTaskHeaderHtml(t){
   const _coChanges = coApplies ? _coTaskChanges(t) : [];
   // A task being taken out has no field to diff, but it is a change all the same.
   const _coDraft = _coChanges.length || (typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id));
-  const coBannerInner = coApplies ? `<div class="sec-taskcard-co-banner${_coDraft ? ' has-changes' : ''}">
+  // Shop with Kai: nothing standing here until there is a change order to
+  // speak of — the first edit announces it once, in a floating bar (_coWatch).
+  const coBannerInner = (coApplies && !(window.__KAI_SHOP && !_coDraft)) ? `<div class="sec-taskcard-co-banner${_coDraft ? ' has-changes' : ''}">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.5L14.5 5v6L8 14.5 1.5 11V5z"/><path d="M8 8v3.5M8 5.2v.2"/></svg>
     <span class="sec-taskcard-co-banner-body">${_coDraft && _coOpen
       ? `<b>Change order is in review.</b> It becomes part of the scope once it's approved.`
@@ -221,14 +234,7 @@ function _shopTaskHeaderHtml(t){
   const _hdrSt = (typeof _pgdRowStatusMeta === 'function') ? _pgdRowStatusMeta(t) : null;
   const approvedChip = '';
   if(window.__KAI_SHOP && !window.__KAI_SHOP_LAYOUT) return _tkhHtml(t, coBannerInner, _coOpen, _coConfirming, _ckSvg);
-  return `<div class="pgd-hdr-box sec-taskhdr">
-    ${coBannerInner}
-    <div class="sec-taskcard-hdr">
-      <div class="sec-taskcard-hdr-l">
-        ${window.__KAI_SHOP_LAYOUT ? _taskCrumbsHtml(t) : `<span class="sec-taskcard-eyebrow">${esc(grpLbl)} <span class="sec-taskcard-sep">·</span> ${esc(t.code)}</span>`}
-        <div class="sec-taskhdr-title-row">
-          <div class="sec-taskcard-title">${esc(t.name)}</div>
-      ${(()=>{
+  const _statusHtml = (()=>{
         // Task status shares this row (work/closeout only). Same
         // vocabulary + color mapping the sidebar chip uses.
         if(PROJ_MODE !== 'work' && PROJ_MODE !== 'closeout') return '';
@@ -247,26 +253,54 @@ function _shopTaskHeaderHtml(t){
         else if(STATUS[t.status])                    curKey = t.status;
         else                                         curKey = 'not_started';
         const curCls = STATUS[curKey]?.cls || 's-notstarted';
-        return `<div class="sec-taskhdr-status-inline">
+        return `<div class="sec-taskhdr-status-inline${window.__KAI_SHOP_LAYOUT ? ' is-field' : ''}">
             ${hdrDdHtml('ddStatus-' + t.id, curKey, opts.map(o => ({value:o.key, label:o.label})), 'setTaskStatus(' + t.id + ', __V__)', 'is-status ' + curCls)}
         </div>`;
-      })()}
+      })();
+  /* Layout file: under the title, the task's facts as the Overview lays out
+     a job's — a band with its name on the left and labelled fields in even
+     columns: where it sits (group, department, product type) and its ID,
+     then who does it and how far along it is. The description is a band of
+     its own under that. */
+  const _infoBand = window.__KAI_SHOP_LAYOUT ? (() => {
+    const tl = taskLine(t);
+    const lk = _lineKeyArg(`${tl.dept}|${tl.line}`);
+    const q = v => esc(String(v)).replace(/'/g, "\\'");
+    const link = (v, on) => `<button type="button" class="task-crumb-a tk-f-link" onclick="${on}" title="Open ${esc(v)}">${esc(v)}</button>`;
+    const cell = (k, v) => `<div class="tk-f"><span class="ov-stat-k">${k}</span><div class="tk-f-v">${v}</div></div>`;
+    return `<div class="tk-band"><h3 class="tk-band-h">Overview</h3><div class="tk-grid">
+      ${cell('Group', link(t.room, `goUpRoom('${q(t.room)}')`))}
+      ${cell('Department', link(tl.dept, `goUpMaterials('${q(tl.dept)}')`))}
+      ${cell('Product type', link(tl.line, `goUpMaterials('${q(tl.dept)}','${lk}')`))}
+      ${cell('Task ID', esc(t.code))}
+      ${cell('Contractor', hdrDdHtml('ddGc-' + t.id, t.gc || '', [{value:'', label:'Unassigned'}].concat(CONTRACTORS.map(c => ({value:c, label:c}))), 'setTaskContractor(' + t.id + ', __V__);requestSecTaskcardRerender()', (t.gc ? '' : 'is-un') + ch('gc', t.gc)) + wGc)}
+      ${_statusHtml ? cell('Status', _statusHtml) : ''}
+    </div></div>`;
+  })() : '';
+  return `<div class="pgd-hdr-box sec-taskhdr">
+    ${coBannerInner}
+    <div class="sec-taskcard-hdr">
+      <div class="sec-taskcard-hdr-l">
+        ${window.__KAI_SHOP_LAYOUT ? '<div class="pg-kind">Task</div>' : `<span class="sec-taskcard-eyebrow">${esc(grpLbl)} <span class="sec-taskcard-sep">·</span> ${esc(t.code)}</span>`}
+        <div class="sec-taskhdr-title-row">
+          <div class="sec-taskcard-title">${esc(t.name)}</div>
+          ${window.__KAI_SHOP_LAYOUT && typeof _coPillHtml === 'function' ? _coPillHtml(t) : ''}
+      ${window.__KAI_SHOP_LAYOUT ? '' : _statusHtml}
         <div class="sec-taskcard-hdr-chips">
           ${isTracking && taskHasSnapshotChanges(t) ? `<button class="sec-taskcard-undo" onclick="event.stopPropagation();undoTaskChanges(${t.id})" title="Revert every field on this task back to the approved snapshot">
             <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a4 4 0 1 1 1.2 2.8"/><path d="M3 4v3h3"/></svg>
             Undo changes
           </button>` : ''}
         </div>
-        <span class="sec-taskcard-amt-line">
+        ${(ALLOW_ON && taskAllowanceRowHtml(t, 'corner')) || `<span class="sec-taskcard-amt-line">
           <span class="sec-taskcard-amt">${esc(t.cost || '$0')}</span>
           ${deltaChipHtml(taskDelta(t))}
-        </span>
-          ${approvedChip}${typeof _coPillHtml === 'function' ? _coPillHtml(t) : ''}
+        </span>`}
+          ${approvedChip}${window.__KAI_SHOP_LAYOUT ? '' : (typeof _coPillHtml === 'function' ? _coPillHtml(t) : '')}
         </div>
       </div>
     </div>
-    ${headerActions}
-    ${descSection}
+    ${window.__KAI_SHOP_LAYOUT ? _infoBand + descSection + headerActions : headerActions + descSection}
   </div>`;
 }
 
@@ -281,9 +315,6 @@ function _tkhHtml(t, coBannerInner, coOpen, coConfirming, ckSvg){
   const q = v => esc(String(v)).replace(/'/g, "\\'");
   const tl = taskLine(t);
   const lk = _lineKeyArg(`${tl.dept}|${tl.line}`);
-  const crumb = parts => parts.map(([lbl, on]) => on
-    ? `<button type="button" class="tkh-crumb-a" onclick="${on}">${esc(lbl)}</button>`
-    : `<span>${esc(lbl)}</span>`).join('<span class="tkh-crumb-sep" aria-hidden="true">›</span>');
   const removed = typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id);
   const hasCo = (typeof taskHasAnyChangeOrder === 'function') && taskHasAnyChangeOrder(t);
   const draft = (typeof taskHasDraftChangeOrder === 'function') && taskHasDraftChangeOrder(t) && !coOpen;
@@ -307,30 +338,31 @@ function _tkhHtml(t, coBannerInner, coOpen, coConfirming, ckSvg){
   return `<div class="pgd-hdr-box sec-taskhdr tkh${removed ? ' is-removed' : ''}">
     ${coBannerInner}
     <div class="tkh-top">
-      <div class="tkh-crumbs">
-        <div class="tkh-crumb">${crumb([['Scope', 'selectScope()'], [t.room, `goUpRoom('${q(t.room)}')`]])}<span class="tkh-crumb-sep" aria-hidden="true">›</span></div>
-        <div class="tkh-crumb">${crumb([['Scope', 'selectScope()'], [tl.dept, `goUpMaterials('${q(tl.dept)}')`], [tl.line, `goUpMaterials('${q(tl.dept)}','${lk}')`]])}</div>
-      </div>
       <span class="tkh-code">${esc(t.code)}</span>
     </div>
     <div class="tkh-title-row">
       <h2 class="tkh-title">${hasCo ? warn : ''}<span>${esc(t.name)}</span></h2>
       <div class="tkh-price">
-        <div class="tkh-amt${removed ? ' is-struck' : ''}">${removed ? fmt2(was) : fmt2(now)}</div>
-        ${tracked && Math.round(delta * 100) ? `<div class="tkh-delta"><span class="tkh-chg">change: <b>${delta > 0 ? '+' : '−'}${fmt2(delta)}</b></span><span class="tkh-was">was: <s>${fmt2(was)}</s></span></div>` : ''}
+        <div class="tkh-amt${removed ? ' is-struck' : ''}">${!removed && tracked && Math.round(delta * 100) ? `<s class="tkh-was-s" title="Approved ${fmt2(was)}">${fmt2(was)}</s>` : ''}${removed ? fmt2(was) : fmt2(now)}</div>
       </div>
     </div>
+    ${[['Group', t.room, `goUpRoom('${q(t.room)}')`],
+       ['Department', tl.dept, `goUpMaterials('${q(tl.dept)}')`],
+       ['Product type', tl.line, `goUpMaterials('${q(tl.dept)}','${lk}')`]].map(([k, v, on]) => `<div class="tkh-row">
+      <span class="tkh-lbl">${k}</span>
+      <span class="tkh-val"><button type="button" class="tkh-crumb-a" onclick="${on}" title="Open ${esc(v)}">${esc(v)}</button></span>
+    </div>`).join('')}
     <div class="tkh-row">
       <span class="tkh-lbl">Contractor</span>
       <span class="tkh-val">${esc(t.gc || 'Unassigned')}</span>
       ${hdrDdHtml('ddGc-' + t.id, '__keep', gcOpts, `tkhSetGc(${t.id}, __V__)`, 'tkh-change')}
     </div>
-    ${ALLOW_ON ? taskAllowanceRowHtml(t) : ''}
     <div class="tkh-row tkh-desc-row">
       <span class="tkh-lbl">Description</span>
       <div class="tkh-desc${open ? ' is-open' : ''}">${desc ? `<span class="tkh-desc-t">${esc(desc)}</span>` : '<span class="tkh-none">N/A</span>'}${desc ? ` <button type="button" class="tkh-more" onclick="event.stopPropagation();toggleDescExpanded(${t.id})">${open ? 'less ⌃' : 'more ⌄'}</button>` : ''}</div>
       <div class="tkh-acts">${acts}</div>
     </div>
+    ${ALLOW_ON ? taskAllowanceRowHtml(t) : ''}
   </div>`;
 }
 function tkhSetGc(id, v){
@@ -799,7 +831,7 @@ function _optThumbHtml(t, o){
   if(!p) return '<span class="optc-thumb is-blank" aria-hidden="true"></span>';
   const cat = p.sku ? ((typeof productPool === 'function' ? (productPool(t) || []).find(c => c.sku === p.sku) : null)
                       || (typeof catalogFind === 'function' ? catalogFind(p.sku) : null)) : null;
-  const img = p.image || (cat && cat.image) || '';
+  const img = p.image || (cat && cat.image) || shopProductImg(cat || p);
   return `<span class="optc-thumb" aria-hidden="true">${img
     ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.replaceWith(document.createRange().createContextualFragment(_THUMB))">`
     : _THUMB}</span>`;
@@ -1217,23 +1249,20 @@ const _LNP_THUMB = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 /* ShopwithKai_layout: a task's eyebrow is two breadcrumbs, each a way up —
    where it is (room · its code), and what it buys (department › product
    type). */
+/* Where the task sits, each part labelled for what it is — its group, its
+   department and product type — then its ID, so no label reads as the task's
+   own name. The places are links up to their pages. */
 function _taskCrumbsHtml(t){
   const tl = taskLine(t);
   const lk = _lineKeyArg(`${tl.dept}|${tl.line}`);
   const q = v => esc(String(v)).replace(/'/g, "\\'");
+  const div = '<span class="task-crumbs-div" aria-hidden="true"></span>';
+  const field = (k, v) => `<span class="task-crumb-f"><span class="page-kind">${k}</span>${v}</span>`;
   return `<span class="sec-taskcard-eyebrow task-crumbs">
-    <span class="page-kind">Task</span>
-    <nav class="task-crumb" aria-label="Room">
-      <button type="button" class="task-crumb-a" onclick="goUpRoom('${q(t.room)}')" title="Open ${esc(t.room)}">${esc(t.room)}</button>
-      <span class="sec-taskcard-sep" aria-hidden="true">·</span><span>${esc(t.code)}</span>
-    </nav>
-    <span class="task-crumbs-div" aria-hidden="true"></span>
-    <span class="page-kind">Product type</span>
-    <nav class="task-crumb" aria-label="Product type">
-      <button type="button" class="task-crumb-a" onclick="goUpMaterials('${q(tl.dept)}')" title="Open ${esc(tl.dept)} under Materials">${esc(tl.dept)}</button>
-      <span class="sec-taskcard-sep" aria-hidden="true">›</span>
-      <button type="button" class="task-crumb-a" onclick="goUpMaterials('${q(tl.dept)}','${lk}')" title="Open ${esc(tl.line)}">${esc(tl.line)}</button>
-    </nav>
+    ${field('Group', `<button type="button" class="task-crumb-a" onclick="goUpRoom('${q(t.room)}')" title="Open ${esc(t.room)}">${esc(t.room)}</button>`)}${div}
+    ${field('Department', `<button type="button" class="task-crumb-a" onclick="goUpMaterials('${q(tl.dept)}')" title="Open ${esc(tl.dept)} under Materials">${esc(tl.dept)}</button>`)}${div}
+    ${field('Product type', `<button type="button" class="task-crumb-a" onclick="goUpMaterials('${q(tl.dept)}','${lk}')" title="Open ${esc(tl.line)}">${esc(tl.line)}</button>`)}${div}
+    ${field('Task ID', `<span>${esc(t.code)}</span>`)}
   </span>`;
 }
 // Up to the task's room, under All.
@@ -1252,31 +1281,7 @@ function goUpMaterials(dept, key){
   if(workMode !== 'shop') setWorkMode('shop');
   if(typeof renderAll === 'function') renderAll();
 }
-/* The tasks at a glance, in the header card: each with its product, quantity
-   and cost, read-only. Clicking it goes down to the chosen products, where
-   each task's product and quantity are edited. */
-function _lnpTaskSummaryHtml(l){
-  // One row per task and product: a task buying two products gets two rows,
-  // its name on the first, so each quantity is one product's.
-  const fmtQ = v => (Math.round(v * 100) / 100).toLocaleString('en-US');
-  const row = (t, first, prod, qty, amt, none) => `<span class="lnps-row${first ? '' : ' is-cont'}">
-      <span class="lnps-task">${first ? `<span class="task-ctx">${esc(t.room)} ›</span> ${esc(t.name)}` : ''}</span>
-      <span class="lnps-prod${none ? ' is-none' : ''}">${esc(prod)}</span>
-      <span class="lnps-qty">${qty}</span>
-      <span class="lnps-amt">${money(Math.round(amt))}</span>
-    </span>`;
-  const rows = l.items.map(t => {
-    const pk = _lineTaskPicked(l, t);
-    if(!pk.length) return row(t, true, 'No product yet', '—', taskLineCost(l, t), true);
-    if(pk.length === 1) return row(t, true, [pk[0].p.brand, pk[0].p.product].filter(Boolean).join(' '), fmtQ(_num(pk[0].p.qty)), taskLineCost(l, t));
-    return pk.map((h, i) => row(t, i === 0, [h.p.brand, h.p.product].filter(Boolean).join(' '),
-      fmtQ(_num(h.p.qty)), _num(h.p.qty) * _parseDollars(h.p.parts))).join('');
-  }).join('');
-  return `<button type="button" class="lnps" onclick="lnpJumpToProducts()" title="Edit each task's product and quantity">
-    <span class="lnps-head"><span>Task</span><span>Product</span><span>Qty</span><span>Cost</span></span>${rows}
-    <span class="lnps-edit">Edit products and quantities ↓</span>
-  </button>`;
-}
+/* Down to Chosen products, from the product type's Overview. */
 function lnpJumpToProducts(){
   const el = document.getElementById('lnpProducts');
   const wb = document.getElementById('workBody');
@@ -1334,7 +1339,7 @@ function _lnpCondensedHtml(l, c){
           <button class="opt-card-qty-btn" onclick="bumpLineTaskQty('${k}',${t.id},+1${skuArg})" aria-label="One more for this task">${svgPlus}</button>
         </span>
       </span>
-      <span class="lnpc-task-amt">${money(Math.round(amt))}</span>
+      <span class="lnpc-task-amt">${shopMoney(amt)}</span>
     </div>`;
   };
   // The pencil: a short menu of the line's other products. On a product it
@@ -1373,7 +1378,7 @@ function _lnpCondensedHtml(l, c){
         <div class="lnpg-prod">
           <!-- Change and remove sit under the name; the task costs carry the money. -->
           <span class="lnpg-prod-l">
-            <span class="lnpc-thumb is-sm lnpg-open" onclick="openFly(${l.items[0].id},'${esc(cat.sku)}',event)" title="View product details">${cat.image ? `<img src="${esc(cat.image)}" alt="" loading="lazy">` : _LNP_THUMB}</span>
+            <span class="lnpc-thumb is-lg lnpg-open" onclick="openFly(${l.items[0].id},'${esc(cat.sku)}',event)" title="View product details">${shopProductImg(cat) ? `<img src="${esc(shopProductImg(cat))}" alt="${esc(cat.name)}" loading="lazy">` : _LNP_THUMB}</span>
             <span class="lnpg-prod-n">
               <span class="lnpg-open" onclick="openFly(${l.items[0].id},'${esc(cat.sku)}',event)" title="View product details"><span class="lnpc-brand">${esc(cat.brand || '')}</span><span class="lnpc-name">${esc(cat.name)}</span></span>
               <span class="lnpg-acts">
@@ -1393,7 +1398,7 @@ function _lnpCondensedHtml(l, c){
     ${(() => { const u = sharedUnit && sharedUnit !== 'ea' ? ' ' + esc(sharedUnit) : '';
       // "Total" unless the quantities don't meet what's scoped — then say how.
       return `<span class="lnpc-foot-l">Total${status ? `<span class="lnp-total-status ${statusCls}">${esc(status)}</span>` : ''}${u && sharedUnit !== null ? `<span class="lnpc-foot-q">${fmtN(boxSum)}${u}</span>` : ''}</span>`; })()}
-    <span class="lnpc-foot-amt">${money(Math.round(deptLineCost(l)))}</span>
+    <span class="lnpc-foot-amt">${shopMoney(deptLineCost(l))}</span>
   </div>`;
   const colHead = `<div class="lnpg-head"><span>Product</span><span class="lnpg-head-t"><span>Group › Task › Option</span><span>Qty</span><span class="num">Cost</span></span></div>`;
   const head = total + colHead + (groups || `<div class="lnpg-empty">${n} ${n === 1 ? 'task needs' : 'tasks need'} a product. Pick one below.</div>`) + bareHtml;
@@ -1411,13 +1416,13 @@ function _lnpCondensedHtml(l, c){
           // Each alternative says where it would be bought from, and can be
           // switched before it's added — the same strip the chosen product has.
           return `<div class="lnpc-alt"><div class="lnpc-alt-row">
-            <div class="lnpc-thumb is-sm">${x.image ? `<img src="${esc(x.image)}" alt="" loading="lazy">` : _LNP_THUMB}</div>
+            <div class="lnpc-thumb is-md" onclick="openFly(${l.items[0].id},'${esc(x.sku)}',event)" title="View product details">${shopProductImg(x) ? `<img src="${esc(shopProductImg(x))}" alt="${esc(x.name)}" loading="lazy">` : _LNP_THUMB}</div>
             <div class="lnpc-alt-main" onclick="openFly(${l.items[0].id},'${esc(x.sku)}',event)" title="View product details">
               <span class="lnpc-brand">${esc(x.brand || '')}</span>
               <span class="lnpc-alt-name">${esc(x.name)}</span>
             </div>
             ${o.offer.price === low && priced.length > 1 ? '<span class="lnpc-alt-sup"><span class="lnpc-low">Lowest</span></span>' : ''}
-            <span class="lnpc-alt-price">${money(Math.round(o.offer.price))}<span> / ${esc(x.unit || 'ea')}</span></span>
+            <span class="lnpc-alt-price">${shopMoney(o.offer.price)}<span> / ${esc(x.unit || 'ea')}</span></span>
             ${(() => { const open = _lnpSel && _lnpSel.line === l.key && _lnpSel.sku === x.sku;
               return `<button type="button" class="lnp-apply lnp-select${open ? ' is-on' : ''}" aria-expanded="${open}" onclick="event.stopPropagation();lnpSelStart('${k}','${esc(x.sku)}')">${open ? 'Cancel' : 'Select'}</button>`; })()}
           </div>
@@ -1427,7 +1432,7 @@ function _lnpCondensedHtml(l, c){
       </div>`
     : `<button type="button" class="optc-alt" onclick="lnpToggle('alt','${lk}',true)">
         <span>${alts.length} alternative${alts.length === 1 ? '' : 's'}</span>
-        <span class="optc-alt-names">${priced.slice(0, 2).map(({x, o}) => `${esc(x.brand)} ${esc(x.name)} ${money(Math.round(o.offer.price))}`).join(' · ')}${priced.length > 2 ? ' · …' : ''}</span>
+        <span class="optc-alt-names">${priced.slice(0, 2).map(({x, o}) => `${esc(x.brand)} ${esc(x.name)} ${shopMoney(o.offer.price)}`).join(' · ')}${priced.length > 2 ? ' · …' : ''}</span>
       </button>`;
   // The catalogue search is always there, under the alternatives.
   const search = `<div class="optc-search">${prodSearchHtml('line:' + l.key)}</div>`;
@@ -1546,7 +1551,7 @@ function _lnpSelHtml(l, cat){
         <input class="opt-card-qty-input" value="${q.toLocaleString('en-US')}" readonly tabindex="-1">
         <button type="button" class="opt-card-qty-btn" onclick="lnpSelQty(${t.id},1)" aria-label="One more">${plus}</button>
       </span>` : '<span></span>'}
-      <span class="lnp-sel-amt">${ok ? `${money(Math.round(q * price))}<span class="lnp-sel-unit">${q.toLocaleString('en-US')} ${unit} × ${money(Math.round(price))}</span>` : ''}</span>
+      <span class="lnp-sel-amt">${ok ? `${shopMoney(q * price)}<span class="lnp-sel-unit">${q.toLocaleString('en-US')} ${unit} × ${shopMoney(price)}</span>` : ''}</span>
     </label>`;
   }).join('');
   const seg = m => `<button type="button" class="${mode === m ? 'on' : ''}" onclick="lnpSelMode('${m}')">${m === 'replace' ? 'Replace' : '+ Add'}</button>`;
@@ -1559,7 +1564,7 @@ function _lnpSelHtml(l, cat){
     <div class="lnp-sel-list">${rows}</div>
     <div class="lnp-sel-ft">
       <button type="button" class="optc-link" onclick="lnpSelStart('${_lineKeyArg(l.key)}','${esc(cat.sku)}')">Cancel</button>
-      <button type="button" class="lnp-pick-go" ${nOn ? '' : 'disabled'} onclick="lnpSelApply()">${nOn ? `${mode === 'replace' ? 'Replace on' : 'Add to'} ${nOn} task${nOn === 1 ? '' : 's'} · ${money(Math.round(sumOn))}` : 'Choose a task'}</button>
+      <button type="button" class="lnp-pick-go" ${nOn ? '' : 'disabled'} onclick="lnpSelApply()">${nOn ? `${mode === 'replace' ? 'Replace on' : 'Add to'} ${nOn} task${nOn === 1 ? '' : 's'} · ${shopMoney(sumOn)}` : 'Choose a task'}</button>
     </div>
   </div>`;
 }
@@ -1698,7 +1703,7 @@ function _renderLinePageHtml(){
           ? `<span class="lnp-total-prod" title="${esc(one.product)}">${esc(one.product)}</span>`
           : '<span></span>';
       })()}
-      <span class="lnp-task-amt">${money(Math.round(deptLineCost(l)))}</span>
+      <span class="lnp-task-amt">${shopMoney(deptLineCost(l))}</span>
     </div>`;
   const pool = isLabor ? [] : deptLinePool(l);
   const taskRows = l.items.map(t => {
@@ -1723,7 +1728,7 @@ function _renderLinePageHtml(){
         return `<div class="lnp-task-pick">${hdrDdHtml('ddLnp-' + t.id, inPool ? cur : '', opts,
           `setLineTaskProduct('${k}',${t.id},__V__)`, 'lnp-task-dd' + (pk.length ? '' : ' is-unset'))}</div>`;
       })()}
-      <span class="lnp-task-amt">${isLabor ? '' : money(Math.round(taskLineCost(l, t)))}</span>
+      <span class="lnp-task-amt">${isLabor ? '' : shopMoney(taskLineCost(l, t))}</span>
     </div>`;
   }).join('');
 
@@ -1764,33 +1769,44 @@ function _renderLinePageHtml(){
   return `<div class="pgd lnp">
     <div class="pgd-hdr-box">
       <div class="sec-taskcard-hdr">
+        ${window.__KAI_SHOP_PHOTOS && !isLabor ? (() => {
+          // The photos file: the product being bought for it, large, beside the title.
+          const h = l.items.map(t => _lineTaskPicked(l, t)[0]).find(Boolean);
+          const cat = h ? Object.assign({}, (typeof catalogFind === 'function' && h.p.sku && catalogFind(h.p.sku)) || {}, {name: h.p.product, brand: h.p.brand, image: h.p.image}) : null;
+          return `<span class="lnp-hero"${h ? ` onclick="openFly(${l.items[0].id},'${esc(h.p.sku || '')}',event)" title="View product details"` : ''}><img src="${esc(shopProductImg(cat || {}))}" alt=""></span>`;
+        })() : ''}
         <div class="sec-taskcard-hdr-l">
-          ${window.__KAI_SHOP_LAYOUT ? (() => {
-            /* Breadcrumbs, as on a task: the department above it (a way up),
-               then the rooms — the groups — its tasks are in. */
-            const q = v => esc(String(v)).replace(/'/g, "\\'");
-            return `<div class="lnp-eyebrow"><span class="sec-taskcard-eyebrow task-crumbs">
-              <span class="page-kind">Product type</span>
-              <nav class="task-crumb" aria-label="Department">
-                <button type="button" class="task-crumb-a" onclick="goUpMaterials('${q(l.dept)}')" title="Open ${esc(l.dept)}">${esc(l.dept)}</button>
-                <span class="sec-taskcard-sep" aria-hidden="true">›</span><span>${esc(l.name)}</span>
-              </nav>
-              <span class="task-crumbs-div" aria-hidden="true"></span>
-              <span class="page-kind">${rooms.length === 1 ? 'Room' : 'Rooms'}</span>
-              <nav class="task-crumb" aria-label="Rooms">${rooms.map((r, i) => `${i ? '<span class="sec-taskcard-sep" aria-hidden="true">·</span>' : ''}<button type="button" class="task-crumb-a" onclick="goUpRoom('${q(r)}')" title="Open ${esc(r)}">${esc(r)}</button>`).join('')}</nav>
-            </span></div>`;
-          })() : `<div class="lnp-eyebrow">${esc(l.dept)}</div>`}
+          ${window.__KAI_SHOP_LAYOUT ? '<div class="pg-kind">Product type</div>' : `<div class="lnp-eyebrow">${esc(l.dept)}</div>`}
           <div class="pgd-title">${esc(l.name)}</div>
-          <div class="pgd-grp-meta">${esc(_lineHdrNeed(l, isLabor))}<span class="sep">&middot;</span>${rooms.length} ${rooms.length === 1 ? 'room' : 'rooms'}</div>
+          ${window.__KAI_SHOP_LAYOUT ? '' : `<div class="pgd-grp-meta">${esc(_lineHdrNeed(l, isLabor))}<span class="sep">&middot;</span>${rooms.length} ${rooms.length === 1 ? 'room' : 'rooms'}</div>`}
         </div>
         <div class="sec-taskcard-hdr-r">
-          ${isLabor ? '' : `<span class="sec-taskcard-amt-line"><span class="sec-taskcard-amt">${money(Math.round(deptLineCost(l)))}</span></span>`}
+          ${isLabor ? '' : `${window.__KAI_SHOP_LAYOUT ? '<span class="ov-stat-k sec-taskcard-amt-k">Materials cost</span>' : ''}<span class="sec-taskcard-amt-line"><span class="sec-taskcard-amt">${window.__KAI_SHOP ? sbMoney(deptLineCost(l)) : shopMoney(deptLineCost(l))}</span></span>`}
           ${isLabor || !window.__KAI_SHOP ? '' : `<button type="button" class="lnp-po-link" onclick="openPurchaseOrder()">View purchase order &rarr;</button>`}
         </div>
       </div>
-      ${window.__KAI_SHOP_LAYOUT && !isLabor ? _lnpTaskSummaryHtml(l) : ''}
+      ${window.__KAI_SHOP_LAYOUT ? (() => {
+        /* The task page's pattern: the product type's facts as a band of
+           labelled fields under the title. */
+        const q = v => esc(String(v)).replace(/'/g, "\\'");
+        const link = (v, on) => `<button type="button" class="task-crumb-a tk-f-link" onclick="${on}" title="Open ${esc(v)}">${esc(v)}</button>`;
+        return infoBandHtml('Overview', [
+          ['Tasks', String(l.items.length)],
+          ['Department', link(l.dept, `goUpMaterials('${q(l.dept)}')`)],
+          [rooms.length === 1 ? 'Group' : `Groups (${rooms.length})`, rooms.map(r => link(r, `goUpRoom('${q(r)}')`)).join('<span class="sec-taskcard-sep" aria-hidden="true"> · </span>')],
+          ...(isLabor ? [] : [(() => {
+            /* What's being bought for it, in brief — one product named, or
+               how many — and a way down to Chosen products, where each
+               task's product and quantity are set. */
+            const names = [...new Set(l.items.flatMap(t => _lineTaskPicked(l, t).map(h => [h.p.brand, h.p.product].filter(Boolean).join(' '))).filter(Boolean))];
+            const txt = !names.length ? 'None chosen yet' : names.length === 1 ? names[0] : 'See all ↓';
+            return [names.length > 1 ? `Products (${names.length})` : 'Product',
+              `<button type="button" class="task-crumb-a tk-f-link tk-f-prod" onclick="lnpJumpToProducts()" title="${esc(names.join(', ') || 'Choose products below')}">${esc(txt)}</button>`];
+          })()]),
+        ], isLabor ? 'wide' : 'wide4');
+      })() : ''}
     </div>
-    ${_linePhotoSectionHtml(l, isLabor ? '' : money(Math.round(deptLineCost(l))))}
+    ${_linePhotoSectionHtml(l, isLabor ? '' : shopMoney(deptLineCost(l)))}
     ${condensed || `<div class="pgd-details-sec">
       <div class="pgd-sec-hd">
         <div class="pgd-details-title">Tasks in this line</div>

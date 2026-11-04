@@ -805,3 +805,6 @@ body{flex-direction:column}
   font-family:var(--body);font-size:13px;font-weight:600;color:var(--ink,#1A1A1A);
   text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--stroke,#DDD6C8)}
 .turn-pop-how:hover{text-decoration-color:var(--ink,#1A1A1A)}
+
+/* Corners (see panel.css): informational tags round slightly; controls stay square. */
+.ver-chip-tag,.ver-item-badge,.ver-notice-tag,.ti-badge,.stage-track-tag{border-radius:3px}

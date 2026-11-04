@@ -1102,7 +1102,7 @@ function _pgdRowsHtml(items, taskOnClick){
     .join('');
 }
 function _pgdTaskHeadHtml(){
-  return `<div class="pgd-tk-head">
+  return `<div class="pgd-tk-head${_pgdAlwCol() ? ' has-alw' : ''}">
     <span>Task</span>
     <span>Status</span>
     <span>Contractor</span>
@@ -1111,8 +1111,61 @@ function _pgdTaskHeadHtml(){
     <span class="num">Qty</span>
     <span class="num">Rate</span>
     <span class="num"><span class="files-lgd"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h2.4l1-1.6h5.2l1 1.6H14v8H2z"/><circle cx="8" cy="8.4" r="2.2"/></svg>/<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2.5h10v11H3z"/><path d="M5.5 6h5M5.5 8.5h5M5.5 11h3"/></svg></span></span>
-    <span class="num">Amount</span>
+    <span class="num">${_pgdAlwCol() ? 'Cost / Allowance' : window.__KAI_SHOP_LAYOUT ? 'Cost' : 'Amount'}</span>
   </div>`;
+}
+/* Layout file with allowances: the task tables carry each task's allowance
+   in a column beside its amount — a dash where it has none, red where the
+   amount has run past it. */
+/* Layout file, a department: where its shopping stands, one row per product
+   type — what's chosen, what's missing — each with the way into its page.
+   Rows that need something come first. Returned with the count of types
+   that are ready, for the Overview band. */
+function _deptProductTypes(g){
+  const rows = deptLines(g.items).filter(l => l.dept !== NO_PRODUCT_DEPT).map(l => {
+    const picked = l.items.flatMap(t => _lineTaskPicked(l, t));
+    const names = [...new Set(picked.map(h => [h.p.brand, h.p.product].filter(Boolean).join(' ')).filter(Boolean))];
+    const needs = l.items.filter(t => !_lineTaskPicked(l, t).length).length;
+    const oos = picked.filter(h => { const st = (typeof _rowStock === 'function') ? _rowStock(h.p) : null; return st && st.stock === 'out'; }).length;
+    const change = l.items.some(t => shopSide(t, 'dept').delta);
+    const st = needs ? {cls:'is-warn', txt:`${needs} ${needs === 1 ? 'task needs' : 'tasks need'} a product`}
+      : oos ? {cls:'is-warn', txt:`${oos} out of stock`}
+      : change ? {cls:'is-info', txt:'Change pending'}
+      : {cls:'', txt:''};
+    return {l, names, first: picked[0] ? picked[0].p : null, needs, oos, st, todo: !!(needs || oos)};
+  });
+  rows.sort((a, b) => (b.todo - a.todo));
+  return {rows, ready: rows.filter(r => !r.todo).length};
+}
+function _deptProductTypesHtml(g){
+  const {rows, ready} = _deptProductTypes(g);
+  if(!rows.length) return '';
+  const q = v => esc(String(v)).replace(/'/g, "\\'");
+  return `<div class="pgd-details-sec dpt" id="deptProductTypes">
+    <div class="pgd-sec-hd"><div class="pgd-details-title">Product types</div></div>
+    <div class="dpt-list">${rows.map(r => {
+      const go = `goUpMaterials('${q(r.l.dept)}','${_lineKeyArg(r.l.key)}')`;
+      const prod = !r.names.length ? '<span class="dpt-none">No product yet</span>' : r.names.length === 1 ? esc(r.names[0]) : `${r.names.length} products`;
+      return `<div class="dpt-row${r.todo ? ' is-todo' : ''}" role="button" tabindex="0" onclick="${go}" onkeydown="if(event.key==='Enter'){event.preventDefault();${go}}">
+        <span class="dpt-thumb">${r.first ? `<img src="${esc(shopProductImg(Object.assign({}, (typeof catalogFind === 'function' && r.first.sku && catalogFind(r.first.sku)) || {}, {name: r.first.product, brand: r.first.brand, image: r.first.image})))}" alt="" loading="lazy">` : ''}</span>
+        <span class="dpt-name">${esc(r.l.name)}<span class="dpt-n">${r.l.items.length} ${r.l.items.length === 1 ? 'task' : 'tasks'}</span></span>
+        <span class="dpt-prod" title="${esc(r.names.join(', '))}">${prod}</span>
+        <span class="dpt-st ${r.st.cls}"${r.st.tip ? ` title="${esc(r.st.tip)}"` : ''}>${r.st.cls === 'is-warn' ? _ALW_WARN : ''}${esc(r.st.txt)}</span>
+        <span class="dpt-cost">${sbMoney(deptLineCost(r.l))}</span>
+        <button type="button" class="dpt-go${r.todo ? ' is-primary' : ''}" onclick="event.stopPropagation();${go}">${r.todo ? 'Choose product' : 'Review'} →</button>
+      </div>`;
+    }).join('')}</div>
+  </div>`;
+}
+function _pgdAlwCol(){ return typeof ALLOW_ON !== 'undefined' && ALLOW_ON && !!window.__KAI_SHOP_LAYOUT; }
+// The amount and its allowance as one figure, "$540.82 / $900.00" — a dash
+// where there's no allowance, the amount in red where it has run past it.
+function _pgdAlwCellHtml(t){
+  const a = taskAllowance(t);
+  const amt = sbMoney(dollars(t.cost || 0));
+  if(a == null) return `<span class="pgd-tk-cost">${amt}<span class="pgd-tk-alw"> / —</span></span>`;
+  const over = taskAllowActual(t) > a + 0.005;
+  return `<span class="pgd-tk-cost${over ? ' is-over' : ''}" title="${over ? 'Over its allowance by ' + sbMoney(taskAllowActual(t) - a) : sbMoney(a - taskAllowActual(t)) + ' under its allowance'}">${amt}<span class="pgd-tk-alw"> / ${sbMoney(a)}</span></span>`;
 }
 
 /* Row status. Approval comes first — a task is Pending until someone reviews
@@ -1353,7 +1406,7 @@ function _pgdTaskRowHtml(t, taskOnClick, typeFirst){
     // the parser closes the outer one at the inner tag, which threw the
     // last three cells out of the grid and onto their own lines. role +
     // tabindex + Enter/Space keep it operable from the keyboard.
-    return `<div class="pgd-tk-rowwrap${_PGD_BY_TYPE && typeFirst ? ' is-type-start' : ''}"><div class="pgd-tk-row${_unready}" data-tid="${t.id}" role="button" tabindex="0" onclick="pgdRowOpen(event,${t.id},'${esc(taskOnClick)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="${esc(fullName)}">
+    return `<div class="pgd-tk-rowwrap${_PGD_BY_TYPE && typeFirst ? ' is-type-start' : ''}"><div class="pgd-tk-row${_unready}${_pgdAlwCol() ? ' has-alw' : ''}" data-tid="${t.id}" role="button" tabindex="0" onclick="pgdRowOpen(event,${t.id},'${esc(taskOnClick)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="${esc(fullName)}">
       <span class="pgd-tk-name" title="${esc(fullName)}">${flg}${chk}<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;flex:1">${esc(displayName)}</span></span>
       ${statusPill}
       <span class="pgd-tk-gc${t.gc ? '' : ' is-none'}" title="${esc(t.gc || 'Unassigned')}">${esc(t.gc || 'Unassigned')}</span>
@@ -1362,9 +1415,9 @@ function _pgdTaskRowHtml(t, taskOnClick, typeFirst){
         return `<span class="pgd-tk-prod pgd-tk-type" title="${esc(ty)}">${typeFirst ? esc(ty) : ''}</span>`; })()
       : `<span class="pgd-tk-prod${prodName ? '' : ' is-none'}" title="${esc(fullProd)}">${esc(prodName || '—')}</span>`}
       <span class="pgd-tk-qty" title="${esc(t.qty || '')}">${prodName && qtyNum ? esc(qtyNum) : '—'}</span>
-      <span class="pgd-tk-rate">${prodName ? esc(t.rate || '—') : '—'}</span>
+      <span class="pgd-tk-rate">${prodName ? (window.__KAI_SHOP && t.rate && dollars(t.rate) ? sbMoney(dollars(t.rate)) : esc(t.rate || '—')) : '—'}</span>
       ${_pgdRowFilesHtml(t)}
-      <span class="pgd-tk-cost">${esc(t.cost || '$0')}</span>
+      ${_pgdAlwCol() ? _pgdAlwCellHtml(t) : `<span class="pgd-tk-cost">${window.__KAI_SHOP ? sbMoney(dollars(t.cost || 0)) : esc(t.cost || '$0')}</span>`}
     </div></div>`;
 }
 
@@ -2255,8 +2308,10 @@ function _renderScopePageHtml(opts){
   const nApproved   = tasks.filter(t => approved.has(t.id)).length;
   // Same override the sidebar rollup honours, so the scope total reads the
   // same in both places when the shell has pushed a version-specific number.
+  // Shop with Kai counts the scope after the change order — removed tasks
+  // out — as the left panel and the budget block do.
   const totalDisplay = (typeof __KAI_SCOPE_TOTAL_OVERRIDE !== 'undefined' && __KAI_SCOPE_TOTAL_OVERRIDE)
-    ? __KAI_SCOPE_TOTAL_OVERRIDE : money(total);
+    ? __KAI_SCOPE_TOTAL_OVERRIDE : window.__KAI_SHOP ? sbMoney(jobScopeTotal()) : money(total);
 
   /* Photo strip — same tiles the group page uses (_pgdPhotoFigHtml), just
      widened to the whole scope: every group shot from the rooms currently
@@ -2298,11 +2353,12 @@ function _renderScopePageHtml(opts){
     <div class="pgd-hdr-box">
       <div class="sec-taskcard-hdr">
         <div class="sec-taskcard-hdr-l">
+          ${window.__KAI_SHOP_LAYOUT ? '<div class="pg-kind">Job</div>' : ''}
           <div class="pgd-title">Scope</div>
           <div class="pgd-grp-meta">${tasks.length} task${tasks.length === 1 ? '' : 's'}<span class="sep">&middot;</span>${groups.length} ${groupKindNoun()}${groups.length === 1 ? '' : 's'}${PROJ_MODE === 'review' ? `<span class="sep">&middot;</span>${nApproved} approved` : ''}</div>
         </div>
         <div class="sec-taskcard-hdr-r">
-          <span class="sec-taskcard-amt-line"><span class="sec-taskcard-amt">${totalDisplay}</span></span>
+          ${ALLOW_ON ? ovBudgetHtml('corner') : `<span class="sec-taskcard-amt-line"><span class="sec-taskcard-amt">${totalDisplay}</span></span>`}
         </div>
       </div>
     </div>
@@ -2538,7 +2594,30 @@ function _renderGroupPageHtml(opts){
     ? `<div class="pgd-photos">${allGroupPhotos.map((p,i) => _pgdPhotoFigHtml(p, i, g.name)).join('')}</div>`
     : `<div class="pgd-photos-empty">No photos yet for this group</div>`;
   // Aggregate details (Modifiers intentionally excluded from the overview).
-  const gCost = g.items.reduce((s,t)=>s+dollars(t.cost), 0);
+  /* Shop with Kai: the same figure the left panel shows for this group —
+     after the change order, and only materials or only labor in those
+     views — so the page and the panel never disagree. */
+  const gCost = window.__KAI_SHOP ? _shopSum(g.items, _shopMode()).now : g.items.reduce((s,t)=>s+dollars(t.cost), 0);
+  // A department's allowance band already carries its materials figure.
+  const gBand = ALLOW_ON && groupBy === 'dept' && g.key !== NO_PRODUCT_DEPT;
+  /* Layout file, a department: the task page's pattern — the title and the
+     figure on top, then the department's facts as a band of labelled fields,
+     and its task allowances as a band of their own. */
+  const _deptBand = (window.__KAI_SHOP_LAYOUT && groupBy === 'dept') ? (() => {
+    const q = v => esc(String(v)).replace(/'/g, "\\'");
+    const lines = deptLines(g.items);
+    const rooms = [...new Set(g.items.map(t => t.room))];
+    const list = (arr, fn) => arr.map(fn).join('<span class="sec-taskcard-sep" aria-hidden="true"> · </span>');
+    const link = (v, on) => `<button type="button" class="task-crumb-a tk-f-link" onclick="${on}" title="Open ${esc(v)}">${esc(v)}</button>`;
+    return infoBandHtml('Overview', [
+      ['Tasks', String(g.items.length)],
+      [lines.length === 1 ? 'Product type' : `Product types (${lines.length})`, list(lines, l => link(l.name, `goUpMaterials('${q(l.dept)}','${_lineKeyArg(l.key)}')`))],
+      [rooms.length === 1 ? 'Group' : `Groups (${rooms.length})`, list(rooms, r => link(r, `goUpRoom('${q(r)}')`))],
+      // Only when something needs doing: how many product types, and the way to them.
+      ...((() => { if(g.key === NO_PRODUCT_DEPT) return []; const pt = _deptProductTypes(g); const left = pt.rows.length - pt.ready;
+        return left ? [['Products', `<button type="button" class="task-crumb-a tk-f-link is-todo" onclick="document.getElementById('deptProductTypes')?.scrollIntoView({behavior:'smooth',block:'start'})">${left} ${left === 1 ? 'needs' : 'need'} attention</button>`]] : []; })()),
+    ], (g.key !== NO_PRODUCT_DEPT && _deptProductTypes(g).rows.some(r => r.todo)) ? 'wide4' : 'wide');
+  })() : '';
   const nApproved = g.items.filter(t => approved.has(t.id)).length;
   const contractorsSet = new Set(g.items.map(t => t.gc).filter(Boolean));
   // Task rows — mini cards that route into the task drill-in on click.
@@ -2576,24 +2655,7 @@ function _renderGroupPageHtml(opts){
       })()}
       <div class="sec-taskcard-hdr">
         <div class="sec-taskcard-hdr-l">
-          ${window.__KAI_SHOP_LAYOUT && groupBy === 'dept' ? (() => {
-            /* A department's breadcrumbs, as on a product type and a task:
-               the product types in it, and the rooms its tasks are in — each
-               a way into that page. */
-            const q = v => esc(String(v)).replace(/'/g, "\\'");
-            const lines = deptLines(g.items);
-            const rooms = [...new Set(g.items.map(t => t.room))];
-            const links = (arr, fn) => arr.map((x, i) => `${i ? '<span class="sec-taskcard-sep" aria-hidden="true">·</span>' : ''}${fn(x)}`).join('');
-            return `<div class="lnp-eyebrow"><span class="sec-taskcard-eyebrow task-crumbs">
-              <span class="page-kind">Department</span><span>${esc(g.name)}</span>
-              <span class="task-crumbs-div" aria-hidden="true"></span>
-              <span class="page-kind">${lines.length === 1 ? 'Product type' : 'Product types'}</span>
-              <nav class="task-crumb" aria-label="Product types">${links(lines, l => `<button type="button" class="task-crumb-a" onclick="goUpMaterials('${q(l.dept)}','${_lineKeyArg(l.key)}')" title="Open ${esc(l.name)}">${esc(l.name)}</button>`)}</nav>
-              <span class="task-crumbs-div" aria-hidden="true"></span>
-              <span class="page-kind">${rooms.length === 1 ? 'Room' : 'Rooms'}</span>
-              <nav class="task-crumb" aria-label="Rooms">${links(rooms, r => `<button type="button" class="task-crumb-a" onclick="goUpRoom('${q(r)}')" title="Open ${esc(r)}">${esc(r)}</button>`)}</nav>
-            </span></div>`;
-          })() : ''}
+          ${window.__KAI_SHOP_LAYOUT ? `<div class="pg-kind">${groupBy === 'room' ? 'Group' : (() => { const k = groupKindNoun(); return k.charAt(0).toUpperCase() + k.slice(1); })()}</div>` : ''}
           <div class="pgd-title-l">
             <div class="pgd-title">${esc(g.name)}</div>
             ${window.__KAI_SHOP && g.items.length && g.items.every(t => typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id)) ? '<span class="co-pill" title="Removal after approval">Change</span>' : ''}
@@ -2608,16 +2670,18 @@ function _renderGroupPageHtml(opts){
                ${groupLabels[g.key] ? `<span class="pgd-label-chip" onclick="event.stopPropagation();openGroupLabelEdit('${g.key}')" title="Edit label">${esc(groupLabels[g.key])}</span>` : ''}`
           }
           </div>
-          <div class="pgd-grp-meta">${(() => { const k = groupKindNoun(), K = k.charAt(0).toUpperCase() + k.slice(1); return !window.__KAI_SHOP_LAYOUT ? K + ' ' : groupBy === 'dept' ? '' : `<span class="page-kind">${K}</span>`; })()}${gIdx + 1} of ${groups.length}<span class="sep">&middot;</span>${g.items.length} ${g.items.length === 1 ? 'task' : 'tasks'}</div>
+          ${_deptBand ? '' : `<div class="pgd-grp-meta">${(() => { const k = groupKindNoun(), K = k.charAt(0).toUpperCase() + k.slice(1); return !window.__KAI_SHOP_LAYOUT ? K + ' ' : ''; })()}${gIdx + 1} of ${groups.length}<span class="sep">&middot;</span>${g.items.length} ${g.items.length === 1 ? 'task' : 'tasks'}</div>`}
         </div>
         <div class="sec-taskcard-hdr-r">
-          <span class="sec-taskcard-amt-line">
+          ${gBand ? deptAllowanceHtml(g.key, 'corner') : `${window.__KAI_SHOP_LAYOUT ? `<span class="ov-stat-k sec-taskcard-amt-k">${groupBy === 'dept' ? 'Materials cost' : groupBy === 'contractor' ? 'Labor cost' : 'Total cost'}</span>` : ''}<span class="sec-taskcard-amt-line">
+            ${(() => { const gs = window.__KAI_SHOP ? _shopSum(g.items, _shopMode()) : null; return gs && gs.delta ? `<s class="sec-taskcard-was" title="Approved ${sbMoney(gs.now - gs.delta)}">${sbMoney(gs.now - gs.delta)}</s>` : ''; })()}
             <span class="sec-taskcard-amt">${(window.__KAI_SHOP ? sbMoney(gCost) : money(gCost))}</span>
-          </span>
+          </span>`}
         </div>
       </div>
-      ${ALLOW_ON && groupBy === 'dept' && g.key !== NO_PRODUCT_DEPT ? deptAllowanceHtml(g.key) : ''}
+      ${_deptBand}
     </div>
+    ${_deptBand && g.key !== NO_PRODUCT_DEPT ? _deptProductTypesHtml(g) : ''}
     <div class="pgd-details-sec pgd-mediasec is-sticky">
       <div class="pgd-sec-hd">
         <div class="pgd-media-ctx" aria-hidden="true"><span class="pgd-media-ctx-name">${esc(g.name)}</span><span class="pgd-media-ctx-amt">${(window.__KAI_SHOP ? sbMoney(gCost) : money(gCost))}</span><span class="pgd-media-ctx-n">${g.items.length} ${g.items.length === 1 ? 'task' : 'tasks'}</span></div>

@@ -37,6 +37,8 @@ function KAI_PANEL_DOC(qs){
   /* ShopwithKai_materials.html: with Materials on, the Editor shows a
      department as a shopping list (see materials-page.js). */
   const shopMaterials = (typeof window.__KAI_SHOP_MATERIALS !== 'undefined') && !!window.__KAI_SHOP_MATERIALS;
+  /* ShopwithKai_photos.html: the layout file with product pictures leading. */
+  const shopPhotos = (typeof window.__KAI_SHOP_PHOTOS !== 'undefined') && !!window.__KAI_SHOP_PHOTOS;
   const boot =
     '<base href="' + location.href.split('#')[0] + '">' +
     '<scr' + 'ipt>window.__KAI_QS=' + JSON.stringify(qs ? '?' + qs : '')
@@ -44,7 +46,8 @@ function KAI_PANEL_DOC(qs){
       + ';window.__KAI_ACTIVITY_SENTENCES=' + (sent ? 'true' : 'false')
       + ';window.__KAI_SHOP=' + (shop ? 'true' : 'false')
       + ';window.__KAI_SHOP_LAYOUT=' + (shopLayout ? 'true' : 'false')
-      + ';window.__KAI_SHOP_MATERIALS=' + (shopMaterials ? 'true' : 'false') + ';<\/script>';
+      + ';window.__KAI_SHOP_MATERIALS=' + (shopMaterials ? 'true' : 'false')
+      + ';window.__KAI_SHOP_PHOTOS=' + (shopPhotos ? 'true' : 'false') + ';<\/script>';
   return KAI_PANEL_RAW.replace(/<head([^>]*)>/i, '<head$1>' + boot);
 }
 
@@ -65,7 +68,7 @@ function KAI_PANEL_DOC(qs){
    one who does not. Holding it is what makes a hand-off theirs to make. */
 const ROLES = [
   {id:'field_agent', name:'Field agent',    desc:'Holds the baton. Walks the property, builds the scope, and hands it off.'},
-  {id:'manager',     name:'Job manager',desc:'Edits, hands off and approves at any time.'},
+  {id:'manager',     name:'Job manager',desc:'Edits, hands off and approves while it is their turn. Takes the turn to act earlier.'},
   /* The field agent without the baton. They can see the scope and weigh in —
      edit it while it is unlocked, mark it as done — but they own no stage, so
      they never hold the move and cannot hand it off. */
@@ -324,13 +327,11 @@ function handoffNoun(){
   const cfg = handoffCfg || {};
   return (cfg.subject || _turnArtifactName()).replace(/^the\s+/, '');
 }
-/* What handing off does, said once at the top. The second sentence is a
-   constraint on the person handing off, so it is only said to roles it binds:
-   the job manager can edit at any time, and telling them otherwise would be
-   wrong. */
+/* What handing off does, said once at the top. The second sentence binds
+   everyone who can hand off, the job manager included: they take the turn
+   before editing like anyone else. */
 function handoffExplainer(what){
   const base = `Handing off allows the receiver to edit the ${what}, or approve it if they are a ${rn('manager')}.`;
-  if(state.role === 'manager') return base;
   return `${base} You can only edit while the ${what} is with you, and you can ask for it back anytime.`;
 }
 
@@ -380,7 +381,8 @@ function renderCoHandoff(){
    action for a live job, the wrong one while an order sits unapproved, and gated
    on every task being complete so it was permanently disabled here. */
 function canApproveChangeOrderHere(){
-  return state.projectStage === 'published' && state.workTrack === 'change_order' && state.role === 'manager';
+  return state.projectStage === 'published' && state.workTrack === 'change_order' && state.role === 'manager'
+      && whoseTurn(state.projectStage, state.role, state.twoStep).mine;
 }
 function approveChangeOrder(){
   openModal({
@@ -543,28 +545,34 @@ function renderScopeEditRequest(){
 
      Field agent (baton)    edit, hand off
      Field agent (no baton) view, edit while unlocked, mark as done
-     Project manager        edit, hand off, approve — any time
+     Project manager        edit, hand off, approve — on their turn
+
+   The map once gave the project manager all three at any time. They now take
+   the turn first like everyone else, so the document is only ever being worked
+   by the person the chip names.
 
    Not modelled: the no-baton agent's view right is "if they are in the same
    market", and a project here has no market to compare against. They can see it
    regardless. */
 function canEditHere(){
   const r = state.role;
-  // Any time: the job manager, and the field agent holding the baton. The
-  // map puts the "if the artifact is not locked" caveat on the no-baton row only
-  // — putting it there would be pointless if it applied to both — and the baton
-  // holder's Submit scope CTA already assumes they can edit a scope that is out
-  // for review, which is how a second version gets sent at all.
-  if(r === 'manager' || r === 'field_agent') return true;
+  // The job manager: on their turn, taken or handed to them.
+  if(r === 'manager') return whoseTurn(state.projectStage, r, state.twoStep).mine;
+  // Any time: the field agent holding the baton. The map puts the "if the
+  // artifact is not locked" caveat on the no-baton row only — putting it there
+  // would be pointless if it applied to both — and the baton holder's Submit
+  // scope CTA already assumes they can edit a scope that is out for review,
+  // which is how a second version gets sent at all.
+  if(r === 'field_agent') return true;
   // No baton: only while the document is unlocked, which is draft.
   if(r === 'field_agent_nr') return docStateFor(state.projectStage) === 'draft';
   return false;                                          // contractor, renter
 }
 function canHandOffHere(){
   const proj = state.projectStage;
-  // Project manager: any time. Seniority is the point — the dialogue names whose
-  // document it is before they move it.
-  if(state.role === 'manager') return true;
+  // Project manager: on their turn. Seniority no longer skips it; they take the
+  // turn first, and the dialogue names whose document it was.
+  if(state.role === 'manager') return whoseTurn(proj, state.role, state.twoStep).mine;
   // The field agent holding the baton: when the move is theirs.
   if(state.role === 'field_agent'
      && whoseTurn(proj, state.role, state.twoStep).mine) return true;
@@ -573,19 +581,21 @@ function canHandOffHere(){
      the order needs. */
   return proj === 'published' && state.workTrack === 'change_order' && state.role === 'field_agent';
 }
-/* The project manager approves, and by the map they may do it at any time rather
-   than only at review — so reaching past their own publish stage is available
-   throughout, with its own confirm naming what it does to the budget. Nothing
-   left to approve once it is approved. */
+/* The project manager approves on their turn. Holding it early — taken from the
+   field agent mid-draft — still lets them approve ahead of review, with its own
+   confirm naming what it does to the budget. Nothing left to approve once it is
+   approved. */
 function canApproveScopeHere(){
-  return state.role === 'manager' && docStateFor(state.projectStage) !== 'approved';
+  return state.role === 'manager' && docStateFor(state.projectStage) !== 'approved'
+      && whoseTurn(state.projectStage, state.role, state.twoStep).mine;
 }
 
 /* A manager can open the review before the draft is handed to them. It is out of
    order on purpose — the field agent is still working and has not passed it on —
    so it asks first rather than just doing it. */
 function canStartReviewHere(){
-  return state.role === 'manager' && state.projectStage === 'edit';
+  return state.role === 'manager' && state.projectStage === 'edit'
+      && whoseTurn(state.projectStage, state.role, state.twoStep).mine;
 }
 function openStartReview(){
   const agent = (ROLE_PEOPLE.field_agent || {}).name || 'The field agent';
@@ -630,7 +640,8 @@ function submitScopeAgain(){
 function canSubmitCloseoutHere(){
   return state.projectStage === 'published'
       && state.workTrack !== 'change_order'
-      && state.role === 'manager';
+      && state.role === 'manager'
+      && whoseTurn(state.projectStage, state.role, state.twoStep).mine;
 }
 function approveScopeAsManager(){
   const v = VERSIONS.find(x => x.id === currentVersionId) || VERSIONS[0];
@@ -776,11 +787,12 @@ function docLockLine(id, mine){
      it was, and so told a contractor and a renter "you can edit, though nothing
      you change is reflected…", a sentence written for an editor and handed to
      two roles that have never had edit access. The access map draws the line:
-     the two managers edit at any time, the field agents only while unlocked,
+     the job manager edits on their turn, the field agents only while unlocked,
      and nobody else edits at all. */
   const may = canEditHere();
   if(id === 'draft') return {label:'Editing', text: may
     ? 'Anyone with edit access can edit.'
+    : state.role === 'manager' ? 'Take the turn to edit it.'
     : 'Open to the field agents and managers. Not to you.'};
   if(id === 'locked') return {label:'Editing', text: !may
     ? 'Out for review. Only the ' + rn('manager') + ' can change it now.'
@@ -1937,6 +1949,23 @@ function syncAppApproveBtn(){
     btn.textContent = 'Hand off';
     btn.disabled = false;
     btn.onclick = (proj === 'published') ? openCoHandoff : submitForReview;
+    btn.hidden = false;
+    // The job manager took it to act on it, and approving is the act.
+    if(secondBtn && canApproveScopeHere()){
+      secondBtn.textContent = 'Approve';
+      secondBtn.onclick = approveScopeAsManager;
+      secondBtn.hidden = false;
+    }
+    if(tipEl) tipEl.hidden = true;
+    return;
+  }
+  /* The job manager without the turn takes it before anything else. Approving
+     or handing off a document someone else is still working would act on a
+     version its holder has not finished. */
+  if(turn.role && !turn.mine && state.role === 'manager'){
+    btn.textContent = 'Take the turn';
+    btn.disabled = false;
+    btn.onclick = openTakeTurn;
     btn.hidden = false;
     if(tipEl) tipEl.hidden = true;
     return;

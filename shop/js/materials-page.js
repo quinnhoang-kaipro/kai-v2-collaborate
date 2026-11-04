@@ -160,7 +160,7 @@ function _mtlCardHtml(l){
           const on = c.sku === picked;
           return `<label class="mtl-opt${on ? ' on' : ''}">
             <input type="radio" name="mtl-${esc(l.key)}" ${on ? 'checked' : ''} onchange="mtlPick('${k}','${esc(c.sku)}')">
-            <span class="mtl-thumb">${c.image ? `<img src="${esc(c.image)}" alt="" loading="lazy" onerror="this.replaceWith(document.createRange().createContextualFragment(_LNP_THUMB))">` : _LNP_THUMB}</span>
+            <span class="mtl-thumb">${shopProductImg(c) ? `<img src="${esc(shopProductImg(c))}" alt="" loading="lazy" onerror="this.replaceWith(document.createRange().createContextualFragment(_LNP_THUMB))">` : _LNP_THUMB}</span>
             <span class="mtl-opt-main">
               <span class="mtl-ret">${esc(supplierName(sup))}${c.sku === cur ? ' · current choice' : ''}</span>
               <span class="mtl-opt-name">${esc(c.brand)} ${esc(c.name)}</span>

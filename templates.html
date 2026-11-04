@@ -328,7 +328,7 @@
             </div>
           </section>
           <section class="card allow" id="allowCard" hidden>
-            <h2>Department Allowances<span class="allow-sum" id="allowSum"></span></h2>
+            <h2>Materials Allowances<span class="allow-sum" id="allowSum"></span></h2>
             <div class="allow-body" id="allowRows"></div>
           </section>
         </div>
@@ -575,9 +575,25 @@
      rather than naming one group. Only Basement lists its tasks, so the
      spread is mock, steady per task. */
   function tradeTaskCounts(task) {
-    let h = 0; for (const ch of task) h = (h * 33 + ch.charCodeAt(0)) >>> 0;
-    const n = 1 + (h % 4), c = taskCounts(task);
+    const n = taskGroups(task).length, c = taskCounts(task);
     return { tasks: n, options: c.options * n, lines: c.lines * n };
+  }
+  /* The groups a task sits in. Groups with a real list answer for
+     themselves; the rest are a steady mock spread from the template's groups,
+     kept once made so the drawer can edit them. */
+  const TASK_EXTRA = {};   // task → { desc, groups }
+  function taskGroups(task) {
+    if (TASK_EXTRA[task]) return TASK_EXTRA[task].groups;
+    let h = 0; for (const ch of task) h = (h * 33 + ch.charCodeAt(0)) >>> 0;
+    const want = 1 + (h % 4);
+    const all = SECTIONS.flatMap(s => s.groups);
+    const groups = all.filter(g => g.known && (g.taskList || TASK_CATALOG.slice(0, g.tasks)).includes(task)).map(g => g.name);
+    for (let i = 0; groups.length < want && i < all.length; i++) {
+      const g = all[(h + i * 7) % all.length].name;
+      if (!groups.includes(g)) groups.push(g);
+    }
+    TASK_EXTRA[task] = { desc: task, groups };
+    return groups;
   }
   function typeCounts(tasks) {
     return tasks.reduce((a, t) => { const c = taskCounts(t); a.options += c.options; a.lines += c.lines; return a; }, { options: 0, lines: 0 });
@@ -612,7 +628,7 @@
           return `<div class="cat${open ? ' is-open' : ''}">
             <div class="grp cat-row trade-row" data-trade="${esc(t.name)}">${caret(open)}<span class="n">${esc(t.name)}</span><span class="t">${plural(t.tasks.length, 'task')}</span></div>
             ${open ? (t.shown.length
-              ? t.shown.map(x => `<div class="grp task-row trade-task" data-s="${x.si}" data-g="${x.gi}"><span class="n">${esc(x.task)}</span><span class="t">${plural(tradeTaskCounts(x.task).tasks, 'task')}</span></div>`).join('')
+              ? t.shown.map(x => `<div class="grp task-row trade-task" data-task="${esc(x.task)}"><span class="n">${esc(x.task)}</span><span class="t">${plural(tradeTaskCounts(x.task).tasks, 'task')}</span></div>`).join('')
               : '<div class="rail-empty">No tasks yet</div>') : ''}
           </div>`;
         }).join('')}</div>`;
@@ -668,13 +684,13 @@
   function allowHtml(dept, where = 'tiles') {
     if (NO_ALLOW.includes(dept)) return '';
     const v = DEPT_ALLOWANCES[dept];
-    const label = where === 'tiles' ? '<span class="alw-k">Allowance</span>' : '';
+    const label = where === 'tiles' ? '<span class="alw-k">Materials allowance</span>' : '';
     if (allowEditing === `${where}|${dept}`) {
-      return `<span class="alw" data-dept="${esc(dept)}" data-where="${where}">${label}<span class="alw-edit">$<input class="alw-in" inputmode="decimal" value="${v != null ? v.toFixed(2) : ''}" placeholder="0.00" aria-label="${esc(dept)} allowance"></span></span>`;
+      return `<span class="alw" data-dept="${esc(dept)}" data-where="${where}">${label}<span class="alw-edit">$<input class="alw-in" inputmode="decimal" value="${v != null ? v.toFixed(2) : ''}" placeholder="0.00" aria-label="${esc(dept)} materials allowance"></span></span>`;
     }
     // One control for both setting and changing it: a pencil and Edit.
     return `<span class="alw" data-dept="${esc(dept)}" data-where="${where}">${label}${v != null
-      ? `<span class="alw-v">${usd(v)}</span>` : '<span class="alw-v is-none">None</span>'}<button type="button" class="alw-btn" data-alw="${esc(dept)}" aria-label="Edit ${esc(dept)} allowance">${PENCIL}Edit</button></span>`;
+      ? `<span class="alw-v">${usd(v)}</span>` : '<span class="alw-v is-none">None</span>'}<button type="button" class="alw-btn" data-alw="${esc(dept)}" aria-label="Edit ${esc(dept)} materials allowance">${PENCIL}Edit</button></span>`;
   }
   const PENCIL = '<svg class="alw-pen" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.2 2.3l2.5 2.5-8.4 8.4-3.1.6.6-3.1z"/><path d="M9.6 3.9l2.5 2.5"/></svg>';
   // Departments and product types in the Information card, counted the way
@@ -707,7 +723,7 @@
     $('allowRows').innerHTML = (set.length ? `<div class="allow-grid">${set.map(row).join('')}</div>` : '')
       + (unset.length ? `<div class="allow-rest${open ? ' is-open' : ''}">
           <button type="button" class="allow-rest-hd" data-rest aria-expanded="${open}">
-            <span class="allow-rest-n">Missing allowance: ${plural(unset.length, 'department')}</span>
+            <span class="allow-rest-n">Missing materials allowance: ${plural(unset.length, 'department')}</span>
             <svg class="cv${open ? ' open' : ''}" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
             <span class="allow-rest-names">${unset.map(c => esc(c.name)).join(' · ')}</span>
           </button>
@@ -737,7 +753,7 @@
         <h2 class="sh" id="trade-${t.name.replace(/\W+/g, '-')}">${esc(t.name.toUpperCase())}<span class="c">${plural(t.tasks.length, 'TASK').toUpperCase()}</span></h2>
         ${t.tasks.length ? `<div class="tiles">${t.tasks.map(x => {
           const n = tradeTaskCounts(x.task);
-          return `<div class="tile" data-s="${x.si}" data-g="${x.gi}">
+          return `<div class="tile" data-task="${esc(x.task)}">
             <h3>${esc(x.task)}</h3>
             <p>${plural(n.tasks, 'task')}<br>${plural(n.options, 'option')}<br>${plural(n.lines, 'line item')}</p>
           </div>`;
@@ -838,6 +854,7 @@
     const g = e.target.closest('.grp');
     if (!g) return;
     // A task opens its group, as its card does.
+    if (g.dataset.task) { openTaskDrawer(g.dataset.task); return; }
     if (g.classList.contains('task-row')) { openDrawer(+g.dataset.s, +g.dataset.g); return; }
     if (g.classList.contains('trade-row')) {
       const k = g.dataset.trade;
@@ -918,6 +935,7 @@
              tasksH: "Group's Tasks", tasks: 'Tasks in Group', add: 'ADD NEW TASK TO THIS GROUP', del: 'DELETE THIS GROUP TEMPLATE' },
     type:  { title: 'Product type', meas: "Product type's Custom Values (Measurements)", std: 'Use standard Product type measurements',
              tasksH: "Product type's Tasks", tasks: 'Tasks in Product type', add: 'ADD NEW TASK TO THIS PRODUCT TYPE', del: 'DELETE THIS PRODUCT TYPE' },
+    task:  { title: 'Task', meas: '', std: '', tasksH: 'Groups with this Task', tasks: 'Groups', add: 'ADD THIS TASK TO ANOTHER GROUP', del: 'DELETE THIS TASK FROM THE TEMPLATE' },
   };
   function setDrawerKind(kind) {
     const w = DR_WORDS[kind];
@@ -929,12 +947,14 @@
     $('drDelete').textContent = w.del;
     // A product type sits in a department; a group's category is interior /
     // exterior, which is a different thing and keeps its name.
-    $('drCatLbl').textContent = kind === 'type' ? 'Department' : 'Category';
-    // A product type has no measurements of its own — those belong to rooms.
+    $('drCatLbl').textContent = kind === 'type' ? 'Department' : kind === 'task' ? 'Trade' : 'Category';
+    // Product types and tasks have no measurements of their own — those belong to rooms.
     [$('drTypeFld'), $('drFloorBox'), $('drMeasH').parentElement, $('drStd').closest('label'), $('drMeas')]
-      .forEach(el => { el.hidden = kind === 'type'; });
+      .forEach(el => { el.hidden = kind !== 'group'; });
     $('drCat').innerHTML = kind === 'type'
       ? CATEGORIES.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')
+      : kind === 'task'
+      ? [...TRADES, 'No trade'].map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('')
       : SECTIONS.map((s, i) => `<option value="${i}">${s.kind.toLowerCase()}</option>`).join('');
   }
   const drTitle = () => `${DR_WORDS[cur.kind].title}: ${cur.g.name}`;
@@ -972,6 +992,44 @@
     if (oldKey !== newKey) delete PT_EXTRA[oldKey];
     cur.from = { cat: g.cat, name: g.name };
     rerenderAll();
+  }
+
+  /* A task, from the Trades view: its name, description and trade, and the
+     groups it sits in — added or taken out with the same checklist the other
+     drawers use for tasks. */
+  function openTaskDrawer(task) {
+    const x = TASK_EXTRA[task] || (taskGroups(task), TASK_EXTRA[task]);
+    cur = { kind: 'task', task, g: { name: task, desc: x.desc, taskList: x.groups, floors: [], meas: true, custom: Object.fromEntries(MEAS_FIELDS) } };
+    setDrawerKind('task');
+    $('drTitle').textContent = drTitle();
+    setField($('drName'), task);
+    setField($('drDesc'), x.desc);
+    $('drCat').value = TASK_TRADE[task] || 'No trade';
+    renderDrawerMeas();
+    renderTags();
+    $('drawer').querySelector('.dr-body').scrollTop = 0;
+    document.body.classList.add('dr-open');
+    $('drawer').setAttribute('aria-hidden', 'false');
+  }
+  // Renaming a task renames it everywhere the template keeps it.
+  function renameTask(from, to) {
+    if (!to || from === to) return;
+    const move = obj => { if (from in obj) { obj[to] = obj[from]; delete obj[from]; } };
+    move(TASK_TRADE); move(TASK_TYPES); move(TASK_EXTRA);
+    const ci = TASK_CATALOG.indexOf(from); if (ci >= 0) TASK_CATALOG[ci] = to;
+    SECTIONS.forEach(s => s.groups.forEach(g => { const i = (g.taskList || []).indexOf(from); if (i >= 0) g.taskList[i] = to; }));
+    cur.task = to;
+  }
+  // Basement keeps a real task list, so putting a task in or out of it says so there too.
+  function syncKnownGroups(task, groups) {
+    SECTIONS.forEach(s => s.groups.forEach(g => {
+      if (!g.known) return;
+      g.taskList ??= TASK_CATALOG.slice(0, g.tasks);
+      const i = g.taskList.indexOf(task), want = groups.includes(g.name);
+      if (want && i < 0) g.taskList.push(task);
+      if (!want && i >= 0) g.taskList.splice(i, 1);
+      g.tasks = g.taskList.length;
+    }));
   }
 
   function openDrawer(si, gi) {
@@ -1018,6 +1076,7 @@
 
   function syncTaskCount() {
     if (cur.kind === 'type') { applyType(); return; }
+    if (cur.kind === 'task') { syncKnownGroups(cur.task, cur.g.taskList); rerenderAll(); return; }
     const g = cur.g;
     if (g.active != null) g.active = Math.min(g.active, g.taskList.length);
     g.tasks = g.taskList.length;
@@ -1026,6 +1085,8 @@
 
   $('groupTiles').addEventListener('click', e => {
     if (e.target.closest('.alw')) return;
+    const tk = e.target.closest('.tile[data-task]');
+    if (tk) { openTaskDrawer(tk.dataset.task); return; }
     const pt = e.target.closest('.tile[data-type]');
     if (pt) { openTypeDrawer(pt.dataset.cat, pt.dataset.type); return; }
     const t = e.target.closest('.tile[data-s]');
@@ -1063,15 +1124,20 @@
     cur.g.name = e.target.value;
     $('drTitle').textContent = drTitle();
     if (cur.kind === 'type') { if (cur.g.name.trim()) applyType(); return; }
+    if (cur.kind === 'task') { if (cur.g.name.trim()) { renameTask(cur.task, cur.g.name.trim()); rerenderAll(); } return; }
     rerenderAll();
   });
-  $('drDesc').addEventListener('input', e => { if (!cur) return; cur.g.desc = e.target.value; if (cur.kind === 'type') PT_EXTRA[`${cur.g.cat}|${cur.g.name}`] = { desc: cur.g.desc, meas: cur.g.meas, custom: cur.g.custom }; });
+  $('drDesc').addEventListener('input', e => { if (!cur) return; cur.g.desc = e.target.value; if (cur.kind === 'task') TASK_EXTRA[cur.task].desc = cur.g.desc; if (cur.kind === 'type') PT_EXTRA[`${cur.g.cat}|${cur.g.name}`] = { desc: cur.g.desc, meas: cur.g.meas, custom: cur.g.custom }; });
   $('drType').addEventListener('change', e => {
     cur.g.type = e.target.value;
     e.target.classList.toggle('empty', !e.target.value);
   });
   $('drCat').addEventListener('change', e => {
     if (cur.kind === 'type') { cur.g.cat = e.target.value; applyType(); return; }
+    if (cur.kind === 'task') {
+      if (e.target.value === 'No trade') delete TASK_TRADE[cur.task]; else TASK_TRADE[cur.task] = e.target.value;
+      rerenderAll(); return;
+    }
     const to = SECTIONS[e.target.value];
     cur.s.groups.splice(cur.s.groups.indexOf(cur.g), 1);
     to.groups.push(cur.g);
@@ -1114,12 +1180,14 @@
     if (!cur) return;
     const q = $('drTask').value.trim().toLowerCase();
     const have = new Set(cur.g.taskList.map(t => t.toLowerCase()));
-    const list = ALL_TASKS.filter(t => !q || t.toLowerCase().includes(q));
+    const pool = cur.kind === 'task' ? SECTIONS.flatMap(s => s.groups.map(g => g.name)) : ALL_TASKS;
+    const list = pool.filter(t => !q || t.toLowerCase().includes(q));
     const hl = t => { if (!q) return esc(t); const i = t.toLowerCase().indexOf(q); return esc(t.slice(0, i)) + '<mark>' + esc(t.slice(i, i + q.length)) + '</mark>' + esc(t.slice(i + q.length)); };
     const top = dd.scrollTop;
     dd.innerHTML = list.map(t => `<label class="tdd-row" role="option" aria-selected="${have.has(t.toLowerCase())}">
         <input type="checkbox" data-task="${esc(t)}" ${have.has(t.toLowerCase()) ? 'checked' : ''}><span class="tdd-n">${hl(t)}</span>${cur.kind === 'type' ? `<span class="tdd-grp">${esc(taskGroupOf(t))}</span>` : ''}</label>`).join('')
-      || `<div class="tdd-none">No task matches. Press Enter to add “${esc($('drTask').value.trim())}”.</div>`;
+      || (cur.kind === 'task' ? '<div class="tdd-none">No group matches.</div>'
+        : `<div class="tdd-none">No task matches. Press Enter to add “${esc($('drTask').value.trim())}”.</div>`);
     dd.scrollTop = top;
   }
   const showTaskDd = on => { $('drTaskDd').hidden = !on; $('drTask').setAttribute('aria-expanded', on); if (on) renderTaskDd(); };
@@ -1141,6 +1209,8 @@
   $('drTask').addEventListener('keydown', e => {
     const v = e.target.value.trim();
     if (e.key !== 'Enter' || !v) return;
+    // A task's list is groups: only a group the template has can go in it.
+    if (cur.kind === 'task' && !SECTIONS.some(s => s.groups.some(g => g.name.toLowerCase() === v.toLowerCase()))) return;
     const i = cur.g.taskList.findIndex(t => t.toLowerCase() === v.toLowerCase());
     if (i >= 0) cur.g.taskList.splice(i, 1); // typing an existing task removes it — "add or remove"
     else cur.g.taskList.push(v);
@@ -1161,6 +1231,14 @@
     $('drTask').focus();
   });
   $('drDelete').addEventListener('click', () => {
+    if (cur.kind === 'task') {
+      if (!confirm(`Delete "${cur.task}" from this template? It comes out of every group it's in.`)) return;
+      syncKnownGroups(cur.task, []);
+      delete TASK_EXTRA[cur.task];
+      closeDrawer();
+      rerenderAll();
+      return;
+    }
     if (cur.kind === 'type') {
       if (!confirm(`Delete the "${cur.g.name}" product type? Its tasks stay in their groups.`)) return;
       cur.g.taskList = [];
