@@ -7006,3 +7006,436 @@ button.alw-v.is-edit:hover{text-decoration:underline;text-decoration-thickness:1
 .ntm-add{background:var(--ink);border-color:var(--ink);color:var(--white)}
 .ntm-add:hover:not(:disabled){background:#000}
 .ntm-acts .ntm-add:disabled{opacity:.3}
+/* Product type and department pages: one breadcrumb per line, the tags in a
+   column so the trails start on the same edge. */
+.task-crumbs.is-stack{display:inline-grid;grid-template-columns:auto 1fr;align-items:center;gap:6px 10px}
+.task-crumbs.is-stack .page-kind{justify-self:start}
+.task-crumbs.is-stack .task-crumbs-div{display:none}
+/* Breadcrumb links read as links: underlined at rest, darker on hover. */
+.task-crumb-a,.tkh-crumb-a{border-bottom-color:currentColor}
+.task-crumb-a:hover,.tkh-crumb-a:hover{color:var(--ink);border-bottom-color:var(--ink)}
+/* A product type's approved figure, struck, left of its current one. */
+.dline-hdr .dline-was{margin-left:auto;margin-right:8px;font-size:12px;color:var(--t3);text-decoration:line-through;text-decoration-thickness:1px;font-variant-numeric:tabular-nums}
+.dline-hdr .dline-was + .dline-amt{margin-left:0}
+.task-amt-line:has(> .task-amt-was){flex-direction:row;align-items:baseline;flex-wrap:nowrap}
+/* Where a department's allowance comes from. */
+.alw-tbl .alw-src{display:block;margin:1px 0 0;font-size:11px}
+.alw-src.is-changed,.alw-src.is-job{color:#9E6B2F}
+.alw-tpl-link{padding:0;background:none;border:0;border-bottom:1px solid currentColor;font:inherit;color:var(--ink);cursor:pointer;line-height:1.2}
+.alw-tpl-link:hover{border-bottom-width:2px}
+.alw-tpl-note{margin-top:4px}
+/* The task's place — group, department, product type — as fields, the code
+   alone on the top line. */
+.tkh-top{justify-content:flex-end}
+.tkh-val .tkh-crumb-a{font-family:var(--body);font-size:13.5px;letter-spacing:0;text-transform:none;color:var(--ink)}
+/* Overview: scope total over the job budget as one figure. */
+.ov-budget{gap:4px}
+.ov-budget-v{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.ov-budget-scope{font-family:var(--display);font-size:26px;font-weight:700;letter-spacing:-.015em;line-height:1.1;color:var(--ink);font-variant-numeric:tabular-nums}
+.ov-budget-of{font-family:var(--display);font-size:20px;color:var(--t3)}
+.ov-budget-b{display:inline-flex;align-items:baseline}
+.ov-budget-v .ov-budget-b .alw-v,.ov-budget-v .ov-budget-b button.alw-v{font-family:var(--display);font-size:18px;font-weight:600;color:var(--t2);letter-spacing:-.01em}
+.ov-budget-v .ov-budget-b .alw-input{font-size:18px;width:130px}
+.ov-budget-bar{width:100%;min-width:220px;height:4px;background:var(--stroke);margin-top:4px;overflow:hidden}
+.ov-budget-bar span{display:block;height:100%;background:var(--success)}
+.ov-budget-bar.is-near span{background:#9E6B2F}
+.ov-budget-bar.is-over span{background:var(--error)}
+/* The scope total at the budget's size: one figure, "$a / $b". */
+.ov-budget-scope{font-size:18px;font-weight:600;letter-spacing:-.01em}
+.ov-budget-of{font-size:16px}
+.ov-budget-v .ov-budget-b .alw-v,.ov-budget-v .ov-budget-b button.alw-v{color:var(--ink)}
+/* The Record's band: the same block laid flat under the breakdown. */
+.ov-budget.is-band{display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;column-gap:16px;row-gap:6px;
+  margin-top:16px;padding-top:14px;border-top:1px solid var(--stroke);text-align:left}
+.ov-budget.is-band .ov-stat-k{grid-column:1}
+.ov-budget.is-band .ov-budget-v{grid-column:2;justify-content:flex-start}
+.ov-budget.is-band .alw-st{grid-column:3;text-align:right}
+.ov-budget.is-band .ov-budget-bar{grid-column:1 / -1;grid-row:2;min-width:0;margin-top:0}
+/* Edit sits on the label's line. */
+.ov-budget-hd{display:inline-flex;align-items:baseline;gap:8px}
+.ov-budget-hd .alw-btn{margin-left:0;font-size:11.5px}
+.ov-budget.is-band .ov-budget-hd{grid-column:1}
+/* The band's notes (where a department's number came from) under its bar. */
+.ov-budget-notes{display:flex;flex-wrap:wrap;gap:2px 16px}
+.ov-budget.is-band .ov-budget-notes{grid-column:1 / -1}
+.ov-budget-notes .alw-src{display:inline;font-size:12px}
+.ov-budget.is-unset .ov-budget-v .alw-v.is-none{font-size:14px;font-weight:400}
+.ov-budget.is-band.is-unset{grid-template-columns:auto 1fr}
+/* Department page: the warning sits under the band. */
+.pgd-hdr-box .ov-budget.is-band + .alw-warn{margin-top:10px}
+/* In the task header the band runs the card's width. */
+.tkh .ov-budget.is-band{margin-top:10px;padding-top:12px}
+/* Shop with Kai: the figures' labels sit above them, as the job and
+   property fields do. */
+.ov-root.is-shop .ov-stats .ov-stat{flex-direction:column-reverse;gap:3px}
+/* The block in a page header's top right corner, as on the Overview. */
+.ov-budget.is-corner{display:flex;flex-direction:column;align-items:flex-end;text-align:right;gap:4px}
+.ov-budget.is-corner .ov-budget-bar{min-width:240px}
+.ov-budget.is-corner .ov-budget-notes{justify-content:flex-end;margin-top:2px}
+.ov-budget.is-corner .ov-budget-notes .alw-src{display:block}
+.pgd-hdr-box .sec-taskcard-hdr-r:has(.ov-budget.is-corner){flex-shrink:0}
+.pgd-hdr-box .alw-warn{margin-top:14px}
+/* Layout file's task header: the allowance band under the description. */
+.sec-taskhdr .ov-budget.is-band{margin-top:12px}
+/* Layout task header: price and allowance as one compact figure top right. */
+.sec-taskhdr .ov-budget.is-corner{margin-left:auto;flex-shrink:0}
+.sec-taskhdr .ov-budget.is-corner .ov-budget-bar{min-width:0;width:100%}
+.sec-taskhdr .ov-budget.is-corner .ov-budget-scope,
+.sec-taskhdr .ov-budget.is-corner .ov-budget-b .alw-v,
+.sec-taskhdr .ov-budget.is-corner .ov-budget-b button.alw-v{font-size:16px}
+.sec-taskhdr .ov-budget.is-corner .ov-budget-of{font-size:14px}
+.sec-taskhdr .ov-budget.is-corner .alw-src .cost-delta{margin-left:0}
+/* The page-kind tags read as labels, not buttons: plain grey mono caps, as
+   the Overview's field labels (Job ID). */
+.page-kind{padding:0;background:none;color:var(--t3);font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border:0;border-radius:0}
+.task-crumb-f{display:inline-flex;align-items:baseline;gap:6px}
+/* Layout pages: the page's name first, then the small labelled lines and
+   the count together under it. */
+.sec-taskcard-hdr-l:has(.task-crumbs) > .pgd-title,
+.sec-taskcard-hdr-l:has(.task-crumbs) > .pgd-title-l,
+.sec-taskcard-hdr-l:has(.task-crumbs) > .sec-taskhdr-title-row{order:-1;margin-bottom:6px}
+.sec-taskcard-hdr-l:has(.task-crumbs) > .lnp-eyebrow{margin-bottom:0}
+.sec-taskcard-hdr-l:has(.task-crumbs) > .pgd-grp-meta{margin-top:4px}
+/* Layout task info: the contractor on its own line, the description the
+   full width under it. */
+.sec-taskdesc-body.is-stack{grid-template-columns:minmax(0,1fr)}
+.sec-taskdesc-body.is-stack .sec-taskdesc-gc{max-width:320px}
+/* Record: the allowances table on white, for reading. */
+.art-alw .alw-ov{background:var(--white);border:1px solid var(--stroke);padding:14px 18px 16px}
+/* Task row tags share one line, wrapping only when they run out of room. */
+.task-mid-status .alw-mark,.task-mid-status .co-pill{margin-left:0}
+
+/* ════ Corners: the design-system rule ════
+   Square corners mean "you can press this": buttons, dropdowns, inputs,
+   links set as boxes. Informational tags — a task's status, Change, Over,
+   Deferred, document states, product badges — get a slight round, so a tag
+   is never mistaken for a control. Add a new tag's class to this list. */
+:root{--r-tag:3px}
+.task-status,.task-mod,.co-pill,.alw-mark,.pgd-tk-status,.pgd-tk-mod,.pgd-mod-chip,
+.po-status,.po-src-tag,.reg-chip,.reg-status,.reg-draft-tag,.hist-card-tag,.hist-doc-tag,
+.shop-product-tag,.mtl-tag,.mtl-chip,.mtw-badge,.sup-tag,.a2-badge,.a2-mc-badge,.a2-mod,
+.tlx-ms-tag,.tlx-status,.tl-cell-status,.pgd-photo-groupbadge,.lnp-total-status,
+.gal-coord-status,.co-bar-tag,.sb-edit-banner-tag,.td-mod,.ph-tag,.org-chip,.mkt-chip,
+.ds-hover-tag,.ov-tl-state,.cart-summary .pill,.gal-photo .tag,
+.pgd-photo-date,.pm-photo-stage{border-radius:var(--r-tag)}
+/* …and nothing pressable is rounded. */
+.pgd-act-btn,.ntp-close,.grp-caret-btn,.dline-caret-btn,.opt-card-doc,.opt-card-more{border-radius:0}
+/* Record allowances: the job budget heads the table, set apart from the departments. */
+.alw-tr.is-job td{border-bottom:1.5px solid var(--ink)}
+.alw-tr.is-more td{padding:6px 0 8px}
+.alw-more{padding:0;background:none;border:0;border-bottom:1px solid currentColor;font:inherit;font-size:12.5px;color:var(--t2);cursor:pointer}
+.alw-more:hover{color:var(--ink)}
+.alw-tr.is-unset td:first-child{font-weight:400}
+.reg-lead-co b{font-weight:600}
+.reg-lead-co b.is-over{color:#9E6B2F}
+.reg-lead-co b.is-under{color:var(--success)}
+/* Record (Shop): resident-responsible money marked inside its segment, and
+   the same mark beside its line in the key. */
+.reg-bar-seg{position:relative;overflow:hidden}
+.reg-bar-res{position:absolute;top:0;right:0;bottom:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.6) 0 2px,transparent 2px 5px)}
+.reg-res-sw{display:inline-block;width:12px;height:10px;margin-right:6px;vertical-align:-1px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.6) 0 2px,transparent 2px 5px)}
+.reg-res-sw.is-mat{background-color:var(--ink)}
+.reg-res-sw.is-lab{background-color:var(--midtone)}
+/* Record lead with a budget: total left, scope / budget right, history under. */
+.reg-lead-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px 32px;flex-wrap:wrap}
+.reg-lead.has-budget .reg-lead-head .reg-lead-val{margin-top:6px;font-size:34px}
+.reg-lead.has-budget .reg-lead-top{margin-top:8px}
+.reg-lead.has-budget .reg-lead-top .reg-lead-sub{text-align:left}
+.reg-lead-head .ov-budget.is-corner .ov-budget-bar{min-width:260px}
+/* Record lead as a sum: approved total − change order = scope total / budget. */
+.reg-eq{display:flex;align-items:flex-start;gap:14px 22px;flex-wrap:wrap}
+.reg-eq-cell{display:flex;flex-direction:column;gap:4px;min-width:0}
+.reg-eq-cell .reg-lead-val{margin-top:2px;font-size:34px}
+.reg-eq-v{font-family:var(--display);font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums;margin-top:2px}
+.reg-eq-v.is-under{color:var(--success)}
+.reg-eq-v.is-over{color:#9E6B2F}
+.reg-eq-sub{font-size:12.5px;color:var(--t3);line-height:1.35}
+.reg-eq-op{align-self:flex-start;margin-top:22px;font-family:var(--display);font-size:28px;font-weight:400;color:var(--t3);line-height:1}
+.reg-eq-cell.is-result{margin-left:auto}
+.reg-eq-cell.is-result .ov-budget.is-corner{align-items:flex-start;text-align:left}
+.reg-eq-cell.is-result .ov-budget.is-corner .ov-budget-v{justify-content:flex-start}
+.reg-eq-cell.is-result .ov-budget-scope,.reg-eq-cell.is-result .ov-budget-b .alw-v,.reg-eq-cell.is-result .ov-budget-b button.alw-v{font-size:34px;font-weight:700;letter-spacing:-.02em}
+.reg-eq-cell.is-result .ov-budget-of{font-size:22px}
+.reg-eq-cell.is-result .ov-budget-b .alw-v,.reg-eq-cell.is-result .ov-budget-b button.alw-v{font-size:20px;font-weight:600;color:var(--t2)}
+.reg-eq-cell.is-result .ov-budget-bar{min-width:0;width:100%}
+.reg-eq-cap{margin-top:22px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.reg-lead.has-budget .reg-bar{margin-top:8px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* Keep the sum on one row in the panel's width: smaller figures, the notes wrap. */
+.reg-eq{flex-wrap:nowrap;gap:12px 16px}
+.reg-eq-cell{flex:0 1 auto}
+.reg-eq-cell .reg-lead-val,.reg-eq-v,
+.reg-eq-cell.is-result .ov-budget-scope{font-size:28px}
+.reg-eq-cell.is-result .ov-budget-b .alw-v,.reg-eq-cell.is-result .ov-budget-b button.alw-v{font-size:17px}
+.reg-eq-op{margin-top:20px;font-size:24px}
+.reg-eq-sub{max-width:240px}
+.reg-eq-cell.is-result{margin-left:auto;flex-shrink:0}
+.reg-eq-cell.is-result .ov-budget-v{flex-wrap:nowrap;white-space:nowrap}
+@container (max-width:760px){.reg-eq{flex-wrap:wrap}}
+/* Record lead: a receipt-style statement under the headline. Small type,
+   figures right-aligned in one column, a hairline above each subtotal. */
+.reg-stmt{margin-top:16px;max-width:420px;font-size:13px;color:var(--t2)}
+.reg-stmt-row{display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:3px 0}
+.reg-stmt-v{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink)}
+.reg-stmt-row.is-sum{border-top:1px solid var(--stroke);margin-top:3px;padding-top:6px;font-weight:600;color:var(--ink)}
+.reg-stmt-row.is-sum .reg-stmt-v{font-weight:600}
+.reg-stmt-row.is-final{border-top:1px solid var(--ink)}
+.reg-stmt-note{color:var(--t3);font-weight:400;margin-left:4px}
+.reg-stmt-v .is-under{color:var(--success)}
+.reg-stmt-v .is-over{color:#9E6B2F}
+/* Ledger: the open change order and the scope total it makes, under the job total. */
+.reg-row.is-draft td{color:var(--t2);background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(0,0,0,.018) 6px 12px)}
+.reg-draft-note{margin-left:8px;font-size:12px;color:var(--t3)}
+.reg-chg-under{color:var(--success)}
+.reg-chg-over{color:#9E6B2F}
+.reg-row.is-grand.is-final td{border-top:1.5px solid var(--ink)}
+/* Two patterns, two meanings: deferred keeps its diagonal stripes; resident
+   responsible is dotted, inside its segment and on its key. */
+.reg-bar-res{background:radial-gradient(circle,rgba(255,255,255,.75) 1.1px,transparent 1.4px) 0 0/5px 5px}
+.reg-res-sw{background:radial-gradient(circle,rgba(255,255,255,.75) 1.1px,transparent 1.4px) 0 0/4px 4px}
+.reg-res-sw.is-mat{background-color:var(--ink)}
+.reg-res-sw.is-lab{background-color:var(--midtone)}
+/* Deferred inside its segment: diagonal stripes at the end. */
+.reg-bar-def{position:absolute;top:0;right:0;bottom:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.7) 0 2px,transparent 2px 5px)}
+.reg-def-sw{display:inline-block;width:12px;height:10px;margin-right:6px;vertical-align:-1px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.7) 0 2px,transparent 2px 5px)}
+.reg-def-sw.is-mat{background-color:var(--ink)}
+.reg-def-sw.is-lab{background-color:var(--midtone)}
+.alw-mark{display:inline-flex;align-items:center;gap:4px}
+.alw-mark-ic{width:10px;height:10px;fill:currentColor;flex-shrink:0}
+/* Layout task header: the Change tag sits against the title, the figures stay on the right. */
+.sec-taskhdr-title-row > .sec-taskcard-title + .co-pill{margin-right:auto;align-self:center}
+.sec-taskhdr-title-row > .sec-taskcard-title:has(+ .co-pill){flex:0 1 auto}
+/* Layout task header: the status is a labelled field beside Task / Allowance,
+   both tops aligned, so the right of the header reads as two fields. */
+.sec-taskhdr-status-inline.is-field{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-left:auto;margin-right:24px;align-self:flex-start}
+.sec-taskhdr-status-k{display:block}
+.sec-taskhdr-title-row:has(.sec-taskhdr-status-inline.is-field){align-items:flex-start}
+.sec-taskhdr-title-row:has(.sec-taskhdr-status-inline.is-field) > .ov-budget.is-corner{margin-left:0}
+.sec-taskhdr-title-row:has(.sec-taskhdr-status-inline.is-field) > .sec-taskcard-title{align-self:center}
+/* Layout task header: contractor and status side by side, then the price. */
+.sec-taskhdr-status-inline.is-field.is-gc{margin-right:16px}
+.sec-taskhdr-status-inline.is-field.is-gc + .sec-taskhdr-status-inline.is-field{margin-left:0}
+.sec-taskhdr-status-inline.is-gc .sec-hdr-dd{min-width:180px}
+/* The description on one line, cut off with an ellipsis. */
+.sec-taskdesc-line{display:flex;flex-direction:column;gap:4px;margin-top:10px;min-width:0}
+.sec-taskdesc-trunc{font-size:13.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+/* Layout task header: contractor and status as a row under the task's place. */
+.sec-taskhdr-fields{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px 24px;margin-top:12px}
+.sec-taskhdr-fields .sec-taskhdr-status-inline.is-field{margin:0;align-self:auto}
+.sec-taskcard-hdr-l:has(.task-crumbs) > .sec-taskhdr-fields{order:1}
+/* The bar that says a change order has started: floats up from the bottom,
+   stays a few seconds, goes. */
+.co-float{position:fixed;left:50%;bottom:24px;z-index:400;display:flex;align-items:flex-start;gap:10px;max-width:min(620px,calc(100vw - 32px));
+  padding:12px 14px;background:#F7EFE2;border:1px solid #E2CFAE;color:#6B4E1F;font-size:13px;line-height:1.45;
+  box-shadow:0 12px 32px rgba(26,26,26,.18);transform:translate(-50%,16px);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+.co-float.is-on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.co-float svg{width:16px;height:16px;flex-shrink:0;margin-top:2px}
+.co-float b{color:var(--ink)}
+.co-float-x{flex-shrink:0;margin-left:4px;padding:0 2px;background:none;border:0;font-size:16px;line-height:1;color:#6B4E1F;cursor:pointer}
+/* Layout task header: contractor and status as plain values with a caret —
+   no box, no fill; the status keeps its colour in the text. The menu opens
+   the same as before. */
+.sec-taskhdr-fields .sec-hdr-dd{width:auto;min-width:0}
+.sec-taskhdr-status-inline.is-gc .sec-hdr-dd{min-width:0}
+.sec-taskhdr-fields .sec-hdr-dd .pgd-filter-btn{width:auto;min-width:0;height:auto;padding:2px 0;gap:6px;background:none !important;border:0 !important;border-bottom:1px solid transparent !important;
+  font-family:var(--body);font-size:14px;font-weight:500;letter-spacing:0;text-transform:none;justify-content:flex-start}
+.sec-taskhdr-fields .sec-hdr-dd .pgd-filter-btn:hover,.sec-taskhdr-fields .sec-hdr-dd.open .pgd-filter-btn{border-bottom-color:currentColor !important}
+.sec-taskhdr-fields .sec-hdr-dd .pgd-filter-btn svg{width:11px;height:11px;flex-shrink:0}
+.sec-taskhdr-fields .sec-hdr-dd.is-un .pgd-filter-btn{color:var(--error);font-style:italic}
+.sec-taskhdr-fields .sec-hdr-dd .pgd-filter-menu{min-width:200px}
+/* Layout task header as bands, like the Overview's Job info: a name on the
+   left, labelled fields in even columns, a hairline between bands. */
+.tk-band{display:flex;align-items:flex-start;gap:0 24px;margin-top:14px;padding-top:14px;border-top:1px solid var(--stroke)}
+.tk-band-h{flex:0 0 96px;margin:0;padding-top:1px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.tk-grid{flex:1;min-width:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 24px}
+.tk-f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.tk-f-v{font-size:13.5px;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.tk-f-link{font-family:var(--body) !important;font-size:13.5px !important;letter-spacing:0 !important;text-transform:none !important;color:var(--ink) !important}
+.tk-band > .sec-taskdesc-trunc{flex:1}
+.tk-grid .sec-taskhdr-status-inline{margin:0}
+.tk-grid .sec-hdr-dd{width:auto;min-width:0}
+.tk-grid .sec-hdr-dd .pgd-filter-btn{width:auto;min-width:0;height:auto;padding:0;gap:6px;background:none !important;border:0 !important;border-bottom:1px solid transparent !important;
+  font-family:var(--body);font-size:13.5px;font-weight:500;letter-spacing:0;text-transform:none;justify-content:flex-start}
+.tk-grid .sec-hdr-dd .pgd-filter-btn:hover,.tk-grid .sec-hdr-dd.open .pgd-filter-btn{border-bottom-color:currentColor !important}
+.tk-grid .sec-hdr-dd .pgd-filter-btn svg{width:11px;height:11px;flex-shrink:0}
+.tk-grid .sec-hdr-dd.is-un .pgd-filter-btn{color:var(--error);font-style:italic}
+.tk-grid .sec-hdr-dd .pgd-filter-menu{min-width:200px}
+.tk-grid .tk-f-v:has(.sec-hdr-dd){overflow:visible}
+@container (max-width:620px){.tk-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Shop sidebar: the caption over the scope bar, and the budget under the total. */
+.sb-cap{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:7px 14px 6px;background:var(--white);border-bottom:1px solid var(--stroke);
+  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.sb-cap b{color:var(--t2);font-weight:700}
+.sb-cap-cols{white-space:nowrap}
+.sb-cap-was{text-decoration:line-through;text-decoration-thickness:1px}
+.sb-rollup:has(.sb-roll-budget){flex-direction:column;align-items:flex-end;gap:3px}
+.sb-roll-main{display:inline-flex;align-items:baseline;gap:8px}
+.sb-roll-budget{display:inline-flex;align-items:center;gap:8px;font-family:var(--body);font-size:11.5px;font-weight:400;color:var(--t3);letter-spacing:0;text-transform:none}
+.sb-roll-bar{display:inline-block;width:72px;height:3px;background:var(--stroke);overflow:hidden}
+.sb-roll-bar span{display:block;height:100%;background:var(--success)}
+.sb-roll-budget.is-over .sb-roll-bar span{background:var(--error)}
+.sb-roll-budget.is-over{color:var(--error)}
+/* The caption as a header row: column labels sit over their figures. */
+.sb-cap{position:relative;justify-content:flex-start;min-height:28px}
+.sb-cap-col{position:absolute;top:7px;white-space:nowrap}
+.sb-cap-col.is-was{text-decoration:line-through;text-decoration-thickness:1px}
+/* The warning tag is pressable now (it opens the Editor), so it keeps square
+   corners, per the corner rule. */
+button.alw-mark{border:0;font:inherit;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border-radius:0}
+button.alw-mark:hover{filter:brightness(.96);text-decoration:underline;text-underline-offset:2px}
+/* Scope bar: a small label over each figure, in place of a caption row. */
+.sb-fig{display:inline-flex;flex-direction:column;align-items:flex-end;gap:1px}
+.sb-fig-k{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);line-height:1.2}
+.sb-fig.is-was .sb-fig-k{text-decoration:line-through;text-decoration-thickness:1px}
+.sb-fig .total-was{margin-right:0}
+.sb-roll-main{align-items:flex-end;gap:12px}
+/* Scope bar: an empty slot at its end no longer holds its figure off the edge. */
+#sbScopeDec:empty{display:none}
+/* The Over tag sits just left of the figure it's about. */
+.task-amt-line > .alw-mark{margin:0 8px 0 0;flex-shrink:0;align-self:center}
+.task-right:has(.alw-mark){max-width:none}
+.task-amt-line:has(> .alw-mark){flex-direction:row;align-items:baseline;flex-wrap:nowrap}
+.grp-hdr > .alw-mark{margin-left:auto;margin-right:8px;flex-shrink:0}
+.grp-hdr > .alw-mark + .grp-total-was{margin-left:0}
+.grp-hdr > .alw-mark + .grp-total{margin-left:0}
+/* Bands on product type and department pages: three fields, the lists wrap. */
+.tk-grid.is-wide{grid-template-columns:minmax(0,1.6fr) minmax(0,1.6fr) minmax(0,.6fr)}
+.tk-grid.is-wide .tk-f-v{overflow:visible;white-space:normal;line-height:1.6}
+.tk-f-v .sec-taskcard-sep{color:var(--t3)}
+/* A department's task allowances, one row per task. */
+.tk-alw{flex:1;min-width:0;display:flex;flex-direction:column}
+.tk-alw-row{display:flex;justify-content:space-between;gap:16px;padding:4px 0;background:none;border:0;font:inherit;font-size:13.5px;color:var(--ink);text-align:left;cursor:pointer}
+.tk-alw-row:not(.is-sum):hover .tk-alw-name{text-decoration:underline}
+.tk-alw-row.is-sum{cursor:default;border-top:1px solid var(--stroke);margin-top:2px;padding-top:6px;font-weight:600}
+.tk-alw-v{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tk-alw .alw-warn{margin-top:8px}
+/* Status in the task band: the caret after the words, not over them. */
+.tk-grid .sec-hdr-dd .pgd-filter-btn svg{position:static !important;margin-left:2px}
+.tk-grid .sec-hdr-dd .pgd-filter-btn{padding-right:0 !important}
+.tk-band-h{flex-basis:118px;white-space:nowrap}
+/* Layout file: what kind of page this is, a small label over its title. */
+.pg-kind{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-bottom:2px}
+.sec-taskcard-hdr-l > .pg-kind{order:-2}
+/* Task tables with an allowance column beside the amount. */
+.pgd-tk-row.has-alw,.pgd-tk-head.has-alw{grid-template-columns:minmax(70px,1.55fr) minmax(56px,.86fr) minmax(48px,.86fr) minmax(40px,.66fr) minmax(60px,1.24fr) minmax(26px,.43fr) minmax(32px,.56fr) minmax(28px,.45fr) minmax(46px,.8fr) minmax(46px,.8fr)}
+.pgd-tk-alw{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13px;color:var(--t2)}
+.pgd-tk-alw.is-none{color:var(--t3)}
+.pgd-tk-alw.is-over{color:var(--error);font-weight:600}
+/* Tasks leads now: the narrow column first, the two lists after it. */
+.tk-grid.is-wide{grid-template-columns:minmax(0,.5fr) minmax(0,1.6fr) minmax(0,1.6fr)}
+/* Description: one line with See all, or the whole of it with Show less. */
+.tk-desc{flex:1;min-width:0;display:flex;align-items:baseline;gap:12px}
+.tk-desc .sec-taskdesc-trunc{flex:1}
+.tk-desc.is-open{flex-direction:column;align-items:flex-start;gap:6px}
+.tk-desc.is-open .sec-taskdesc-trunc{white-space:normal;overflow:visible;line-height:1.5}
+.tk-desc-more{flex-shrink:0;padding:0;background:none;border:0;border-bottom:1px solid currentColor;font:inherit;font-size:12.5px;color:var(--t2);cursor:pointer;white-space:nowrap}
+.tk-desc-more:hover{color:var(--ink)}
+/* Tighter bands: the band's name takes only what "Description" needs, Tasks
+   a narrow fixed column (a number or two), the two lists the rest. */
+.tk-band-h{flex-basis:88px}
+.tk-band{gap:0 20px}
+.tk-grid.is-wide{grid-template-columns:52px minmax(0,1fr) minmax(0,1.25fr);gap:14px 28px}
+/* Product type Overview: Tasks, Department, Groups, Products. */
+.tk-grid.is-wide4{grid-template-columns:52px minmax(0,.8fr) minmax(0,1.2fr) minmax(0,1.2fr);gap:14px 28px}
+.tk-grid.is-wide4 .tk-f-v{overflow:visible;white-space:normal;line-height:1.6}
+.tk-f-prod{text-align:left}
+/* Amount / Allowance in one column: the allowance after a slash, quieter. */
+.pgd-tk-row.has-alw,.pgd-tk-head.has-alw{grid-template-columns:minmax(70px,1.55fr) minmax(56px,.86fr) minmax(48px,.86fr) minmax(40px,.66fr) minmax(60px,1.1fr) minmax(26px,.4fr) minmax(32px,.5fr) minmax(28px,.42fr) minmax(120px,1.4fr)}
+.pgd-tk-cost .pgd-tk-alw{font-weight:400;color:var(--t3);font-size:12.5px}
+.pgd-tk-cost.is-over{color:var(--error)}
+/* Budget / allowance block without the bar: over reads as a red cost behind a
+   warning mark, with the difference under it. */
+.ov-budget.is-over .ov-budget-scope{color:var(--error);display:inline-flex;align-items:center;gap:6px}
+.ov-budget.is-over .ov-budget-scope .alw-warn-ic{width:15px;height:15px;margin:0;fill:var(--error)}
+.ov-budget-diff{font-size:12.5px;font-weight:600;color:var(--error);font-variant-numeric:tabular-nums}
+.ov-budget.is-band .ov-budget-diff{grid-column:3;text-align:right}
+/* Shown while editing a department's allowance: its source and the template. */
+.ov-budget-editnote{max-width:300px;margin-top:4px;font-size:12px;line-height:1.45;color:var(--t2);text-align:right}
+.ov-budget-editnote .alw-tpl-link{margin-top:2px;font-size:12px}
+/* The standard for a changed price: the approved figure struck through, quiet,
+   just before the current one. */
+.ov-budget-was,.tkh-was-s,.sec-taskcard-was{color:var(--t3);text-decoration:line-through;text-decoration-thickness:1px;font-weight:400;font-variant-numeric:tabular-nums;margin-right:8px}
+.ov-budget-was{font-size:13px;align-self:baseline}
+.tkh-was-s{font-size:14px;vertical-align:middle}
+.sec-taskcard-was{font-size:14px}
+/* A page figure's label, over it, as on the task's. */
+.sec-taskcard-amt-k{display:block;text-align:right;margin-bottom:2px}
+/* Department page: product types to review, first under the header. */
+.dpt-list{display:flex;flex-direction:column}
+.dpt-row{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.5fr) minmax(0,1fr) 96px 138px;align-items:center;gap:14px;
+  padding:11px 12px;border-bottom:1px solid var(--stroke);cursor:pointer}
+.dpt-row:last-child{border-bottom:0}
+.dpt-row:hover{background:var(--sunken)}
+.dpt-row.is-todo{box-shadow:inset 3px 0 0 #E58A2B}
+.dpt-name{font-weight:600;font-size:14px;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dpt-n{margin-left:8px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.dpt-prod{font-size:13px;color:var(--t2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dpt-none{color:var(--t3);font-style:italic}
+.dpt-st{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--t2);white-space:nowrap}
+.dpt-st.is-warn{color:#B45309;font-weight:600}
+.dpt-st.is-warn .alw-warn-ic{fill:#C2410C;margin:0;width:12px;height:12px}
+.dpt-st.is-ok{color:var(--success)}
+.dpt-st.is-info{color:#9E6B2F}
+.dpt-cost{text-align:right;font-variant-numeric:tabular-nums;font-size:13px;color:var(--ink)}
+.dpt-go{justify-self:end;padding:7px 12px;border:1px solid var(--stroke);background:var(--white);font-family:var(--mono);font-size:10px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink);cursor:pointer;white-space:nowrap}
+.dpt-go:hover{border-color:var(--ink)}
+.dpt-go.is-primary{background:var(--ink);border-color:var(--ink);color:var(--white)}
+.tk-f-link.is-todo{color:#B45309 !important}
+/* The product types section sits on a white card, like the photos below it. */
+.pgd-details-sec.dpt{gap:0;border:1px solid var(--stroke);background:var(--white)}
+.dpt .pgd-sec-hd{padding:12px 14px;border-bottom:1px solid var(--stroke)}
+/* Product pictures, bigger: the chosen product leads with one, alternatives
+   carry a good-sized one, each opens the product's details. */
+.lnpc-thumb.is-lg{width:88px;height:88px;cursor:zoom-in}
+.lnpc-thumb.is-md{width:64px;height:64px;cursor:zoom-in}
+.lnpc-thumb img{object-fit:cover;background:#fff}
+.optc-thumb img,.mtl-thumb img,.sec-taskcard-product-thumb img{width:100%;height:100%;object-fit:cover}
+/* Department product types: a picture at the start of each row. */
+.dpt-row{grid-template-columns:44px minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr) 96px 138px}
+.dpt-thumb{width:44px;height:44px;background:var(--sunken);border:1px solid var(--stroke);overflow:hidden;display:block}
+.dpt-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+
+/* ════ ShopwithKai_photos.html: product pictures lead ════ */
+/* Product type page: the product, large, beside the title. */
+.lnp-hero{display:none}
+.kai-shop-photos .lnp-hero{display:block;width:132px;height:132px;flex-shrink:0;margin-right:20px;background:var(--sunken);border:1px solid var(--stroke);overflow:hidden;cursor:zoom-in}
+.kai-shop-photos .lnp-hero img{width:100%;height:100%;object-fit:cover;display:block}
+/* Chosen products: the picture at the size of a product card. */
+.kai-shop-photos .lnpc-thumb.is-lg{width:168px;height:168px}
+.kai-shop-photos .lnpg-prod-l{align-items:flex-start}
+/* Alternatives as a gallery of cards, picture on top. */
+.kai-shop-photos .lnpc-alts{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;padding:0 12px 12px}
+.kai-shop-photos .lnpc-alts-hd{grid-column:1/-1;padding:10px 4px 0}
+.kai-shop-photos .lnpc-alt{display:flex;flex-direction:column;border:1px solid var(--stroke);background:var(--white);min-width:0}
+.kai-shop-photos .lnpc-alt:has(.lnp-pick){grid-column:1/-1}
+.kai-shop-photos .lnpc-alt-row{flex-direction:column;align-items:stretch;gap:8px;padding:0 0 12px;border-top:0}
+.kai-shop-photos .lnpc-alt-row > .lnpc-thumb.is-md{width:100%;height:auto;aspect-ratio:1;border:0;border-bottom:1px solid var(--stroke)}
+.kai-shop-photos .lnpc-alt-row > :not(.lnpc-thumb){margin:0 12px}
+.kai-shop-photos .lnpc-alt-name{white-space:normal;font-size:14px}
+.kai-shop-photos .lnpc-alt-price{font-size:15px}
+.kai-shop-photos .lnpc-alt-row .lnp-select{width:auto}
+.kai-shop-photos .lnpc-alt > .sup-strip{margin:0 12px 12px;padding-left:0;flex-wrap:wrap;row-gap:4px}
+/* Department page: product types as cards, picture on top. */
+.kai-shop-photos .dpt-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;padding:12px}
+.kai-shop-photos .dpt-row{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:0 0 12px;border:1px solid var(--stroke);background:var(--white)}
+.kai-shop-photos .dpt-row:last-child{border-bottom:1px solid var(--stroke)}
+.kai-shop-photos .dpt-row.is-todo{box-shadow:inset 0 3px 0 #E58A2B}
+.kai-shop-photos .dpt-thumb{width:100%;height:auto;aspect-ratio:4/3;border:0;border-bottom:1px solid var(--stroke)}
+.kai-shop-photos .dpt-row > :not(.dpt-thumb){margin:0 12px}
+.kai-shop-photos .dpt-name{white-space:normal}
+.kai-shop-photos .dpt-cost{text-align:left;font-weight:600}
+.kai-shop-photos .dpt-st:empty{display:none}
+.kai-shop-photos .dpt-go{justify-self:stretch;margin-top:4px !important}
+/* Option rows in a task: bigger pictures too. */
+.kai-shop-photos .optc-thumb{width:72px;height:72px}
+/* Photos file, Chosen products: the product reads top to bottom in its
+   column — picture, then brand and name, then its actions — one direction,
+   a card's order, level with the task rows beside it. */
+.kai-shop-photos .lnpg-body{grid-template-columns:minmax(0,.8fr) minmax(0,1.7fr);align-items:start}
+.kai-shop-photos .lnpg-prod{padding-top:0}
+.kai-shop-photos .lnpg-prod-l{flex-direction:column;align-items:flex-start;gap:10px}
+.kai-shop-photos .lnpc-thumb.is-lg{width:100%;max-width:180px;height:auto;aspect-ratio:1}
+.kai-shop-photos .lnpg-prod-n{width:100%;max-width:220px}
+.kai-shop-photos .lnpg-prod-n .lnpc-name{white-space:normal;line-height:1.3}
+.kai-shop-photos .lnpg-acts{margin-top:6px}

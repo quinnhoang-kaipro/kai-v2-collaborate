@@ -51,7 +51,11 @@ let editId = null;          // task currently in edit mode
 let editDraft = null;       // working copy of fields while editing
 
 /* ════════════ DERIVED ════════════ */
-function money(n){ return '$'+n.toLocaleString(); }
+// Shop with Kai shows every figure to the cent; the other prototypes keep
+// whole-dollar display.
+function money(n){ return window.__KAI_SHOP ? sbMoney(n) : '$'+n.toLocaleString(); }
+// A figure for display that the other prototypes round and Shop does not.
+function shopMoney(n){ return window.__KAI_SHOP ? sbMoney(n) : money(Math.round(n)); }
 
 /* unified lookup: a key may be a flag or a project modifier */
 function tagInfo(k){

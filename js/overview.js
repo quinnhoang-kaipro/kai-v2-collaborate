@@ -1410,7 +1410,7 @@ function renderOverview(){
      names the project, the title names the property, and the standing sits on
      the title's line — the same head a task carries in the Editor. */
   body.innerHTML = `
-  <div class="ov-root">
+  <div class="ov-root${window.__KAI_SHOP ? ' is-shop' : ''}">
     <section class="ov-mod ov-mod-head">
       <!-- The property, photographed. The prototype has no property
            photography, so the slot holds the tan rather than an illustration
@@ -1432,7 +1432,7 @@ function renderOverview(){
       ${jobFields}
       ${propBand}
     </section>
-    ${ALLOW_ON ? _ovSec('Allowances', ovAllowancesHtml(), 'ov-alw-sec') : ''}${_ovCrewHtml()}${trailSec}
+    ${_ovCrewHtml()}${trailSec}
   </div>`;
 }
 

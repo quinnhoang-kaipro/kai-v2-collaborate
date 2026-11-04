@@ -15,6 +15,8 @@
    selection for when it comes back. */
 const SHOP_LAYOUT = !!window.__KAI_SHOP_LAYOUT;
 document.documentElement.classList.toggle('kai-shop-layout', SHOP_LAYOUT);
+// ShopwithKai_photos.html: product pictures lead (panel.css, .kai-shop-photos).
+document.documentElement.classList.toggle('kai-shop-photos', !!window.__KAI_SHOP_PHOTOS);
 
 let poSide = null;   // null (scope list) | the order id on show
 
@@ -148,8 +150,8 @@ function _poSideOrderHtml(id){
         return `<div class="pos-line${on ? ' is-on' : ''}" role="button" tabindex="0"
             onclick="poSideProduct('${esc(jk)}')" title="Open this product in the Editor"
             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();poSideProduct('${esc(jk)}');}">
-          <div class="pos-line-thumb sec-taskcard-product-thumb">${L.image
-            ? `<img src="${esc(L.image)}" alt="" loading="lazy" onerror="this.replaceWith(document.createRange().createContextualFragment(_PO_THUMB_SVG))">`
+          <div class="pos-line-thumb sec-taskcard-product-thumb">${shopProductImg(L)
+            ? `<img src="${esc(shopProductImg(L))}" alt="" loading="lazy" onerror="this.replaceWith(document.createRange().createContextualFragment(_PO_THUMB_SVG))">`
             : _PO_THUMB_SVG}</div>
           <div class="pos-line-main">
             <div class="pos-line-top">

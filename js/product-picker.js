@@ -30,7 +30,7 @@ function renderCart(){
         <div class="cart-title">${entries.length} ${entries.length===1?'product':'products'}</div>
         <div class="cart-summary">
           <span class="pill">${Object.keys(byRoom).length} ${Object.keys(byRoom).length===1?'room':'rooms'}</span>
-          <span class="pill">${money(Math.round(grandTotal))} total</span>
+          <span class="pill">${shopMoney(grandTotal)} total</span>
           ${overCount?`<span class="pill over">${overCount} over budget</span>`:''}
         </div>
       </div>
@@ -44,7 +44,7 @@ function renderCart(){
         return `<div class="cart-group">
           <div class="cart-group-hdr">
             <span class="cart-group-name">${room}</span>
-            <span class="cart-group-meta${roomOver?' over':''}">${money(Math.round(roomTotal))} of ${money(roomBudget)}</span>
+            <span class="cart-group-meta${roomOver?' over':''}">${shopMoney(roomTotal)} of ${money(roomBudget)}</span>
           </div>
           ${items.map(e=>cartItem(e)).join('')}
         </div>`;
@@ -53,7 +53,7 @@ function renderCart(){
     <div class="cart-foot">
       <div class="cart-foot-row${grandTotal>grandBudget?' over':''}">
         <span class="gl">Grand total</span>
-        <span class="gv">${money(Math.round(grandTotal))}</span>
+        <span class="gv">${shopMoney(grandTotal)}</span>
       </div>
       <div class="cart-foot-row" style="font-size:11.5px;color:var(--t3)">
         <span class="gl">Scope budget</span>
@@ -131,7 +131,7 @@ function renderFly(){
       <button class="fly-close" onclick="closeFly()" aria-label="Close"><svg viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-linecap="round"/></svg></button>
     </div>
     <div class="fly-body">
-      <div class="fly-hero" id="flyHero" style="${p.image?'padding:0;overflow:hidden':''}">${p.image?`<img id="flyHeroImg" src="${p.image}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;background:#fff" onerror="this.style.opacity=.3">`:svgPhoto()}</div>
+      <div class="fly-hero" id="flyHero" style="${shopProductImg(p)?'padding:0;overflow:hidden':''}">${shopProductImg(p)?`<img id="flyHeroImg" src="${shopProductImg(p)}" alt="${esc(p.name)}" style="width:100%;height:100%;object-fit:${p.image?'cover':'contain'};background:#fff" onerror="this.style.opacity=.3">`:svgPhoto()}</div>
       ${flyThumbStrip(p)}
       ${p.source?`<div style="margin-top:6px;font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);display:flex;align-items:center;gap:6px"><span>Source</span><a href="${p.sourceUrl||'#'}" target="_blank" rel="noopener" style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--stroke)">${p.source}</a></div>`:''}
       ${p.listPrice&&p.listPrice>p.price?`<div style="margin-top:4px;font-family:var(--body);font-size:12px;color:var(--t3)"><span style="text-decoration:line-through">$${p.listPrice.toLocaleString()}</span> <span style="color:var(--success);font-weight:600;margin-left:4px">Save $${(p.listPrice-p.price).toLocaleString()}</span></div>`:''}

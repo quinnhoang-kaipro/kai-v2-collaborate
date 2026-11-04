@@ -84,7 +84,9 @@ if(PROJ_MODE === 'work' || PROJ_MODE === 'closeout'){
 }
 // The panel draws once as its scripts load, before the seeds above run, so
 // Shop with Kai draws again with the cents and the change order in place.
-if(window.__KAI_SHOP) document.addEventListener('DOMContentLoaded', () => { if(typeof renderAll === 'function') renderAll(); });
+// The change-order watch starts from this render: what the seeds set up
+// counts as how the job was, not as a change just made.
+if(window.__KAI_SHOP) document.addEventListener('DOMContentLoaded', () => { _coWasOpen = null; if(typeof renderAll === 'function') renderAll(); });
 /* Shop with Kai, step 6 (change order review): a change order with more in
    it than one edit — a whole room taken out (Garage), single tasks taken
    out, and prices moved both ways — submitted and waiting on review. Made
@@ -731,24 +733,54 @@ function taskRow(t, opts){
         <div class="task-mid-top">
           ${typeof flagMarkHtml === 'function' ? flagMarkHtml(t, 'task-flag') : ''}<span class="task-name">${(opts && opts.ctx) ? `<span class="task-ctx">${esc(opts.ctx)} ›</span> ` : ''}${t.name}</span>
         </div>
-        <div class="task-mid-status">${taskStatus(t)}${modChipsHtml}${(typeof ALLOW_ON !== 'undefined' && ALLOW_ON) ? allowMarkHtml(taskAllowFlag(t), 'task') : ''}</div>
         ${(() => {
           // Only emitted when there's something in it. It used to always
           // render and lean on :empty to collapse, which never matched —
-          // the newline inside the tag is a text node.
+          // the newline inside the tag is a text node. Shop with Kai keeps
+          // every tag on one wrapping line, the change tag included.
           const co = (typeof _coPillHtml === 'function') ? _coPillHtml(t) : '';
-          return co ? `<div class="task-mid-meta">${co}</div>` : '';
+          const one = !!window.__KAI_SHOP;
+          return `<div class="task-mid-status">${taskStatus(t)}${modChipsHtml}${one ? co : ''}</div>`
+            + (co && !one ? `<div class="task-mid-meta">${co}</div>` : '');
         })()}
       </div>
       <div class="task-right">
         ${taskDecisionHtml(t)}
-        <span class="task-amt-line">${amtHtml}</span>
+        <span class="task-amt-line">${(typeof ALLOW_ON !== 'undefined' && ALLOW_ON) ? allowMarkHtml(taskAllowFlag(t), 'task', t) : ''}${amtHtml}</span>
       </div>
     </div>
     ${(opts && opts.after) || ''}
   </div>`;
 }
+/* Shop with Kai: the moment the scope's first edit after approval opens a
+   change order, a bar floats up to say so — once, then it goes. Watched from
+   every sidebar render, which follows every edit; the state at load is taken
+   as given, so a change order already open doesn't announce itself. */
+let _coWasOpen = null, _coFloatT = null;
+function _coAnyOpen(){
+  return TASKS.some(t => (typeof taskHasDraftChangeOrder === 'function' && taskHasDraftChangeOrder(t)))
+    || (typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.size > 0)
+    || (typeof __CO_ADDED !== 'undefined' && __CO_ADDED.size > 0);
+}
+function _coWatch(){
+  if(!window.__KAI_SHOP || !(PROJ_MODE === 'work' || PROJ_MODE === 'closeout')) return;
+  const now = _coAnyOpen();
+  if(_coWasOpen === false && now) _coFloat();
+  _coWasOpen = now;
+}
+function _coFloat(){
+  const nm = (typeof versionLabel === 'function' && typeof VERSIONS !== 'undefined') ? versionLabel({num: VERSIONS.length + 1}) : 'A change order';
+  let el = document.getElementById('coFloat');
+  if(!el){ el = document.createElement('div'); el.id = 'coFloat'; el.className = 'co-float'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  el.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.5L14.5 5v6L8 14.5 1.5 11V5z"/><path d="M8 8v3.5M8 5.2v.2"/></svg>
+    <span><b>${esc(nm)} started.</b> The scope is approved, so this edit and the ones after it go into a draft change order. Submit it for review when it's ready.</span>
+    <button type="button" class="co-float-x" onclick="document.getElementById('coFloat').classList.remove('is-on')" aria-label="Dismiss">×</button>`;
+  setTimeout(() => el.classList.add('is-on'), 20);
+  clearTimeout(_coFloatT);
+  _coFloatT = setTimeout(() => el.classList.remove('is-on'), 7000);
+}
 function renderSidebar(){
+  _coWatch();
   // The white Scope bar is the scope-level nav target. Availability is
   // a body class (so CSS can drop the affordance entirely at the Edit
   // stage) and selection mirrors the group rows' is-selgrp treatment.
@@ -788,8 +820,16 @@ function renderSidebar(){
   // changes in — with what it moved by on its left, in every view.
   const _shopScope = !!window.__KAI_SHOP && !(typeof __KAI_SCOPE_TOTAL_OVERRIDE !== 'undefined' && __KAI_SCOPE_TOTAL_OVERRIDE);
   const _sc = _shopScope ? _shopSum(tasks, _shopMode()) : null;
+  /* Shop with Kai: a caption over the scope bar names what the figures add
+     up to in this view and which column is which, and in All the total is
+     read against the job budget under it. */
+  /* Shop with Kai: each figure in the scope bar carries its own small label
+     above it — what it adds up to in this view, and Approved over the struck
+     one — so the bar is its own header row. */
+  const _colLbl = (() => { const m = _shopMode(); return m === 'dept' ? 'Materials cost' : m === 'contractor' ? 'Labor cost' : 'Total cost'; })();
+  const _wasFig = _sc && _sc.delta ? `<span class="sb-fig is-was"><span class="sb-fig-k">Approved</span>${_shopWasHtml(_sc, 'total-was')}</span>` : '';
   document.getElementById('sbRollup').innerHTML = _shopScope
-    ? `${deltaChipHtml(_sc.delta)}<span class="total">${sbMoney(_sc.now)}</span>`
+    ? `<span class="sb-roll-main">${_wasFig}<span class="sb-fig"><span class="sb-fig-k">${_colLbl}</span><span class="total">${sbMoney(_sc.now)}</span></span></span>`
     : _sideTotal == null
     ? (window.__KAI_SHOP ? `${scopeDeltaChip}<span class="total">${totalDisplay}</span>` : `<span class="total">${totalDisplay}</span>${scopeDeltaChip}`)
     : `<span class="total">${sbMoney(_sideTotal)}</span>`;
@@ -862,8 +902,7 @@ function renderSidebar(){
           const n = g.items.length;
           return `<span class="grp-approve-caption" title="${n} ${n===1?'task':'tasks'}">${n} ${n===1?'task':'tasks'}</span>`;
         })()}
-        ${(typeof ALLOW_ON !== 'undefined' && ALLOW_ON && groupBy === 'dept') ? allowMarkHtml(deptAllowFlag(g.key), 'department') : ''}
-        ${_gs ? `${_leadChip(_gs.delta)}<span class="grp-total">${sbMoney(_gs.now)}</span>`
+        ${_gs ? `${(typeof ALLOW_ON !== 'undefined' && ALLOW_ON && groupBy === 'dept') ? allowMarkHtml(deptAllowFlag(g.key), 'department', null, g.key) : ''}${_shopWasHtml(_gs, 'grp-total-was')}<span class="grp-total">${sbMoney(_gs.now)}</span>`
           : grpRemoved ? `<span class="grp-total">${sbMoney(grpWas)}</span>`
           : (coRoom && Math.round(grpWas) !== Math.round(grpNow))
             ? `<span class="grp-total-was">${sbMoney(grpWas)}</span><span class="grp-total">${sbMoney(grpNow)}</span>`
@@ -940,7 +979,7 @@ function deptLinesHtml(g){
           const ls = window.__KAI_SHOP ? _shopSum(l.items, 'dept') : null;
           const now = ls ? ls.now : l.items.reduce((a, t) => a + _taskMatSplit(t).now, 0);
           const later = l.items.reduce((a, t) => a + _taskMatSplit(t).later, 0);
-          return (ls ? _leadChip(ls.delta) : '')
+          return (ls ? _shopWasHtml(ls, 'dline-was') : '')
             + `<span class="dline-amt">${now ? sbMoney(now) : (later ? '—' : (isLabor ? '' : sbMoney(0)))}</span>`
             + (later && !window.__KAI_SHOP ? `<span class="dline-later" title="Waiting on a change order">+${money(Math.round(later))} deferred</span>` : '');
         })()}
@@ -1025,6 +1064,8 @@ function _sbSideAmtHtml(t, side, later){
   // names it — no second "deferred" under the figure.
   if(wait && wait >= part) return `<span class="task-amt is-later">${sbMoney(part)}</span>`;
   if(!part) return `<span class="task-amt is-none">—</span>${of}`;
+  // Shop with Kai counts deferred inside the figure and says how much of it is.
+  if(window.__KAI_SHOP) return `<span class="task-amt">${sbMoney(part)}</span>${wait ? `<span class="task-amt-of">incl. ${sbMoney(wait)} deferred</span>` : of}`;
   return `<span class="task-amt">${sbMoney(part - wait)}</span>${wait ? `<span class="task-amt-of">+${sbMoney(wait)} deferred</span>` : of}`;
 }
 function taskLineCost(l, t){
@@ -2899,12 +2940,15 @@ function _origMatSplit(t){
 function shopSide(t, mode){
   const o = __TASK_ORIGINALS[t.id];
   let now, was;
+  // Deferred work counts in its side, as the Record counts it: it is still
+  // part of the job, only held for a later change order.
   if(mode === 'dept'){
-    now = _taskMatSplit(t).now;
-    was = o ? _origMatSplit(t).now : now;
+    const sp = _taskMatSplit(t);
+    now = sp.now + sp.later;
+    if(o){ const op = _origMatSplit(t); was = op.now + op.later; } else was = now;
   } else if(mode === 'contractor'){
-    now = _taskIsDeferred(t) ? 0 : _taskLabor(t);
-    if(o){ const sp = _origMatSplit(t); was = _taskIsDeferred(t) ? 0 : Math.max(0, _parseDollars(o.cost) - sp.now - sp.later); }
+    now = _taskLabor(t);
+    if(o){ const sp = _origMatSplit(t); was = Math.max(0, _parseDollars(o.cost) - sp.now - sp.later); }
     else was = now;
   } else {
     now = dollars(t.cost);
@@ -2920,13 +2964,16 @@ function _shopSum(items, mode){
 }
 // A group or line's change, set to sit left of its total.
 function _leadChip(d){ return d ? deltaChipHtml(d).replace('cost-delta ', 'cost-delta is-lead ') : ''; }
+// The approved figure struck through, left of the current one, where the
+// change order moved it. Takes {now, delta}.
+function _shopWasHtml(s, cls){ return s.delta ? `<span class="${cls}" title="Approved ${sbMoney(s.now - s.delta)}">${sbMoney(s.now - s.delta)}</span>` : ''; }
 // A task row's figure: the change, then the price. A removed task reads $0.00;
 // otherwise the view's own figure (with its "of" or deferred note) stays.
 function _shopAmtHtml(s, amt){
   const fig = s.removed ? `<span class="task-amt">${sbMoney(0)}</span>`
     : amt != null ? `<span class="tal-stack">${amt}</span>`
     : `<span class="task-amt">${sbMoney(s.now)}</span>`;
-  return `${deltaChipHtml(s.delta)}${fig}`;
+  return `${_shopWasHtml(s, 'task-amt-was')}${fig}`;
 }
 function groupDelta(items){
   if(!items || !items.length) return 0;

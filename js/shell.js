@@ -37,6 +37,8 @@ function KAI_PANEL_DOC(qs){
   /* ShopwithKai_materials.html: with Materials on, the Editor shows a
      department as a shopping list (see materials-page.js). */
   const shopMaterials = (typeof window.__KAI_SHOP_MATERIALS !== 'undefined') && !!window.__KAI_SHOP_MATERIALS;
+  /* ShopwithKai_photos.html: the layout file with product pictures leading. */
+  const shopPhotos = (typeof window.__KAI_SHOP_PHOTOS !== 'undefined') && !!window.__KAI_SHOP_PHOTOS;
   const boot =
     '<base href="' + location.href.split('#')[0] + '">' +
     '<scr' + 'ipt>window.__KAI_QS=' + JSON.stringify(qs ? '?' + qs : '')
@@ -44,7 +46,8 @@ function KAI_PANEL_DOC(qs){
       + ';window.__KAI_ACTIVITY_SENTENCES=' + (sent ? 'true' : 'false')
       + ';window.__KAI_SHOP=' + (shop ? 'true' : 'false')
       + ';window.__KAI_SHOP_LAYOUT=' + (shopLayout ? 'true' : 'false')
-      + ';window.__KAI_SHOP_MATERIALS=' + (shopMaterials ? 'true' : 'false') + ';<\/script>';
+      + ';window.__KAI_SHOP_MATERIALS=' + (shopMaterials ? 'true' : 'false')
+      + ';window.__KAI_SHOP_PHOTOS=' + (shopPhotos ? 'true' : 'false') + ';<\/script>';
   return KAI_PANEL_RAW.replace(/<head([^>]*)>/i, '<head$1>' + boot);
 }
 

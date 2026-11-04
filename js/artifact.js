@@ -42,6 +42,7 @@ renderArtifact = function(){ _renderArtifactBase(); if(typeof _poSyncFocus === '
 function _renderArtifactIndex(){
   return `<div class="art-index">
     ${_renderRegisterSection()}
+    ${ALLOW_ON ? _renderAllowanceSection() : ''}
     ${SHOP_WITH_KAI ? (regViewAs === 'shared' ? '' : _renderPurchaseOrderSection()) : _renderHistoricalSection()}
     ${_renderCopiesSection()}
   </div>`;
@@ -151,6 +152,57 @@ function _regAddedRevised(v){
   return (added || revised) ? {added, revised} : null;
 }
 
+/* The tasks the Record counts: the job as approved. Shop with Kai reads each
+   task as its approved snapshot — its approved price and products, removals
+   still in, tasks the open change order adds still out — so the change order
+   being put together shows on its own, as what it would do if approved,
+   rather than inside the total. Products keep today's modifiers (matched by
+   id), so deferred and resident responsible still sort them. */
+function _regTasks(){
+  const all = (typeof TASKS !== 'undefined') ? TASKS : [];
+  if(!window.__KAI_SHOP || typeof __TASK_ORIGINALS === 'undefined') return all;
+  return all.filter(t => !(typeof __CO_ADDED !== 'undefined' && __CO_ADDED.has(t.id))).map(t => {
+    const o = __TASK_ORIGINALS[t.id];
+    if(!o) return t;
+    const cur = {};
+    (t.options || []).forEach(co => (co.products || []).forEach(p => { cur[p.id] = p; }));
+    return {...t, cost: o.cost, options: (o.options || []).map(so => ({...so,
+      products: (so.products || []).map(sp => ({...sp, mods: (cur[sp.id] && cur[sp.id].mods) || []}))}))};
+  });
+}
+/* Shop with Kai, under the ledger's total: the change order being put
+   together, as a row of its own — not approved, so outside the total — and
+   the scope total it would make, the last line of the sum. Nothing when no
+   change order is open. */
+function _regDraftRowsHtml(fmt, sgn){
+  const d = _regDraftDelta();
+  if(!d) return '';
+  const nm = (typeof versionLabel === 'function') ? versionLabel({num: VERSIONS.length + 1}) : 'Next change order';
+  const fa = typeof USER_ROLE !== 'undefined' && USER_ROLE === 'field_agent';
+  const t = (typeof _ovTurn === 'function') ? _ovTurn() : null;
+  const n = TASKS.filter(x => shopSide(x, 'room').delta).length;
+  return `<tr class="reg-row is-draft">
+      <td class="reg-date">—</td>
+      <td class="reg-doc"><span class="reg-caret is-blank"></span><span class="reg-doc-name">${esc(nm)}</span><span class="reg-draft-note">${fa ? 'draft' : 'in review'}</span></td>
+      <td class="reg-status"><span class="reg-draft-tag">${fa ? 'Draft' : 'In review'}${t && t.who ? ` · ${esc(t.who)}'s turn` : ''}</span></td>
+      <td class="reg-num reg-items">${n}</td>
+      <td class="reg-num"><span class="${d > 0 ? 'reg-chg-over' : 'reg-chg-under'}">${sgn(_regPriced(d))}</span></td>
+      <td class="reg-num reg-total is-quiet">—</td>
+    </tr>
+    <tr class="reg-row is-grand is-final">
+      <td class="reg-date"></td>
+      <td class="reg-doc"><span class="reg-caret is-blank"></span><span class="reg-doc-name">Current job total</span><span class="reg-draft-note">with ${esc(nm)}</span></td>
+      <td class="reg-status"></td><td class="reg-num reg-items"></td><td class="reg-num"></td>
+      <td class="reg-num reg-total">${fmt(_regPriced(jobScopeTotal()))}</td>
+    </tr>`;
+}
+/* What the open change order would move the job by, if approved: today's
+   scope against the approved one. */
+function _regDraftDelta(){
+  if(!window.__KAI_SHOP || typeof _shopSum !== 'function') return 0;
+  const d = _shopSum(TASKS, 'room').delta;
+  return Math.abs(d) < 0.005 ? 0 : d;
+}
 /* How today's Job Total splits — the Record as index.html shows it.
    Precedence rather than overlap: a task held for a change order is Deferred
    whatever else it carries, so the three buckets partition the total exactly
@@ -161,7 +213,7 @@ function _regClassifyJob(){
     return new Set([...(t.mods || []), ...pm]);
   };
   const out = {ready:0, tenant:0, deferred:0, readyN:0, tenantN:0, deferredN:0};
-  (typeof TASKS !== 'undefined' ? TASKS : []).forEach(t => {
+  _regTasks().forEach(t => {
     const m = modsOf(t), c = dollars(t.cost);
     if(m.has('deferred'))   { out.deferred += c; out.deferredN++; }
     else if(m.has('tenant')){ out.tenant   += c; out.tenantN++;   }
@@ -183,7 +235,7 @@ function _regClassify(){
      materials with the labour to install them (what the bucket costs). */
   const out = {ready:0, tenant:0, deferred:0, readyN:0, tenantN:0, deferredN:0,
                readyAll:0, tenantAll:0, deferredAll:0};
-  (typeof TASKS !== 'undefined' ? TASKS : []).forEach(t => {
+  _regTasks().forEach(t => {
     const taskMods = t.mods || [];
     (t.options || []).forEach(o => {
       if(o.added === false) return;
@@ -574,8 +626,8 @@ function _poTableHtml(order){
     return `<tr class="po-ord-dept"><td colspan="4">${esc(c)}</td>
         <td class="reg-num">${fmt(sub)}</td>${ap ? '<td></td>' : ''}</tr>`
       + lines.map(L => `<tr class="reg-row${ap && L.ok ? ' is-approved' : ''}">
-        <td class="po-ord-thumb"><div class="sec-taskcard-product-thumb">${L.image
-          ? `<img src="${esc(L.image)}" alt="" loading="lazy" onerror="this.replaceWith(document.createRange().createContextualFragment(_PO_THUMB_SVG))">`
+        <td class="po-ord-thumb"><div class="sec-taskcard-product-thumb">${shopProductImg(L)
+          ? `<img src="${esc(shopProductImg(L))}" alt="" loading="lazy" onerror="this.replaceWith(document.createRange().createContextualFragment(_PO_THUMB_SVG))">`
           : _PO_THUMB_SVG}</div></td>
         <td class="po-ord-item">
           <span class="po-ord-name">${esc([L.brand, L.product].filter(Boolean).join(' ') || 'Product')}</span>${L.tenantAmt > 0
@@ -756,7 +808,7 @@ function openPurchaseOrder(){
    approval, derived by unwinding the later changes from today's figure. */
 function _regLedger(){
   const ordered = VERSIONS.slice().sort((a,b) => a.num - b.num);
-  const live = (typeof TASKS !== 'undefined' ? TASKS : []).reduce((s,t) => s + dollars(t.cost), 0);
+  const live = _regTasks().reduce((s,t) => s + dollars(t.cost), 0);
   // Each document's own movement, from the version ladder's budgets. The
   // budgets disagree with the live scope in absolute terms but the steps
   // between them are the real change-order amounts.
@@ -987,13 +1039,22 @@ function _renderRegisterSection(){
     const sm = _regPriced(laterSplit[0]);
     laterSplit = [sm, Math.round((laterShown - sm) * 100) / 100];
   }
+  /* Shop with Kai: two parts only, materials and labor. What is deferred
+     stays inside the part it belongs to, marked there the way resident
+     responsible is — stripes for deferred, dots for resident responsible. */
+  if(SHOP_WITH_KAI){
+    matShown += laterSplit[0];
+    labShown += laterSplit[1];
+  }
   const segs = [
-    {key:'mat', icon:'cart', label:'Materials, ordered through Kai', amt:matShown, tenant:shared ? 0 : tenMat, link:shared ? '' : 'regGoToPo()'},
-    {key:'lab', icon:'hardhat', label:'Labor, paid to contractors', amt:labShown, tenant:shared ? 0 : tenLab, link:shared ? '' : 'toggleRegLabour(event)', pop:true},
-    {key:'later', icon:'', label:'Not yet ordered', amt:laterShown, sub:'Waiting on a change order', split:laterSplit},
+    {key:'mat', icon:'cart', label:SHOP_WITH_KAI ? 'Materials' : 'Materials, ordered through Kai', amt:matShown, deferred:SHOP_WITH_KAI ? laterSplit[0] : 0, tenant:shared ? 0 : tenMat, link:shared ? '' : 'regGoToPo()'},
+    {key:'lab', icon:'hardhat', label:SHOP_WITH_KAI ? 'Labor' : 'Labor, paid to contractors', amt:labShown, deferred:SHOP_WITH_KAI ? laterSplit[1] : 0, tenant:shared ? 0 : tenLab, link:shared ? '' : 'toggleRegLabour(event)', pop:true},
+    SHOP_WITH_KAI ? null : {key:'later', icon:'', label:'Not yet ordered', amt:laterShown, sub:'Waiting on a change order', split:laterSplit},
     view === 'markup' ? {key:'mk', icon:'', label:'Your markup', amt:markupAmt, sub:'Seen only by your org'} : null,
   ].filter(sg => sg && sg.amt > 0);
-  const leadLbl = view === 'markup' ? 'Price to customer' : shared ? 'Price' : 'Current job total';
+  // Shop with Kai keeps two names apart: the approved job total (approved
+  // documents only) and the current job total (with the draft change order).
+  const leadLbl = view === 'markup' ? 'Price to customer' : shared ? 'Price' : SHOP_WITH_KAI ? 'Approved job total' : 'Current job total';
   const firstShown = _regPriced(first.total), changeShown = _regPriced(approvedChange);
   // Resident-responsible money, in full words: under each segment that
   // carries it when there's room, else one line under the whole bar.
@@ -1002,14 +1063,30 @@ function _renderRegisterSection(){
     ? `<div class="reg-res-line">Includes ${resParts.map(sg => `${whole(sg.tenant)} resident responsible in ${sg.key === 'mat' ? 'materials' : 'labor'}`).join(' and ')}</div>`
     : '';
   const totalBar = segs.reduce((a, sg) => a + sg.amt, 0) || 1;
-  const lead = `<div class="reg-lead">
-    <div class="reg-lead-lbl">${leadLbl}</div>
+  /* Shop with Kai with a budget: the approved job total leads, the current
+     job total (with the draft change order) against the budget beside it,
+     and the bar breaks the approved total down. The arithmetic between the
+     two totals is the ledger's, below. */
+  const lead = `<div class="reg-lead${ALLOW_ON ? ' has-budget' : ''}">
+    ${ALLOW_ON ? `<div class="reg-lead-head">
+      <div class="reg-lead-head-l"><div class="reg-lead-lbl">${leadLbl}</div><div class="reg-lead-val">${whole(livePrice)}</div></div>
+      ${ovBudgetHtml('corner')}
+    </div>
+    <div class="reg-eq-cap">${leadLbl}, by type</div>` : `<div class="reg-lead-lbl">${leadLbl}</div>
     <div class="reg-lead-top">
     <div class="reg-lead-val">${whole(livePrice)}</div>
     <div class="reg-lead-sub">Initial scope: ${whole(firstShown)}<span class="sep">·</span>${coCount} approved change order${coCount === 1 ? '' : 's'}${changeShown ? ` (${changeShown > 0 ? '+' : '−'}${whole(Math.abs(changeShown))})` : ''}</div>
-    </div>
+    </div>`}
     <div class="reg-bar" role="img" aria-label="${esc(segs.map(sg => `${sg.label} ${whole(sg.amt)}`).join(', '))}">
-      ${segs.map(sg => `<span class="reg-bar-seg is-${sg.key}" style="flex-grow:${sg.amt}" title="${esc(sg.label)} · ${whole(sg.amt)} · ${Math.round(sg.amt / totalBar * 100)}%"></span>`).join('')}
+      ${segs.map(sg => `<span class="reg-bar-seg is-${sg.key}" style="flex-grow:${sg.amt}" title="${esc(sg.label)} · ${whole(sg.amt)} · ${Math.round(sg.amt / totalBar * 100)}%">${
+        /* Shop with Kai: the resident-responsible share of a segment, marked
+           inside it at its end, so it reads at a glance as well as in words. */
+        SHOP_WITH_KAI && sg.amt > 0 ? (() => {
+          // Deferred at the segment's end, resident responsible just before it.
+          const dp = Math.min(100, (sg.deferred || 0) / sg.amt * 100), tp = Math.min(100 - dp, (sg.tenant || 0) / sg.amt * 100);
+          return (tp > 0 ? `<span class="reg-bar-res" style="right:${dp.toFixed(1)}%;width:${tp.toFixed(1)}%" title="Resident responsible · ${whole(sg.tenant)}"></span>` : '')
+            + (dp > 0 ? `<span class="reg-bar-def" style="width:${dp.toFixed(1)}%" title="Deferred · ${whole(sg.deferred)}"></span>` : '');
+        })() : ''}</span>`).join('')}
     </div>
     <div class="reg-bar-keys">
       ${segs.map(sg => `<div class="reg-bar-key is-${sg.key}">
@@ -1018,7 +1095,8 @@ function _renderRegisterSection(){
               title="${sg.pop ? 'See who is paid for the labor' : 'Go to the purchase orders'}">${esc(sg.label)}<span aria-hidden="true">›</span></button>`
           : `<span>${esc(sg.label)}</span>`}${sg.pop && sg.link && _regLabOpen ? _regLabourPopHtml() : ''}</div>
         <div class="reg-bar-key-amt">${whole(sg.amt)}</div>
-        ${sg.tenant ? `<div class="reg-bar-key-note is-res">Includes ${whole(sg.tenant)} resident responsible</div>`
+        ${SHOP_WITH_KAI && (sg.tenant || sg.deferred) ? `${sg.tenant ? `<div class="reg-bar-key-note is-res"><span class="reg-res-sw is-${sg.key}" aria-hidden="true"></span>Includes ${whole(sg.tenant)} resident responsible</div>` : ''}${sg.deferred ? `<div class="reg-bar-key-note is-res"><span class="reg-def-sw is-${sg.key}" aria-hidden="true"></span>Includes ${whole(sg.deferred)} deferred</div>` : ''}`
+          : sg.tenant ? `<div class="reg-bar-key-note is-res">Includes ${whole(sg.tenant)} resident responsible</div>`
           : sg.sub ? `<div class="reg-bar-key-note">${esc(sg.sub)}</div>${sg.split ? `<div class="reg-bar-key-note is-split">${whole(sg.split[0])} materials + ${whole(sg.split[1])} labor</div>` : ''}` : ''}
       </div>`).join('')}
     </div>
@@ -1129,8 +1207,9 @@ function _renderRegisterSection(){
     ? TASKS.filter(t => taskHasOpenChangeOrder(t)) : [];
   let pendingRow = '';
   if(staged.length && SHOP_WITH_KAI){
-    /* In the ledger's own grid, so every value sits under its header. */
-    const d = (typeof scopeDelta === 'function') ? scopeDelta() : 0;
+    /* In the ledger's own grid, so every value sits under its header. Its
+       change is the same figure the lead calls "if approved". */
+    const d = _regDraftDelta();
     const t = (typeof _ovTurn === 'function') ? _ovTurn() : null;
     const who = (t && t.who) || 'Quinn';
     const draft = {num:VERSIONS.length+1, id:'draft-' + (VERSIONS.length+1)};
@@ -1161,7 +1240,7 @@ function _renderRegisterSection(){
     <header class="art-sec-hdr">
       <div class="art-sec-hdr-l">
         <h2 class="art-sec-title">Register</h2>
-        <p class="art-sec-desc">Every event that changed the job total, and how it is classified today.</p>
+        <p class="art-sec-desc">${SHOP_WITH_KAI ? "Today\u2019s job total, what it\u2019s made of, and the changes and documents behind it." : 'Every event that changed the job total, and how it is classified today.'}</p>
       </div>
     </header>
     ${SHOP_WITH_KAI ? lead : cards}
@@ -1176,11 +1255,11 @@ function _renderRegisterSection(){
           ${ledgerRows}
           <tr class="reg-row is-grand">
             <td class="reg-date"></td>
-            <td class="reg-doc"><span class="reg-caret is-blank"></span><span class="reg-doc-name">${!SHOP_WITH_KAI || regViewAs === 'plain' ? 'Current job total' : regViewAs === 'shared' ? 'Current price' : 'Current price to customer'}</span></td>
+            <td class="reg-doc"><span class="reg-caret is-blank"></span><span class="reg-doc-name">${!SHOP_WITH_KAI ? 'Current job total' : regViewAs === 'plain' ? 'Approved job total' : regViewAs === 'shared' ? 'Current price' : 'Current price to customer'}</span></td>
             <td class="reg-status"></td><td class="reg-num reg-items"></td><td class="reg-num"></td>
             <td class="reg-num reg-total">${fmt(_regPriced(live))}</td>
           </tr>
-          ${pendingRow}
+          ${ALLOW_ON ? _regDraftRowsHtml(fmt, sgn) : pendingRow}
         </tbody>
       </table>
       ${pending}

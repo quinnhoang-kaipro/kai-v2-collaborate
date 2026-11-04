@@ -6,6 +6,7 @@
    dependency-free utilities here. */
 function dollars(c){ return parseFloat(String(c).replace(/[$,]/g,''))||0; }
 function _fmtDollars(n){
+  if(window.__KAI_SHOP) return (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
   const abs = Math.abs(Math.round(n));
   return (n < 0 ? '-' : '') + '$' + abs.toLocaleString();
 }
@@ -51,3 +52,20 @@ function kaiIcon(name, cls){
   if(!body) return '';
   return `<svg class="kai-ic${cls ? ' ' + cls : ''}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
 }
+
+/* ════════════ PRODUCT IMAGE PLACEHOLDER ════════════
+   The prototype's catalogue has no product photos. Where a product has none,
+   a plain "image goes here" mark holds its place — deliberately generic, so
+   nobody takes it for the picture itself. A real `image` always wins. */
+let _imgPh = null;
+function productArtUri(x){
+  if(x && x.image) return x.image;
+  if(_imgPh) return _imgPh;
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" fill="#F1EEE7"/>'
+    + '<g fill="none" stroke="#B5AC9C" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">'
+    + '<rect x="38" y="42" width="44" height="36" rx="3"/><circle cx="51" cy="54" r="4"/><path d="M40 74l13-12 9 8 7-6 11 10"/></g></svg>';
+  return (_imgPh = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
+}
+// Shop with Kai: a product's picture — its own, or the placeholder.
+// Elsewhere only a real image shows.
+function shopProductImg(x){ return (x && x.image) || (window.__KAI_SHOP && x ? productArtUri(x) : ''); }
