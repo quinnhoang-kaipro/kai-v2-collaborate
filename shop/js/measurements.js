@@ -1137,6 +1137,120 @@ function _deptProductTypes(g){
   rows.sort((a, b) => (b.todo - a.todo));
   return {rows, ready: rows.filter(r => !r.todo).length};
 }
+/* A department page lists its product types with their tasks under each:
+   the type's own row (what's chosen, where it stands, the way into it), then
+   its tasks with the task table's columns. Replaces the separate
+   "Tasks in this department" table. */
+const _dptOpen = new Set();
+const _dptProdOpen = new Set();
+function dptToggleProd(key){ _dptProdOpen.has(key) ? _dptProdOpen.delete(key) : _dptProdOpen.add(key); if(typeof renderShop === 'function') renderShop(); else renderAll(); }
+// Swap the type's one product, or put the first pick on every task.
+function dptUseProduct(key, fromSku, toSku){
+  _dptProdOpen.delete(key);
+  if(fromSku) swapLineProduct(key, fromSku, toSku); else addLineProduct(key, toSku);
+  if(typeof renderShop === 'function') renderShop();
+}
+/* The product type's product, as its own row under the type: what's chosen
+   (or that nothing is), and — opened — the other products it could be, each
+   one click to use. Several products on one type are changed on its page. */
+function _dptProductRowHtml(r, img){
+  const l = r.l, k = _lineKeyArg(l.key);
+  const picked = l.items.flatMap(t => _lineTaskPicked(l, t));
+  const skus = [...new Set(picked.map(h => h.p.sku).filter(Boolean))];
+  const pool = typeof deptLinePool === 'function' ? deptLinePool(l) : [];
+  const cur = skus.length === 1 ? (pool.find(x => x.sku === skus[0]) || (typeof catalogFind === 'function' ? catalogFind(skus[0]) : null)) : null;
+  const open = _dptProdOpen.has(l.key);
+  const price = x => { try { return _lnpOffer(l, x).offer.price; } catch(e){ return x.price; } };
+  const name = !skus.length ? '<span class="dpt-none">No product yet</span>'
+    : cur ? `<span class="lnpc-brand">${esc(cur.brand || '')}</span> ${esc(cur.name)}`
+    : `${skus.length} products`;
+  const unitP = cur ? `<span class="dpt-pr-unit">${shopMoney(price(cur))} / ${esc(cur.unit || 'ea')}</span>` : '';
+  const alts = pool.filter(x => !skus.includes(x.sku));
+  const low = alts.length ? Math.min(...alts.map(price)) : null;
+  const go = `goUpMaterials('${esc(String(l.dept)).replace(/'/g, "\\'")}','${k}')`;
+  const body = !open ? '' : skus.length > 1
+    ? `<div class="dpt-pr-list"><div class="dpt-pr-note">These tasks use different products. Change them one by one on the product type page.</div><button type="button" class="dpt-go" onclick="${go}">Review →</button></div>`
+    : `<div class="dpt-pr-list">${alts.map(x => `<div class="dpt-pr-alt">
+        <span class="dpt-thumb is-sm dpt-fly" onclick="openFly(${l.items[0].id},'${esc(x.sku)}',event)" title="View product details">${shopProductImg(x) ? `<img src="${esc(shopProductImg(x))}" alt="" loading="lazy">` : ''}</span>
+        <span class="dpt-pr-alt-n dpt-fly" onclick="openFly(${l.items[0].id},'${esc(x.sku)}',event)" title="View product details"><span class="lnpc-brand">${esc(x.brand || '')}</span><span>${esc(x.name)}</span></span>
+        ${price(x) === low && alts.length > 1 ? '<span class="lnpc-low">Lowest</span>' : '<span></span>'}
+        <span class="dpt-pr-unit">${shopMoney(price(x))} / ${esc(x.unit || 'ea')}</span>
+        <button type="button" class="dpt-go${skus.length ? '' : ' is-primary'}" onclick="dptUseProduct('${k}',${cur ? `'${esc(cur.sku)}'` : 'null'},'${esc(x.sku)}')">${skus.length ? 'Swap in' : `Use on ${l.items.length === 1 ? 'the task' : `all ${l.items.length}`}`}</button>
+      </div>`).join('') || '<div class="dpt-pr-note">No other products for this type.</div>'}</div>`;
+  return `<div class="dpt-prodrow${open ? ' is-open' : ''}${skus.length ? '' : ' is-none'}" onclick="dptToggleProd('${k}')">
+      <button type="button" class="dpt-caret${open ? ' is-open' : ''}" aria-expanded="${open}" onclick="event.stopPropagation();dptToggleProd('${k}')" title="${open ? 'Hide' : 'Show'} other products"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2.5L7.5 6 4 9.5"/></svg></button>
+      <span class="dpt-thumb is-pr${cur ? ' dpt-fly' : ''}"${cur ? ` onclick="event.stopPropagation();openFly(${l.items[0].id},'${esc(cur.sku)}',event)" title="View product details"` : ''}>${img || ''}</span>
+      <span class="dpt-pr-name"><span class="${cur ? 'dpt-fly' : ''}"${cur ? ` onclick="event.stopPropagation();openFly(${l.items[0].id},'${esc(cur.sku)}',event)" title="View product details"` : ''}>${name}</span></span>
+      ${unitP}
+      <span class="dpt-pr-act">${open ? 'Hide' : skus.length ? `Change product${alts.length ? ` · ${alts.length} more` : ''}` : `Choose product${alts.length ? ` · ${alts.length} options` : ''}`}</span>
+    </div>${open ? `<div class="dpt-pr-wrap" onclick="event.stopPropagation()">${body}</div>` : ''}`;
+}
+function dptToggleTask(id){ _dptOpen.has(id) ? _dptOpen.delete(id) : _dptOpen.add(id); if(typeof renderShop === 'function') renderShop(); else if(typeof renderAll === 'function') renderAll(); }
+// What opens under a task row: its photos, then the facts the row cuts short.
+function _dptTaskDetailHtml(t, taskOnClick){
+  const ph = typeof photosForTask === 'function' ? photosForTask(t) : [];
+  const photos = ph.length
+    ? `<div class="pgd-photos dpt-x-photos">${ph.map((p, i) => _pgdPhotoFigHtml(p, i, t.name)).join('')}</div>`
+    : '<div class="dpt-x-none">No photos yet</div>';
+  const pool = typeof _groupNotesPool === 'function' ? _groupNotesPool(null, [t]) : [];
+  const notes = pool.length || (typeof _pgdRowCounts === 'function' ? _pgdRowCounts(t).notes : 0);
+  const latest = pool[0];
+  const noteHtml = latest ? `<div class="shop-notes-card dpt-x-note">
+      <div class="shop-notes-head">
+        <span class="shop-notes-who"><b>${esc(latest.who || 'Someone')}</b>${latest.role ? ` &middot; ${esc(latest.role)}` : ''}</span>
+        <span class="shop-notes-time">${esc(latest.when || '')}</span>
+      </div>
+      <div class="shop-notes-body">${esc(latest.body || '')}</div>
+    </div>` : '';
+  const f = (k, v) => `<div class="dpt-x-f"><span class="dpt-x-k">${k}</span><span class="dpt-x-v">${v}</span></div>`;
+  return `<div class="dpt-x" onclick="event.stopPropagation()">
+    ${photos}
+    <div class="dpt-x-grid">
+      ${f('Task', esc(t.name || ''))}
+      ${f('Group', esc(t.room || '—'))}
+      ${f('Option', esc(t.opt || '—'))}
+      ${f('Product', esc(t.product || '—'))}
+      ${f('Quantity', esc(t.qty || '—'))}
+      ${f('Task ID', esc(t.code || '—'))}
+      ${t.desc ? `<div class="dpt-x-f is-wide"><span class="dpt-x-k">Description</span><span class="dpt-x-v">${esc(t.desc)}</span></div>` : ''}
+    </div>
+    ${noteHtml}
+    <div class="dpt-x-ft">
+      <button type="button" class="optc-link" onclick="openDrawer(${t.id},'notes')">${notes ? `View all ${notes} ${notes === 1 ? 'note' : 'notes'} &amp; add` : 'Add a note'}</button>
+      <button type="button" class="dpt-go" onclick="${esc(taskOnClick)}(${t.id})">Open task →</button>
+    </div>
+  </div>`;
+}
+function _deptTypesTableHtml(g, taskOnClick){
+  const {rows} = _deptProductTypes(g);
+  if(!rows.length) return '';
+  const q = v => esc(String(v)).replace(/'/g, "\\'");
+  const seen = new Set();
+  const bands = rows.map(r => {
+    const go = `goUpMaterials('${q(r.l.dept)}','${_lineKeyArg(r.l.key)}')`;
+    const prod = !r.names.length ? '<span class="dpt-none">No product yet</span>' : r.names.length === 1 ? esc(r.names[0]) : `${r.names.length} products`;
+    const img = r.first ? `<img src="${esc(shopProductImg(Object.assign({}, (typeof catalogFind === 'function' && r.first.sku && catalogFind(r.first.sku)) || {}, {name: r.first.product, brand: r.first.brand, image: r.first.image})))}" alt="" loading="lazy">` : '';
+    r.l.items.forEach(t => seen.add(t.id));
+    return `<div class="dpt-band${r.todo ? ' is-todo' : ''}" role="button" tabindex="0" onclick="${go}" onkeydown="if(event.key==='Enter'){event.preventDefault();${go}}">
+        <span class="dpt-band-main">
+          <span class="dpt-kind">Product type</span>
+          <span class="dpt-name">${esc(r.l.name)}</span>
+        </span>
+        <span class="dpt-st ${r.st.cls}">${r.st.cls === 'is-warn' ? _ALW_WARN : ''}${esc(r.st.txt)}</span>
+        <button type="button" class="dpt-go${r.todo ? ' is-primary' : ''}" onclick="event.stopPropagation();${go}">${r.todo ? 'Choose product' : 'Review'} →</button>
+        <span class="dpt-cost">${sbMoney(deptLineCost(r.l))}</span>
+      </div>
+      ${_dptProductRowHtml(r, img)}
+      <div class="dpt-tasks-lbl">${r.l.items.length} ${r.l.items.length === 1 ? 'task' : 'tasks'}</div>
+      ${_pgdSortTasksForGroup(r.l.items).map(t => _pgdTaskRowHtml(t, taskOnClick, false, true)).join('')}`;
+  }).join('');
+  const rest = g.items.filter(t => !seen.has(t.id));
+  const restHtml = rest.length ? `<div class="dpt-band is-plain"><span class="dpt-band-main"><span class="dpt-name">Other tasks<span class="dpt-n">${rest.length} ${rest.length === 1 ? 'task' : 'tasks'}</span></span></span></div>${rest.map(t => _pgdTaskRowHtml(t, taskOnClick, false, true)).join('')}` : '';
+  return `<div class="pgd-details-sec dpt dpt-merged" id="deptProductTypes">
+    <div class="pgd-details-title dpt-merged-title">Product types and tasks</div>
+    <div class="pgd-tk-list">${_pgdTaskHeadHtml()}${bands}${restHtml}</div>
+  </div>`;
+}
 function _deptProductTypesHtml(g){
   const {rows, ready} = _deptProductTypes(g);
   if(!rows.length) return '';
@@ -1337,7 +1451,7 @@ function _pgdSortTasksForGroup(items){
     .map(x => x.t);
 }
 
-function _pgdTaskRowHtml(t, taskOnClick, typeFirst){
+function _pgdTaskRowHtml(t, taskOnClick, typeFirst, ex){
     const _st = _pgdRowStatusMeta(t);
     const statusPill = _st ? `<span class="pgd-tk-status task-status ${_st.cls||''}">${esc(_st.label)}</span>` : '<span></span>';
     // Gutter marks, left of the name.
@@ -1406,8 +1520,12 @@ function _pgdTaskRowHtml(t, taskOnClick, typeFirst){
     // the parser closes the outer one at the inner tag, which threw the
     // last three cells out of the grid and onto their own lines. role +
     // tabindex + Enter/Space keep it operable from the keyboard.
-    return `<div class="pgd-tk-rowwrap${_PGD_BY_TYPE && typeFirst ? ' is-type-start' : ''}"><div class="pgd-tk-row${_unready}${_pgdAlwCol() ? ' has-alw' : ''}" data-tid="${t.id}" role="button" tabindex="0" onclick="pgdRowOpen(event,${t.id},'${esc(taskOnClick)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="${esc(fullName)}">
-      <span class="pgd-tk-name" title="${esc(fullName)}">${flg}${chk}<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;flex:1">${esc(displayName)}</span></span>
+    // ex: the department table's expandable rows — a caret before the name,
+    // and the task's photos and details folded under the row.
+    const _exOpen = !!(ex && _dptOpen.has(t.id));
+    const _caret = ex ? `<button type="button" class="dpt-caret${_exOpen ? ' is-open' : ''}" aria-expanded="${_exOpen}" title="${_exOpen ? 'Hide' : 'Show'} photos and details" onclick="event.stopPropagation();dptToggleTask(${t.id})"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2.5L7.5 6 4 9.5"/></svg></button>` : '';
+    return `<div class="pgd-tk-rowwrap${_PGD_BY_TYPE && typeFirst ? ' is-type-start' : ''}${_exOpen ? ' is-open' : ''}"><div class="pgd-tk-row${_unready}${_pgdAlwCol() ? ' has-alw' : ''}" data-tid="${t.id}" role="button" tabindex="0" onclick="pgdRowOpen(event,${t.id},'${esc(taskOnClick)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="${esc(fullName)}">
+      <span class="pgd-tk-name" title="${esc(fullName)}">${_caret}${flg}${chk}<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;flex:1">${esc(displayName)}</span></span>
       ${statusPill}
       <span class="pgd-tk-gc${t.gc ? '' : ' is-none'}" title="${esc(t.gc || 'Unassigned')}">${esc(t.gc || 'Unassigned')}</span>
       <span class="pgd-tk-mod${modLbl ? '' : ' is-none'}" title="${esc(modFull || 'No modifier')}">${esc(modLbl || '—')}</span>
@@ -1418,7 +1536,7 @@ function _pgdTaskRowHtml(t, taskOnClick, typeFirst){
       <span class="pgd-tk-rate">${prodName ? (window.__KAI_SHOP && t.rate && dollars(t.rate) ? sbMoney(dollars(t.rate)) : esc(t.rate || '—')) : '—'}</span>
       ${_pgdRowFilesHtml(t)}
       ${_pgdAlwCol() ? _pgdAlwCellHtml(t) : `<span class="pgd-tk-cost">${window.__KAI_SHOP ? sbMoney(dollars(t.cost || 0)) : esc(t.cost || '$0')}</span>`}
-    </div></div>`;
+    </div>${_exOpen ? _dptTaskDetailHtml(t, taskOnClick) : ''}</div>`;
 }
 
 /* One photo tile — 170px, GROUP chip on group-scope shots, date and
@@ -2618,6 +2736,8 @@ function _renderGroupPageHtml(opts){
         return left ? [['Products', `<button type="button" class="task-crumb-a tk-f-link is-todo" onclick="document.getElementById('deptProductTypes')?.scrollIntoView({behavior:'smooth',block:'start'})">${left} ${left === 1 ? 'needs' : 'need'} attention</button>`]] : []; })()),
     ], (g.key !== NO_PRODUCT_DEPT && _deptProductTypes(g).rows.some(r => r.todo)) ? 'wide4' : 'wide');
   })() : '';
+  // Department page with product types: one table, types with their tasks.
+  const _deptMerged = !!_deptBand && g.key !== NO_PRODUCT_DEPT && _deptProductTypes(g).rows.length > 0;
   const nApproved = g.items.filter(t => approved.has(t.id)).length;
   const contractorsSet = new Set(g.items.map(t => t.gc).filter(Boolean));
   // Task rows — mini cards that route into the task drill-in on click.
@@ -2681,8 +2801,8 @@ function _renderGroupPageHtml(opts){
       </div>
       ${_deptBand}
     </div>
-    ${_deptBand && g.key !== NO_PRODUCT_DEPT ? _deptProductTypesHtml(g) : ''}
-    <div class="pgd-details-sec pgd-mediasec is-sticky">
+    ${_deptMerged ? _deptTypesTableHtml(g, taskOnClick) : ''}
+    ${_deptMerged ? '' : `<div class="pgd-details-sec pgd-mediasec is-sticky">
       <div class="pgd-sec-hd">
         <div class="pgd-media-ctx" aria-hidden="true"><span class="pgd-media-ctx-name">${esc(g.name)}</span><span class="pgd-media-ctx-amt">${(window.__KAI_SHOP ? sbMoney(gCost) : money(gCost))}</span><span class="pgd-media-ctx-n">${g.items.length} ${g.items.length === 1 ? 'task' : 'tasks'}</span></div>
         <div class="pgd-details-title">Group and Task Photos${allGroupPhotos.length ? ` <span class="sec-mod-count is-static">&bull; ${allGroupPhotos.length} total ${allGroupPhotos.length === 1 ? 'photo' : 'photos'}</span>` : ''}</div>
@@ -2693,11 +2813,11 @@ function _renderGroupPageHtml(opts){
       </div>
       ${photoStripHtml}
     </div>
-    ${_groupNotesHtml(g)}
-    <div class="pgd-details-sec">
+    ${_groupNotesHtml(g)}`}
+    ${_deptMerged ? '' : `<div class="pgd-details-sec">
       <div class="pgd-details-title">Tasks in this ${groupKindNoun()}</div>
       <div class="pgd-tk-list">${_pgdTaskHeadHtml()}${taskRowsHtml || '<div class="pgd-muted" style="padding:14px 0">No tasks in this group yet.</div>'}</div>
-    </div>
+    </div>`}
     ${activitySectionHtml}
     ${groupActHtml}
     <div class="shop-nav-float">

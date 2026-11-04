@@ -135,7 +135,9 @@ function kaiStickyRoom(){
        nothing below it moves. */
     if(stuck){
       const restH = m.offsetHeight;
+      m.dataset.restH = restH;
       _stuckNav(m);
+      _stuckSize(m);
       m.classList.add('is-stuck');
       m.style.marginBottom = Math.max(0, restH - m.offsetHeight) + 'px';
       _stuckNavSync(m);
@@ -143,6 +145,28 @@ function kaiStickyRoom(){
       m.classList.remove('is-stuck');
       m.style.marginBottom = '';
     }
+  };
+  /* Shop with Kai: stuck, the reel shrinks to a row of small thumbnails so the
+     page under it keeps its room; a button at its end opens it back up to
+     the larger strip, and the choice holds as you move between pages. */
+  const _stuckSize = m => {
+    if(!window.__KAI_SHOP) return;
+    m.classList.toggle('is-big', !!window.__stripBig);
+    if(m.querySelector('.pgd-media-size')) return;
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'pgd-media-size';
+    const label = () => { b.textContent = window.__stripBig ? 'Smaller' : 'Larger'; b.setAttribute('aria-pressed', !!window.__stripBig); };
+    label();
+    b.onclick = e => {
+      e.stopPropagation();
+      window.__stripBig = !window.__stripBig;
+      m.classList.toggle('is-big', window.__stripBig);
+      label();
+      // Keep the reel's footprint, as on sticking, so nothing below jumps.
+      m.style.marginBottom = Math.max(0, (+m.dataset.restH || 0) - m.offsetHeight) + 'px';
+      _stuckNavSync(m);
+    };
+    m.appendChild(b);
   };
   /* Stuck, the photos share the bar's row and page sideways with ‹ ›; a
      trackpad swipe scrolls the strip as it always has. The buttons are added

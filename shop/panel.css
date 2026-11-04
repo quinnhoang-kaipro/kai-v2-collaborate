@@ -7442,3 +7442,133 @@ button.alw-mark:hover{filter:brightness(.96);text-decoration:underline;text-unde
 /* Right-aligned blocks: Edit comes first so the label ends on the right edge,
    over the figures. */
 .ov-budget:not(.is-band) .ov-budget-hd .alw-btn{order:-1;margin-left:0}
+/* Shop with Kai: the stuck photo bar as small thumbnails, opened up by Larger. */
+.pgd-media-size{display:none}
+.kai-shop .pgd-mediasec.is-sticky.is-stuck{grid-template-columns:auto auto minmax(0,1fr) auto auto;padding-top:6px;padding-bottom:6px}
+.kai-shop .pgd-mediasec.is-stuck > .pgd-media-size{display:inline-flex;grid-column:5;grid-row:1;align-self:center;padding:4px 0;background:none;border:0;border-bottom:1px solid currentColor;
+  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);cursor:pointer;white-space:nowrap}
+.kai-shop .pgd-mediasec.is-stuck > .pgd-media-size:hover{color:var(--ink)}
+.kai-shop .pgd-mediasec.is-stuck:not(.is-big) .pgd-photos{gap:6px;padding:0}
+.kai-shop .pgd-mediasec.is-stuck:not(.is-big) .pgd-photo{width:44px !important;height:44px !important;min-height:0;aspect-ratio:auto}
+.kai-shop .pgd-mediasec.is-stuck:not(.is-big) .pgd-photo-fig{gap:0}
+.kai-shop .pgd-mediasec.is-stuck:not(.is-big) .pgd-photo-name,
+.kai-shop .pgd-mediasec.is-stuck:not(.is-big) .pgd-photo > *{display:none}
+
+/* No product yet: tasks full width, no product column */
+.lnpg-head.is-flat,.lnpg-body.is-flat{grid-template-columns:minmax(0,1fr)}
+.lnpc-alts-sub{margin-left:10px;font-family:var(--sans,inherit);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--t3)}
+.lnpc-alts-hd .lnpc-alts-sub + .optc-link{margin-left:auto}
+
+/* Photos: product-type cards sit open on the section, no box lines */
+.kai-shop-photos .dpt .pgd-sec-hd{border-bottom:0}
+.kai-shop-photos .dpt .dpt-list{border-top:0;padding-top:0}
+.kai-shop-photos .dpt .dpt-row,.kai-shop-photos .dpt .dpt-row:last-child{border:0}
+.kai-shop-photos .dpt .dpt-thumb{border:0}
+
+/* Department page: product types with their tasks, one table */
+.dpt-merged .pgd-tk-list .dpt-band{display:grid;grid-template-columns:44px minmax(0,1fr) auto auto 110px;align-items:center;gap:14px;padding:12px;border-bottom:1px solid var(--stroke);background:var(--app-bg);cursor:pointer}
+.dpt-merged .pgd-tk-list .pgd-tk-head + .dpt-band{border-top:0}
+.dpt-merged .pgd-tk-list .pgd-tk-row + .dpt-band{border-top:1px solid var(--stroke);margin-top:-1px}
+.dpt-merged .dpt-band:hover{background:var(--sunken)}
+.dpt-merged .dpt-band.is-todo{box-shadow:inset 3px 0 0 #E58A2B}
+.dpt-merged .dpt-band.is-plain{grid-template-columns:minmax(0,1fr);cursor:default}
+.dpt-merged .dpt-band-main{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dpt-merged .dpt-band .dpt-st:empty{display:block}
+.dpt-merged .dpt-band .dpt-cost{font-weight:600;text-align:right;justify-self:stretch}
+.kai-shop-photos .dpt-merged .dpt-band{grid-template-columns:72px minmax(0,1fr) auto auto 110px}
+.kai-shop-photos .dpt-merged .dpt-thumb{width:72px;height:72px;aspect-ratio:auto;border:1px solid var(--stroke)}
+
+/* Product type page: qty reads as plain text until you point at or click it */
+.kai-shop .lnpg-task .opt-card-qty-stepper{border-color:transparent;background:transparent}
+.kai-shop .lnpg-task .opt-card-qty-stepper:hover{border-color:var(--stroke);background:var(--white)}
+.kai-shop .lnpg-task .opt-card-qty-stepper:focus-within{border-color:var(--ink);background:var(--white)}
+/* Photos: column header follows the body's wider task column */
+.kai-shop-photos .lnpg-head:not(.is-flat){grid-template-columns:minmax(0,.8fr) minmax(0,1.7fr)}
+
+/* Merged table: room around the title, a kind label, the task count as its own line */
+.dpt-merged > .dpt-merged-title{padding:18px 18px 14px}
+.dpt-merged > .pgd-tk-list{margin:0;border-left:0;border-right:0;border-bottom:0}
+.dpt-merged .dpt-kind{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-bottom:2px}
+.dpt-merged .dpt-tasks-lbl{padding:10px 12px 4px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);background:var(--white)}
+
+/* Department table: a task row opens to its photos and details */
+.dpt-caret{flex:none;width:18px;height:18px;margin:0 4px 0 -4px;padding:0;border:0;background:transparent;color:var(--t3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.dpt-caret svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;transition:transform .14s}
+.dpt-caret:hover{color:var(--ink)}
+.dpt-caret.is-open svg{transform:rotate(90deg)}
+.dpt-merged .pgd-tk-rowwrap.is-open{background:var(--app-bg)}
+.dpt-merged .pgd-tk-rowwrap.is-open .pgd-tk-row{border-bottom:0}
+.dpt-x{padding:4px 14px 16px 34px;border-bottom:1px solid var(--stroke);cursor:default}
+.dpt-x-photos{padding:0 0 12px}
+.dpt-x-none{padding:4px 0 12px;font-size:12.5px;color:var(--t3);font-style:italic}
+.dpt-x-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 18px}
+.dpt-x-f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.dpt-x-f.is-wide{grid-column:1 / -1}
+.dpt-x-k{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.dpt-x-v{font-size:13px;color:var(--ink);line-height:1.45}
+.dpt-x-ft{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+.dpt-x-note{margin-top:14px}
+
+/* Merged table: the type's product row, opening to the other products */
+.dpt-merged .dpt-prodrow{display:grid;grid-template-columns:18px 64px minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid var(--stroke);background:var(--white);cursor:pointer}
+.dpt-merged .dpt-prodrow:hover{background:var(--sunken)}
+.dpt-merged .dpt-prodrow .dpt-caret{margin:0}
+.dpt-merged .dpt-prodrow .dpt-kind{margin:0}
+.dpt-pr-name{font-size:13.5px;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dpt-pr-name .lnpc-brand{margin-right:4px}
+.dpt-prodrow.is-none .dpt-pr-name{color:#B45309}
+.dpt-pr-unit{font-size:13px;color:var(--t2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.dpt-pr-act{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+.dpt-pr-wrap{background:var(--app-bg);border-bottom:1px solid var(--stroke);padding:6px 12px 10px 42px}
+.dpt-pr-list{display:flex;flex-direction:column}
+.dpt-pr-alt{display:grid;grid-template-columns:40px minmax(0,1fr) auto auto 128px;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--stroke)}
+.dpt-pr-alt:last-child{border-bottom:0}
+.dpt-pr-alt-n{display:flex;flex-direction:column;min-width:0;font-size:13px;color:var(--ink)}
+.dpt-pr-alt-n > span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dpt-merged .dpt-thumb.is-sm{width:40px;height:40px}
+.dpt-pr-alt .dpt-go{justify-self:stretch;text-align:center}
+.dpt-pr-note{padding:8px 0;font-size:12.5px;color:var(--t2)}
+.dpt-pr-list > .dpt-go{align-self:flex-start}
+
+/* Compact type row: one line, no image; the product row carries the product's image */
+.dpt-merged .pgd-tk-list .dpt-band,.kai-shop-photos .dpt-merged .dpt-band{grid-template-columns:minmax(0,1fr) auto auto 110px;padding:9px 12px}
+.dpt-merged .dpt-band-main{flex-direction:row;align-items:baseline;gap:10px}
+.dpt-merged .dpt-band .dpt-kind{margin:0}
+.dpt-merged .dpt-band .dpt-go{padding:5px 10px}
+.dpt-merged .dpt-prodrow{grid-template-columns:18px 40px minmax(0,1fr) auto auto;padding:8px 12px}
+.dpt-merged .dpt-thumb.is-pr{width:40px;height:40px}
+.kai-shop-photos .dpt-merged .dpt-prodrow{grid-template-columns:18px 64px minmax(0,1fr) auto auto}
+.kai-shop-photos .dpt-merged .dpt-thumb.is-pr{width:64px;height:64px;border:1px solid var(--stroke)}
+.dpt-fly{cursor:pointer}
+.dpt-pr-name .dpt-fly:hover,.dpt-pr-alt-n.dpt-fly:hover > span:last-child{text-decoration:underline;text-underline-offset:3px}
+.dpt-thumb.dpt-fly:hover{border-color:var(--ink)}
+
+/* One thumbnail size across the product row and its alternatives */
+.dpt-merged{--dpt-th:56px}
+.kai-shop-photos .dpt-merged{--dpt-th:80px}
+.dpt-merged .dpt-thumb.is-pr,.dpt-merged .dpt-thumb.is-sm,
+.kai-shop-photos .dpt-merged .dpt-thumb.is-pr,.kai-shop-photos .dpt-merged .dpt-thumb.is-sm{width:var(--dpt-th);height:var(--dpt-th);border:1px solid var(--stroke)}
+.dpt-merged .dpt-prodrow,.kai-shop-photos .dpt-merged .dpt-prodrow{grid-template-columns:18px var(--dpt-th) minmax(0,1fr) auto auto}
+.dpt-merged .dpt-pr-alt{grid-template-columns:var(--dpt-th) minmax(0,1fr) auto auto 128px}
+/* Alternatives line up under the chosen product's image */
+.dpt-merged .dpt-pr-wrap{padding-left:42px}
+
+/* Product type page, chosen products: like the department table —
+   the product on its own full-width row, then "N tasks", then its tasks */
+.kai-shop-layout{--lnpg-th:56px}
+.kai-shop-photos{--lnpg-th:80px}
+.kai-shop-layout .lnpg-body,.kai-shop-photos .lnpg-body{grid-template-columns:minmax(0,1fr);padding:0;align-items:stretch}
+.kai-shop-layout .lnpg-prod,.kai-shop-photos .lnpg-prod{padding:12px 18px;border-bottom:1px solid var(--stroke);background:var(--white)}
+.kai-shop-layout .lnpg-prod-l,.kai-shop-photos .lnpg-prod-l,
+.kai-shop-layout .lnpg-prod-l.is-none,.kai-shop-photos .lnpg-prod-l.is-none{flex-direction:row;align-items:center;gap:14px;width:100%}
+.kai-shop-layout .lnpg-prod .lnpc-thumb,.kai-shop-photos .lnpg-prod .lnpc-thumb,
+.kai-shop-layout .lnpg-prod .lnpc-thumb.is-lg,.kai-shop-photos .lnpg-prod .lnpc-thumb.is-lg{width:var(--lnpg-th);height:var(--lnpg-th);max-width:none;aspect-ratio:auto;flex-shrink:0}
+.kai-shop-layout .lnpg-prod-n,.kai-shop-photos .lnpg-prod-n{flex-direction:row;align-items:center;gap:16px;flex:1;min-width:0;max-width:none;width:auto}
+.kai-shop-layout .lnpg-prod-n .lnpg-open,.kai-shop-photos .lnpg-prod-n .lnpg-open{flex:1;min-width:0}
+.kai-shop-layout .lnpg-prod-n .lnpc-name,.kai-shop-photos .lnpg-prod-n .lnpc-name{font-size:14px;-webkit-line-clamp:1}
+.kai-shop-layout .lnpg-prod-n .lnpg-acts,.kai-shop-photos .lnpg-prod-n .lnpg-acts{margin:0;gap:6px}
+.kai-shop-layout .lnpg-prod-n .lnpg-bare-t{flex:1;color:#B45309}
+.lnpg-unit{font-size:13px;color:var(--t2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.lnpg-ntasks{padding:10px 18px 2px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.kai-shop-layout .lnpg-tasks,.kai-shop-photos .lnpg-tasks{padding:0 18px 6px}
+.kai-shop-layout .lnpg-head.is-flat,.kai-shop-photos .lnpg-head.is-flat{padding-left:18px;padding-right:18px}
