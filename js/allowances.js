@@ -172,7 +172,7 @@ function budgetBlockHtml(o){
   const can = allowCanEdit(o.key);
   const has = o.target != null;
   const btn = (!editing && can) ? `<button type="button" class="alw-btn" onclick="event.stopPropagation();allowEdit('${_allowArg(o.key)}')">${has ? 'Edit' : 'Set'}</button>`
-    : o.tplLink && allowIsManager() ? `<button type="button" class="alw-btn" title="Department allowances are set on the template, for every job that uses it" onclick="event.stopPropagation();ovOpenTemplate('${_allowArg(allowTemplateName())}')">Edit on template ↗</button>` : '';
+    : o.tplLink && allowIsManager() ? `<button type="button" class="alw-btn" title="Opens the template — department allowances are set there, for every job that uses it" onclick="event.stopPropagation();ovOpenTemplate('${_allowArg(allowTemplateName())}')">Edit</button>` : '';
   const d = has ? o.target - o.actual : 0;
   // No bar: within the target the figures speak for themselves; once over,
   // the cost turns red behind a warning mark and says by how much.

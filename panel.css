@@ -7439,3 +7439,6 @@ button.alw-mark:hover{filter:brightness(.96);text-decoration:underline;text-unde
 .kai-shop-photos .lnpg-prod-n{width:100%;max-width:220px}
 .kai-shop-photos .lnpg-prod-n .lnpc-name{white-space:normal;line-height:1.3}
 .kai-shop-photos .lnpg-acts{margin-top:6px}
+/* Right-aligned blocks: Edit comes first so the label ends on the right edge,
+   over the figures. */
+.ov-budget:not(.is-band) .ov-budget-hd .alw-btn{order:-1;margin-left:0}
