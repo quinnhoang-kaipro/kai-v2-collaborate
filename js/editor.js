@@ -1366,6 +1366,7 @@ function _lnpCondensedHtml(l, c){
               <span class="lnpg-prod-n"><span class="lnpg-bare-t">No product yet</span>
                 <span class="lnpg-acts">${penMenu(pool, `addLineProduct('${k}','__V__',[${ids}])`, 'Pick a product for these tasks', 'Select a product from template')}</span></span></span>
           </div>
+          <div class="lnpg-ntasks">${bare.length} ${bare.length === 1 ? 'task' : 'tasks'}</div>
           <div class="lnpg-tasks">${bare.map(t => taskRow(t)).join('')}</div>
         </div>
       </div>`;
@@ -1381,6 +1382,7 @@ function _lnpCondensedHtml(l, c){
             <span class="lnpc-thumb is-lg lnpg-open" onclick="openFly(${l.items[0].id},'${esc(cat.sku)}',event)" title="View product details">${shopProductImg(cat) ? `<img src="${esc(shopProductImg(cat))}" alt="${esc(cat.name)}" loading="lazy">` : _LNP_THUMB}</span>
             <span class="lnpg-prod-n">
               <span class="lnpg-open" onclick="openFly(${l.items[0].id},'${esc(cat.sku)}',event)" title="View product details"><span class="lnpc-brand">${esc(cat.brand || '')}</span><span class="lnpc-name">${esc(cat.name)}</span></span>
+              <span class="lnpg-unit">${shopMoney(o.offer.price)} / ${esc(cat.unit || 'ea')}</span>
               <span class="lnpg-acts">
                 ${penMenu(pool.filter(x => x.sku !== cat.sku), `swapLineProduct('${k}','${esc(cat.sku)}','__V__')`, 'Change this product', 'Select another product from template')}
                 <button type="button" class="optc-trash" onclick="event.stopPropagation();removeLineProduct('${k}','${esc(cat.sku)}')" title="Take this product off its tasks" aria-label="Remove ${esc(cat.brand)} ${esc(cat.name)}">${trashSvg}</button>
@@ -1388,7 +1390,8 @@ function _lnpCondensedHtml(l, c){
             </span>
           </span>
         </div>
-        <div class="lnpg-tasks">${on.flatMap(t => _lineTaskPicked(l, t).filter(h => h.p.sku === cat.sku).map(h => taskRow(t, cat.sku, h))).join('')}</div>
+        ${(() => { const rows = on.flatMap(t => _lineTaskPicked(l, t).filter(h => h.p.sku === cat.sku).map(h => taskRow(t, cat.sku, h)));
+          return `<div class="lnpg-ntasks">${rows.length} ${rows.length === 1 ? 'task' : 'tasks'}</div><div class="lnpg-tasks">${rows.join('')}</div>`; })()}
       </div>
       ${supplierPickHtml(o.offers, o.sup, `setLineSupplier('${k}','${esc(cat.sku)}','__S__')`, `line:${l.key}|${cat.sku}`)}
     </div>`;
@@ -1400,8 +1403,15 @@ function _lnpCondensedHtml(l, c){
       return `<span class="lnpc-foot-l">Total${status ? `<span class="lnp-total-status ${statusCls}">${esc(status)}</span>` : ''}${u && sharedUnit !== null ? `<span class="lnpc-foot-q">${fmtN(boxSum)}${u}</span>` : ''}</span>`; })()}
     <span class="lnpc-foot-amt">${shopMoney(deptLineCost(l))}</span>
   </div>`;
-  const colHead = `<div class="lnpg-head"><span>Product</span><span class="lnpg-head-t"><span>Group › Task › Option</span><span>Qty</span><span class="num">Cost</span></span></div>`;
-  const head = total + colHead + (groups || `<div class="lnpg-empty">${n} ${n === 1 ? 'task needs' : 'tasks need'} a product. Pick one below.</div>`) + bareHtml;
+  /* Nothing picked yet: no product column to fill, so the tasks run the full
+     width and the picker under them applies to all of them (Select still
+     lets you untick tasks to pick per task). */
+  const flat = !added.length;
+  const colHead = (flat || window.__KAI_SHOP_LAYOUT)
+    ? `<div class="lnpg-head is-flat"><span class="lnpg-head-t"><span>Group › Task › Option</span><span>Qty</span><span class="num">Cost</span></span></div>`
+    : `<div class="lnpg-head"><span>Product</span><span class="lnpg-head-t"><span>Group › Task › Option</span><span>Qty</span><span class="num">Cost</span></span></div>`;
+  const flatBody = flat ? `<div class="lnpg is-flat"><div class="lnpg-body is-flat"><div class="lnpg-tasks">${l.items.map(t => taskRow(t)).join('')}</div></div></div>` : '';
+  const head = total + colHead + (flat ? flatBody : groups || `<div class="lnpg-empty">${n} ${n === 1 ? 'task needs' : 'tasks need'} a product. Pick one below.</div>`) + bareHtml;
   const foot = '';
   // The choice: what else this line could buy.
   const alts = pool.filter(x => !added.some(a => a.sku === x.sku));
@@ -1411,7 +1421,7 @@ function _lnpCondensedHtml(l, c){
   const altOpen = l.key in _lnpAltOpen ? _lnpAltOpen[l.key] : true;
   const altHtml = !alts.length ? '' : altOpen
     ? `<div class="lnpc-alts">
-        <div class="lnpc-alts-hd"><span>${added.length ? 'Alternatives' : 'Pick a product'}</span>${added.length ? `<button type="button" class="optc-link" onclick="lnpToggle('alt','${lk}',false)">Hide</button>` : ''}</div>
+        <div class="lnpc-alts-hd"><span>${added.length ? 'Alternatives' : n > 1 ? `Pick a product for all ${n} tasks` : 'Pick a product'}</span>${!added.length && n > 1 ? '<span class="lnpc-alts-sub">Select lets you untick tasks to pick per task</span>' : ''}${added.length ? `<button type="button" class="optc-link" onclick="lnpToggle('alt','${lk}',false)">Hide</button>` : ''}</div>
         ${priced.map(({x, o}) => {
           // Each alternative says where it would be bought from, and can be
           // switched before it's added — the same strip the chosen product has.
