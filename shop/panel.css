@@ -7572,3 +7572,189 @@ button.alw-mark:hover{filter:brightness(.96);text-decoration:underline;text-unde
 .lnpg-ntasks{padding:10px 18px 2px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
 .kai-shop-layout .lnpg-tasks,.kai-shop-photos .lnpg-tasks{padding:0 18px 6px}
 .kai-shop-layout .lnpg-head.is-flat,.kai-shop-photos .lnpg-head.is-flat{padding-left:18px;padding-right:18px}
+.dpt-merged .pgd-tk-list > .pgd-tk-head{border-top:0}
+/* Product row: name with its action under it, price at the right edge */
+.dpt-merged .dpt-prodrow,.kai-shop-photos .dpt-merged .dpt-prodrow{grid-template-columns:18px var(--dpt-th) minmax(0,1fr) auto}
+.dpt-pr-main{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
+.dpt-pr-main .dpt-pr-name{max-width:100%}
+.dpt-merged .dpt-prodrow .dpt-pr-unit{justify-self:end;text-align:right}
+
+/* Department table: one card per product type, page showing between them */
+.pgd-details-sec.dpt-merged{border:0;background:transparent;padding:0;box-shadow:none}
+.dpt-merged > .pgd-tk-list{display:flex;flex-direction:column;gap:16px;border:0;background:transparent}
+.dpt-merged .dpt-grp{border:1px solid var(--stroke);background:var(--white);display:flex;flex-direction:column}
+.dpt-merged .dpt-grp.is-todo{box-shadow:inset 3px 0 0 #E58A2B}
+.dpt-merged .dpt-grp .dpt-band,.kai-shop-photos .dpt-merged .dpt-grp .dpt-band{grid-template-columns:minmax(0,1fr) auto auto;padding:14px 12px 12px;cursor:default;box-shadow:none}
+.dpt-merged .dpt-grp .dpt-band:hover{background:var(--app-bg)}
+.dpt-merged .dpt-band-main{align-items:baseline;gap:12px}
+.dpt-name-link{border:0;background:transparent;padding:0;font:inherit;font-size:17px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left}
+.dpt-name-link:hover{text-decoration:underline;text-underline-offset:3px}
+.dpt-cost-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:110px}
+.dpt-cost-k{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.dpt-merged .dpt-band .dpt-cost-wrap .dpt-cost{font-size:15px}
+.dpt-merged .dpt-grp > .pgd-tk-rowwrap:last-child .pgd-tk-row,.dpt-merged .dpt-grp > .pgd-tk-rowwrap:last-child .dpt-x{border-bottom:0}
+/* Supplier strip under the product row, lined up with the product name */
+.dpt-merged .dpt-prodrow:has(+ .dpt-pr-sup){border-bottom:0;padding-bottom:4px}
+.dpt-pr-sup{padding:0 12px 10px calc(12px + 18px + 12px + var(--dpt-th) + 12px);border-bottom:1px solid var(--stroke);background:var(--white)}
+.dpt-pr-sup .sup-strip{padding:0;border:0;background:transparent}
+
+/* Product type page: each task row leads with its photo */
+.lnpt-cell{display:flex;align-items:center;gap:12px;min-width:0}
+.lnpt-cell > .lnpt-task{min-width:0;flex:1}
+.lnpt-thumb{position:relative;flex:none;width:48px;height:48px;padding:0;border:1px solid var(--stroke);background:var(--sunken);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.kai-shop-photos .lnpt-thumb{width:64px;height:64px}
+.lnpt-thumb:hover{border-color:var(--ink)}
+.lnpt-thumb.is-none svg{width:16px;height:16px;fill:none;stroke:var(--t3);stroke-width:1.2}
+.lnpt-thumb-n{position:absolute;right:3px;bottom:3px;padding:1px 4px;background:rgba(26,26,26,.78);color:#fff;font-family:var(--mono);font-size:9px;font-weight:700;line-height:1.3}
+
+/* Department table, round 3 */
+/* Supplier strip: label "Supplier", lined up with the thumbnail; opened, only the list */
+.dpt-pr-sup{padding-left:42px}
+.dpt-pr-sup .sup-strip.open .sup-strip-hd > :not(.sup-strip-k):not(.sup-strip-n):not(.sup-strip-chev){display:none}
+.dpt-pr-sup .sup-strip.open .sup-strip-n{margin-left:auto}
+/* Lean task table: task and product get the room */
+.dpt-merged .pgd-tk-head.is-lean,.dpt-merged .pgd-tk-row.is-lean{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1.4fr) 44px 92px 170px;gap:14px;padding-left:12px;padding-right:12px}
+.dpt-merged .pgd-tk-row.is-lean .pgd-tk-name{display:flex;align-items:center;gap:6px;min-width:0}
+.dpt-tk-link{border:0;background:transparent;padding:0;font:inherit;font-weight:600;color:var(--ink);text-align:left;cursor:pointer;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dpt-tk-link:hover{text-decoration:underline;text-underline-offset:3px}
+.dpt-merged .pgd-tk-row.is-lean .pgd-tk-prod{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dpt-merged .pgd-tk-row.is-lean .pgd-tk-qty,.dpt-merged .pgd-tk-row.is-lean .pgd-tk-rate{text-align:right}
+/* Expanded task: photos tagged by kind, then group › task › option */
+.dpt-x-photos{display:flex;flex-wrap:wrap;gap:10px;padding:2px 0 14px}
+.dpt-x-ph{position:relative;width:132px;cursor:pointer}
+.dpt-x-ph .pgd-photo-fig{margin:0;width:100%}
+.dpt-x-ph .pgd-photo{width:100% !important;height:100px !important}
+.dpt-x-ph .pgd-photo-name,.dpt-x-ph .pgd-photo-groupbadge,.dpt-x-ph .pgd-photo-fig > span{display:none}
+.dpt-x-prodimg{display:block;width:100%;height:100px;background:var(--sunken);border:1px solid var(--stroke);overflow:hidden}
+.dpt-x-prodimg img{width:100%;height:100%;object-fit:cover;display:block}
+.dpt-x-ph-k{position:absolute;left:6px;bottom:6px;padding:2px 6px;background:rgba(26,26,26,.78);color:#fff;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:3px;pointer-events:none}
+.dpt-x-ph[data-kind="Product"] .dpt-x-ph-k{background:var(--white);color:var(--ink);border:1px solid var(--stroke)}
+.dpt-x-photos .dpt-x-none{align-self:center;padding:0 6px}
+.dpt-x-path{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.dpt-x-sep{color:var(--t3);font-size:15px;padding-bottom:1px}
+.dpt-x-path .dpt-x-id{margin-left:auto;text-align:right}
+.dpt-x-desc{margin-top:12px}
+.dpt-x-photos{flex-wrap:nowrap;overflow-x:auto;padding-bottom:12px}
+.dpt-x-ph{flex:none}
+.dpt-x-tree{display:flex;flex-direction:column;gap:6px}
+.dpt-x-lvl{display:grid;grid-template-columns:64px minmax(0,1fr);align-items:baseline;gap:10px;padding-left:calc(var(--lvl) * 22px);position:relative}
+.dpt-x-lvl + .dpt-x-lvl::before{content:'└';position:absolute;left:calc(var(--lvl) * 22px - 16px);top:-1px;color:var(--t3);font-size:12px}
+.dpt-x-lvl .dpt-x-id{margin-left:10px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--t3)}
+
+/* Product row opened: quantities, tasks to apply to, products to add */
+.dpt-pr-sec{padding:12px 0 6px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.dpt-pr-wrap > .dpt-pr-sec:first-child{padding-top:6px}
+.dpt-ch{padding:0 0 8px;border-bottom:1px solid var(--stroke);margin-bottom:4px}
+.dpt-ch-hd{display:grid;grid-template-columns:var(--dpt-th) minmax(0,1fr) auto 28px;align-items:center;gap:12px;padding:6px 0}
+.dpt-ch-rows{display:flex;flex-direction:column}
+.dpt-ch-row{display:grid;grid-template-columns:minmax(0,1fr) 104px 96px;align-items:center;gap:12px;padding:5px 0;border-top:1px solid var(--hair,#EFEBE2)}
+.dpt-ch-task{font-size:13px;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dpt-ch-opt{color:var(--t2)}
+.dpt-ch-step{width:104px}
+.dpt-ch-amt{text-align:right;font-variant-numeric:tabular-nums;font-size:13px}
+.dpt-ch-more{margin-top:6px;font-size:12.5px}
+.dpt-pr-altwrap{border-bottom:1px solid var(--stroke)}
+.dpt-pr-altwrap:last-child{border-bottom:0}
+.dpt-pr-altwrap .dpt-pr-alt{border-bottom:0}
+.dpt-pr-altwrap .lnp-sel,.dpt-ch .lnp-sel{margin:4px 0 10px}
+.dpt-go.is-on{background:var(--ink);color:var(--white);border-color:var(--ink)}
+.dpt-sup-for{text-transform:none;letter-spacing:0;font-family:var(--sans,inherit);font-weight:400;color:var(--t2)}
+.dpt-merged .dpt-pr-wrap + .dpt-pr-sup{padding-top:10px}
+.dpt-merged .dpt-prodrow.is-open{border-bottom:1px solid var(--stroke);padding-bottom:8px}
+.dpt-pr-sec{display:flex;align-items:center;justify-content:space-between}.dpt-pr-rm{font-family:var(--sans,inherit);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
+
+/* MVP (KAIDEV-4533): price choices and honest supplier data */
+.mvp-tier{display:inline-flex;align-items:center;padding:2px 7px;border-radius:var(--r-tag,3px);font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;border:1px solid var(--stroke);color:var(--t2);background:var(--white)}
+.mvp-tier.is-low{color:#2F6B3A;background:#EEF6EF;border-color:#CFE5D3}
+.mvp-tier.is-middle{color:#6B5A2F;background:#F7F2E6;border-color:#E8DDC2}
+.mvp-tier.is-high{color:#3F4A6B;background:#EEF1F8;border-color:#D3DAEB}
+.mvp-sec-note{font-family:var(--sans,inherit);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--t3)}
+.kai-shop-mvp .sup-logi-i:last-child{color:var(--t3)}
+.mvp-stock{font-size:11.5px;color:var(--success,#2F6B3A);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mvp-stock.is-low{color:#9E6B2F}
+.mvp-stock.is-out{color:var(--t3)}
+.dpt-pr-unit .mvp-tier{margin-right:10px;vertical-align:1px}
+/* Several products on one type: each its own block, a gap of page between */
+.dpt-merged .dpt-seg{display:flex;flex-direction:column}
+.dpt-merged .dpt-seg.is-multi + .dpt-seg.is-multi{border-top:6px solid var(--app-bg)}
+.dpt-merged .dpt-seg > .pgd-tk-rowwrap:last-child .pgd-tk-row{border-bottom:0}
+
+/* Text links underline every line they wrap onto (a border only marks the box's bottom) */
+.task-crumb-a,.tkh-crumb-a,.task-crumb-a:hover,.tkh-crumb-a:hover{border-bottom:0;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px}
+.tk-f-link{text-align:left;display:inline !important;white-space:normal !important}
+/* Department table: qty edited in the task row; reads as text until pointed at */
+.dpt-merged .pgd-tk-qty.is-edit{display:flex;justify-content:flex-end}
+.dpt-row-step{width:84px;height:30px}
+.dpt-merged .dpt-row-step{border-color:transparent;background:transparent}
+.dpt-merged .pgd-tk-row:hover .dpt-row-step{border-color:var(--stroke);background:var(--white)}
+.dpt-merged .dpt-row-step:focus-within{border-color:var(--ink);background:var(--white)}
+.dpt-merged .pgd-tk-head.is-lean,.dpt-merged .pgd-tk-row.is-lean{grid-template-columns:minmax(0,1.5fr) minmax(0,1.4fr) 84px 92px 170px}
+.dpt-pr-acts{display:flex;align-items:center;justify-content:space-between;padding:8px 0 4px;font-size:12.5px}
+/* Product names read as links to their details drawer */
+.dpt-pr-name .dpt-pr-n,.dpt-pr-alt-n.dpt-fly > span:nth-child(2){text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px;text-decoration-color:currentColor}
+.dpt-pr-name .dpt-fly:hover .dpt-pr-n,.dpt-pr-alt-n.dpt-fly:hover > span:nth-child(2){text-decoration-thickness:2px}
+/* Section label and the product's actions share one line */
+.dpt-pr-sec-l{display:flex;align-items:baseline;gap:10px}
+.dpt-pr-sec .dpt-pr-acts{display:flex;align-items:center;gap:18px;padding:0;font-family:var(--sans,inherit);font-size:12.5px;font-weight:400;letter-spacing:0;text-transform:none}
+
+/* Product type page: chosen products in the department card's blocks */
+.dpt-inpage{margin:0}
+.dpt-inpage > .dpt-grp{border:0;border-top:1px solid var(--stroke)}
+.dpt-merged .dpt-prodrow.is-fixed{grid-template-columns:var(--dpt-th) minmax(0,1fr) auto 28px;cursor:default;padding-left:12px}
+.dpt-merged .dpt-prodrow.is-fixed:hover{background:var(--white)}
+.dpt-inpage .dpt-pr-sup{padding-left:12px}
+.dpt-pr-hint{font-size:12.5px;color:var(--t3)}
+
+/* Task page, an open option: the department card's table */
+.optl{display:flex;flex-direction:column;--dpt-th:56px}
+.kai-shop-photos .optl{--dpt-th:80px}
+.optl-head,.optl-row{display:grid;grid-template-columns:var(--dpt-th) minmax(0,1fr) 96px 104px 104px 120px 28px;align-items:center;gap:12px}
+.optl-head{padding:8px 0;border-bottom:1px solid var(--stroke);font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.optl-head > span:first-child{grid-column:1 / 3}
+.optl-head .num{text-align:right}
+.optl-row{padding:10px 0}
+.optl-row + .optl-row,.optl-sup + .optl-row{border-top:1px solid var(--hair,#EFEBE2)}
+.optl-th{width:var(--dpt-th);height:var(--dpt-th);border:1px solid var(--stroke)}
+.optl-th.is-blank{border:0;background:transparent}
+.optl-row.is-labor .optl-th{height:1px}
+.optl-n{display:flex;flex-direction:column;gap:2px;min-width:0}
+.optl-name{font-size:14px;color:var(--ink);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.optl-name.is-plain{text-decoration:none}
+.optl-sku{font-size:11.5px;color:var(--t3)}
+.optl-step{width:96px;border-color:transparent;background:transparent}
+.optl-in{width:100%;height:32px;padding:0 8px;border:1px solid transparent;background:transparent;font:inherit;font-size:13.5px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.optl-row:hover .optl-step,.optl-row:hover .optl-in{border-color:var(--stroke);background:var(--white)}
+.optl-step:focus-within,.optl-in:focus{border-color:var(--ink) !important;background:var(--white);outline:0}
+.optl-amt{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-weight:600;font-variant-numeric:tabular-nums}
+.optl-sup{padding:0 0 10px calc(var(--dpt-th) + 12px)}
+.optl-none{padding:12px 0;font-size:13px;color:#B45309}
+.optl-sec{padding-top:16px}
+.optl-alt{border-bottom:1px solid var(--stroke)}
+.optl-alt:last-child{border-bottom:0}
+.optl .optc-search{margin-top:12px}
+.optl-name{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+/* Several products in one card: each block opens with a darker band */
+.dpt-merged .dpt-seg.is-multi + .dpt-seg.is-multi{border-top:0}
+.dpt-seg-band{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--sunken,#EFEBE2);border-bottom:1px solid var(--stroke);font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.dpt-seg + .dpt-seg .dpt-seg-band{border-top:1px solid var(--stroke);margin-top:14px}
+.dpt-seg-band-n{color:var(--t3)}
+
+/* Task page: the way into the Materials shopping flow for this task's product type */
+.shop-tog{display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:12px;margin:12px 0 4px;padding:12px 14px;border:1px solid var(--stroke);background:var(--app-bg)}
+.shop-tog.is-todo{box-shadow:inset 3px 0 0 #E58A2B}
+.shop-tog-ic{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--stroke);background:var(--white);color:var(--ink)}
+.shop-tog-ic svg{width:15px;height:15px}
+.shop-tog-main{display:flex;flex-direction:column;gap:3px;min-width:0}
+.shop-tog-k{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.shop-tog-warn{color:#B45309}
+.shop-tog-t{font-size:13px;color:var(--ink);line-height:1.4}
+.shop-tog-go{padding:9px 14px;border:1px solid var(--ink);background:var(--ink);color:var(--white);font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;white-space:nowrap}
+.shop-tog-go:hover{background:#000}
+
+/* Materials drill-in: the scope bar is the way back up */
+.sb-hdr.is-back .sb-hdr-title{display:inline-flex;align-items:center;gap:8px}
+.sb-hdr.is-back:hover .sb-hdr-title{text-decoration:underline;text-underline-offset:4px}
+.sb-back-ic{font-family:var(--body);font-size:15px;line-height:1}
+.grp.is-focus > .grp-hdr .grp-caret-btn{visibility:hidden;width:0;margin:0;padding:0}
+.grp.is-focus > .grp-hdr .grp-name{font-size:15px}
+.dpt-pr-search{margin:12px 0 4px}

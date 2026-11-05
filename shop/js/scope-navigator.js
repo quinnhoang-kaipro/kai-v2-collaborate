@@ -815,7 +815,17 @@ function renderSidebar(){
     const live = TASKS.reduce((a, t) => a + dollars(t.cost), 0);
     _sideTotal = Math.max(0, live - _cls.onPos - _cls.deferredAll);
   }
-  if(_ht) _ht.textContent = _sideTotal == null ? 'All scope' : (groupBy === 'dept' ? 'All materials' : 'All labor');
+  /* Layout files, Materials: with a department, one of its product types or
+     one of its tasks open, the panel steps down a level — just that
+     department, its product types and their tasks — and the bar on top
+     becomes the way back to all materials. */
+  const _focusKey = (window.__KAI_SHOP_LAYOUT && groupBy === 'dept')
+    ? (selGroupKey || (selLineKey ? String(selLineKey).split('|')[0] : null) || (selId ? ((groups.find(g => g.items.some(t => t.id === selId)) || {}).key || null) : null))
+    : null;
+  const _focusG = _focusKey ? groups.find(g => g.key === _focusKey) : null;
+  if(_sbHdr){ _sbHdr.classList.toggle('is-back', !!_focusG); _sbHdr.title = _focusG ? 'Back to all materials' : 'View the whole scope'; }
+  if(_ht) _ht.innerHTML = _focusG ? '<span class="sb-back-ic" aria-hidden="true">←</span>All materials'
+    : (_sideTotal == null ? 'All scope' : (groupBy === 'dept' ? 'All materials' : 'All labor'));
   // Shop with Kai: the total after the change order — removals out, price
   // changes in — with what it moved by on its left, in every view.
   const _shopScope = !!window.__KAI_SHOP && !(typeof __KAI_SCOPE_TOTAL_OVERRIDE !== 'undefined' && __KAI_SCOPE_TOTAL_OVERRIDE);
@@ -848,7 +858,7 @@ function renderSidebar(){
     return;
   }
   if(collapsedGrps===null) collapsedGrps=new Set(groups.slice(1).map(g=>g.key));
-  scroll.innerHTML=_sbPoLinkHtml() + groups.map(g=>{
+  scroll.innerHTML=_sbPoLinkHtml() + (_focusG ? [_focusG] : groups).map(g=>{
     // A department totals what its products cost — it's the shopping view,
     // and labour on top would make the figure useless for a budget at the
     // till. Rooms and contractors total the task, as before.
@@ -861,7 +871,7 @@ function renderSidebar(){
       : groupBy === 'contractor'
         ? g.items.reduce((a, t) => a + (_taskIsDeferred(t) ? 0 : _taskLabor(t)), 0)
         : g.items.reduce((s,t)=>s+dollars(t.cost),0);
-    const isCollapsed=collapsedGrps.has(g.key);
+    const isCollapsed=_focusG ? false : collapsedGrps.has(g.key);
     const allApproved=g.items.every(t=>approved.has(t.id));
     /* Shop with Kai, under a change order, by room: a room whose every task
        is being taken out is struck through whole; otherwise a total that
@@ -889,7 +899,7 @@ function renderSidebar(){
     // SHOP-EDIT VARIANT: sidebar is view-only. No "+ Update" affordance on
     // group headers — updates get posted from the Task / Progress tabs.
     const progressAdd = '';
-    return `<div class="grp${grpRemoved?' co-removed':''}${g.pinned?' pinned':''}${isCollapsed?' collapsed':''}${approvedGroupsExplicit.has(g.key)?' allapproved':''}${selGroupKey===g.key?' is-selgrp':''}${g.items.length?'':' is-empty'}" data-grp="${g.key}">
+    return `<div class="grp${_focusG?' is-focus':''}${grpRemoved?' co-removed':''}${g.pinned?' pinned':''}${isCollapsed?' collapsed':''}${approvedGroupsExplicit.has(g.key)?' allapproved':''}${selGroupKey===g.key?' is-selgrp':''}${g.items.length?'':' is-empty'}" data-grp="${g.key}">
       <div class="grp-hdr" onclick="selectGroup('${g.key}')">
         <button class="grp-caret-btn" onclick="event.stopPropagation();toggleGrp(this)" aria-label="Toggle group" title="Expand / collapse">
           <svg class="grp-caret" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5l3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1805,11 +1815,12 @@ function toggleGrp(el){
    Clears any task or group selection and routes to the Editor tab, which
    is where the scope overview renders. */
 function selectScope(){
+  const hadLine = !!selLineKey;
   selLineKey = null;
   if(!SCOPE_VIEW_ENABLED) return;
   // Clicking the already-selected scope is a no-op — no deselect toggle,
-  // same rule selectGroup follows.
-  if(scopeView && !selId && !selGroupKey) return;
+  // same rule selectGroup follows. A product type open counts as away.
+  if(!hadLine && scopeView && !selId && !selGroupKey) return;
   scopeView = true;
   selId = null;
   selGroupKey = null;

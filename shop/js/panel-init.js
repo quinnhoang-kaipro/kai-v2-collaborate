@@ -155,7 +155,7 @@ function kaiStickyRoom(){
     if(m.querySelector('.pgd-media-size')) return;
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'pgd-media-size';
-    const label = () => { b.textContent = window.__stripBig ? 'Smaller' : 'Larger'; b.setAttribute('aria-pressed', !!window.__stripBig); };
+    const label = () => { b.textContent = window.__stripBig ? 'Collapse image' : 'Expand image'; b.setAttribute('aria-pressed', !!window.__stripBig); };
     label();
     b.onclick = e => {
       e.stopPropagation();
