@@ -18,12 +18,28 @@
 // ShopwithKai.html and the layout file; the materials file stays without.
 const ALLOW_ON = !!window.__KAI_SHOP && !window.__KAI_SHOP_MATERIALS;
 // The job budget is anyone's to set; task allowances are the job manager's;
-// department allowances are the template's, so nobody edits them on the job.
+// department allowances come from the template, and the job manager can
+// change one for this job — the template's figure stays named under it.
 function allowIsManager(){ return typeof USER_ROLE === 'undefined' || USER_ROLE === 'manager'; }
 function allowCanEdit(key){
   if(key === 'job') return true;
-  if(key && key.indexOf('dept:') === 0) return false;
   return allowIsManager();
+}
+function allowResetDept(dept){
+  if(TEMPLATE_DEPT_ALLOWANCES[dept] == null) delete DEPT_ALLOWANCES[dept];
+  else DEPT_ALLOWANCES[dept] = TEMPLATE_DEPT_ALLOWANCES[dept];
+  renderAll();
+}
+/* The fine print under a department's allowance: what the template sets, and
+   whether this job has changed it. */
+function deptAllowFinePrint(dept){
+  const tpl = TEMPLATE_DEPT_ALLOWANCES[dept], own = DEPT_ALLOWANCES[dept];
+  const tplLink = _allowTplLinkHtml();
+  const q = esc(String(dept)).replace(/'/g, "\\'");
+  if(tpl == null) return own == null ? '' : `<span class="alw-fine">Set on this job · no department allowance in template ${tplLink}</span>`;
+  // Unchanged, it only says so while being edited.
+  if(own != null && Math.abs(own - tpl) < 0.005) return _allowEditKey === 'dept:' + dept ? `<span class="alw-fine">${sbMoney(tpl)} is the department allowance set in template ${tplLink}</span>` : '';
+  return `<span class="alw-fine">Changed on this job · template ${tplLink} sets ${sbMoney(tpl)}${allowIsManager() ? ` · <button type="button" class="alw-fine-reset" onclick="event.stopPropagation();allowResetDept('${q}')">Reset</button>` : ''}</span>`;
 }
 
 // Mock targets.
@@ -172,7 +188,7 @@ function budgetBlockHtml(o){
   const can = allowCanEdit(o.key);
   const has = o.target != null;
   const btn = (!editing && can) ? `<button type="button" class="alw-btn" onclick="event.stopPropagation();allowEdit('${_allowArg(o.key)}')">${has ? 'Edit' : 'Set'}</button>`
-    : o.tplLink && allowIsManager() ? `<button type="button" class="alw-btn" title="Opens the template — department allowances are set there, for every job that uses it" onclick="event.stopPropagation();ovOpenTemplate('${_allowArg(allowTemplateName())}')">Edit</button>` : '';
+    : '';
   const d = has ? o.target - o.actual : 0;
   // No bar: within the target the figures speak for themselves; once over,
   // the cost turns red behind a warning mark and says by how much.
@@ -272,7 +288,7 @@ function deptAllowanceHtml(dept, variant){
     : [origin ? (origin.kind === 'template' ? `<span class="alw-src">From template ${_allowTplLinkHtml()}</span>` : `<span class="alw-src">${esc(origin.label)}</span>`) : '',
        da.nTasks ? `<span class="alw-src">Task allowances ${sbMoney(da.fromTasks)}</span>` : ''].join('');
   // The layout file lays the detail out in bands under the header instead.
-  const block = budgetBlockHtml({key:'dept:' + dept, label:'Materials cost / Allowance', actual: deptAllowActual(dept), target: da.value, kind:'allowance', variant: variant || 'band', notes: window.__KAI_SHOP_LAYOUT ? '' : notes, tplLink: true});
+  const block = budgetBlockHtml({key:'dept:' + dept, label:'Materials cost / Allowance', actual: deptAllowActual(dept), target: da.value, kind:'allowance', variant: variant || 'band', notes: window.__KAI_SHOP_LAYOUT ? deptAllowFinePrint(dept) : notes});
   return variant === 'corner' ? block : block + _allowWarnHtml(dept, da);
 }
 
@@ -325,8 +341,12 @@ function allowMarkHtml(flag, what, t, key){
   /* The left panel says only that something is over — a warning mark and
      "Over" — with no figures and no word for what it's over. Pressing it opens
      the task or department in the Editor, where the allowance is laid out. */
-  const by = (t && flag === 'over') ? ` by ${sbMoney(taskAllowActual(t) - taskAllowance(t))}` : '';
-  const tip = `Over its allowance${by} · open for details`;
+  // The tooltip names the allowance and how far past it the figure is.
+  const nums = t ? {cap: taskAllowance(t), now: taskAllowActual(t), lbl: 'Task allowance'}
+    : key ? {cap: deptAllowance(key).value, now: deptAllowActual(key), lbl: 'Materials allowance'} : null;
+  const tip = nums && nums.cap != null
+    ? `${nums.lbl} ${sbMoney(nums.cap)} · ${sbMoney(nums.now - nums.cap)} over · open for details`
+    : 'Over its allowance · open for details';
   const ic = '<svg class="alw-mark-ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8 15 14H1z"/><path d="M8 6.2v3.6M8 11.6v.2" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>';
   const go = t ? `allowGoTask(${t.id})` : (key ? `goUpMaterials('${_allowArg(key)}')` : '');
   return `<button type="button" class="alw-mark is-${flag}" title="${esc(tip)}" aria-label="${esc(tip)}"${go ? ` onclick="event.stopPropagation();${go}"` : ''}>${ic}Over</button>`;
