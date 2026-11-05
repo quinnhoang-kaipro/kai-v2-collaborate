@@ -7780,3 +7780,5 @@ button.alw-mark:hover{filter:brightness(.96);text-decoration:underline;text-unde
 .alw-fine{display:block;margin-top:4px;font-size:11.5px;color:var(--t3);text-align:right;line-height:1.4}
 .alw-fine .alw-tpl-link{font:inherit;color:var(--t2);text-decoration:underline;text-underline-offset:3px;border:0;background:none;padding:0;cursor:pointer}
 .alw-fine-reset{font:inherit;color:var(--ink);text-decoration:underline;text-underline-offset:3px;border:0;background:none;padding:0;cursor:pointer}
+/* Task table under a product: no product column, the product row is just above */
+.dpt-merged .pgd-tk-head.is-lean,.dpt-merged .pgd-tk-row.is-lean{grid-template-columns:minmax(0,1fr) 84px 110px 190px 28px}

@@ -1105,7 +1105,6 @@ function _pgdTaskHeadHtml(n, lean){
   // lean: the department table — what you're shopping for, not who does it.
   if(lean) return `<div class="pgd-tk-head is-lean${_pgdAlwCol() ? ' has-alw' : ''}">
     <span>Task${n != null ? ` (${n})` : ''}</span>
-    <span>Product</span>
     <span class="num">Qty</span>
     <span class="num">Rate</span>
     <span class="num">${_pgdAlwCol() ? 'Task cost / Allowance' : 'Task cost'}</span>
@@ -1640,7 +1639,6 @@ function _pgdTaskRowHtml(t, taskOnClick, typeFirst, ex){
       const costCell = _pgdAlwCol() ? _pgdAlwCellHtml(t) : `<span class="pgd-tk-cost">${window.__KAI_SHOP ? sbMoney(dollars(t.cost || 0)) : esc(t.cost || '$0')}</span>`;
       return `<div class="pgd-tk-rowwrap${_exOpen ? ' is-open' : ''}"><div class="pgd-tk-row is-lean${_unready}${_pgdAlwCol() ? ' has-alw' : ''}" data-tid="${t.id}" role="button" tabindex="0" aria-expanded="${_exOpen}" onclick="dptToggleTask(${t.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
         <span class="pgd-tk-name">${_caret}${flg}${chk}<button type="button" class="dpt-tk-link" onclick="event.stopPropagation();pgdRowOpen(event,${t.id},'${esc(taskOnClick)}')" title="Go to ${esc(fullName)}">${esc(fullName)}</button></span>
-        <span class="pgd-tk-prod${fullProd ? '' : ' is-none'}" title="${esc(fullProd)}">${esc(fullProd || '—')}${(() => { const sk = ex && ex.sku; const h = sk ? _pk.find(x => x.p.sku === sk) : null; return h && typeof _rowStock === 'function' && (_rowStock(h.p) || {}).stock === 'out' ? '<span class="oos-tag">Out of stock</span>' : ''; })()}</span>
         ${(() => {
           // The block's product on this task: its quantity, changed right here
           // (down to 0 takes it off the task).
