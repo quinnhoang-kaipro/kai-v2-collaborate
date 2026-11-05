@@ -7758,3 +7758,25 @@ button.alw-mark:hover{filter:brightness(.96);text-decoration:underline;text-unde
 .grp.is-focus > .grp-hdr .grp-caret-btn{visibility:hidden;width:0;margin:0;padding:0}
 .grp.is-focus > .grp-hdr .grp-name{font-size:15px}
 .dpt-pr-search{margin:12px 0 4px}
+.optl > .optc-search{margin:14px 0 2px}
+.dpt-pr-wrap > .dpt-pr-search:first-child{margin-top:6px}
+
+/* Consistency pass */
+.dpt-merged .pgd-tk-head.is-lean,.dpt-merged .pgd-tk-row.is-lean{grid-template-columns:minmax(0,1.5fr) minmax(0,1.4fr) 84px 92px 170px 28px}
+.dpt-row-trash{justify-self:end;opacity:.55}
+.dpt-merged .pgd-tk-row:hover .dpt-row-trash{opacity:1}
+.oos-tag{display:inline-flex;align-items:center;margin-left:8px;padding:1px 6px;border-radius:var(--r-tag,3px);background:#FDECEA;color:#B42318;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;vertical-align:2px}
+.optl-n .oos-tag{margin:2px 0 0;align-self:flex-start}
+/* Supplier strips under products: no second price beside the rate */
+.dpt-pr-sup .sup-strip-hd .sup-strip-price{display:none}
+.optl-sup{padding-left:0}
+/* Supplier marks */
+.sup-logo{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:18px;height:18px;padding:0 3px;margin-right:6px;border-radius:2px;color:#fff;font-family:var(--body);font-size:9.5px;font-weight:800;letter-spacing:-.02em;line-height:1;vertical-align:-3px}
+.sup-opt-name{display:inline-flex;align-items:center}
+/* Product type row: label beside the figure, one line */
+.dpt-merged .dpt-cost-wrap{flex-direction:row;align-items:baseline;gap:10px}
+.dpt-merged .dpt-grp .dpt-band{padding-top:12px;padding-bottom:12px}
+/* Department allowance: the template's figure as fine print under it */
+.alw-fine{display:block;margin-top:4px;font-size:11.5px;color:var(--t3);text-align:right;line-height:1.4}
+.alw-fine .alw-tpl-link{font:inherit;color:var(--t2);text-decoration:underline;text-underline-offset:3px;border:0;background:none;padding:0;cursor:pointer}
+.alw-fine-reset{font:inherit;color:var(--ink);text-decoration:underline;text-underline-offset:3px;border:0;background:none;padding:0;cursor:pointer}

@@ -1108,7 +1108,8 @@ function _pgdTaskHeadHtml(n, lean){
     <span>Product</span>
     <span class="num">Qty</span>
     <span class="num">Rate</span>
-    <span class="num">${_pgdAlwCol() ? 'Cost / Allowance' : 'Cost'}</span>
+    <span class="num">${_pgdAlwCol() ? 'Task cost / Allowance' : 'Task cost'}</span>
+    <span></span>
   </div>`;
   return `<div class="pgd-tk-head${_pgdAlwCol() ? ' has-alw' : ''}">
     <span>Task${n != null ? ` (${n})` : ''}</span>
@@ -1219,7 +1220,13 @@ function _dptProductRowHtml(r, sku, opts){
   const plus = '<svg viewBox="0 0 12 12" fill="none"><path d="M6 3v6M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
   const parse = v => typeof _parseDollars === 'function' ? _parseDollars(v) : (parseFloat(String(v || '').replace(/[^\d.]/g, '')) || 0);
   const curTier = c && window.__KAI_SHOP_MVP && typeof shopTierChip === 'function' ? shopTierChip(price(c), pool.map(price)) : '';
-  const unitP = c ? `<span class="dpt-pr-unit">${curTier}${shopMoney(price(c))} / ${esc(c.unit || 'ea')}</span>` : '<span></span>';
+  // The unit price is the rate this product is on its tasks at — the figure
+  // the task rows' Rate column shows — not a separate list price.
+  const parse0 = v => typeof _parseDollars === 'function' ? _parseDollars(v) : (parseFloat(String(v || '').replace(/[^\d.]/g, '')) || 0);
+  const rates = c ? [...new Set(l.items.flatMap(t => _lineTaskPicked(l, t)).filter(h => h.p.sku === c.sku).map(h => parse0(h.p.parts)))] : [];
+  const rate = rates.length ? Math.min(...rates) : (c ? price(c) : 0);
+  const unitP = c ? `<span class="dpt-pr-unit">${curTier}${rates.length > 1 ? 'from ' : ''}${shopMoney(rate)} / ${esc(c.unit || 'ea')}</span>` : '<span></span>';
+  const oos = c && (() => { try { return _lnpOffer(l, c).offer.stock === 'out'; } catch(e){ return false; } })();
   // What's left of the product's own controls once quantities live in the
   // task rows: take it off every task, or put it on the ones without it.
   const qtyHtml = !c ? '' : (() => {
@@ -1244,16 +1251,16 @@ function _dptProductRowHtml(r, sku, opts){
         <button type="button" class="dpt-go${c ? '' : ' is-primary'}${selOn(x.sku) ? ' is-on' : ''}" onclick="dptAddStart('${k}','${esc(x.sku)}')">${selOn(x.sku) ? 'Cancel' : '+ Add'}</button>
       </div>${selOn(x.sku) && typeof _lnpSelHtml === 'function' ? _lnpSelHtml(l, x) : ''}</div>`).join('');
   // One line: what the list below is, then this product's own actions.
-  const body = !open ? '' : `<div class="dpt-pr-sec"><span class="dpt-pr-sec-l">${window.__KAI_SHOP_MVP ? 'Kai suggestions' : c ? 'Add another product' : 'Pick a product'}${window.__KAI_SHOP_MVP ? '<span class="mvp-sec-note">Three price choices · in stock nearby first</span>' : ''}</span></div>
+  const body = !open ? '' : `${typeof prodSearchHtml === 'function' ? `<div class="optc-search dpt-pr-search">${prodSearchHtml('line:' + l.key)}</div>` : ''}
+    <div class="dpt-pr-sec"><span class="dpt-pr-sec-l">Other products${window.__KAI_SHOP_MVP ? '<span class="mvp-sec-note">Three price choices · in stock nearby first</span>' : ''}</span></div>
     ${curSel}
-    <div class="dpt-pr-list">${altsHtml || '<div class="dpt-pr-note">No other products for this type.</div>'}</div>
-    ${typeof prodSearchHtml === 'function' ? `<div class="optc-search dpt-pr-search">${prodSearchHtml('line:' + l.key)}</div>` : ''}`;
+    <div class="dpt-pr-list">${altsHtml || '<div class="dpt-pr-note">No other products for this type.</div>'}</div>`;
   const supHtml = !c || typeof supplierPickHtml !== 'function' ? '' : (() => {
     const o = _lnpOffer(l, c);
     const strip = supplierPickHtml(o.offers, o.sup, `setLineSupplier('${k}','${esc(c.sku)}','__S__')`, `line:${l.key}|${c.sku}`);
     return strip ? `<div class="dpt-pr-sup">${strip.replace('>Buying from<', '>Supplier<').replace('>Sold by<', '>Supplier<')}</div>` : '';
   })();
-  const name = c ? `<span class="lnpc-brand">${esc(c.brand || '')}</span> <span class="dpt-pr-n">${esc(c.name)}</span>` : '<span class="dpt-none">No product yet</span>';
+  const name = c ? `<span class="lnpc-brand">${esc(c.brand || '')}</span> <span class="dpt-pr-n">${esc(c.name)}</span>${oos ? ' <span class="oos-tag">Out of stock</span>' : ''}` : '<span class="dpt-none">No product yet</span>';
   if(opts.fixed){
     const trash = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.7 6.5v4.5M9.3 6.5v4.5"/></svg>';
     return `<div class="dpt-prodrow is-fixed${c ? '' : ' is-none'}">
@@ -1633,7 +1640,7 @@ function _pgdTaskRowHtml(t, taskOnClick, typeFirst, ex){
       const costCell = _pgdAlwCol() ? _pgdAlwCellHtml(t) : `<span class="pgd-tk-cost">${window.__KAI_SHOP ? sbMoney(dollars(t.cost || 0)) : esc(t.cost || '$0')}</span>`;
       return `<div class="pgd-tk-rowwrap${_exOpen ? ' is-open' : ''}"><div class="pgd-tk-row is-lean${_unready}${_pgdAlwCol() ? ' has-alw' : ''}" data-tid="${t.id}" role="button" tabindex="0" aria-expanded="${_exOpen}" onclick="dptToggleTask(${t.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
         <span class="pgd-tk-name">${_caret}${flg}${chk}<button type="button" class="dpt-tk-link" onclick="event.stopPropagation();pgdRowOpen(event,${t.id},'${esc(taskOnClick)}')" title="Go to ${esc(fullName)}">${esc(fullName)}</button></span>
-        <span class="pgd-tk-prod${fullProd ? '' : ' is-none'}" title="${esc(fullProd)}">${esc(fullProd || '—')}</span>
+        <span class="pgd-tk-prod${fullProd ? '' : ' is-none'}" title="${esc(fullProd)}">${esc(fullProd || '—')}${(() => { const sk = ex && ex.sku; const h = sk ? _pk.find(x => x.p.sku === sk) : null; return h && typeof _rowStock === 'function' && (_rowStock(h.p) || {}).stock === 'out' ? '<span class="oos-tag">Out of stock</span>' : ''; })()}</span>
         ${(() => {
           // The block's product on this task: its quantity, changed right here
           // (down to 0 takes it off the task).
@@ -1649,8 +1656,19 @@ function _pgdTaskRowHtml(t, taskOnClick, typeFirst, ex){
             <button type="button" class="opt-card-qty-btn" onclick="event.stopPropagation();bumpLineTaskQty('${lk}',${t.id},1,'${sk}','${oid}')" aria-label="One more">${pl}</button>
           </span></span>`;
         })()}
-        <span class="pgd-tk-rate">${fullProd ? (window.__KAI_SHOP && t.rate && dollars(t.rate) ? sbMoney(dollars(t.rate)) : esc(t.rate || '—')) : '—'}</span>
+        ${(() => {
+          // Rate is the block's product's unit price on this task — the same
+          // figure its product row shows.
+          const sk = ex && ex.sku, h = sk ? _pk.find(x => x.p.sku === sk) : (_pk.length === 1 ? _pk[0] : null);
+          const r = h ? (typeof _parseDollars === 'function' ? _parseDollars(h.p.parts) : 0) : 0;
+          return `<span class="pgd-tk-rate">${h ? sbMoney(r) : '—'}</span>`;
+        })()}
         ${costCell}
+        ${(() => {
+          const sk = ex && ex.sku, h = sk ? _pk.find(x => x.p.sku === sk) : null;
+          if(!h || !_ln) return '<span></span>';
+          return `<button type="button" class="optc-trash dpt-row-trash" onclick="event.stopPropagation();bumpLineTaskQty('${_lineKeyArg(_ln.key)}',${t.id},-1e9,'${esc(h.p.sku)}','${esc(h.o.id)}')" title="Take this product off ${esc(t.room)} › ${esc(t.name)}" aria-label="Remove from this task"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.7 6.5v4.5M9.3 6.5v4.5"/></svg></button>`;
+        })()}
       </div>${_exOpen ? _dptTaskDetailHtml(t, taskOnClick) : ''}</div>`;
     }
     return `<div class="pgd-tk-rowwrap${_PGD_BY_TYPE && typeFirst ? ' is-type-start' : ''}${_exOpen ? ' is-open' : ''}"><div class="pgd-tk-row${_unready}${_pgdAlwCol() ? ' has-alw' : ''}" data-tid="${t.id}" role="button" tabindex="0" onclick="pgdRowOpen(event,${t.id},'${esc(taskOnClick)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="${esc(fullName)}">

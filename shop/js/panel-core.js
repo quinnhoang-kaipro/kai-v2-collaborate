@@ -393,7 +393,7 @@ function deptLineNeed(items){
   }
   const n = Math.round(parsed.reduce((s, p) => s + p.n, 0) * 100) / 100;
   const unit = parsed[0].unit;
-  if(unit === 'ea') return `${n} scoped`;
+  if(unit === 'ea') return `${items.length} ${items.length === 1 ? 'task' : 'tasks'}`;
   if(unit === 'sf' || unit === 'lf') return `${n.toLocaleString('en-US')} ${unit.toUpperCase()}`;
   // Countable units read as words, so they take a plural: "2 rooms".
   return `${n.toLocaleString('en-US')} ${unit}${n === 1 || /s$/.test(unit) ? '' : 's'}`;

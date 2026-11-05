@@ -891,13 +891,13 @@ function _optLeanBodyHtml(t, o){
   const field = (p, f, lbl) => `<input class="optl-in" value="${esc(p[f] || '')}" placeholder="$0.00" aria-label="${lbl}" onclick="event.stopPropagation()" oninput="commitOptionProduct(${t.id},'${o.id}','${p.id}','${f}',this.value);requestSecTaskcardRerender()">`;
   const row = p => { const qs = _prodQtySplit(o, p, t); return `<div class="optl-row">
       <span class="dpt-thumb optl-th dpt-fly" ${fly(p)}>${img(p)}</span>
-      <span class="optl-n">${p.brand ? `<span class="lnpc-brand">${esc(p.brand)}</span>` : ''}<span class="optl-name dpt-fly" ${fly(p)}>${esc(p.product || 'Untitled product')}</span>${p.sku ? `<span class="optl-sku">SKU ${esc(p.sku)}</span>` : ''}</span>
+      <span class="optl-n">${p.brand ? `<span class="lnpc-brand">${esc(p.brand)}</span>` : ''}<span class="optl-name dpt-fly" ${fly(p)}>${esc(p.product || 'Untitled product')}</span>${(_rowStock(p) || {}).stock === 'out' ? '<span class="oos-tag">Out of stock</span>' : ''}${p.sku ? `<span class="optl-sku">SKU ${esc(p.sku)}</span>` : ''}</span>
       <span class="opt-card-qty-stepper optl-step" onclick="event.stopPropagation()">
         <button type="button" class="opt-card-qty-btn" onclick="bumpProductQty(${t.id},'${o.id}','${p.id}',-1)" aria-label="One fewer">${minus}</button>
         <input class="opt-card-qty-input" value="${esc(qs.num)}" inputmode="decimal" oninput="commitOptionProduct(${t.id},'${o.id}','${p.id}','qty',_prodQtyJoin(this.value,'${esc(qs.unit)}'));requestSecTaskcardRerender()">
         <button type="button" class="opt-card-qty-btn" onclick="bumpProductQty(${t.id},'${o.id}','${p.id}',1)" aria-label="One more">${plus}</button>
       </span>
-      ${field(p, 'parts', 'Parts price')}
+      ${field(p, 'parts', 'Rate')}
       ${field(p, 'labor', 'Labor')}
       <span class="optl-amt">${esc(_fmtDollars(productLineTotal(p)))}${_prodModHtml(t, o, p)}</span>
       <button type="button" class="optc-trash" onclick="optSetPicked(${t.id},'${o.id}','${p.id}',false)" title="Take this product off the option" aria-label="Remove ${esc(p.product || 'product')}">${trash}</button>
@@ -910,19 +910,25 @@ function _optLeanBodyHtml(t, o){
       <span class="optl-amt">${esc(_fmtDollars(productLineTotal(p)))}${_prodModHtml(t, o, p)}</span>
       <button type="button" class="optc-trash" onclick="optSetPicked(${t.id},'${o.id}','${p.id}',false)" title="Take labor off the option" aria-label="Remove labor">${trash}</button>
     </div>`;
-  const table = picked.length ? `<div class="optl-head"><span>Product (${goods.length})</span><span class="num">Qty</span><span class="num">Parts</span><span class="num">Labor</span><span class="num">Cost</span><span></span></div>
+  const table = picked.length ? `<div class="optl-head"><span>Product (${goods.length})</span><span class="num">Qty</span><span class="num">Rate</span><span class="num">Labor</span><span class="num">Cost</span><span></span></div>
     ${goods.map(row).join('')}${labor.map(laborRow).join('')}` : '<div class="optl-none">No product yet. Add one below.</div>';
-  const altsHtml = alts.map(p => `<div class="dpt-pr-alt optl-alt">
+  // Same as the department's list: where each is stocked, its price choice
+  // (MVP), nearby stock first.
+  const offOf = p => { const os = offersForSku(p.sku) || []; return os.find(x => x.supplier === rowSupplier(p)) || os[0] || null; };
+  const priceOf = p => _parseDollars(p.parts) || 0;
+  const allPrices = ps.filter(p => p.sku).map(priceOf);
+  if(_MVP) alts.sort((a, b) => shopStockRank(offOf(a)) - shopStockRank(offOf(b)) || priceOf(a) - priceOf(b));
+  const altsHtml = alts.map(p => { const of = offOf(p); return `<div class="dpt-pr-alt optl-alt">
       <span class="dpt-thumb is-sm dpt-fly" ${fly(p)}>${img(p)}</span>
-      <span class="dpt-pr-alt-n dpt-fly" ${fly(p)}><span class="lnpc-brand">${esc(p.brand || '')}</span><span>${esc(p.product || '')}</span></span>
-      <span></span>
+      <span class="dpt-pr-alt-n dpt-fly" ${fly(p)}><span class="lnpc-brand">${esc(p.brand || '')}</span><span>${esc(p.product || '')}</span>${of ? `<span class="mvp-stock is-${of.stock || 'in'}">${esc(_supStockFor(of.supplier, of.stock))} · ${esc(supplierName(of.supplier))}</span>` : ''}</span>
+      ${_MVP ? (shopTierChip(priceOf(p), allPrices) || '<span></span>') : '<span></span>'}
       <span class="dpt-pr-unit">${esc(_fmtDollars(_parseDollars(p.parts) || 0))}${p.unit ? ` / ${esc(p.unit)}` : ''}</span>
       <button type="button" class="dpt-go${goods.length ? '' : ' is-primary'}" onclick="optSetPicked(${t.id},'${o.id}','${p.id}',true)">+ Add</button>
-    </div>`).join('');
+    </div>`; }).join('');
   return `<div class="optl dpt-merged">
     ${table}
-    ${alts.length ? `<div class="dpt-pr-sec optl-sec"><span>${goods.length ? 'Add another product' : 'Pick a product'}</span></div><div class="dpt-pr-list">${altsHtml}</div>` : ''}
     <div class="optc-search">${prodSearchHtml(`opt:${t.id}:${o.id}`)}</div>
+    ${alts.length ? `<div class="dpt-pr-sec optl-sec"><span>Other products</span></div><div class="dpt-pr-list">${altsHtml}</div>` : ''}
   </div>`;
 }
 /* Browsing task by task (All or Labor), the task's products are one piece of
@@ -1495,7 +1501,7 @@ function _lnpCondensedHtml(l, c){
   const total = `<div class="lnpc-foot lnpg-total">
     ${(() => { const u = sharedUnit && sharedUnit !== 'ea' ? ' ' + esc(sharedUnit) : '';
       // "Total" unless the quantities don't meet what's scoped — then say how.
-      return `<span class="lnpc-foot-l">Total${status ? `<span class="lnp-total-status ${statusCls}">${esc(status)}</span>` : ''}${u && sharedUnit !== null ? `<span class="lnpc-foot-q">${fmtN(boxSum)}${u}</span>` : ''}</span>`; })()}
+      return `<span class="lnpc-foot-l">${window.__KAI_SHOP_LAYOUT ? 'Materials cost' : 'Total'}${status ? `<span class="lnp-total-status ${statusCls}">${esc(status)}</span>` : ''}${u && sharedUnit !== null ? `<span class="lnpc-foot-q">${fmtN(boxSum)}${u}</span>` : ''}</span>`; })()}
     <span class="lnpc-foot-amt">${shopMoney(deptLineCost(l))}</span>
   </div>`;
   /* Nothing picked yet: no product column to fill, so the tasks run the full
@@ -1521,7 +1527,7 @@ function _lnpCondensedHtml(l, c){
   const altOpen = l.key in _lnpAltOpen ? _lnpAltOpen[l.key] : true;
   const altHtml = !alts.length ? '' : altOpen
     ? `<div class="lnpc-alts">
-        <div class="lnpc-alts-hd"><span>${_MVP ? 'Kai suggestions' : added.length ? 'Alternatives' : n > 1 ? `Pick a product for all ${n} tasks` : 'Pick a product'}</span>${_MVP ? '<span class="lnpc-alts-sub">Three price choices · in stock nearby first</span>' : ''}${!added.length && n > 1 ? '<span class="lnpc-alts-sub">Select lets you untick tasks to pick per task</span>' : ''}${added.length ? `<button type="button" class="optc-link" onclick="lnpToggle('alt','${lk}',false)">Hide</button>` : ''}</div>
+        <div class="lnpc-alts-hd"><span>${_MVP ? 'Other products' : added.length ? 'Alternatives' : n > 1 ? `Pick a product for all ${n} tasks` : 'Pick a product'}</span>${_MVP ? '<span class="lnpc-alts-sub">Three price choices · in stock nearby first</span>' : ''}${!added.length && n > 1 ? '<span class="lnpc-alts-sub">Select lets you untick tasks to pick per task</span>' : ''}${added.length ? `<button type="button" class="optc-link" onclick="lnpToggle('alt','${lk}',false)">Hide</button>` : ''}</div>
         ${priced.map(({x, o}) => {
           // Each alternative says where it would be bought from, and can be
           // switched before it's added — the same strip the chosen product has.
@@ -1591,7 +1597,8 @@ function lnpSelStart(key, sku){
   if(_lnpSel && _lnpSel.line === key && _lnpSel.sku === sku){ _lnpSel = null; renderShop(); return; }
   const l = deptLineByKey(key); if(!l) return;
   const anyChosen = l.items.some(t => _lineTaskPicked(l, t).length);
-  const mode = anyChosen ? 'replace' : 'add';
+  // Adding only: an unwanted product is stepped down to 0 in its row.
+  const mode = 'add';
   _lnpSel = {line:key, sku, mode, on:new Set(_lnpSelFree(l, sku, mode).map(t => t.id)), qty:_lnpSelQtys(l, sku, mode)};
   renderShop();
 }
@@ -1668,7 +1675,7 @@ function _lnpSelHtml(l, cat){
   const seg = m => `<button type="button" class="${mode === m ? 'on' : ''}" onclick="lnpSelMode('${m}')">${m === 'replace' ? 'Replace' : '+ Add'}</button>`;
   return `<div class="lnp-sel" onclick="event.stopPropagation()">
     <div class="lnp-sel-hd">
-      ${anyChosen && !_lnpSel.addOnly ? `<span class="lnp-sel-seg" role="group" aria-label="Replace or add">${seg('replace')}${seg('add')}</span>` : ''}
+      
       <span class="lnp-sel-what">${mode === 'replace' ? 'Swap it in on' : 'Add it to'}</span>
       ${free.length > 1 ? `<label class="lnp-sel-all"><input type="checkbox" ${allOn ? 'checked' : ''} onchange="lnpSelAll(this.checked)"> All ${free.length} tasks</label>` : ''}
     </div>
@@ -2113,6 +2120,13 @@ const _supLogiHtml = (supplier, stock) => {
   return `<span class="sup-logi"><span class="sup-logi-i">${esc(pick)}</span><span class="sup-logi-sep" aria-hidden="true">·</span><span class="sup-logi-i">${esc(ship)}</span></span>`;
 };
 const _supPrice = n => '$' + Number(n).toLocaleString('en-US');
+/* A small mark beside the big-box suppliers' names. Placeholder badges in
+   each retailer's colour; swap for the official logo files when we have them. */
+const _SUP_LOGO = {hd:{t:'HD', bg:'#F96302'}, low:{t:'L', bg:'#004990'}};
+function supplierLogoHtml(id){
+  const l = _SUP_LOGO[id]; if(!l) return '';
+  return `<span class="sup-logo" style="background:${l.bg}" aria-hidden="true">${l.t}</span>`;
+}
 function supplierPickHtml(offers, cur, pick, key){
   if(!offers || !offers.length) return '';
   const low = offers[0].price;
@@ -2121,7 +2135,7 @@ function supplierPickHtml(offers, cur, pick, key){
   const k = esc(key).replace(/'/g, "\\'");
   if(offers.length === 1){
     return `<div class="sup-strip is-single" onclick="event.stopPropagation()">
-      <span class="sup-strip-k">Sold by</span><b>${esc(supplierName(curOffer.supplier))}</b>
+      <span class="sup-strip-k">Supplier</span>${supplierLogoHtml(curOffer.supplier)}<b>${esc(supplierName(curOffer.supplier))}</b>
       <span class="sup-stock${stockCls(curOffer.stock)}">${_supStockFor(curOffer.supplier, curOffer.stock)}</span>
       ${_supLogiHtml(curOffer.supplier, curOffer.stock)}
     </div>`;
@@ -2133,7 +2147,7 @@ function supplierPickHtml(offers, cur, pick, key){
         onclick="event.stopPropagation();${on ? '' : pick.replace('__S__', esc(o.supplier))}">
       <span class="sup-radio" aria-hidden="true"></span>
       <span class="sup-opt-who">
-        <span class="sup-opt-name">${esc(supplierName(o.supplier))}</span>
+        <span class="sup-opt-name">${supplierLogoHtml(o.supplier)}${esc(supplierName(o.supplier))}</span>
         ${_supLogiHtml(o.supplier, o.stock)}
       </span>
       <span class="sup-stock${stockCls(o.stock)}">${_supStockFor(o.supplier, o.stock)}</span>
@@ -2143,7 +2157,7 @@ function supplierPickHtml(offers, cur, pick, key){
   }).join('');
   return `<div class="sup-strip${open ? ' open' : ''}" data-sup="${esc(key)}" onclick="event.stopPropagation()">
     <button type="button" class="sup-strip-hd" aria-expanded="${open}" onclick="event.stopPropagation();toggleSupStrip('${k}')">
-      <span class="sup-strip-k">Buying from</span><b>${esc(supplierName(curOffer.supplier))}</b>
+      <span class="sup-strip-k">Supplier</span>${supplierLogoHtml(curOffer.supplier)}<b>${esc(supplierName(curOffer.supplier))}</b>
       <span class="sup-strip-price">${_supPrice(curOffer.price)}</span>
       <span class="sup-stock${stockCls(curOffer.stock)}">${_supStockFor(curOffer.supplier, curOffer.stock)}</span>
       ${_supLogiHtml(curOffer.supplier, curOffer.stock)}
