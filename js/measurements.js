@@ -1101,9 +1101,17 @@ function _pgdRowsHtml(items, taskOnClick){
     .map(({t, k}) => { const first = k !== prev; prev = k; return _pgdTaskRowHtml(t, taskOnClick, first); })
     .join('');
 }
-function _pgdTaskHeadHtml(){
+function _pgdTaskHeadHtml(n, lean){
+  // lean: the department table — what you're shopping for, not who does it.
+  if(lean) return `<div class="pgd-tk-head is-lean${_pgdAlwCol() ? ' has-alw' : ''}">
+    <span>Task${n != null ? ` (${n})` : ''}</span>
+    <span>Product</span>
+    <span class="num">Qty</span>
+    <span class="num">Rate</span>
+    <span class="num">${_pgdAlwCol() ? 'Cost / Allowance' : 'Cost'}</span>
+  </div>`;
   return `<div class="pgd-tk-head${_pgdAlwCol() ? ' has-alw' : ''}">
-    <span>Task</span>
+    <span>Task${n != null ? ` (${n})` : ''}</span>
     <span>Status</span>
     <span>Contractor</span>
     <span>Modifier</span>
@@ -1143,7 +1151,14 @@ function _deptProductTypes(g){
    "Tasks in this department" table. */
 const _dptOpen = new Set();
 const _dptProdOpen = new Set();
-function dptToggleProd(key){ _dptProdOpen.has(key) ? _dptProdOpen.delete(key) : _dptProdOpen.add(key); if(typeof renderShop === 'function') renderShop(); else renderAll(); }
+const _dptProdShut = new Set();
+function dptToggleProd(key){
+  const bare = /::$/.test(key);
+  const isOpen = _dptProdOpen.has(key) || (bare && !_dptProdShut.has(key));
+  if(isOpen){ _dptProdOpen.delete(key); if(bare) _dptProdShut.add(key); }
+  else { _dptProdOpen.add(key); _dptProdShut.delete(key); }
+  if(typeof renderShop === 'function') renderShop(); else renderAll();
+}
 // Swap the type's one product, or put the first pick on every task.
 function dptUseProduct(key, fromSku, toSku){
   _dptProdOpen.delete(key);
@@ -1153,47 +1168,131 @@ function dptUseProduct(key, fromSku, toSku){
 /* The product type's product, as its own row under the type: what's chosen
    (or that nothing is), and — opened — the other products it could be, each
    one click to use. Several products on one type are changed on its page. */
-function _dptProductRowHtml(r, img){
+function dptAddStart(key, sku){
+  if(typeof lnpSelStart !== 'function') return;
+  lnpSelStart(key, sku);
+  // "+ Add" only ever adds: an unwanted product is stepped down to 0 in its row.
+  if(typeof _lnpSel !== 'undefined' && _lnpSel){ _lnpSel.addOnly = true; if(_lnpSel.mode !== 'add') lnpSelMode('add'); else renderShop(); }
+}
+/* The product type's products, as their own row under the type. Closed: what's
+   chosen. Open: each chosen product with its quantity on every task (down to
+   0 takes it off), a way to put it on more tasks, then other products to add
+   — each picks which tasks (one, some, all) and how many. Where each product
+   is bought sits under all of that, just above the tasks. */
+/* One product of a product type, as its own block: the product's row (always
+   the product itself — image, name, price), opening to its quantity on each
+   task, a way to put it on more tasks, and other products to add; then where
+   it's bought. sku null is the "no product yet" block for tasks without one.
+   The caller puts the block's own tasks under it. */
+/* A product type's products, one block each — product row, supplier, then
+   just the tasks it's on; tasks without a product get their own block. Used
+   by the department card and the product type page (opts.fixed: no opening
+   the product row there, the page lists the alternatives itself). */
+function _dptSegmentsHtml(r, taskOnClick, opts){
+  opts = opts || {};
+  const order = [];
+  r.l.items.forEach(t => { const pk = _lineTaskPicked(r.l, t); (pk.length ? [...new Set(pk.map(h => h.p.sku))] : [null]).forEach(s => { if(!order.includes(s)) order.push(s); }); });
+  const multi = order.length > 1;
+  const nProd = order.filter(Boolean).length;
+  let pi = 0;
+  return order.map(sku => {
+    const tasks = r.l.items.filter(t => { const pk = _lineTaskPicked(r.l, t); return sku ? pk.some(h => h.p.sku === sku) : !pk.length; });
+    // Several blocks: each opens with a band naming which it is.
+    const band = !multi ? '' : `<div class="dpt-seg-band">${sku ? `Product ${++pi} of ${nProd}` : 'No product yet'}<span class="dpt-seg-band-n">${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}</span></div>`;
+    return `<div class="dpt-seg${multi ? ' is-multi' : ''}">${band}${_dptProductRowHtml(r, sku, opts)}${_pgdTaskHeadHtml(tasks.length, true)}${_pgdSortTasksForGroup(tasks).map(t => _pgdTaskRowHtml(t, taskOnClick, false, {sku})).join('')}</div>`;
+  }).join('');
+}
+function _dptProductRowHtml(r, sku, opts){
+  opts = opts || {};
   const l = r.l, k = _lineKeyArg(l.key);
-  const picked = l.items.flatMap(t => _lineTaskPicked(l, t));
-  const skus = [...new Set(picked.map(h => h.p.sku).filter(Boolean))];
+  const allSkus = [...new Set(l.items.flatMap(t => _lineTaskPicked(l, t)).map(h => h.p.sku).filter(Boolean))];
   const pool = typeof deptLinePool === 'function' ? deptLinePool(l) : [];
-  const cur = skus.length === 1 ? (pool.find(x => x.sku === skus[0]) || (typeof catalogFind === 'function' ? catalogFind(skus[0]) : null)) : null;
-  const open = _dptProdOpen.has(l.key);
+  const catOf = s => pool.find(x => x.sku === s) || (typeof catalogFind === 'function' ? catalogFind(s) : null);
+  const c = sku ? catOf(sku) : null;
+  const okey = `${l.key}::${sku || ''}`, okArg = String(okey).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  // A block with no product yet opens on its choices unless it was closed.
+  const open = _dptProdOpen.has(okey) || (!sku && !_dptProdShut.has(okey));
   const price = x => { try { return _lnpOffer(l, x).offer.price; } catch(e){ return x.price; } };
-  const name = !skus.length ? '<span class="dpt-none">No product yet</span>'
-    : cur ? `<span class="lnpc-brand">${esc(cur.brand || '')}</span> ${esc(cur.name)}`
-    : `${skus.length} products`;
-  const unitP = cur ? `<span class="dpt-pr-unit">${shopMoney(price(cur))} / ${esc(cur.unit || 'ea')}</span>` : '';
-  const alts = pool.filter(x => !skus.includes(x.sku));
+  const thumbOf = x => x && shopProductImg(x) ? `<img src="${esc(shopProductImg(x))}" alt="" loading="lazy">` : '';
+  const fly = x => `onclick="event.stopPropagation();openFly(${l.items[0].id},'${esc(x.sku)}',event)" title="View product details"`;
+  const minus = '<svg viewBox="0 0 12 12" fill="none"><path d="M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  const plus = '<svg viewBox="0 0 12 12" fill="none"><path d="M6 3v6M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  const parse = v => typeof _parseDollars === 'function' ? _parseDollars(v) : (parseFloat(String(v || '').replace(/[^\d.]/g, '')) || 0);
+  const curTier = c && window.__KAI_SHOP_MVP && typeof shopTierChip === 'function' ? shopTierChip(price(c), pool.map(price)) : '';
+  const unitP = c ? `<span class="dpt-pr-unit">${curTier}${shopMoney(price(c))} / ${esc(c.unit || 'ea')}</span>` : '<span></span>';
+  // What's left of the product's own controls once quantities live in the
+  // task rows: take it off every task, or put it on the ones without it.
+  const qtyHtml = !c ? '' : (() => {
+    const on = new Set(l.items.filter(t => _lineTaskPicked(l, t).some(h => h.p.sku === c.sku)).map(t => t.id));
+    const more = l.items.length - on.size;
+    return `<span class="dpt-pr-acts">
+      ${more ? `<button type="button" class="optc-link" onclick="dptAddStart('${k}','${esc(c.sku)}')">+ Add to ${more === 1 ? 'the other task' : `more tasks (${more} without it)`}</button>` : ''}
+      <button type="button" class="optc-link dpt-pr-rm" onclick="removeLineProduct('${k}','${esc(c.sku)}')">Remove from all tasks</button>
+    </span>`;
+  })();
+  const curSel = c && typeof _lnpSelHtml === 'function' ? _lnpSelHtml(l, c) : '';
+  const stockRank = x => { try { return typeof shopStockRank === 'function' ? shopStockRank(_lnpOffer(l, x).offer) : 0; } catch(e){ return 1; } };
+  // MVP: stock ranks, it never hides — nearby stock first, then the rest.
+  const alts = pool.filter(x => !allSkus.includes(x.sku)).sort((a, b) => window.__KAI_SHOP_MVP ? stockRank(a) - stockRank(b) || price(a) - price(b) : 0);
   const low = alts.length ? Math.min(...alts.map(price)) : null;
-  const go = `goUpMaterials('${esc(String(l.dept)).replace(/'/g, "\\'")}','${k}')`;
-  const body = !open ? '' : skus.length > 1
-    ? `<div class="dpt-pr-list"><div class="dpt-pr-note">These tasks use different products. Change them one by one on the product type page.</div><button type="button" class="dpt-go" onclick="${go}">Review →</button></div>`
-    : `<div class="dpt-pr-list">${alts.map(x => `<div class="dpt-pr-alt">
-        <span class="dpt-thumb is-sm dpt-fly" onclick="openFly(${l.items[0].id},'${esc(x.sku)}',event)" title="View product details">${shopProductImg(x) ? `<img src="${esc(shopProductImg(x))}" alt="" loading="lazy">` : ''}</span>
-        <span class="dpt-pr-alt-n dpt-fly" onclick="openFly(${l.items[0].id},'${esc(x.sku)}',event)" title="View product details"><span class="lnpc-brand">${esc(x.brand || '')}</span><span>${esc(x.name)}</span></span>
-        ${price(x) === low && alts.length > 1 ? '<span class="lnpc-low">Lowest</span>' : '<span></span>'}
+  const selOn = s => typeof _lnpSel !== 'undefined' && _lnpSel && _lnpSel.line === l.key && _lnpSel.sku === s;
+  const altsHtml = alts.map(x => `<div class="dpt-pr-altwrap"><div class="dpt-pr-alt">
+        <span class="dpt-thumb is-sm dpt-fly" ${fly(x)}>${thumbOf(x)}</span>
+        <span class="dpt-pr-alt-n dpt-fly" ${fly(x)}><span class="lnpc-brand">${esc(x.brand || '')}</span><span>${esc(x.name)}</span>${window.__KAI_SHOP_MVP && typeof _supStockFor === 'function' ? (() => { const o = _lnpOffer(l, x).offer; return `<span class="mvp-stock is-${o.stock || 'in'}">${esc(_supStockFor(o.supplier, o.stock))} · ${esc(supplierName(o.supplier))}</span>`; })() : ''}</span>
+        ${window.__KAI_SHOP_MVP && typeof shopTierChip === 'function' ? (shopTierChip(price(x), pool.map(price)) || '<span></span>') : price(x) === low && alts.length > 1 ? '<span class="lnpc-low">Lowest</span>' : '<span></span>'}
         <span class="dpt-pr-unit">${shopMoney(price(x))} / ${esc(x.unit || 'ea')}</span>
-        <button type="button" class="dpt-go${skus.length ? '' : ' is-primary'}" onclick="dptUseProduct('${k}',${cur ? `'${esc(cur.sku)}'` : 'null'},'${esc(x.sku)}')">${skus.length ? 'Swap in' : `Use on ${l.items.length === 1 ? 'the task' : `all ${l.items.length}`}`}</button>
-      </div>`).join('') || '<div class="dpt-pr-note">No other products for this type.</div>'}</div>`;
-  return `<div class="dpt-prodrow${open ? ' is-open' : ''}${skus.length ? '' : ' is-none'}" onclick="dptToggleProd('${k}')">
-      <button type="button" class="dpt-caret${open ? ' is-open' : ''}" aria-expanded="${open}" onclick="event.stopPropagation();dptToggleProd('${k}')" title="${open ? 'Hide' : 'Show'} other products"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2.5L7.5 6 4 9.5"/></svg></button>
-      <span class="dpt-thumb is-pr${cur ? ' dpt-fly' : ''}"${cur ? ` onclick="event.stopPropagation();openFly(${l.items[0].id},'${esc(cur.sku)}',event)" title="View product details"` : ''}>${img || ''}</span>
-      <span class="dpt-pr-name"><span class="${cur ? 'dpt-fly' : ''}"${cur ? ` onclick="event.stopPropagation();openFly(${l.items[0].id},'${esc(cur.sku)}',event)" title="View product details"` : ''}>${name}</span></span>
+        <button type="button" class="dpt-go${c ? '' : ' is-primary'}${selOn(x.sku) ? ' is-on' : ''}" onclick="dptAddStart('${k}','${esc(x.sku)}')">${selOn(x.sku) ? 'Cancel' : '+ Add'}</button>
+      </div>${selOn(x.sku) && typeof _lnpSelHtml === 'function' ? _lnpSelHtml(l, x) : ''}</div>`).join('');
+  // One line: what the list below is, then this product's own actions.
+  const body = !open ? '' : `<div class="dpt-pr-sec"><span class="dpt-pr-sec-l">${window.__KAI_SHOP_MVP ? 'Kai suggestions' : c ? 'Add another product' : 'Pick a product'}${window.__KAI_SHOP_MVP ? '<span class="mvp-sec-note">Three price choices · in stock nearby first</span>' : ''}</span></div>
+    ${curSel}
+    <div class="dpt-pr-list">${altsHtml || '<div class="dpt-pr-note">No other products for this type.</div>'}</div>
+    ${typeof prodSearchHtml === 'function' ? `<div class="optc-search dpt-pr-search">${prodSearchHtml('line:' + l.key)}</div>` : ''}`;
+  const supHtml = !c || typeof supplierPickHtml !== 'function' ? '' : (() => {
+    const o = _lnpOffer(l, c);
+    const strip = supplierPickHtml(o.offers, o.sup, `setLineSupplier('${k}','${esc(c.sku)}','__S__')`, `line:${l.key}|${c.sku}`);
+    return strip ? `<div class="dpt-pr-sup">${strip.replace('>Buying from<', '>Supplier<').replace('>Sold by<', '>Supplier<')}</div>` : '';
+  })();
+  const name = c ? `<span class="lnpc-brand">${esc(c.brand || '')}</span> <span class="dpt-pr-n">${esc(c.name)}</span>` : '<span class="dpt-none">No product yet</span>';
+  if(opts.fixed){
+    const trash = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.7 6.5v4.5M9.3 6.5v4.5"/></svg>';
+    return `<div class="dpt-prodrow is-fixed${c ? '' : ' is-none'}">
+      <span class="dpt-thumb is-pr${c ? ' dpt-fly' : ''}" ${c ? fly(c) : ''}>${thumbOf(c)}</span>
+      <span class="dpt-pr-main"><span class="dpt-pr-name"><span class="${c ? 'dpt-fly' : ''}" ${c ? fly(c) : ''}>${name}</span></span>${c ? '' : '<span class="dpt-pr-hint">Pick one from the suggestions below</span>'}</span>
       ${unitP}
-      <span class="dpt-pr-act">${open ? 'Hide' : skus.length ? `Change product${alts.length ? ` · ${alts.length} more` : ''}` : `Choose product${alts.length ? ` · ${alts.length} options` : ''}`}</span>
-    </div>${open ? `<div class="dpt-pr-wrap" onclick="event.stopPropagation()">${body}</div>` : ''}`;
+      ${c ? `<button type="button" class="optc-trash" onclick="removeLineProduct('${k}','${esc(c.sku)}')" title="Take this product off its tasks" aria-label="Remove ${esc(c.brand || '')} ${esc(c.name)}">${trash}</button>` : '<span></span>'}
+    </div>${supHtml}`;
+  }
+  return `<div class="dpt-prodrow${open ? ' is-open' : ''}${c ? '' : ' is-none'}" onclick="dptToggleProd('${okArg}')">
+      <button type="button" class="dpt-caret${open ? ' is-open' : ''}" aria-expanded="${open}" onclick="event.stopPropagation();dptToggleProd('${okArg}')" title="${open ? 'Hide' : 'Show'} product choices"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2.5L7.5 6 4 9.5"/></svg></button>
+      <span class="dpt-thumb is-pr${c ? ' dpt-fly' : ''}" ${c ? fly(c) : ''}>${thumbOf(c)}</span>
+      <span class="dpt-pr-main">
+        <span class="dpt-pr-name"><span class="${c ? 'dpt-fly' : ''}" ${c ? fly(c) : ''}>${name}</span></span>
+        <span class="dpt-pr-act">${open ? 'Hide' : c ? 'View/Edit' : 'Choose product'}</span>
+      </span>
+      ${unitP}
+    </div>${open ? `<div class="dpt-pr-wrap" onclick="event.stopPropagation()">${body}</div>` : ''}${supHtml}`;
 }
 function dptToggleTask(id){ _dptOpen.has(id) ? _dptOpen.delete(id) : _dptOpen.add(id); if(typeof renderShop === 'function') renderShop(); else if(typeof renderAll === 'function') renderAll(); }
-// What opens under a task row: its photos, then the facts the row cuts short.
+/* What opens under a task row: only what the row doesn't already say.
+   Photos first — the chosen product's own shots, then the task's, then its
+   group's — then where the task sits (group › task › option), its ID and
+   description, its latest note. */
 function _dptTaskDetailHtml(t, taskOnClick){
-  const ph = typeof photosForTask === 'function' ? photosForTask(t) : [];
-  const photos = ph.length
-    ? `<div class="pgd-photos dpt-x-photos">${ph.map((p, i) => _pgdPhotoFigHtml(p, i, t.name)).join('')}</div>`
-    : '<div class="dpt-x-none">No photos yet</div>';
+  const tl = typeof taskLine === 'function' ? taskLine(t) : null;
+  const l = tl && typeof deptLineByKey === 'function' ? deptLineByKey(`${tl.dept}|${tl.line}`) : null;
+  const picked = l ? _lineTaskPicked(l, t) : [];
+  const cats = [...new Map(picked.map(h => [h.p.sku, h.p])).values()]
+    .map(p => Object.assign({}, (typeof catalogFind === 'function' && p.sku && catalogFind(p.sku)) || {}, {sku:p.sku, name:p.product || p.name, brand:p.brand, image:p.image}));
+  const tile = (inner, kind, extra) => `<div class="dpt-x-ph" data-kind="${kind}"${extra || ''}>${inner}<span class="dpt-x-ph-k">${kind}</span></div>`;
+  const prodTiles = cats.map(c => tile(`<span class="dpt-x-prodimg">${shopProductImg(c) ? `<img src="${esc(shopProductImg(c))}" alt="${esc(c.name || '')}" loading="lazy">` : ''}</span>`, 'Product', ` onclick="openFly(${t.id},'${esc(c.sku)}',event)" title="${esc([c.brand, c.name].filter(Boolean).join(' '))}"`));
+  const taskPh = typeof photosForTask === 'function' ? photosForTask(t) : [];
+  const groupPh = (typeof PHOTOS !== 'undefined' ? PHOTOS : []).filter(p => p.kind === 'group' && p.room === t.room);
+  const phTiles = [...taskPh.map((p, i) => tile(_pgdPhotoFigHtml(p, i, t.name, t.name), 'Task')),
+                   ...groupPh.map((p, i) => tile(_pgdPhotoFigHtml(p, i + taskPh.length, t.room, p.room), 'Group'))];
+  const photos = `<div class="dpt-x-photos">${[...prodTiles, ...phTiles].join('')}${phTiles.length ? '' : '<span class="dpt-x-none">No task or group photos yet</span>'}</div>`;
   const pool = typeof _groupNotesPool === 'function' ? _groupNotesPool(null, [t]) : [];
-  const notes = pool.length || (typeof _pgdRowCounts === 'function' ? _pgdRowCounts(t).notes : 0);
+  const notes = pool.length;
   const latest = pool[0];
   const noteHtml = latest ? `<div class="shop-notes-card dpt-x-note">
       <div class="shop-notes-head">
@@ -1202,22 +1301,19 @@ function _dptTaskDetailHtml(t, taskOnClick){
       </div>
       <div class="shop-notes-body">${esc(latest.body || '')}</div>
     </div>` : '';
-  const f = (k, v) => `<div class="dpt-x-f"><span class="dpt-x-k">${k}</span><span class="dpt-x-v">${v}</span></div>`;
+  const sep = '<span class="dpt-x-sep" aria-hidden="true">›</span>';
   return `<div class="dpt-x" onclick="event.stopPropagation()">
     ${photos}
-    <div class="dpt-x-grid">
-      ${f('Task', esc(t.name || ''))}
-      ${f('Group', esc(t.room || '—'))}
-      ${f('Option', esc(t.opt || '—'))}
-      ${f('Product', esc(t.product || '—'))}
-      ${f('Quantity', esc(t.qty || '—'))}
-      ${f('Task ID', esc(t.code || '—'))}
-      ${t.desc ? `<div class="dpt-x-f is-wide"><span class="dpt-x-k">Description</span><span class="dpt-x-v">${esc(t.desc)}</span></div>` : ''}
+    <div class="dpt-x-tree">
+      <div class="dpt-x-lvl" style="--lvl:0"><span class="dpt-x-k">Group</span><span class="dpt-x-v">${esc(t.room || '—')}</span></div>
+      <div class="dpt-x-lvl" style="--lvl:1"><span class="dpt-x-k">Task</span><span class="dpt-x-v">${esc(t.name || '')}<span class="dpt-x-id">${esc(t.code || '')}</span></span></div>
+      <div class="dpt-x-lvl" style="--lvl:2"><span class="dpt-x-k">Option</span><span class="dpt-x-v">${esc(t.opt || '—')}</span></div>
     </div>
+    ${t.desc ? `<div class="dpt-x-f dpt-x-desc"><span class="dpt-x-k">Description</span><span class="dpt-x-v">${esc(t.desc)}</span></div>` : ''}
     ${noteHtml}
     <div class="dpt-x-ft">
       <button type="button" class="optc-link" onclick="openDrawer(${t.id},'notes')">${notes ? `View all ${notes} ${notes === 1 ? 'note' : 'notes'} &amp; add` : 'Add a note'}</button>
-      <button type="button" class="dpt-go" onclick="${esc(taskOnClick)}(${t.id})">Open task →</button>
+      <button type="button" class="dpt-go" onclick="${esc(taskOnClick)}(${t.id})">Go to task →</button>
     </div>
   </div>`;
 }
@@ -1231,24 +1327,24 @@ function _deptTypesTableHtml(g, taskOnClick){
     const prod = !r.names.length ? '<span class="dpt-none">No product yet</span>' : r.names.length === 1 ? esc(r.names[0]) : `${r.names.length} products`;
     const img = r.first ? `<img src="${esc(shopProductImg(Object.assign({}, (typeof catalogFind === 'function' && r.first.sku && catalogFind(r.first.sku)) || {}, {name: r.first.product, brand: r.first.brand, image: r.first.image})))}" alt="" loading="lazy">` : '';
     r.l.items.forEach(t => seen.add(t.id));
-    return `<div class="dpt-band${r.todo ? ' is-todo' : ''}" role="button" tabindex="0" onclick="${go}" onkeydown="if(event.key==='Enter'){event.preventDefault();${go}}">
+    // Each product type is its own card: the type, its product, its tasks.
+    // The name is the way into the type's own page.
+    return `<div class="dpt-grp${r.todo ? ' is-todo' : ''}" data-line="${esc(r.l.key)}">
+      <div class="dpt-band">
         <span class="dpt-band-main">
           <span class="dpt-kind">Product type</span>
-          <span class="dpt-name">${esc(r.l.name)}</span>
+          <button type="button" class="dpt-name dpt-name-link" onclick="${go}" title="Open the ${esc(r.l.name)} page">${esc(r.l.name)}</button>
         </span>
         <span class="dpt-st ${r.st.cls}">${r.st.cls === 'is-warn' ? _ALW_WARN : ''}${esc(r.st.txt)}</span>
-        <button type="button" class="dpt-go${r.todo ? ' is-primary' : ''}" onclick="event.stopPropagation();${go}">${r.todo ? 'Choose product' : 'Review'} →</button>
-        <span class="dpt-cost">${sbMoney(deptLineCost(r.l))}</span>
+        <span class="dpt-cost-wrap"><span class="dpt-cost-k">Materials cost</span><span class="dpt-cost">${sbMoney(deptLineCost(r.l))}</span></span>
       </div>
-      ${_dptProductRowHtml(r, img)}
-      <div class="dpt-tasks-lbl">${r.l.items.length} ${r.l.items.length === 1 ? 'task' : 'tasks'}</div>
-      ${_pgdSortTasksForGroup(r.l.items).map(t => _pgdTaskRowHtml(t, taskOnClick, false, true)).join('')}`;
+      ${_dptSegmentsHtml(r, taskOnClick)}
+    </div>`;
   }).join('');
   const rest = g.items.filter(t => !seen.has(t.id));
-  const restHtml = rest.length ? `<div class="dpt-band is-plain"><span class="dpt-band-main"><span class="dpt-name">Other tasks<span class="dpt-n">${rest.length} ${rest.length === 1 ? 'task' : 'tasks'}</span></span></span></div>${rest.map(t => _pgdTaskRowHtml(t, taskOnClick, false, true)).join('')}` : '';
+  const restHtml = rest.length ? `<div class="dpt-grp"><div class="dpt-band is-plain"><span class="dpt-band-main"><span class="dpt-name">Other tasks</span></span></div>${_pgdTaskHeadHtml(rest.length, true)}${rest.map(t => _pgdTaskRowHtml(t, taskOnClick, false, true)).join('')}</div>` : '';
   return `<div class="pgd-details-sec dpt dpt-merged" id="deptProductTypes">
-    <div class="pgd-details-title dpt-merged-title">Product types and tasks</div>
-    <div class="pgd-tk-list">${_pgdTaskHeadHtml()}${bands}${restHtml}</div>
+    <div class="pgd-tk-list">${bands}${restHtml}</div>
   </div>`;
 }
 function _deptProductTypesHtml(g){
@@ -1492,6 +1588,7 @@ function _pgdTaskRowHtml(t, taskOnClick, typeFirst, ex){
     const fullProd = (typeof _pgdHasProduct === 'function' ? _pgdHasProduct(t)
       : (t.product && !/not selected/i.test(t.product))) ? t.product : '';
     const prodName = fullProd.length > 12 ? fullProd.slice(0, 12).trimEnd() + '…' : fullProd;
+    const fullProd0 = fullProd;
     // Quantity is a count; the unit belongs to the product. "14 LF" reads as
     // two facts in a 26px column, and the units vary by trade (LF, SF, ea,
     // Suite) so they never line up down the column either. Leading figure only.
@@ -1524,6 +1621,38 @@ function _pgdTaskRowHtml(t, taskOnClick, typeFirst, ex){
     // and the task's photos and details folded under the row.
     const _exOpen = !!(ex && _dptOpen.has(t.id));
     const _caret = ex ? `<button type="button" class="dpt-caret${_exOpen ? ' is-open' : ''}" aria-expanded="${_exOpen}" title="${_exOpen ? 'Hide' : 'Show'} photos and details" onclick="event.stopPropagation();dptToggleTask(${t.id})"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2.5L7.5 6 4 9.5"/></svg></button>` : '';
+    if(ex){
+      // The department table's row: a click opens it in place; only the
+      // name goes to the task.
+      // The product actually picked for this task on its product type.
+      const _tl = typeof taskLine === 'function' ? taskLine(t) : null;
+      const _ln = _tl && typeof deptLineByKey === 'function' ? deptLineByKey(`${_tl.dept}|${_tl.line}`) : null;
+      const _pk = _ln ? _lineTaskPicked(_ln, t) : [];
+      const _pn = [...new Set(_pk.map(h => [h.p.brand, h.p.product].filter(Boolean).join(' ')).filter(Boolean))];
+      const fullProd = _ln ? _pn.join(' + ') : fullProd0;
+      const costCell = _pgdAlwCol() ? _pgdAlwCellHtml(t) : `<span class="pgd-tk-cost">${window.__KAI_SHOP ? sbMoney(dollars(t.cost || 0)) : esc(t.cost || '$0')}</span>`;
+      return `<div class="pgd-tk-rowwrap${_exOpen ? ' is-open' : ''}"><div class="pgd-tk-row is-lean${_unready}${_pgdAlwCol() ? ' has-alw' : ''}" data-tid="${t.id}" role="button" tabindex="0" aria-expanded="${_exOpen}" onclick="dptToggleTask(${t.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+        <span class="pgd-tk-name">${_caret}${flg}${chk}<button type="button" class="dpt-tk-link" onclick="event.stopPropagation();pgdRowOpen(event,${t.id},'${esc(taskOnClick)}')" title="Go to ${esc(fullName)}">${esc(fullName)}</button></span>
+        <span class="pgd-tk-prod${fullProd ? '' : ' is-none'}" title="${esc(fullProd)}">${esc(fullProd || '—')}</span>
+        ${(() => {
+          // The block's product on this task: its quantity, changed right here
+          // (down to 0 takes it off the task).
+          const segSku = ex && ex.sku;
+          const h = segSku ? _pk.find(x => x.p.sku === segSku) : (_pk.length === 1 ? _pk[0] : null);
+          if(!h || !_ln) return `<span class="pgd-tk-qty" title="${esc(t.qty || '')}">${fullProd && qtyNum ? esc(qtyNum) : '—'}</span>`;
+          const lk = _lineKeyArg(_ln.key), sk = esc(h.p.sku), oid = esc(h.o.id);
+          const mi = '<svg viewBox="0 0 12 12" fill="none"><path d="M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+          const pl = '<svg viewBox="0 0 12 12" fill="none"><path d="M6 3v6M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+          return `<span class="pgd-tk-qty is-edit" onclick="event.stopPropagation()"><span class="opt-card-qty-stepper dpt-row-step">
+            <button type="button" class="opt-card-qty-btn" onclick="event.stopPropagation();bumpLineTaskQty('${lk}',${t.id},-1,'${sk}','${oid}')" aria-label="One fewer">${mi}</button>
+            <input class="opt-card-qty-input" value="${esc(String(_num(h.p.qty)))}" readonly tabindex="-1">
+            <button type="button" class="opt-card-qty-btn" onclick="event.stopPropagation();bumpLineTaskQty('${lk}',${t.id},1,'${sk}','${oid}')" aria-label="One more">${pl}</button>
+          </span></span>`;
+        })()}
+        <span class="pgd-tk-rate">${fullProd ? (window.__KAI_SHOP && t.rate && dollars(t.rate) ? sbMoney(dollars(t.rate)) : esc(t.rate || '—')) : '—'}</span>
+        ${costCell}
+      </div>${_exOpen ? _dptTaskDetailHtml(t, taskOnClick) : ''}</div>`;
+    }
     return `<div class="pgd-tk-rowwrap${_PGD_BY_TYPE && typeFirst ? ' is-type-start' : ''}${_exOpen ? ' is-open' : ''}"><div class="pgd-tk-row${_unready}${_pgdAlwCol() ? ' has-alw' : ''}" data-tid="${t.id}" role="button" tabindex="0" onclick="pgdRowOpen(event,${t.id},'${esc(taskOnClick)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="${esc(fullName)}">
       <span class="pgd-tk-name" title="${esc(fullName)}">${_caret}${flg}${chk}<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;flex:1">${esc(displayName)}</span></span>
       ${statusPill}
@@ -2733,7 +2862,15 @@ function _renderGroupPageHtml(opts){
       [rooms.length === 1 ? 'Group' : `Groups (${rooms.length})`, list(rooms, r => link(r, `goUpRoom('${q(r)}')`))],
       // Only when something needs doing: how many product types, and the way to them.
       ...((() => { if(g.key === NO_PRODUCT_DEPT) return []; const pt = _deptProductTypes(g); const left = pt.rows.length - pt.ready;
-        return left ? [['Products', `<button type="button" class="task-crumb-a tk-f-link is-todo" onclick="document.getElementById('deptProductTypes')?.scrollIntoView({behavior:'smooth',block:'start'})">${left} ${left === 1 ? 'needs' : 'need'} attention</button>`]] : []; })()),
+        if(!left) return [];
+        // Say what's wrong, each a way to the first product type it's on.
+        const jump = r => `(document.querySelector('.dpt-grp[data-line=&quot;${esc(r.l.key).replace(/'/g, "\\'")}&quot;]')||document.getElementById('deptProductTypes'))?.scrollIntoView({block:'start'})`;
+        const oos = pt.rows.reduce((a, r) => a + r.oos, 0), needs = pt.rows.reduce((a, r) => a + r.needs, 0);
+        const issues = [
+          oos ? `<button type="button" class="task-crumb-a tk-f-link is-todo" onclick="${jump(pt.rows.find(r => r.oos))}">${oos} out of stock</button>` : '',
+          needs ? `<button type="button" class="task-crumb-a tk-f-link is-todo" onclick="${jump(pt.rows.find(r => r.needs))}">${needs} ${needs === 1 ? 'task needs' : 'tasks need'} a product</button>` : '',
+        ].filter(Boolean);
+        return [['Products', issues.join('<span class="sec-taskcard-sep" aria-hidden="true"> · </span>')]]; })()),
     ], (g.key !== NO_PRODUCT_DEPT && _deptProductTypes(g).rows.some(r => r.todo)) ? 'wide4' : 'wide');
   })() : '';
   // Department page with product types: one table, types with their tasks.
@@ -2818,8 +2955,8 @@ function _renderGroupPageHtml(opts){
       <div class="pgd-details-title">Tasks in this ${groupKindNoun()}</div>
       <div class="pgd-tk-list">${_pgdTaskHeadHtml()}${taskRowsHtml || '<div class="pgd-muted" style="padding:14px 0">No tasks in this group yet.</div>'}</div>
     </div>`}
-    ${activitySectionHtml}
-    ${groupActHtml}
+    ${_deptMerged ? '' : activitySectionHtml}
+    ${_deptMerged ? '' : groupActHtml}
     <div class="shop-nav-float">
       <button class="shop-nav-btn" ${prevG ? '' : 'disabled'} onclick="${prevG ? `selectGroup('${prevG.key}')` : ''}" title="${prevG ? esc(prevG.name) : 'No previous group'}">${svgChevL()} Previous group</button>
       <button class="shop-nav-btn" ${nextG ? '' : 'disabled'} onclick="${nextG ? `selectGroup('${nextG.key}')` : ''}" title="${nextG ? esc(nextG.name) : 'No next group'}">Next group ${svgChevR()}</button>

@@ -17,6 +17,7 @@ const SHOP_LAYOUT = !!window.__KAI_SHOP_LAYOUT;
 document.documentElement.classList.toggle('kai-shop-layout', SHOP_LAYOUT);
 // ShopwithKai_photos.html: product pictures lead (panel.css, .kai-shop-photos).
 document.documentElement.classList.toggle('kai-shop-photos', !!window.__KAI_SHOP_PHOTOS);
+document.documentElement.classList.toggle('kai-shop-mvp', !!window.__KAI_SHOP_MVP);
 
 let poSide = null;   // null (scope list) | the order id on show
 
