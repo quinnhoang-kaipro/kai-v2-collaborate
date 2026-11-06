@@ -1237,6 +1237,8 @@ function _dptProductRowHtml(r, sku, opts){
     </span>`;
   })();
   const curSel = c && typeof _lnpSelHtml === 'function' ? _lnpSelHtml(l, c) : '';
+  // ShopwithKai_Cart.html: "Add to cart" under each product's name (shop-cart.js).
+  const cartLink = (x, chosen) => typeof shopCartLinkHtml === 'function' ? shopCartLinkHtml(l, x, chosen) : '';
   const stockRank = x => { try { return typeof shopStockRank === 'function' ? shopStockRank(_lnpOffer(l, x).offer) : 0; } catch(e){ return 1; } };
   // MVP: stock ranks, it never hides — nearby stock first, then the rest.
   const alts = pool.filter(x => !allSkus.includes(x.sku)).sort((a, b) => window.__KAI_SHOP_MVP ? stockRank(a) - stockRank(b) || price(a) - price(b) : 0);
@@ -1244,7 +1246,7 @@ function _dptProductRowHtml(r, sku, opts){
   const selOn = s => typeof _lnpSel !== 'undefined' && _lnpSel && _lnpSel.line === l.key && _lnpSel.sku === s;
   const altsHtml = alts.map(x => `<div class="dpt-pr-altwrap"><div class="dpt-pr-alt">
         <span class="dpt-thumb is-sm dpt-fly" ${fly(x)}>${thumbOf(x)}</span>
-        <span class="dpt-pr-alt-n dpt-fly" ${fly(x)}><span class="lnpc-brand">${esc(x.brand || '')}</span><span>${esc(x.name)}</span>${window.__KAI_SHOP_MVP && typeof _supStockFor === 'function' ? (() => { const o = _lnpOffer(l, x).offer; return `<span class="mvp-stock is-${o.stock || 'in'}">${esc(_supStockFor(o.supplier, o.stock))} · ${esc(supplierName(o.supplier))}</span>`; })() : ''}</span>
+        <span class="dpt-pr-alt-n dpt-fly" ${fly(x)}><span class="lnpc-brand">${esc(x.brand || '')}</span><span>${esc(x.name)}</span>${window.__KAI_SHOP_MVP && typeof _supStockFor === 'function' ? (() => { const o = _lnpOffer(l, x).offer; return `<span class="mvp-stock is-${o.stock || 'in'}">${esc(_supStockFor(o.supplier, o.stock))} · ${esc(supplierName(o.supplier))}</span>`; })() : ''}${cartLink(x, false)}</span>
         ${window.__KAI_SHOP_MVP && typeof shopTierChip === 'function' ? (shopTierChip(price(x), pool.map(price)) || '<span></span>') : price(x) === low && alts.length > 1 ? '<span class="lnpc-low">Lowest</span>' : '<span></span>'}
         <span class="dpt-pr-unit">${shopMoney(price(x))} / ${esc(x.unit || 'ea')}</span>
         <button type="button" class="dpt-go${c ? '' : ' is-primary'}${selOn(x.sku) ? ' is-on' : ''}" onclick="dptAddStart('${k}','${esc(x.sku)}')">${selOn(x.sku) ? 'Cancel' : '+ Add'}</button>
@@ -1264,7 +1266,7 @@ function _dptProductRowHtml(r, sku, opts){
     const trash = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.7 6.5v4.5M9.3 6.5v4.5"/></svg>';
     return `<div class="dpt-prodrow is-fixed${c ? '' : ' is-none'}">
       <span class="dpt-thumb is-pr${c ? ' dpt-fly' : ''}" ${c ? fly(c) : ''}>${thumbOf(c)}</span>
-      <span class="dpt-pr-main"><span class="dpt-pr-name"><span class="${c ? 'dpt-fly' : ''}" ${c ? fly(c) : ''}>${name}</span></span>${c ? '' : '<span class="dpt-pr-hint">Pick one from the suggestions below</span>'}</span>
+      <span class="dpt-pr-main"><span class="dpt-pr-name"><span class="${c ? 'dpt-fly' : ''}" ${c ? fly(c) : ''}>${name}</span></span>${c ? cartLink(c, true) : '<span class="dpt-pr-hint">Pick one from the suggestions below</span>'}</span>
       ${unitP}
       ${c ? `<button type="button" class="optc-trash" onclick="removeLineProduct('${k}','${esc(c.sku)}')" title="Take this product off its tasks" aria-label="Remove ${esc(c.brand || '')} ${esc(c.name)}">${trash}</button>` : '<span></span>'}
     </div>${supHtml}`;
@@ -1274,7 +1276,7 @@ function _dptProductRowHtml(r, sku, opts){
       <span class="dpt-thumb is-pr${c ? ' dpt-fly' : ''}" ${c ? fly(c) : ''}>${thumbOf(c)}</span>
       <span class="dpt-pr-main">
         <span class="dpt-pr-name"><span class="${c ? 'dpt-fly' : ''}" ${c ? fly(c) : ''}>${name}</span></span>
-        <span class="dpt-pr-act">${open ? 'Hide' : c ? 'View/Edit' : 'Choose product'}</span>
+        <span class="dpt-pr-act">${open ? 'Hide' : c ? 'View/Edit' : 'Choose product'}</span>${c ? cartLink(c, true) : ''}
       </span>
       ${unitP}
     </div>${open ? `<div class="dpt-pr-wrap" onclick="event.stopPropagation()">${body}</div>` : ''}${supHtml}`;

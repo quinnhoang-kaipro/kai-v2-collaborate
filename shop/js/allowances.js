@@ -39,7 +39,8 @@ function deptAllowFinePrint(dept){
   if(tpl == null) return own == null ? '' : `<span class="alw-fine">Set on this job · no department allowance in template ${tplLink}</span>`;
   // Unchanged, it only says so while being edited.
   if(own != null && Math.abs(own - tpl) < 0.005) return _allowEditKey === 'dept:' + dept ? `<span class="alw-fine">${sbMoney(tpl)} is the department allowance set in template ${tplLink}</span>` : '';
-  return `<span class="alw-fine">Changed on this job · template ${tplLink} sets ${sbMoney(tpl)}${allowIsManager() ? ` · <button type="button" class="alw-fine-reset" onclick="event.stopPropagation();allowResetDept('${q}')">Reset</button>` : ''}</span>`;
+  // Changed on this job: the template's figure, the word "template" the link.
+  return `<span class="alw-fine">Original allowance from ${_allowTplLinkHtml('template')}: ${sbMoney(tpl)}</span>`;
 }
 
 // Mock targets.
@@ -59,9 +60,11 @@ function deptAllowOrigin(dept){
   if(Math.abs(own - tpl) < 0.005) return {kind:'template', label:'From template'};
   return {kind:'changed', label:`Template ${sbMoney(tpl)}, changed on this job`};
 }
-function _allowTplLinkHtml(){
+// label: the link's text when it isn't the template's name (the name then
+// shows on hover).
+function _allowTplLinkHtml(label){
   const n = allowTemplateName();
-  return `<button type="button" class="alw-tpl-link" onclick="ovOpenTemplate('${esc(n).replace(/'/g, "\\'")}')">${esc(n)}</button>`;
+  return `<button type="button" class="alw-tpl-link" onclick="ovOpenTemplate('${esc(n).replace(/'/g, "\\'")}')"${label ? ` title="Open ${esc(n)}"` : ''}>${esc(label || n)}</button>`;
 }
 
 /* ── figures ── */

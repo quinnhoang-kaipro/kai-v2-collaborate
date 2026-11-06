@@ -1,0 +1,86 @@
+/* ════════════ SHOPPING CART ════════════
+   ShopwithKai_Cart.html only — every rule is under .kai-shop-cart (set by
+   js/shop-cart.js), so the other pages that load this file are untouched.
+   The drawer is the ShopEdit cart's, carried over. */
+
+/* ── "Add to cart" under a product's name ── */
+.kai-shop-cart .sc-add{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;margin-top:4px;padding:3px 8px 3px 6px;
+  border:1px solid var(--stroke);background:var(--white);cursor:pointer;color:var(--ink);
+  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;transition:border-color .12s,background .12s}
+.kai-shop-cart .sc-add svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linejoin:round}
+.kai-shop-cart .sc-add:hover{border-color:var(--ink)}
+.kai-shop-cart .sc-add.is-in{background:var(--accent);border-color:var(--ink)}
+.kai-shop-cart .dpt-pr-alt-n{align-items:flex-start}
+.kai-shop-cart .dpt-pr-alt-n > span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── Cart button in the work header ── */
+.kai-shop-cart .shop-cart-hbtn{margin-left:auto;flex-shrink:0;align-self:center;display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 10px;
+  border:0;background:transparent;cursor:pointer;color:var(--ink);
+  font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;transition:background .12s}
+.kai-shop-cart .shop-cart-hbtn:hover{background:var(--sunken)}
+.kai-shop-cart .shop-cart-hbtn svg{width:15px;height:15px}
+.kai-shop-cart .shop-cart-hbtn .n{min-width:18px;padding:1px 6px;text-align:center;background:var(--sunken);border:1px solid var(--stroke);font-weight:700;font-size:10px;letter-spacing:.02em}
+.kai-shop-cart .shop-cart-hbtn.has-items .n{background:var(--accent);border-color:var(--ink)}
+.kai-shop-cart .shop-cart-hbtn + .wmode-expand{margin-left:0}
+.kai-shop-cart .shop-cart-hbtn.is-bump .n{animation:scBump .4s ease}
+@keyframes scBump{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
+
+/* ── Drawer ── */
+.kai-shop-cart #shopCartScrim{position:fixed;inset:0;background:rgba(26,26,26,.32);opacity:0;pointer-events:none;transition:opacity .2s;z-index:312}
+.kai-shop-cart #shopCartScrim.open{opacity:1;pointer-events:auto}
+.kai-shop-cart #shopCart{position:fixed;top:0;right:0;bottom:0;width:480px;max-width:92vw;background:var(--white);border-left:1px solid var(--stroke);
+  transform:translateX(100%);transition:transform .25s ease;z-index:313;display:flex;flex-direction:column;box-shadow:-12px 0 32px rgba(0,0,0,.08)}
+.kai-shop-cart #shopCart.open{transform:translateX(0)}
+.kai-shop-cart .sc-head{flex-shrink:0;padding:18px 22px;border-bottom:1px solid var(--stroke);display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.kai-shop-cart .sc-eyebrow{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin-bottom:4px}
+.kai-shop-cart .sc-title{font-family:var(--display);font-size:20px;font-weight:700;color:var(--ink);line-height:1.2}
+.kai-shop-cart .sc-summary{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
+.kai-shop-cart .sc-summary .pill{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;background:var(--sunken);border:1px solid var(--stroke);color:var(--t2)}
+.kai-shop-cart .sc-summary .pill.over{background:rgba(192,68,58,.08);border-color:rgba(192,68,58,.4);color:var(--error,#C0443A)}
+.kai-shop-cart .sc-body{flex:1;overflow-y:auto}
+.kai-shop-cart .sc-group{border-bottom:1px solid var(--stroke)}
+.kai-shop-cart .sc-group:last-child{border-bottom:0}
+.kai-shop-cart .sc-group-hdr{display:flex;align-items:center;gap:10px;padding:10px 22px;background:var(--sunken)}
+.kai-shop-cart .sc-group-name{font-family:var(--display);font-size:13px;font-weight:700;text-transform:uppercase;color:var(--ink)}
+.kai-shop-cart .sc-group-meta{font-family:var(--mono);font-size:10px;color:var(--t3);margin-left:auto}
+.kai-shop-cart .sc-item{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:14px;padding:14px 22px;border-bottom:1px solid rgba(0,0,0,.05);align-items:start}
+.kai-shop-cart .sc-item:last-child{border-bottom:0}
+.kai-shop-cart .sc-item-thumb{width:64px;aspect-ratio:1;background:var(--sunken);border:1px solid var(--stroke);display:flex;align-items:center;justify-content:center;color:var(--t3);overflow:hidden}
+.kai-shop-cart .sc-item-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.kai-shop-cart .sc-item-thumb svg{width:22px;height:22px}
+.kai-shop-cart .sc-item-mid{min-width:0;display:flex;flex-direction:column;gap:2px}
+.kai-shop-cart .sc-item-brand{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.kai-shop-cart .sc-item-name{font-size:14px;font-weight:600;color:var(--ink);line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.kai-shop-cart .sc-item-meta{font-family:var(--mono);font-size:10px;color:var(--t2);margin-top:2px}
+.kai-shop-cart .sc-item-stock{font-size:11.5px;color:var(--success,#2F6B3A)}
+.kai-shop-cart .sc-item-stock.is-low{color:#B45309}
+.kai-shop-cart .sc-item-stock.is-out{color:var(--error,#C0443A)}
+.kai-shop-cart .sc-item-actions{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.kai-shop-cart .sc-qty{display:inline-flex;align-items:stretch;height:28px;border:1px solid var(--stroke);background:var(--white)}
+.kai-shop-cart .sc-qty:focus-within{border-color:var(--ink)}
+.kai-shop-cart .sc-qty-btn{width:28px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;cursor:pointer;color:var(--t2)}
+.kai-shop-cart .sc-qty-btn:hover{background:var(--sunken);color:var(--ink)}
+.kai-shop-cart .sc-qty-btn svg{width:11px;height:11px}
+.kai-shop-cart .sc-qty-input{width:48px;border:0;border-left:1px solid var(--stroke);border-right:1px solid var(--stroke);text-align:center;font-family:var(--mono);font-size:12px;color:var(--ink);background:transparent;outline:none}
+.kai-shop-cart .sc-item-unit{font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase}
+.kai-shop-cart .sc-item-task{font-size:11.5px;color:var(--t2);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;font-family:var(--body,inherit)}
+.kai-shop-cart .sc-item-task:hover{color:var(--ink)}
+.kai-shop-cart .sc-item-remove{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--error,#C0443A);background:none;border:none;cursor:pointer;padding:0;margin-left:auto}
+.kai-shop-cart .sc-item-remove:hover{color:#8a2828}
+.kai-shop-cart .sc-item-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.kai-shop-cart .sc-item-total{font-family:var(--display);font-size:14px;font-weight:700;color:var(--ink);white-space:nowrap}
+.kai-shop-cart .sc-foot{flex-shrink:0;padding:16px 22px;border-top:1px solid var(--stroke);background:var(--white);display:flex;flex-direction:column;gap:10px}
+.kai-shop-cart .sc-foot-row{display:flex;align-items:baseline;justify-content:space-between;font-size:15px}
+.kai-shop-cart .sc-foot-row .gl{color:var(--t2)}
+.kai-shop-cart .sc-foot-row .gv{font-family:var(--display);font-size:20px;font-weight:700;color:var(--ink)}
+.kai-shop-cart .sc-foot-note{font-size:11.5px;color:var(--t3)}
+.kai-shop-cart .sc-foot-actions{display:flex;gap:8px}
+.kai-shop-cart .sc-btn{flex:1;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:11px 16px;border:1px solid var(--stroke);background:var(--white);color:var(--ink);cursor:pointer;transition:border-color .12s,background .12s}
+.kai-shop-cart .sc-btn:hover{border-color:var(--ink)}
+.kai-shop-cart .sc-btn.primary{background:var(--ink);color:var(--white);border-color:var(--ink)}
+.kai-shop-cart .sc-btn.primary:hover{background:#000}
+.kai-shop-cart .sc-clear{align-self:center;background:none;border:0;cursor:pointer;color:var(--t3);font-size:11.5px;text-decoration:underline}
+.kai-shop-cart .sc-clear:hover{color:var(--ink)}
+.kai-shop-cart .sc-empty{padding:60px 30px;text-align:center;color:var(--t3);display:flex;flex-direction:column;align-items:center;gap:14px;font-size:13.5px;line-height:1.45}
+.kai-shop-cart .sc-empty svg{width:36px;height:36px;opacity:.6}
+.kai-shop-cart .sc-empty .sc-btn{flex:0 0 auto}

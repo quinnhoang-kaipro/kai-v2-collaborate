@@ -1959,13 +1959,43 @@ function _renderLinePageHtml(){
    Typing only redraws the result list, so the caret never jumps. */
 let prodSearchCtx = null;   // which box the results belong to
 let prodSearchQ = '';
+/* MVP: a search box searches its own product type only — the Vanities box
+   finds vanities, never paint or blinds. The type is the line's (or the
+   task's) product pool: its catalogue sections, plus anything already in
+   the pool. Other Shop pages keep the whole-catalogue search. */
+function _prodSearchScope(ctx){
+  if(!window.__KAI_SHOP_MVP) return null;
+  const [kind, a] = ctx.split(':');
+  let pool = [], label = '';
+  if(kind === 'line' && typeof deptLineByKey === 'function'){
+    const l = deptLineByKey(ctx.slice(5)); if(!l) return null;
+    pool = typeof deptLinePool === 'function' ? deptLinePool(l) : [];
+    label = String(l.key).split('|').pop();
+  } else if(kind === 'opt' && typeof taskLine === 'function'){
+    const t = TASKS.find(x => x.id === +a); if(!t) return null;
+    const tl = taskLine(t);
+    pool = productPool(t, (typeof _LINE_POOL !== 'undefined' && _LINE_POOL[tl.line]) || null);
+    label = tl.line;
+  } else return null;
+  const secs = new Set(pool.map(x => x.section || (catalogFind(x.sku) || {}).section).filter(Boolean));
+  const skus = new Set(pool.map(x => x.sku));
+  return {label, keep: p => skus.has(p.sku) || secs.has(p.section)};
+}
+function _prodSearchScoped(q, sc, limit){
+  const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const tierRank = {team:0, similar:1, other:2};
+  return catalogAll().filter(p => sc.keep(p) && terms.every(t => `${p.brand} ${p.name} ${p.sku}`.toLowerCase().includes(t)))
+    .sort((a, b) => (tierRank[a.tier] ?? 3) - (tierRank[b.tier] ?? 3))
+    .slice(0, limit);
+}
 function prodSearchHtml(ctx){
   const open = prodSearchCtx === ctx;
+  const scope = _prodSearchScope(ctx);
   const id = 'ps-' + ctx.replace(/[^a-z0-9]/gi, '_');
   return `<div class="prod-search${open && prodSearchQ ? ' has-results' : ''}" id="${id}" onclick="event.stopPropagation()">
     <div class="prod-search-box">
       <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-      <input type="search" class="prod-search-input" placeholder="Search the catalog — brand, product or SKU"
+      <input type="search" class="prod-search-input" placeholder="${scope ? `Search ${esc(scope.label.toLowerCase())} — brand, product or SKU` : 'Search the catalog — brand, product or SKU'}"
         value="${open ? esc(prodSearchQ) : ''}" autocomplete="off"
         onfocus="prodSearchFocus('${esc(ctx).replace(/'/g, "\\'")}', this)"
         oninput="prodSearchInput('${esc(ctx).replace(/'/g, "\\'")}', this.value)"
@@ -2000,8 +2030,9 @@ function _prodSearchHas(ctx, sku){
 function _prodSearchResultsHtml(ctx){
   const q = (prodSearchQ || '').trim();
   if(!q) return '';
-  const hits = catalogSearch(q, 8);
-  if(!hits.length) return `<div class="prod-search-empty">No products match “${esc(q)}”.</div>`;
+  const scope = _prodSearchScope(ctx);
+  const hits = scope ? _prodSearchScoped(q, scope, 8) : catalogSearch(q, 8);
+  if(!hits.length) return `<div class="prod-search-empty">${scope ? `No ${esc(scope.label.toLowerCase())} match “${esc(q)}”.` : `No products match “${esc(q)}”.`}</div>`;
   const isLine = ctx.startsWith('line:');
   const line = isLine && typeof deptLineByKey === 'function' ? deptLineByKey(ctx.slice(5)) : null;
   const n = line ? line.items.length : 0;
@@ -2120,12 +2151,13 @@ const _supLogiHtml = (supplier, stock) => {
   return `<span class="sup-logi"><span class="sup-logi-i">${esc(pick)}</span><span class="sup-logi-sep" aria-hidden="true">·</span><span class="sup-logi-i">${esc(ship)}</span></span>`;
 };
 const _supPrice = n => '$' + Number(n).toLocaleString('en-US');
-/* A small mark beside the big-box suppliers' names. Placeholder badges in
-   each retailer's colour; swap for the official logo files when we have them. */
-const _SUP_LOGO = {hd:{t:'HD', bg:'#F96302'}, low:{t:'L', bg:'#004990'}};
+/* A small mark beside the big-box suppliers' names: each retailer's logo
+   (img/suppliers). Lowe's is a wide wordmark, so it sits a little shorter
+   than The Home Depot's square badge to read at the same weight. */
+const _SUP_LOGO = {hd:{src:'img/suppliers/homedepot.png', h:20}, low:{src:'img/suppliers/lowes.png', h:12}};
 function supplierLogoHtml(id){
   const l = _SUP_LOGO[id]; if(!l) return '';
-  return `<span class="sup-logo" style="background:${l.bg}" aria-hidden="true">${l.t}</span>`;
+  return `<img class="sup-logo-img" src="${l.src}" alt="" aria-hidden="true" style="height:${l.h}px;width:auto;flex:none;margin-right:7px;vertical-align:middle">`;
 }
 function supplierPickHtml(offers, cur, pick, key){
   if(!offers || !offers.length) return '';

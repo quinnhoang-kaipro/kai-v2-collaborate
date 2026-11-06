@@ -42,6 +42,8 @@ function KAI_PANEL_DOC(qs){
   /* ShopwithKai_MVP.html: the photos file limited to what KAIDEV-4533 says
      Kai can show at launch — honest supplier stock, three price choices. */
   const shopMvp = (typeof window.__KAI_SHOP_MVP !== 'undefined') && !!window.__KAI_SHOP_MVP;
+  /* ShopwithKai_Cart.html: the MVP page with a shopping cart (see shop-cart.js). */
+  const shopCart = (typeof window.__KAI_SHOP_CART !== 'undefined') && !!window.__KAI_SHOP_CART;
   const boot =
     '<base href="' + location.href.split('#')[0] + '">' +
     '<scr' + 'ipt>window.__KAI_QS=' + JSON.stringify(qs ? '?' + qs : '')
@@ -51,7 +53,8 @@ function KAI_PANEL_DOC(qs){
       + ';window.__KAI_SHOP_LAYOUT=' + (shopLayout ? 'true' : 'false')
       + ';window.__KAI_SHOP_MATERIALS=' + (shopMaterials ? 'true' : 'false')
       + ';window.__KAI_SHOP_PHOTOS=' + (shopPhotos ? 'true' : 'false')
-      + ';window.__KAI_SHOP_MVP=' + (shopMvp ? 'true' : 'false') + ';<\/script>';
+      + ';window.__KAI_SHOP_MVP=' + (shopMvp ? 'true' : 'false')
+      + ';window.__KAI_SHOP_CART=' + (shopCart ? 'true' : 'false') + ';<\/script>';
   return KAI_PANEL_RAW.replace(/<head([^>]*)>/i, '<head$1>' + boot);
 }
 

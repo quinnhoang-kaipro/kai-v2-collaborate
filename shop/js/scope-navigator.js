@@ -6,7 +6,12 @@ function setGroupBy(g){
      under Departments, and a product line goes back to the task last open
      in it. The tab never changes; only what it shows. */
   if(window.__KAI_SHOP_LAYOUT && g !== groupBy){
-    if(g === 'dept' && selId != null){
+    /* Materials opens on All materials unless the user opened a task
+       themselves — the first task is selected on load only to fill the
+       Editor, and carrying it across landed Materials on Kitchen. */
+    if(g === 'dept' && selId != null && _carryTaskId !== selId){
+      selId = null; openIds.clear(); selGroupKey = null; selLineKey = null; scopeView = true;
+    } else if(g === 'dept' && selId != null){
       const t = TASKS.find(x => x.id === selId);
       if(t){ const tl = taskLine(t); _carryTaskId = t.id; selId = null; openIds.clear(); selGroupKey = null; selLineKey = `${tl.dept}|${tl.line}`; }
     } else if(g !== 'dept' && selLineKey){
