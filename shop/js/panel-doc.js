@@ -29,6 +29,8 @@ window.KAI_PANEL_SRC = `<!DOCTYPE html>
 <link rel="stylesheet" href="a2-expand.css">
 <!-- ShopwithKai_Cart.html: the shopping cart drawer (scoped to .kai-shop-cart). -->
 <link rel="stylesheet" href="shop-cart.css">
+<!-- ShopwithKai_v2.html: product tiles and the shopping panel (scoped to .kai-shop-v2). -->
+<link rel="stylesheet" href="shop-v2.css">
 </head>
 <body>
 <div id="app">
@@ -229,6 +231,7 @@ window.KAI_PANEL_SRC = `<!DOCTYPE html>
 <script src="js/materials-page.js"></script>
 <script src="js/allowances.js"></script>
 <script src="js/shop-cart.js"></script>
+<script src="js/shop-v2.js"></script>
 <!-- Artifact 2, split by concern so its parts can be worked on independently.
      Order matters only for a2-init.js, which must load last: it references
      functions the other modules declare. -->

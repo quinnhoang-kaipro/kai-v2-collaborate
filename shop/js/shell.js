@@ -44,6 +44,8 @@ function KAI_PANEL_DOC(qs){
   const shopMvp = (typeof window.__KAI_SHOP_MVP !== 'undefined') && !!window.__KAI_SHOP_MVP;
   /* ShopwithKai_Cart.html: the MVP page with a shopping cart (see shop-cart.js). */
   const shopCart = (typeof window.__KAI_SHOP_CART !== 'undefined') && !!window.__KAI_SHOP_CART;
+  /* ShopwithKai_v2.html: product tiles in the Editor and a shopping panel (see shop-v2.js). */
+  const shopV2 = (typeof window.__KAI_SHOP_V2 !== 'undefined') && !!window.__KAI_SHOP_V2;
   const boot =
     '<base href="' + location.href.split('#')[0] + '">' +
     '<scr' + 'ipt>window.__KAI_QS=' + JSON.stringify(qs ? '?' + qs : '')
@@ -54,7 +56,8 @@ function KAI_PANEL_DOC(qs){
       + ';window.__KAI_SHOP_MATERIALS=' + (shopMaterials ? 'true' : 'false')
       + ';window.__KAI_SHOP_PHOTOS=' + (shopPhotos ? 'true' : 'false')
       + ';window.__KAI_SHOP_MVP=' + (shopMvp ? 'true' : 'false')
-      + ';window.__KAI_SHOP_CART=' + (shopCart ? 'true' : 'false') + ';<\/script>';
+      + ';window.__KAI_SHOP_CART=' + (shopCart ? 'true' : 'false')
+      + ';window.__KAI_SHOP_V2=' + (shopV2 ? 'true' : 'false') + ';<\/script>';
   return KAI_PANEL_RAW.replace(/<head([^>]*)>/i, '<head$1>' + boot);
 }
 

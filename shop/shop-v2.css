@@ -1,0 +1,153 @@
+/* ════════════ SHOP WITH KAI v2 ════════════
+   ShopwithKai_v2.html only — every rule is under .kai-shop-v2 (set by
+   js/shop-v2.js). Kai's type and palette throughout; the shopping panel
+   drops the editor's grid for a plain light surface so it reads as a
+   different mode. */
+
+/* ── 1 · tiles in the task editor ── */
+.kai-shop-v2 .v2-count{display:inline-flex;align-items:center;margin-left:12px;padding:2px 8px;border:1px solid #E7B26A;background:#FFF6E6;color:#8A4B0B;
+  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;vertical-align:middle}
+.kai-shop-v2 .v2-count.is-done{border-color:var(--stroke);background:var(--sunken);color:var(--t2)}
+.kai-shop-v2 .v2-tiles-sec{padding:16px 20px}
+.kai-shop-v2 .v2-tiles-hd{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.kai-shop-v2 .v2-tiles-t{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+.kai-shop-v2 .v2-tiles-sub{font-size:12px;color:var(--t3)}
+.kai-shop-v2 .v2-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.kai-shop-v2 .v2-tile{display:flex;flex-direction:column;text-align:left;border:1px solid var(--stroke);background:var(--white);padding:0;font:inherit;color:inherit;min-width:0}
+.kai-shop-v2 .v2-tile .v2-tile-img{display:flex;align-items:center;justify-content:center;aspect-ratio:4/3;background:#ECE9E2;border:0;border-bottom:1px solid var(--stroke);padding:0;color:var(--t3);overflow:hidden;cursor:pointer;width:100%}
+.kai-shop-v2 .v2-tile .v2-tile-img img{width:100%;height:100%;object-fit:cover;display:block}
+.kai-shop-v2 .v2-tile .v2-tile-img svg{width:36px;height:36px;opacity:.7}
+.kai-shop-v2 .v2-tile-body{display:flex;flex-direction:column;gap:3px;padding:10px 12px 12px;min-width:0}
+.kai-shop-v2 .v2-tile-where{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.kai-shop-v2 .v2-tile-brand{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-top:4px}
+.kai-shop-v2 .v2-tile-name{font-size:14px;font-weight:600;color:var(--ink);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kai-shop-v2 .v2-tile-sup{display:flex;align-items:center;font-size:12px;color:var(--t2)}
+.kai-shop-v2 .v2-tile-price{font-size:12px;color:var(--t2)}
+.kai-shop-v2 .v2-tile-price b{color:var(--ink)}
+.kai-shop-v2 .v2-tile-qty{font-size:13px;color:var(--t2);margin-top:4px}
+.kai-shop-v2 .v2-tile-act{align-self:flex-start;margin-top:8px;padding:6px 12px;border:1px solid var(--ink);background:var(--white);color:var(--ink);cursor:pointer;
+  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.kai-shop-v2 .v2-tile-act:hover{background:var(--sunken)}
+/* Blank: the decision still to make — dashed, the whole tile one button. */
+.kai-shop-v2 .v2-tile.is-blank{border:1.5px dashed #B9B2A3;background:transparent;cursor:pointer;transition:border-color .12s,background .12s}
+.kai-shop-v2 .v2-tile.is-blank .v2-tile-img{background:transparent;border-bottom:1.5px dashed #D3CDBF}
+.kai-shop-v2 .v2-tile.is-blank .v2-tile-act{background:var(--ink);color:var(--white)}
+.kai-shop-v2 .v2-tile.is-blank:hover{border-color:var(--ink);background:rgba(255,255,255,.6)}
+
+/* ── 2 · the shopping panel — a store, not a form ── */
+.kai-shop-v2 .work{position:relative}
+.kai-shop-v2 .work:has(#v2Shop) .shop-nav-float{display:none}
+.kai-shop-v2 #v2Shop{position:absolute;left:0;right:0;bottom:0;z-index:40;display:flex;flex-direction:column;background:#FBFAF7;overflow-y:auto;
+  border-top:3px solid var(--accent)}
+.kai-shop-v2 #v2Shop.is-entering{animation:v2In .18s ease}
+@keyframes v2In{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.kai-shop-v2 .v2s-head{position:sticky;top:0;z-index:2;display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:22px 32px 16px;background:#FBFAF7}
+.kai-shop-v2 .v2s-eyebrow{display:block;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin-bottom:6px}
+.kai-shop-v2 .v2s-title{margin:0;font-family:var(--display);font-size:28px;font-weight:700;line-height:1.15;color:var(--ink)}
+.kai-shop-v2 .v2s-need{font-size:18px;font-weight:500;color:var(--t2);white-space:nowrap}
+.kai-shop-v2 .v2-allow{margin-top:10px;display:inline-flex;align-items:baseline;gap:6px;padding:6px 10px;background:var(--white);border:1px solid var(--stroke);font-size:13px;color:var(--t2)}
+.kai-shop-v2 .v2-allow-k{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.kai-shop-v2 .v2-allow b{color:var(--ink)}
+.kai-shop-v2 .v2-allow b.is-over{color:var(--error,#C0443A)}
+.kai-shop-v2 .v2-allow-sep{color:var(--t3)}
+.kai-shop-v2 .v2s-done{flex-shrink:0;display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border:1px solid var(--ink);background:var(--ink);color:var(--white);cursor:pointer;
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.kai-shop-v2 .v2s-done svg{width:13px;height:13px}
+.kai-shop-v2 .v2s-done:hover{background:#000}
+.kai-shop-v2 .v2s-tools{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:0 32px 16px;border-bottom:1px solid var(--stroke)}
+.kai-shop-v2 .v2s-search{flex:1 1 260px;display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;background:var(--white);border:1px solid var(--stroke);color:var(--t3)}
+.kai-shop-v2 .v2s-search:focus-within{border-color:var(--ink)}
+.kai-shop-v2 .v2s-search svg{width:15px;height:15px;flex-shrink:0}
+.kai-shop-v2 .v2s-search input{flex:1;min-width:0;border:0;outline:none;background:transparent;font:inherit;font-size:14px;color:var(--ink)}
+.kai-shop-v2 .v2s-sups{display:flex;flex-wrap:wrap;gap:6px}
+.kai-shop-v2 .v2s-sups button{display:inline-flex;align-items:center;height:32px;padding:0 12px;border:1px solid var(--stroke);background:var(--white);cursor:pointer;color:var(--t2);font-size:12.5px;white-space:nowrap}
+.kai-shop-v2 .v2s-sups button:hover{border-color:var(--ink);color:var(--ink)}
+.kai-shop-v2 .v2s-sups button.on{border-color:var(--ink);color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);font-weight:600}
+.kai-shop-v2 .v2s-grid-wrap{padding:8px 32px 48px}
+.kai-shop-v2 .v2s-empty{padding:48px 0;text-align:center;color:var(--t3)}
+
+/* ── 3 · product cards ── */
+.kai-shop-v2 .v2-tier{margin-top:20px}
+.kai-shop-v2 .v2-tier-hd{display:flex;align-items:baseline;gap:12px;margin-bottom:12px}
+.kai-shop-v2 .v2-tier-t{font-family:var(--display);font-size:16px;font-weight:700;color:var(--ink)}
+.kai-shop-v2 .v2-tier-r{font-family:var(--mono);font-size:10.5px;color:var(--t3)}
+.kai-shop-v2 .v2-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:12px}
+.kai-shop-v2 .v2-tier .v2-grid{margin-top:0}
+.kai-shop-v2 .v2-card{display:flex;flex-direction:column;background:var(--white);border:1px solid var(--stroke);min-width:0;transition:box-shadow .15s,border-color .15s}
+.kai-shop-v2 .v2-card:hover{border-color:#CFC8B8;box-shadow:0 6px 18px rgba(26,26,26,.07)}
+.kai-shop-v2 .v2-card.is-on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.kai-shop-v2 .v2-card.is-out .v2-card-img img,.kai-shop-v2 .v2-card.is-out .v2-card-img svg{opacity:.45;filter:grayscale(1)}
+.kai-shop-v2 .v2-card-img{position:relative;display:flex;align-items:center;justify-content:center;aspect-ratio:1;background:#ECE9E2;border:0;padding:0;cursor:pointer;overflow:hidden;color:var(--t3)}
+.kai-shop-v2 .v2-card-img img{width:100%;height:100%;object-fit:cover;display:block}
+.kai-shop-v2 .v2-card-img svg{width:44px;height:44px;opacity:.6}
+.kai-shop-v2 .v2-fit{position:absolute;top:8px;left:8px;padding:3px 7px;background:#E6F2E8;border:1px solid #9CC7A4;color:#255C31;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.kai-shop-v2 .v2-card-body{display:flex;flex-direction:column;gap:3px;padding:12px 14px 14px;flex:1}
+.kai-shop-v2 .v2-card-brand{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.kai-shop-v2 .v2-card-name{font-size:14.5px;font-weight:600;line-height:1.3;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em}
+.kai-shop-v2 .v2-card-sup{display:flex;align-items:center;font-size:12px;color:var(--t2);margin-top:2px}
+.kai-shop-v2 .v2-card-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px}
+.kai-shop-v2 .v2-card-price{font-family:var(--display);font-size:18px;font-weight:700;color:var(--ink);white-space:nowrap}
+.kai-shop-v2 .v2-card-price span{font-family:var(--body,inherit);font-size:12px;font-weight:400;color:var(--t3)}
+.kai-shop-v2 .v2-card-total{font-size:11.5px;color:var(--t3)}
+.kai-shop-v2 .v2-stock{flex-shrink:0;padding:2px 7px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;border:1px solid}
+.kai-shop-v2 .v2-stock.is-near{background:#E6F2E8;border-color:#9CC7A4;color:#255C31}
+.kai-shop-v2 .v2-stock.is-ships{background:#EEF2F7;border-color:#B5C3D6;color:#2F4A6B}
+.kai-shop-v2 .v2-stock.is-none{background:var(--sunken);border-color:var(--stroke);color:var(--t3)}
+.kai-shop-v2 .v2-card-cta{margin-top:auto;align-self:stretch;margin-top:12px;padding:10px 12px;border:1px solid var(--ink);background:var(--white);color:var(--ink);cursor:pointer;text-align:center;
+  font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.kai-shop-v2 .v2-card-cta:hover{background:var(--ink);color:var(--white)}
+.kai-shop-v2 .v2-card-cta:disabled{border-color:var(--stroke);color:var(--t3);background:var(--white);cursor:not-allowed}
+.kai-shop-v2 .v2-card-cta.is-on{background:var(--accent);border-color:var(--ink);cursor:default}
+
+/* ── 4 · also needed in ── */
+.kai-shop-v2 .v2s-also{padding:16px 32px 0}
+.kai-shop-v2 .v2s-also[hidden]{display:none}
+.kai-shop-v2 .v2a{background:var(--white);border:1px solid var(--ink);border-left:4px solid var(--accent)}
+.kai-shop-v2 .v2a-hd{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:12px 16px;border-bottom:1px solid var(--stroke)}
+.kai-shop-v2 .v2a-t{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+.kai-shop-v2 .v2a-sub{flex:1;font-size:12.5px;color:var(--t2)}
+.kai-shop-v2 .v2a-row{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid rgba(0,0,0,.05);font-size:13.5px;cursor:pointer}
+.kai-shop-v2 .v2a-row:hover{background:#FBFAF7}
+.kai-shop-v2 .v2a-row.is-done{cursor:default;background:transparent}
+.kai-shop-v2 .v2a-box{width:16px;height:16px;margin:0;accent-color:var(--ink);cursor:pointer}
+.kai-shop-v2 .v2a-box.is-done{display:inline-flex;align-items:center;justify-content:center;color:#255C31;font-weight:700;cursor:default}
+.kai-shop-v2 .v2a-link{margin-left:auto;background:none;border:0;padding:0;cursor:pointer;color:var(--ink);text-decoration:underline;text-underline-offset:3px;font-size:12px}
+.kai-shop-v2 .v2a-foot{display:flex;justify-content:flex-end;padding:10px 16px;border-top:1px solid var(--stroke);background:#FBFAF7}
+.kai-shop-v2 .v2a-fill{padding:9px 16px;border:1px solid var(--ink);background:var(--ink);color:var(--white);cursor:pointer;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.kai-shop-v2 .v2a-fill:hover{background:#000}
+.kai-shop-v2 .v2a-fill:disabled{background:var(--white);color:var(--t3);border-color:var(--stroke);cursor:not-allowed}
+.kai-shop-v2 .v2a-row:last-child{border-bottom:0}
+.kai-shop-v2 .v2a-where{color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kai-shop-v2 .v2a-state{font-size:12px;color:var(--t3);white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+.kai-shop-v2 .v2a-state.is-on{color:#255C31;font-weight:600}
+.kai-shop-v2 .v2a-state.is-need{color:#8A4B0B}
+.kai-shop-v2 .v2a-btn{padding:6px 12px;border:1px solid var(--ink);background:var(--white);color:var(--ink);cursor:pointer;white-space:nowrap;
+  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.kai-shop-v2 .v2a-btn:hover,.kai-shop-v2 .v2a-btn.is-all{background:var(--ink);color:var(--white)}
+
+/* ── header right: mood board toggle + Done ── */
+.kai-shop-v2 .v2s-head-r{display:flex;align-items:center;gap:16px;flex-shrink:0}
+.kai-shop-v2 .v2s-mood-tg{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--t2);white-space:nowrap;user-select:none}
+.kai-shop-v2 .v2s-mood-tg input{position:absolute;opacity:0;pointer-events:none}
+.kai-shop-v2 .v2s-mood-tg .sw{position:relative;width:30px;height:17px;border-radius:9px;background:#D3CDBF;transition:background .15s}
+.kai-shop-v2 .v2s-mood-tg .sw::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.kai-shop-v2 .v2s-mood-tg input:checked + .sw{background:var(--ink)}
+.kai-shop-v2 .v2s-mood-tg input:checked + .sw::after{transform:translateX(13px)}
+.kai-shop-v2 .v2s-mood-tg input:focus-visible + .sw{outline:2px solid var(--ink);outline-offset:2px}
+
+/* ── 5 · split: products | mood board ── */
+.kai-shop-v2 .v2s-body{display:block}
+.kai-shop-v2 .v2s-body.has-mood{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,38%);align-items:start}
+.kai-shop-v2 .v2s-main{min-width:0}
+.kai-shop-v2 .v2s-mood{position:sticky;top:96px;margin:0 32px 32px 0;padding:16px;background:var(--white);border:1px solid var(--stroke)}
+.kai-shop-v2 .v2s-mood-hd{display:flex;align-items:center;gap:10px}
+.kai-shop-v2 .v2s-mood-t{font-family:var(--display);font-size:16px;font-weight:700;color:var(--ink)}
+.kai-shop-v2 .v2s-mood-tag{padding:2px 7px;border:1px dashed #B9B2A3;color:var(--t3);font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.kai-shop-v2 .v2s-mood-note{margin:6px 0 12px;font-size:12px;color:var(--t3);line-height:1.45}
+.kai-shop-v2 .v2s-mood-grid{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:84px;gap:8px}
+.kai-shop-v2 .v2s-mood-tile{position:relative;margin:0;overflow:hidden;background:var(--sunken)}
+.kai-shop-v2 .v2s-mood-tile.is-tall{grid-row:span 2}
+.kai-shop-v2 .v2s-mood-tile img{width:100%;height:100%;object-fit:cover;display:block}
+.kai-shop-v2 .v2s-mood-tile figcaption{position:absolute;left:6px;bottom:6px;padding:2px 6px;background:rgba(255,255,255,.88);font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
+.kai-shop-v2 .v2s-body.has-mood .v2s-tools,.kai-shop-v2 .v2s-body.has-mood .v2s-also,.kai-shop-v2 .v2s-body.has-mood .v2s-grid-wrap{padding-right:20px}
+.kai-shop-v2 .v2s-body.has-mood .v2-grid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
