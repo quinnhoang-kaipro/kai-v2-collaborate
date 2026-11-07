@@ -196,7 +196,7 @@ function renderFly(){
         </div>
       </div>`:''}
     </div>
-    <div class="fly-foot">
+    ${_FLY_REAL ? _flyFootHtml(t, p) : `<div class="fly-foot">
       <div class="fly-task">
         Adding to<b>${t.room} · ${t.name}</b>
         <span style="display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;color:${over?'var(--error)':'var(--t3)'};margin-top:3px">${qty} ${cartedHere?cartUnit(taskId):p.unit} · $${Math.round(total).toLocaleString()} ${over?'(over budget of '+t.cost+')':''}</span>
@@ -218,7 +218,78 @@ function renderFly(){
       <button class="fly-cta${cartedHere?' is-selected':''}" onclick="selectProduct(${taskId},'${p.sku}')">
         ${cartedHere?'Added ✓':'Add to task'}
       </button>
+    </div>`}`;
+}
+
+/* ── Product panel footer, Shop layout pages ──
+   "Add to task" puts the product on the task the way the product rows' "+ Add"
+   does — a product row on the task's option — so the task's cost, its
+   department's, the materials total, the job total and the Record all move.
+   The footer above it is the old ShopEdit cart (selectProduct), which only
+   remembered the pick and never reached a cost. */
+const _FLY_REAL = !!window.__KAI_SHOP_LAYOUT;
+function _flyLine(t){
+  if(typeof taskLine !== 'function' || typeof deptLines !== 'function') return null;
+  const tl = taskLine(t), key = `${tl.dept}|${tl.line}`;
+  return deptLines(TASKS).find(l => l.key === key) || null;
+}
+function _flyPrice(l, p){
+  try { return _lnpOffer(l, p).offer.price; } catch(e){ return p.price; }
+}
+function _flyFootHtml(t, p){
+  const l = _flyLine(t);
+  const on = l ? _lineTaskPicked(l, t).filter(h => h.p.sku === p.sku) : [];
+  const where = `<b>${esc(t.room)} · ${esc(t.name)}</b>`;
+  if(on.length){
+    const q = on.reduce((a, h) => a + _num(h.p.qty), 0);
+    const cost = on.reduce((a, h) => a + _num(h.p.qty) * _num(h.p.parts), 0);
+    return `<div class="fly-foot">
+      <div class="fly-task">On this task${where}
+        <span style="display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;color:var(--t3);margin-top:3px">${q} ${esc(p.unit)} · ${shopMoney(cost)}</span>
+      </div>
+      <button class="fly-cta is-selected" type="button" disabled>Added ✓</button>
     </div>`;
+  }
+  const price = l ? _flyPrice(l, p) : p.price;
+  const q0 = _num(_taskNeedQty(t, p)) || 1;
+  return `<div class="fly-foot">
+      <div class="fly-task">Adding to${where}
+        <span id="flyPendingSum" style="display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;color:var(--t3);margin-top:3px" data-price="${price}" data-unit="${esc(p.unit)}">${q0} ${esc(p.unit)} · ${shopMoney(price * q0)}</span>
+      </div>
+      <div class="shop-qty-grp" title="How many for this task">
+        <div class="shop-qty" style="border:0">
+          <button type="button" onclick="flyPendingBump(-1)">−</button>
+          <input id="flyPendingQty" type="number" min="1" step="1" value="${q0}" oninput="flyPendingBump(0)">
+          <button type="button" onclick="flyPendingBump(1)">+</button>
+        </div>
+        <span class="shop-unit-input" style="display:inline-flex;align-items:center">${esc(p.unit)}</span>
+      </div>
+      <button class="fly-cta" type="button" ${l ? `onclick="flyAddToTask(${t.id},'${esc(p.sku)}')"` : 'disabled title="This task has no product type to add to"'}>Add to task</button>
+    </div>`;
+}
+function flyPendingBump(d){
+  const el = document.getElementById('flyPendingQty'); if(!el) return;
+  const v = Math.max(1, Math.round((parseFloat(el.value) || 1) + d));
+  if(d) el.value = v;
+  const sum = document.getElementById('flyPendingSum');
+  if(sum) sum.textContent = `${v} ${sum.dataset.unit} · ${shopMoney(v * parseFloat(sum.dataset.price))}`;
+}
+function flyAddToTask(taskId, sku){
+  const t = TASKS.find(x => x.id === taskId); if(!t) return;
+  const l = _flyLine(t); if(!l) return;
+  const cat = _lineCat(l, sku); if(!cat) return;
+  const h = _ensureLineProductRow(t, cat); if(!h) return;
+  const el = document.getElementById('flyPendingQty');
+  const q = el && parseFloat(el.value) > 0 ? parseFloat(el.value) : _num(_taskNeedQty(t, cat));
+  const offer = offersForSku(cat.sku).find(o => o.supplier === lineSupplierFor(l, cat.sku));
+  h.p.qty = String(_num(productIsPicked(h.p) ? h.p.qty : 0) + q);
+  if(offer){ h.p.supplier = offer.supplier; h.p.parts = _fmtDollars(offer.price); }
+  if(!optionIsAdded(h.o)) h.o.added = true;
+  recomputeOptionFromProducts(t, h.o);
+  _syncTaskProduct(t);
+  toast(`${cat.brand} ${cat.name} added to ${t.room} › ${t.name}`);
+  renderAll();
+  renderFly();
 }
 
 // Shared empty-state block for each of the 6 tabs when the scope has no
