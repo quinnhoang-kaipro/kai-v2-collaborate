@@ -1,0 +1,914 @@
+/* Shop with Kai workspace (wireframe). Grayscale only. */
+.pg-scope{
+  --sp-ink:#1a1a1a; --sp-t2:#555; --sp-t3:#8a8a8a; --sp-line:#d4d4d4; --sp-hair:#e6e6e6;
+  --sp-fill:#f2f2f2; --sp-bg:#ffffff; --sp-hl:#d1d1d1;
+  color:var(--sp-ink); font-family:var(--body); font-size:13px;
+}
+/* where the pages and panels sit */
+.sidebar,.work{position:relative}
+#pgNav{position:absolute; inset:0; z-index:40; background:var(--sp-bg); display:flex; flex-direction:column; min-height:0}
+#pgNav[hidden],#pgMain[hidden],#pgSide[hidden],#pgDiv[hidden]{display:none !important}
+.pg-nav-hd{padding:12px 14px 10px; border-bottom:1px solid var(--sp-ink); display:flex; flex-direction:column; gap:8px}
+.pg-nav-t{display:flex; justify-content:space-between; align-items:baseline}
+.pg-nav-b{flex:1; min-height:0; overflow:auto; padding:12px 14px 40px}
+#pgMain{position:absolute; left:0; right:0; bottom:0; z-index:40; background:var(--sp-bg); overflow:auto}
+.pg-main-hd{position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:12px; padding:10px 18px; background:var(--sp-bg); border-bottom:1px solid var(--sp-line); flex-wrap:wrap}
+.pg-sp{flex:1}
+.pg-div{flex:0 0 7px; position:relative; cursor:col-resize; background:var(--sp-bg,#fff); touch-action:none; outline:none; z-index:41}
+.pg-div::before{content:""; position:absolute; top:0; bottom:0; left:3px; width:1px; background:#cfcfcf}
+.pg-div-grip{position:absolute; top:50%; left:1px; width:5px; height:32px; margin-top:-16px; border-radius:3px; background:#fff; border:1px solid #8a8a8a}
+.pg-div:hover::before,.pg-div.is-drag::before,.pg-div:focus-visible::before{left:2px; width:3px; background:#1a1a1a}
+.pg-div:hover .pg-div-grip,.pg-div.is-drag .pg-div-grip,.pg-div:focus-visible .pg-div-grip{background:#1a1a1a; border-color:#1a1a1a}
+body.pg-resizing{cursor:col-resize; user-select:none}
+body.pg-resizing iframe,body.pg-resizing #pgMain,body.pg-resizing #pgSide{pointer-events:none}
+#pgSide{flex:0 0 420px; min-width:0; display:flex; flex-direction:column; background:var(--sp-bg); border-left:0}
+.pg-side-hd{height:44px; flex:none; display:flex; align-items:center; gap:10px; padding:0 10px 0 14px; border-bottom:1px solid var(--sp-line)}
+.pg-side-t{font:700 10px var(--mono); letter-spacing:.1em; text-transform:uppercase}
+.pg-side-btn{border:1px solid var(--sp-line); background:var(--sp-bg); padding:4px 8px; border-radius:3px; font-size:11px; cursor:pointer; white-space:nowrap}
+.pg-side-x{border:0; background:none; font-size:14px; cursor:pointer; color:var(--sp-t2); padding:4px 6px}
+.pg-side-b{flex:1; min-height:0; overflow:auto}
+.pg-side-frame{display:block; width:100%; height:100%; border:0}
+.pg-seg{display:flex; gap:0}
+.pg-seg button{border:1px solid var(--sp-line); background:var(--sp-bg); padding:4px 10px; font-size:11px; cursor:pointer; margin-left:-1px}
+.pg-seg button:first-child{margin-left:0; border-radius:3px 0 0 3px}
+.pg-seg button:last-child{border-radius:0 3px 3px 0}
+.pg-media{padding:12px 14px 40px}
+.pg-media.is-main{padding:16px 18px 48px}
+.pg-media-tools{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px}
+.pg-room{margin-bottom:14px}
+.pg-thumbs{display:grid; gap:8px; grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+.pg-thumbs.is-large{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+.pg-thumbs .sp-photo{position:relative}
+.pg-play{position:absolute; left:6px; top:6px; background:#1a1a1a; color:#fff; font:600 10px/16px var(--mono); padding:0 5px; border-radius:2px}
+.sp-mood figcaption small{display:block; color:var(--sp-t3)}
+.sp-mood.is-odd .sp-ph{outline:2px solid var(--sp-ink); outline-offset:1px}
+.sp-shop.is-side{padding:12px 14px 40px}
+.sp-shop.is-side .sp-shelf-row{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+#pgHelp{position:fixed; inset:0; z-index:1000; pointer-events:none}
+#pgHelp > *{pointer-events:auto}
+/* tab bar: Shop, Media and the panel buttons */
+.wmode{display:inline-flex; align-items:center; gap:6px}
+.pg-ic{display:inline-grid; place-items:center; width:20px; height:18px; border-radius:2px; color:#8a8a8a; cursor:pointer}
+.pg-ic svg{width:14px; height:12px}
+.pg-ic .pg-ic-fill{opacity:0}
+.pg-ic:hover{color:#1a1a1a; background:#eee}
+.pg-ic.on{color:#1a1a1a}
+.pg-ic.on .pg-ic-fill{opacity:1}
+.wmode.is-side{color:#1a1a1a}
+body.pg-on .wmode-expand{visibility:hidden}
+.pg-scope :where(button){font:inherit; color:inherit; cursor:pointer}
+.pg-scope .sp-ph{display:block; background:var(--sp-fill) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><path d='M0 0L100 100M100 0L0 100' stroke='%23b4b4b4' stroke-width='1' vector-effect='non-scaling-stroke'/></svg>") center/100% 100% no-repeat;
+  border:1px solid var(--sp-line)}
+.sp-eyebrow,.sp-k,.sp-sec-t,.sp-grp-hd,.sp-shelf-t{font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.sp-meta,.sp-sec-sub{color:var(--sp-t2); font-size:12px}
+.sp-future{display:inline-block; margin-left:6px; padding:0 5px; border:1px dashed var(--sp-t3); color:var(--sp-t2);
+  font:600 9px/15px var(--mono); letter-spacing:.08em; text-transform:uppercase; vertical-align:middle}
+
+/* header */
+.sp-head{display:flex; align-items:center; gap:20px; padding:12px 20px; border-bottom:1px solid var(--sp-ink); flex-wrap:wrap}
+.sp-head-l{display:flex; flex-direction:column; gap:2px; min-width:0}
+.sp-title{margin:0; font:700 18px/1.2 var(--display)}
+.sp-tabs{display:flex; gap:4px; margin-left:auto}
+.sp-tabs button,.sp-by button,.sp-ret button,.sp-ref-sw button,.sp-guide button{border:1px solid var(--sp-line); background:var(--sp-bg); padding:6px 12px; border-radius:3px}
+.sp-tabs button b{display:inline-grid; place-items:center; width:18px; height:18px; margin-right:6px; border:1px solid currentColor; border-radius:50%; font-size:10px}
+.pg-scope .on{background:var(--sp-ink) !important; color:#fff !important; border-color:var(--sp-ink) !important}
+.sp-head-r{display:flex; align-items:center; gap:14px}
+.sp-by{display:flex; align-items:center; gap:4px}
+.sp-by .sp-k{margin-right:4px; color:var(--sp-t2)}
+.sp-by button{display:flex; flex-direction:column; align-items:flex-start; line-height:1.2; padding:5px 10px}
+.sp-by small{font-size:10px; opacity:.7}
+.sp-done{border:1px solid var(--sp-ink); background:var(--sp-bg); padding:8px 16px; border-radius:3px; font-weight:600}
+.sp-done.is-pri{background:var(--sp-hl); border-color:var(--sp-ink)}
+
+.sp-sec-hd{display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:10px}
+.sp-by{display:flex; align-items:center; gap:4px; flex-wrap:wrap}
+
+/* needs / slots */
+.sp-grp{margin-bottom:16px}
+.sp-grp-hd{display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--sp-ink); margin-bottom:8px}
+.sp-grp-n{color:var(--sp-t2)}
+.sp-slots{display:flex; flex-direction:column; gap:8px}
+.sp-slot{position:relative; border:1px solid var(--sp-line); border-radius:3px; background:var(--sp-bg)}
+.sp-slot.is-blank{border-style:dashed; border-color:var(--sp-t3)}
+.sp-slot.is-on{outline:2px solid var(--sp-ink); outline-offset:-1px}
+.sp-slot-btn{display:flex; gap:10px; align-items:center; width:100%; padding:8px; border:0; background:none; text-align:left}
+.sp-slot-img{flex:none; width:44px; height:44px; display:grid; place-items:center; border:1px dashed var(--sp-t3); color:var(--sp-t3); font-size:18px}
+.sp-slot-b{display:flex; flex-direction:column; gap:2px; min-width:0}
+.sp-slot-l{font-weight:600}
+.sp-slot-n{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.sp-slot-s{font-size:11px; color:var(--sp-t2)}
+.sp-slot-tags{display:flex; gap:4px; margin-top:2px}
+body.pg-dragging .sp-slot{opacity:.45}
+body.pg-dragging .sp-slot.can-drop{opacity:1; border:2px dashed var(--sp-ink)}
+.sp-slot.is-over{background:var(--sp-fill)}
+
+/* shelves */
+.sp-shop{padding:14px 18px 48px; display:flex; flex-direction:column; gap:12px}
+.sp-shop-tools{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.sp-ret{display:flex; gap:4px; flex-wrap:wrap}
+.sp-search input{border:1px solid var(--sp-line); border-radius:3px; padding:6px 10px; font:inherit; width:200px; max-width:100%}
+.sp-ghost{border:1px solid var(--sp-line); background:var(--sp-bg); padding:6px 10px; border-radius:3px}
+.sp-ghost:disabled{color:var(--sp-t3); cursor:default}
+.sp-active{display:flex; align-items:center; gap:10px; padding:8px 12px; border:1px solid var(--sp-ink); border-radius:3px; flex-wrap:wrap}
+.sp-active.is-none{border-style:dashed; border-color:var(--sp-line); color:var(--sp-t2)}
+.sp-active-k{font:700 10px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--sp-t2)}
+.sp-active-sp{flex:1}
+.sp-x{border:0; background:none; color:var(--sp-t2)}
+.sp-shelves{display:flex; flex-direction:column; gap:18px}
+.sp-shelf-hd{display:flex; justify-content:space-between; align-items:baseline; padding-bottom:6px; border-bottom:2px solid var(--sp-ink); margin-bottom:10px}
+.sp-shelf-n{font-size:11px; color:var(--sp-t2)}
+.sp-shelf-row{display:grid; grid-template-columns:repeat(auto-fill,minmax(168px,1fr)); gap:12px}
+.sp-card{display:flex; flex-direction:column; gap:3px; padding:8px; border:1px solid var(--sp-line); border-radius:3px; background:var(--sp-bg); cursor:grab}
+.sp-card:active{cursor:grabbing}
+.sp-card.is-picked{border-color:var(--sp-ink)}
+.sp-card-img{aspect-ratio:4/3; width:100%; margin-bottom:4px}
+.sp-card-ret{font:600 9px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--sp-t2)}
+.sp-card-br{font-size:11px; color:var(--sp-t2)}
+.sp-card-n{font-weight:600; line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:2.5em}
+.sp-card-row{display:flex; align-items:baseline; gap:4px}
+.sp-card-row small{color:var(--sp-t2)}
+.sp-card-st{margin-left:auto; font-size:11px; color:var(--sp-t2)}
+.sp-card-tags{display:flex; gap:4px; flex-wrap:wrap; min-height:18px}
+.sp-card-add{margin-top:4px; border:1px solid var(--sp-ink); background:var(--sp-bg); padding:5px; border-radius:3px; font-weight:600}
+.sp-std{display:inline-block; white-space:nowrap; padding:1px 6px; border-radius:9px; font:600 10px/16px var(--body); border:1px solid var(--sp-ink)}
+.sp-std.is-hi{background:var(--sp-ink); color:#fff}
+.sp-std.is-lo{background:var(--sp-bg); border-style:dashed; color:var(--sp-t2)}
+.sp-fin{display:inline-block; padding:1px 6px; border:1px solid var(--sp-line); border-radius:9px; font-size:10px; line-height:16px; color:var(--sp-t2)}
+.sp-fin.is-in{border-color:var(--sp-ink); color:var(--sp-ink)}
+.sp-empty,.sp-empty-all{padding:18px; border:1px dashed var(--sp-line); color:var(--sp-t2); text-align:center}
+.sp-empty-all{margin:40px auto; max-width:480px}
+
+/* reference panel */
+.sp-ref-sw,.sp-guide{display:flex; gap:4px; margin-bottom:10px}
+.sp-ref-sw button,.sp-guide button{flex:1}
+.sp-guide button{font-size:11px; padding:5px 6px}
+.sp-sg{border:1px solid var(--sp-line); padding:8px 10px; margin-bottom:10px; font-size:12px}
+.sp-sg ul{margin:4px 0 0; padding-left:16px; color:var(--sp-t2)}
+/* Pinterest-style masonry: columns of mixed-height tiles, the same gap
+   below every tile, so each column runs on its own rhythm. */
+.sp-mood-grid{column-width:140px; column-gap:10px}
+.sp-mood{margin:0 0 10px; break-inside:avoid; display:block}
+.sp-mood .sp-ph{border-radius:10px; aspect-ratio:3/4}
+.sp-mood .sp-ph.sp-h0{aspect-ratio:3/4}
+.sp-mood .sp-ph.sp-h1{aspect-ratio:4/3}
+.sp-mood .sp-ph.sp-h2{aspect-ratio:2/3}
+.sp-mood .sp-ph.sp-h3{aspect-ratio:1/1}
+.sp-mood figcaption{padding-top:4px}
+.sp-mood figcaption,.sp-photo figcaption{font-size:10px; color:var(--sp-t2); padding-top:2px}
+.sp-pin{display:flex; flex-direction:column; gap:4px; margin-top:10px; font-size:11px; color:var(--sp-t2)}
+.sp-pin input{border:1px dashed var(--sp-line); padding:6px 8px; font:inherit; background:var(--sp-fill)}
+.sp-ph-grp{margin-bottom:10px}
+.sp-ph-room{font:700 10px var(--mono); letter-spacing:.1em; text-transform:uppercase}
+.sp-ph-row{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:4px}
+.sp-photo{margin:0}
+.sp-photo .sp-ph{aspect-ratio:1}
+.sp-picks{margin-top:18px; padding-top:12px; border-top:1px solid var(--sp-ink)}
+.sp-warn{border:2px solid var(--sp-ink); padding:8px 10px; margin-bottom:10px; font-size:12px; line-height:1.4}
+.sp-link{border:0; background:none; text-decoration:underline; padding:0; font-weight:600}
+.sp-picks-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:6px}
+.sp-pick{margin:0}
+.sp-pick .sp-ph{aspect-ratio:1}
+.sp-pick.is-odd .sp-ph{outline:2px solid var(--sp-ink); outline-offset:1px}
+.sp-pick figcaption{display:flex; flex-direction:column; font-size:10px; line-height:1.25; padding-top:3px}
+.sp-pick figcaption span{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.sp-pick small{color:var(--sp-t2)}
+
+/* help me choose */
+.sp-scrim{position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:5}
+.sp-help{position:fixed; z-index:6; top:8%; left:50%; transform:translateX(-50%); width:min(760px,92vw); max-height:84%; overflow:auto;
+  background:var(--sp-bg); border:1px solid var(--sp-ink); border-radius:4px}
+.sp-help-hd{display:flex; justify-content:space-between; gap:12px; padding:16px 18px; border-bottom:1px solid var(--sp-line)}
+.sp-help-hd h3{margin:2px 0; font:700 18px var(--display)}
+.sp-help-b{display:grid; grid-template-columns:220px minmax(0,1fr); gap:18px; padding:16px 18px}
+.sp-help-refs{display:flex; flex-direction:column; gap:6px; margin-top:6px}
+.sp-help-refs button{display:flex; gap:8px; align-items:center; border:1px solid var(--sp-line); background:var(--sp-bg); padding:5px; text-align:left; font-size:12px; border-radius:3px}
+.sp-help-refs .sp-ph{width:44px; height:34px; flex:none}
+.sp-help-res{display:flex; flex-direction:column; gap:8px}
+.sp-help-row{display:flex; align-items:center; gap:12px; border:1px solid var(--sp-line); padding:8px; border-radius:3px}
+.sp-help-img{width:72px; height:56px; flex:none}
+.sp-help-t{display:flex; flex-direction:column; gap:2px; flex:1; min-width:0}
+.sp-help-t span{font-size:12px; color:var(--sp-t2)}
+.sp-help-tags{display:flex; gap:6px; flex-wrap:wrap}
+.sp-score{font:700 11px var(--mono); color:var(--sp-ink) !important}
+
+/* cart */
+.sp-cart{flex:1; min-height:0; overflow:auto; padding:18px 20px 48px; display:flex; flex-direction:column; gap:16px}
+.sp-cart-hd{display:flex; justify-content:space-between; align-items:flex-start; gap:12px}
+.sp-cart-hd > div{display:flex; flex-direction:column; gap:4px}
+.sp-tbl-wrap{overflow-x:auto; border:1px solid var(--sp-line)}
+.sp-tbl,.sp-mini{width:100%; border-collapse:collapse; font-size:12px}
+.sp-tbl th,.sp-tbl td,.sp-mini th,.sp-mini td{padding:8px 10px; border-bottom:1px solid var(--sp-hair); text-align:left; vertical-align:top}
+.sp-tbl thead th,.sp-mini thead th{font:700 10px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--sp-t2); background:var(--sp-fill)}
+.sp-tbl td small{display:block; color:var(--sp-t2); font-size:11px}
+.sp-tbl .num,.sp-mini .num{text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap}
+.sp-tgrp th{background:var(--sp-bg); border-top:2px solid var(--sp-ink); font:700 11px var(--mono); letter-spacing:.08em; text-transform:uppercase}
+.sp-tbl tfoot th{border-top:2px solid var(--sp-ink); font-weight:700}
+.sp-tbl tr.is-empty td{color:var(--sp-t2)}
+.sp-miss{border:1px dashed var(--sp-t3); padding:1px 6px; margin-right:6px}
+.sp-fut-col{color:var(--sp-t3)}
+.sp-future-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px}
+.sp-fcard{border:1px dashed var(--sp-t3); padding:12px 14px; border-radius:3px}
+.sp-fcard .sp-meta{margin:0 0 8px}
+.sp-dl{display:grid; grid-template-columns:1fr auto; gap:4px 12px; margin:0; font-size:12px}
+.sp-dl dd{margin:0; text-align:right; font-variant-numeric:tabular-nums}
+
+/* entry buttons outside the workspace */
+.sp-entry{margin-right:10px; border:1px solid var(--ink,#1a1a1a); background:#d1d1d1; color:var(--ink,#1a1a1a); padding:5px 12px; border-radius:3px;
+  font:700 10px var(--mono); letter-spacing:.1em; text-transform:uppercase; cursor:pointer; white-space:nowrap}
+.sp-entry.is-link{margin-left:auto; margin-right:0}
+
+.pg-main-hd .sp-tabs{margin-left:0}
+/* with a side panel open, the scope navigator gives up some room */
+body.pg-has-side .sidebar{flex-basis:28%; min-width:280px}
+body.pg-has-side .shop-nav-float{position:absolute; left:50%}
+/* tabs scroll sideways when the work area is narrow */
+.wmode-tabs{overflow-x:auto; scrollbar-width:none; min-width:0}
+.wmode-tabs::-webkit-scrollbar{display:none}
+.wmode{flex:none}
+body.pg-on .shop-nav-float{display:none}
+.pg-seg button{white-space:nowrap}
+.sp-pin .sp-future{align-self:flex-start; margin-left:0}
+.pg-scope img.sp-ph.is-img{object-fit:cover; background:var(--sp-fill); outline:0; filter:none}
+.sp-slot-img.is-img{width:44px; height:44px}
+.sp-help-refs img.sp-ph{width:44px; height:34px; flex:none}
+.sp-mood img.sp-ph{width:100%; display:block}
+.sp-photo img.sp-ph{width:100%; display:block}
+.wmode.pg-off{cursor:default}
+.wmode.pg-off .pg-ic.is-inert{cursor:default}
+.wmode.pg-off .pg-ic.is-inert:hover{background:none; color:#8a8a8a}
+
+/* real photos keep their colour and, on the mood board, their own shape */
+.pg-scope img.sp-ph.is-img[src^="img/wf/"]{filter:none}
+.sp-mood img.sp-ph.is-img{aspect-ratio:auto; height:auto; border-radius:12px}
+.pg-credit{margin:8px 0 0; font-size:10px; color:var(--sp-t3)}
+
+/* solid grey tiles: the mood board keeps mixed heights */
+.sp-mood img.sp-ph.is-img{object-fit:cover}
+.sp-mood img.sp-ph.is-img.sp-h0{aspect-ratio:3/4}
+.sp-mood img.sp-ph.is-img.sp-h1{aspect-ratio:4/3}
+.sp-mood img.sp-ph.is-img.sp-h2{aspect-ratio:2/3}
+.sp-mood img.sp-ph.is-img.sp-h3{aspect-ratio:1/1}
+
+/* Shop by: the same compact segmented control as the scope navigator's All / Labor / Materials */
+.pg-nav-hd .pg-by{align-self:flex-start}
+/* match the reference: thin outline, white ground, selected option solid black */
+.pg-nav-hd .pg-by{background:#fff; border:1px solid #cfcfcf; border-radius:3px; padding:2px; gap:2px; height:30px}
+.pg-nav-hd .pg-by button{color:#555; border-radius:2px}
+.pg-nav-hd .pg-by button:hover{color:#1a1a1a}
+.pg-nav-hd .pg-by button.active{background:#1a1a1a; color:#fff}
+
+/* the main page's own panel icon is inactive: a page can't open twice */
+.wmode .pg-ic.is-inert{cursor:default; opacity:.35}
+.wmode .pg-ic.is-inert:hover{background:none; color:#8a8a8a}
+.wmode.pg-off .pg-ic.is-inert{opacity:1}
+
+/* shelf pager: bottom right of each shelf */
+.sp-pager{display:flex; align-items:center; justify-content:flex-end; gap:6px; margin-top:8px}
+.sp-pager-n{font-size:11px; color:var(--sp-t2); margin-right:4px; font-variant-numeric:tabular-nums}
+.sp-pager-b{width:28px; height:28px; border:1px solid var(--sp-ink); background:var(--sp-bg); border-radius:3px; font-size:16px; line-height:1}
+.sp-pager-b:disabled{border-color:var(--sp-line); color:var(--sp-t3); cursor:default}
+
+.pg-ic .pg-ic-left{opacity:0}
+.wmode .pg-ic.is-main{opacity:1; color:#1a1a1a}
+.wmode .pg-ic.is-main .pg-ic-left{opacity:1}
+.wmode .pg-ic.is-main:hover{color:#1a1a1a}
+
+/* remove: a ✕ on the product's picture, shown on hover (or keyboard focus).
+   It clears the product; the slot stays, blank. Cart rows: ✕ on row hover. */
+.sp-slot.is-filled .sp-slot-btn{align-items:flex-start}
+.sp-slot-rm{position:absolute; top:-1px; left:41px; width:20px; height:20px; border-radius:50%; border:1px solid var(--sp-ink);
+  background:var(--sp-bg); color:var(--sp-ink); font-size:10px; line-height:18px; text-align:center; padding:0; cursor:pointer;
+  opacity:0; transition:opacity .12s}
+.sp-slot.is-filled:hover .sp-slot-rm,.sp-slot-rm:focus-visible{opacity:1}
+.sp-slot-rm:hover{background:var(--sp-ink); color:#fff}
+.sp-rm-col{width:36px; text-align:center}
+.sp-row-rm{border:0; background:none; color:var(--sp-t2); font-size:13px; padding:2px 6px; border-radius:3px; cursor:pointer; opacity:0; transition:opacity .12s}
+.sp-tbl tr:hover .sp-row-rm,.sp-row-rm:focus-visible{opacity:1}
+.sp-row-rm:hover{color:var(--sp-ink); background:var(--sp-fill)}
+.sp-vh{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)}
+
+/* product details, opened under the shelf row */
+.sp-card{cursor:pointer}
+.sp-card.is-open{outline:2px solid var(--sp-ink); outline-offset:-1px}
+.sp-detail{display:grid; grid-template-columns:200px minmax(0,1fr) 260px; gap:18px; margin-top:12px; padding:16px; border:1px solid var(--sp-ink); background:var(--sp-bg)}
+.sp-detail-img .sp-ph{width:100%; aspect-ratio:1}
+.sp-detail-hd{display:flex; justify-content:space-between; align-items:flex-start; gap:12px}
+.sp-detail-hd h3{margin:2px 0 8px; font:700 17px/1.25 var(--display)}
+.sp-detail-std{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--sp-t2); margin-bottom:12px}
+.sp-specs{display:grid; grid-template-columns:max-content 1fr; gap:6px 16px; margin:0; font-size:12px}
+.sp-specs dt{color:var(--sp-t2)}
+.sp-specs dd{margin:0}
+.sp-detail-side{display:flex; flex-direction:column; gap:8px; min-width:0}
+.sp-detail-side .sp-mini td{padding:5px 6px}
+.sp-fits{margin:0; padding-left:16px; font-size:12px}
+.sp-fits em{color:var(--sp-t2); font-style:normal}
+.sp-detail-side .sp-card-add{margin-top:auto}
+.sp-shop.is-side .sp-detail{grid-template-columns:1fr} 
+
+.sp-detail-main{min-width:0}
+.sp-detail-hd .sp-x{white-space:nowrap}
+.sp-detail.is-narrow{grid-template-columns:120px minmax(0,1fr)}
+.sp-detail.is-narrow .sp-detail-side{grid-column:1 / -1}
+.sp-detail.is-narrow .sp-detail-side .sp-card-add{align-self:flex-start; padding:6px 16px}
+
+/* details as a pop-up */
+#pgDetail{position:fixed; inset:0; z-index:1000}
+#pgDetail .sp-scrim{position:absolute; inset:0}
+.sp-detail.is-modal{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:min(880px,calc(100vw - 48px)); max-height:calc(100vh - 64px); overflow:auto; margin:0; padding:22px; z-index:10}
+.sp-detail.is-modal .sp-x{font-size:16px; padding:2px 6px}
+
+/* photo gallery in the pop-up: minimal arrows over the photo */
+.sp-gal{position:relative}
+.sp-gal .sp-ph{width:100%; aspect-ratio:1; display:block}
+.sp-gal-b{position:absolute; top:50%; transform:translateY(-50%); width:28px; height:28px; border:0; background:rgba(255,255,255,.85); color:var(--sp-ink); font-size:18px; line-height:28px; padding:0; cursor:pointer; opacity:.75}
+.sp-gal-b:hover,.sp-gal-b:focus-visible{opacity:1; background:#fff}
+.sp-gal-b.is-prev{left:6px}
+.sp-gal-b.is-next{right:6px}
+.sp-gal-n{position:absolute; right:6px; bottom:6px; font:600 10px/16px var(--mono); padding:0 5px; background:rgba(255,255,255,.85); color:var(--sp-t2)}
+.sp-gal-dots{display:flex; justify-content:center; gap:6px; margin-top:8px}
+.sp-gal-dots button{width:6px; height:6px; padding:0; border:0; background:var(--sp-line); cursor:pointer}
+.sp-gal-dots button.on{background:var(--sp-ink)}
+
+/* pop-up layout: big photo left; one vertical column of sections right */
+.sp-detail.is-modal{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:28px; width:min(1080px,calc(100vw - 48px)); align-items:start}
+.sp-detail.is-modal .sp-detail-img{position:sticky; top:0}
+.sp-detail.is-modal .sp-detail-main{display:flex; flex-direction:column}
+.sp-detail-std{margin-bottom:4px}
+.sp-dsec{border-top:1px solid var(--sp-line); padding:14px 0; margin:0}
+.sp-dsec:first-of-type{margin-top:12px}
+.sp-dsec h4{margin:0 0 10px; color:var(--sp-t2)}
+.sp-dsec .sp-mini{margin:0}
+.sp-detail-add{margin-top:6px; padding:9px; font-size:13px}
+@media (max-width:760px){ .sp-detail.is-modal{grid-template-columns:1fr} .sp-detail.is-modal .sp-detail-img{position:static} }
+
+/* previous / next product: arrows on either side of the pop-up */
+.sp-pnav{position:absolute; top:50%; transform:translateY(-50%); z-index:11; width:40px; height:56px; border:1px solid var(--sp-ink); background:var(--sp-bg); color:var(--sp-ink); font-size:24px; line-height:1; padding:0; cursor:pointer}
+.sp-pnav:hover,.sp-pnav:focus-visible{background:var(--sp-ink); color:#fff}
+.sp-pnav.is-prev{left:max(8px, calc(50% - min(540px, 50vw - 24px) - 52px))}
+.sp-pnav.is-next{right:max(8px, calc(50% - min(540px, 50vw - 24px) - 52px))}
+.sp-pnav-n{position:absolute; left:50%; transform:translateX(-50%); bottom:max(10px, calc(50% - 50vh + 12px)); z-index:11; background:var(--sp-bg); border:1px solid var(--sp-line); padding:3px 10px; font:600 11px/16px var(--mono); color:var(--sp-t2)}
+
+/* slots in the pop-up: tick where Add puts the product */
+.sp-fits.is-pick{list-style:none; padding:0; display:flex; flex-direction:column; gap:2px}
+.sp-fits.is-pick label{display:grid; grid-template-columns:18px 1fr auto; align-items:center; gap:8px; padding:6px 0; cursor:pointer; font-size:13px}
+.sp-fits.is-pick label.is-done{cursor:default; color:var(--sp-t2)}
+.sp-fits.is-pick small{font-size:11px; color:var(--sp-t2)}
+.sp-fits.is-pick input{width:15px; height:15px; margin:0; accent-color:#1a1a1a}
+.sp-fit-box{display:inline-grid; place-items:center; width:15px; height:15px; font-size:11px}
+.sp-detail-add:disabled{border-color:var(--sp-line); color:var(--sp-t3); cursor:default}
+
+
+/* in the cart: the button becomes Remove */
+.sp-card-add.is-remove{background:var(--sp-ink); color:#fff}
+.sp-card-add.is-remove:hover{background:#000}
+
+/* items that take the same product, grouped (Department view) */
+.sp-line{border:1px solid var(--sp-line); padding:8px; display:flex; flex-direction:column; gap:8px; background:var(--sp-bg)}
+.sp-line-hd{display:flex; justify-content:space-between; align-items:baseline; font:700 10px var(--mono); letter-spacing:.08em; text-transform:uppercase}
+.sp-line-n{font-weight:400; color:var(--sp-t2); letter-spacing:.04em; text-transform:none; font-family:var(--body); font-size:11px}
+.sp-line-items{display:flex; flex-direction:column; gap:8px}
+.sp-line-tip{display:none; text-align:center; font-size:11px; color:var(--sp-t2); padding:4px 0 2px}
+/* while dragging: the group is a drop target of its own */
+body.pg-dragging .sp-line{opacity:.45}
+body.pg-dragging .sp-line.can-drop{opacity:1; border:2px dashed var(--sp-t3)}
+body.pg-dragging .sp-line.can-drop .sp-line-tip{display:block}
+body.pg-dragging .sp-line .sp-slot.can-drop{border:1px dashed var(--sp-t3)}
+/* the border shows what a drop fills: one item, or the whole group */
+body.pg-dragging .sp-slot.is-over{border:3px solid var(--sp-ink) !important; background:var(--sp-fill)}
+body.pg-dragging .sp-line.is-over{border:3px solid var(--sp-ink); background:var(--sp-fill)}
+body.pg-dragging .sp-line.is-over .sp-slot{border:1px solid var(--sp-ink)}
+body.pg-dragging .sp-line.is-over .sp-line-tip{color:var(--sp-ink); font-weight:600}
+
+/* while dragging: the fill-everything bar sits at the top of the list */
+.sp-line-all{position:sticky; top:0; z-index:3; margin-bottom:12px}
+body.pg-dragging .sp-line-all .sp-line-tip{display:block}
+
+/* bundles */
+.sp-bundle-chip{display:inline-block; padding:1px 6px; border:1px solid var(--sp-ink); background:var(--sp-fill); font:600 10px/16px var(--body); white-space:nowrap}
+.sp-line.is-bundle{border:2px solid var(--sp-ink)}
+.sp-bundle-price{display:flex; align-items:baseline; gap:8px; font-size:13px; font-variant-numeric:tabular-nums}
+.sp-bundle-price s{color:var(--sp-t3)}
+.sp-bundle-price span{margin-left:auto; font-size:11px; font-weight:600}
+.sp-save{color:var(--sp-ink); font-weight:600}
+.sp-tbl tr.sp-sub th{font-weight:400; border-top:0; color:var(--sp-t2)}
+.sp-tbl td s{color:var(--sp-t3)}
+.sp-tbl td .sp-bundle-chip{margin-top:4px}
+.sp-bundles{display:flex; flex-direction:column; gap:8px}
+.sp-bundle-note{margin:8px 0 0; font-size:12px; padding:8px 10px; background:var(--sp-fill)}
+
+/* pack plan: separately vs bundled */
+.sp-plan{border:1px solid var(--sp-line); background:var(--sp-bg); padding:8px 10px; display:flex; flex-direction:column; gap:4px; font-size:12px; font-variant-numeric:tabular-nums}
+.sp-plan-need{color:var(--sp-t2); margin-bottom:2px}
+.sp-plan-row{display:grid; grid-template-columns:72px 1fr auto; gap:8px; align-items:baseline}
+.sp-plan-row span:first-child{color:var(--sp-t2)}
+.sp-plan-row s{color:var(--sp-t3)}
+.sp-plan-row.is-best{font-weight:600}
+.sp-plan-row small{font-weight:400; color:var(--sp-t2)}
+.sp-plan-save{margin-top:2px; padding-top:4px; border-top:1px solid var(--sp-hair); font-weight:700}
+.sp-plan-cap{font:700 10px var(--mono); letter-spacing:.08em; text-transform:uppercase; margin-bottom:-4px}
+.sp-tbl td small{display:block}
+
+/* calmer grouping: a grey rule down the left, like a quoted message; no box */
+.sp-line{border:0; background:none; padding:0; gap:6px}
+.sp-line.is-bundle{border:0; border-left:3px solid #a8a8a8; padding:0 0 0 10px}
+.sp-line-hd{font-size:10px}
+.sp-line.is-bundle .sp-line-n{color:var(--sp-ink); font-weight:600}
+.sp-line-note{font-size:11px; color:var(--sp-t2)}
+.sp-line.is-bundle .sp-bundle-tag{display:none}
+.sp-bundle-tag{display:inline-block; padding:0 5px; border:1px solid var(--sp-line); color:var(--sp-t2); font:500 10px/16px var(--body)}
+/* while dragging the group is a drop target again, so it gets its outline back */
+body.pg-dragging .sp-line.can-drop{border:2px dashed var(--sp-t3); padding:8px}
+body.pg-dragging .sp-line.is-over{border:3px solid var(--sp-ink); padding:7px}
+
+/* allowance at the top of each group: spent / allowance; red when over */
+.sp-allow{font-variant-numeric:tabular-nums}
+/* over: the figures stay as they are; a small muted dot says so, the tooltip gives the amount */
+.sp-allow.is-over::before{content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:#c9706b; margin-right:6px; vertical-align:1px}
+/* long names stop at one line with "…"; hover shows the full name */
+.sp-grp-hd, .sp-line-hd{gap:12px}
+.sp-clip{flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sp-grp-hd .sp-allow, .sp-line-hd .sp-line-n{flex:none; white-space:nowrap}
+/* totals with a breakdown: dotted underline says "hover me"; the breakdown opens at once */
+.has-tip{position:relative; cursor:help; text-decoration:underline dotted var(--sp-t3); text-underline-offset:3px; outline:none}
+.has-tip:hover, .has-tip:focus-visible{text-decoration-color:var(--sp-ink)}
+.sp-tip{display:none; position:absolute; right:0; top:calc(100% + 6px); z-index:30; min-width:200px;
+  grid-template-columns:1fr auto; gap:4px 16px; padding:8px 10px; background:var(--sp-bg, #fff); border:1px solid var(--sp-ink);
+  box-shadow:0 4px 12px rgba(0,0,0,.12); font:400 11px/1.4 var(--body); letter-spacing:0; text-transform:none; color:var(--sp-ink); white-space:nowrap; text-decoration:none}
+.has-tip:hover .sp-tip, .has-tip:focus-visible .sp-tip{display:grid}
+.sp-tip-k{color:var(--sp-t2)}
+.sp-tip-v{text-align:right; font-variant-numeric:tabular-nums}
+.sp-tip-k:nth-last-child(2), .sp-tip-v:last-child{font-weight:600}
+.pg-main-hd .sp-tip{right:auto; left:0}
+/* totals link to the Cost Book */
+.has-tip{cursor:pointer}
+.sp-tip-go{grid-column:1 / -1; margin-top:4px; padding-top:6px; border-top:1px solid var(--sp-line); color:var(--sp-t2); font-weight:400 !important}
+.sp-tip-k:nth-last-child(3), .sp-tip-v:nth-last-child(2){font-weight:600}
+/* cart: bulk rows carry the same grey rule */
+.sp-tbl tr.is-bulk td:first-child{background:linear-gradient(#a8a8a8,#a8a8a8) left top / 3px 100% no-repeat; padding-left:12px}
+/* ── Review (step 2) ── */
+.sp-review{display:flex; flex-direction:column; gap:28px; padding:18px 20px 48px}
+.sp-rv-h{font:600 18px var(--body)}
+.sp-rv-forget-hd{display:flex; align-items:baseline; gap:10px; padding-bottom:8px; border-bottom:1px solid var(--sp-line); margin-bottom:12px}
+.sp-rv-forget-hd .sp-pager-b{align-self:center}
+.sp-forget{display:grid; grid-auto-flow:column; grid-auto-columns:128px; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; padding-bottom:2px}
+.sp-forget::-webkit-scrollbar{display:none}
+.sp-forget-c{scroll-snap-align:start; display:flex; flex-direction:column; gap:8px; font-size:13px}
+.sp-forget-c b{font-weight:600; min-height:34px}
+.sp-forget-ph{display:grid; place-items:center; height:96px; border:1px dashed var(--sp-t3); color:var(--sp-t3); font-size:22px}
+.sp-rv-ret{padding:12px 0 4px; border-bottom:1px solid var(--sp-hair)}
+.sp-rv-ret-hd{display:flex; align-items:center; gap:10px; font-size:14px}
+.sp-rv-how{margin:4px 0 8px; font-size:11px; color:var(--sp-t2)}
+.sp-rv-row{display:grid; grid-template-columns:56px 1fr auto; gap:14px; align-items:start; padding:12px 0; border-top:1px solid var(--sp-hair); font-size:13px}
+.sp-rv-ph{width:56px; height:56px; flex:none}
+.sp-rv-txt{display:flex; flex-direction:column; gap:2px; min-width:0}
+.sp-rv-txt > b{font-weight:600}
+.sp-rv-txt > span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.sp-rv-txt small{color:var(--sp-t2); font-size:12px}
+.sp-rv-issue{color:var(--sp-ink); font-weight:600}
+.sp-rv-pref{all:unset; cursor:pointer; margin-top:6px; font-size:12px}
+.sp-rv-pref b{font-weight:600}
+.sp-rv-save{white-space:nowrap}
+/* saved for later: greyed, stays in place, out of the cart */
+.sp-rv-row.is-later > .sp-ph, .sp-rv-row.is-later .sp-rv-txt > b, .sp-rv-row.is-later .sp-rv-txt > span{opacity:.45}
+.sp-rv-later{font-weight:600; color:var(--sp-ink)}
+/* substitution options open under the item */
+.sp-prefs{grid-column:2 / -1; display:flex; flex-direction:column; gap:6px; padding:4px 0 2px}
+.sp-pref{all:unset; box-sizing:border-box; cursor:pointer; display:flex; flex-direction:column; gap:4px; padding:8px 12px; border:1px solid var(--sp-line); font-size:13px}
+.sp-pref:hover{border-color:var(--sp-t2)}
+.sp-pref.is-sel{border:2px solid var(--sp-ink); padding:7px 11px}
+.sp-pref b{font-weight:600}
+.sp-pref small{color:var(--sp-t2); font-size:11px}
+.sp-pref-p{display:flex; gap:10px; align-items:center}
+.sp-pref-p .sp-rv-ph{width:40px; height:40px}
+.sp-pref-p > span{display:flex; flex-direction:column}
+.sp-prefs > .sp-link{align-self:flex-start; margin-top:2px; font-size:12px}
+.sp-seg{display:inline-flex; gap:0}
+.sp-seg button{padding:4px 10px; font-size:12px}
+.sp-seg button + button{margin-left:-1px}
+.sp-rv-foot{display:flex; align-items:center; gap:10px}
+.sp-forget-c > button{margin-top:auto}
+/* save for later: an option, not a call to action — a quiet text link */
+.sp-rv-save{font-size:12px; color:var(--sp-t2); align-self:start; margin-top:2px; white-space:nowrap}
+.sp-rv-save:hover{color:var(--sp-ink)}
+.sp-forget{grid-auto-columns:150px}
+.sp-forget-c .sp-forget-ph{width:100%; height:110px}
+.sp-forget-c b{min-height:0}
+.sp-forget-p{font-size:12px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.sp-forget-c small{font-size:11px; color:var(--sp-t2)}
+.sp-forget-c > .sp-done{margin-top:auto}
+.sp-forget-c > button:last-child{margin-top:0}
+.sp-forget-more{font-size:12px; align-self:flex-start}
+/* the pick opens the product pop-up */
+.sp-forget-open{all:unset; cursor:pointer; display:block}
+.sp-forget-open:hover .sp-forget-ph{outline:1px solid var(--sp-ink)}
+button.sp-forget-p{all:unset; cursor:pointer; font-size:12px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+button.sp-forget-p:hover{text-decoration:underline}
+/* "Did you forget?" cards: every line gets a fixed slot so cards align; bigger square images */
+.sp-forget{grid-auto-columns:200px; gap:16px; align-items:stretch}
+.sp-forget-c{gap:6px}
+.sp-forget-c .sp-forget-ph{display:block; width:100%; height:auto; aspect-ratio:1 / 1; margin-bottom:4px}
+.sp-forget-c > b, .sp-forget-c .sp-forget-p, .sp-forget-c > small{display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; line-height:1.35}
+.sp-forget-c > b{min-height:calc(2 * 1.35em)}
+.sp-forget-c .sp-forget-p{min-height:calc(2 * 1.35em)}
+.sp-forget-c > small{min-height:calc(2 * 1.35em)}
+.sp-forget-c > .sp-done{margin-top:auto}
+/* "Still needed" cards stretch to the panel: as many ~180px+ cards as fit, sharing the width evenly */
+.sp-review .sp-rv-sec{container-type:inline-size}
+.sp-forget{--n:2; grid-auto-columns:calc((100% - (var(--n) - 1) * 16px) / var(--n))}
+@container (min-width:600px){ .sp-forget{--n:3} }
+@container (min-width:800px){ .sp-forget{--n:4} }
+@container (min-width:1000px){ .sp-forget{--n:5} }
+@container (min-width:1200px){ .sp-forget{--n:6} }
+@container (min-width:1400px){ .sp-forget{--n:7} }
+/* Review: bigger product pictures on each item */
+.sp-rv-row{grid-template-columns:80px 1fr auto}
+.sp-rv-row > .sp-rv-ph{width:80px; height:80px}
+/* Review filters: dropdowns of checkboxes + chips */
+.sp-rv-filter{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:-16px}
+.sp-fdd{position:relative}
+.sp-fdd-b{border:1px solid var(--sp-line); background:var(--sp-bg); padding:6px 12px; font-size:13px; cursor:pointer}
+.sp-fdd-b.is-on, .sp-fdd.is-open .sp-fdd-b{border-color:var(--sp-ink)}
+.sp-fdd-b.is-on{font-weight:600}
+.sp-fdd-pop{position:absolute; left:0; top:calc(100% + 4px); z-index:40; width:260px; background:var(--sp-bg); border:1px solid var(--sp-ink); padding:8px; display:flex; flex-direction:column; gap:6px}
+.sp-fdd-q{font:inherit; font-size:12px; padding:6px 8px; border:1px solid var(--sp-line)}
+.sp-fdd-list{max-height:240px; overflow:auto; display:flex; flex-direction:column}
+.sp-fdd-opt{display:flex; align-items:center; gap:8px; padding:5px 4px; font-size:13px; cursor:pointer}
+.sp-fdd-opt:hover{background:var(--sp-fill, #f2f2f2)}
+.sp-fdd-opt span{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sp-fdd-opt small{color:var(--sp-t2); font-size:11px}
+.sp-fdd-opt[hidden]{display:none}
+.sp-fdd-pop > .sp-link{align-self:flex-start; font-size:12px}
+.sp-fchips{display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:-12px}
+.sp-fchip{display:inline-flex; align-items:center; gap:6px; padding:3px 4px 3px 10px; border:1px solid var(--sp-ink); font-size:12px}
+.sp-fchip button{all:unset; cursor:pointer; padding:0 4px; color:var(--sp-t2)}
+.sp-fchip button:hover{color:var(--sp-ink)}
+.sp-fchips .sp-link{font-size:12px}
+/* Shop: ship or store pickup, and where */
+.sp-ful{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.sp-ful-where{display:flex; align-items:center; gap:8px}
+.sp-ful-where select{font:inherit; font-size:13px; padding:5px 26px 5px 10px; border:1px solid var(--sp-ink); background:var(--sp-bg); color:var(--sp-ink); width:auto; max-width:320px}
+.sp-ful .sp-fdd-b{font-size:13px}
+.sp-ful-pop{width:300px}
+.sp-ful-ret{display:flex; flex-direction:column; padding:4px 0; border-bottom:1px solid var(--sp-hair)}
+.sp-ful-ret b{font-size:12px; font-weight:600; padding:2px 4px}
+.sp-ful-pop .sp-meta{margin:4px; font-size:11px}
+/* product cards: availability for the chosen way */
+.sp-card-av{font-size:11px; color:var(--sp-t2)}
+.sp-card-av.is-no{color:var(--sp-t3); text-decoration:none}
+.sp-fdd-opt input, .sp-ful input{accent-color:#1a1a1a}
+.sp-ful-in{font:inherit; font-size:13px; padding:5px 10px; border:1px solid var(--sp-ink); background:var(--sp-bg); color:var(--sp-ink)}
+.sp-ful-in.is-addr{width:340px; max-width:60vw}
+.sp-ful-in.is-zip{width:150px}
+.sp-ful-where .sp-link{font-size:12px}
+/* address / ZIP search with property + recent searches */
+.sp-combo{position:relative}
+.sp-combo-in{display:flex; align-items:center; gap:6px; border:1px solid var(--sp-ink); background:var(--sp-bg); padding:0 8px}
+.sp-combo-in svg{width:14px; height:14px; flex:none; color:var(--sp-ink)}
+.sp-combo-in .sp-ful-in{border:0; padding:5px 2px; outline:none; background:none}
+.sp-combo-pop{display:none; position:absolute; left:0; right:0; top:calc(100% + 2px); z-index:45; background:var(--sp-bg); border:1px solid var(--sp-ink); padding:6px 0; min-width:280px}
+.sp-combo:focus-within .sp-combo-pop{display:flex; flex-direction:column}
+.sp-combo-h{font-weight:600; font-size:12px; padding:6px 12px 4px}
+.sp-combo-o{all:unset; cursor:pointer; padding:7px 12px; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.sp-combo-o:hover, .sp-combo-o.is-cur{background:var(--sp-fill, #f2f2f2)}
+/* pop-up: delivery or pickup */
+.sp-getit{display:flex; gap:10px; align-items:flex-start; padding:8px 0; cursor:pointer}
+.sp-getit input{margin-top:3px; accent-color:#1a1a1a}
+.sp-getit span{display:flex; flex-direction:column; gap:2px; font-size:13px}
+.sp-getit b{font-weight:600}
+.sp-getit small{color:var(--sp-t2); font-size:12px}
+.sp-card-av b{font-weight:600; color:var(--sp-ink)}
+.sp-mini-av{display:block}
+.sp-ful > .sp-meta{margin-right:-2px}
+/* ── Measurements page ── */
+.pg-meas{display:grid; grid-template-columns:1fr 300px; min-height:calc(100% - 52px)}
+.pg-meas.is-side{grid-template-columns:1fr; }
+.pg-meas.is-rooms{display:block; padding:18px 20px 40px}
+.pg-meas-sw{padding:10px 14px; border-bottom:1px solid var(--sp-line)}
+.pg-plan{position:relative; min-height:520px; background-color:#fafafa;
+  background-image:linear-gradient(#ececec 1px, transparent 1px), linear-gradient(90deg, #ececec 1px, transparent 1px); background-size:24px 24px;
+  display:flex; align-items:center; justify-content:center; padding:72px 24px 24px}
+.pg-meas.is-side .pg-plan{min-height:280px; padding-top:64px}
+.pg-plan-tools{position:absolute; top:14px; right:14px; display:flex; align-items:center; gap:8px; background:var(--sp-bg); border:1px solid var(--sp-ink); padding:6px 8px; flex-wrap:wrap}
+.pg-meas.is-side .pg-plan-tools{left:14px; right:auto}
+.pg-plan-tools .sp-seg button:disabled{color:var(--sp-t3); cursor:default}
+.pg-plan-ic{all:unset; cursor:pointer; width:26px; height:26px; display:grid; place-items:center; border:1px solid var(--sp-line)}
+.pg-plan-ic svg{width:15px; height:15px}
+.pg-plan-ic.is-off{color:var(--sp-t3)}
+.pg-plan-lv{display:flex; align-items:center; gap:6px}
+.pg-plan-lv select{font:inherit; font-size:12px; padding:3px 6px; border:1px solid var(--sp-ink); background:var(--sp-bg)}
+.pg-plan-svg{width:100%; max-width:760px; height:auto}
+.pg-room-g{cursor:pointer}
+.pg-room-g rect{fill:#fff; stroke:#1a1a1a; stroke-width:5}
+.pg-room-g:hover rect{fill:#f0f0f0}
+.pg-room-g.is-on rect{fill:#d9d9d9}
+.pg-room-g text{font:600 11px var(--body); fill:#1a1a1a; text-anchor:middle; pointer-events:none}
+.pg-room-g text.pg-room-d{font:400 10px var(--body); fill:#555}
+.pg-meas-list{border-left:1px solid var(--sp-line); padding:14px; display:flex; flex-direction:column; gap:6px; overflow:auto}
+.pg-meas.is-side .pg-meas-list{border-left:0; border-top:1px solid var(--sp-line)}
+.pg-meas-lh{display:flex; justify-content:space-between; align-items:baseline; padding-bottom:6px; border-bottom:1px solid var(--sp-line); margin-bottom:4px}
+.pg-meas-room{all:unset; box-sizing:border-box; cursor:pointer; display:flex; justify-content:space-between; gap:10px; align-items:baseline; padding:9px 10px; border:1px solid var(--sp-line); font-size:13px}
+.pg-meas-room small{color:var(--sp-t2); font-size:11px; white-space:nowrap}
+.pg-meas-room:hover{border-color:var(--sp-t2)}
+.pg-meas-room.is-on{border:2px solid var(--sp-ink); padding:8px 9px}
+.pg-meas-tip{font-size:11px; margin-top:4px}
+.pg-meas-tbl tbody tr{cursor:pointer}
+.pg-meas-tbl tr.is-on td{background:var(--sp-fill, #f2f2f2)}
+/* plan takes the space; the room list sits beside it when there's room, else below */
+#pgMain:has(.pg-meas){container-type:inline-size}
+.pg-meas{grid-template-columns:1fr}
+@container (min-width:900px){ .pg-meas:not(.is-side):not(.is-rooms){grid-template-columns:1fr 300px} .pg-meas:not(.is-side) .pg-meas-list{border-top:0; border-left:1px solid var(--sp-line)} }
+.pg-meas-list{border-left:0; border-top:1px solid var(--sp-line)}
+.pg-plan{display:block; padding:64px 20px 20px}
+.pg-plan-tools{left:14px; right:auto; flex-wrap:nowrap}
+.pg-plan-svg{display:block; width:100%; max-width:900px; margin:0 auto}
+/* five tabs + panel icons fit in the narrower work area */
+#workHdr .wmode-tabs .wmode{padding:0 10px; gap:5px}
+/* Measurements · Rooms */
+.pg-meas.is-rooms{display:flex; flex-direction:column; gap:16px; padding:16px 18px 40px; background-color:#fafafa;
+  background-image:linear-gradient(#ececec 1px, transparent 1px), linear-gradient(90deg, #ececec 1px, transparent 1px); background-size:24px 24px}
+.pg-msum{background:var(--sp-bg); border:1px solid var(--sp-line); padding:18px 20px; display:flex; flex-direction:column; gap:14px}
+.pg-msum-hd{display:flex; align-items:center; justify-content:space-between; gap:12px}
+.pg-msum-hd h3{margin:0; font:600 22px var(--body)}
+.pg-msum-stats{display:flex; flex-wrap:wrap; gap:16px 32px; align-items:flex-start}
+.pg-msum-stats > span{display:flex; flex-direction:column; gap:4px}
+.pg-msum-stats b{font:600 18px var(--body)}
+.pg-msum-stats b small{font-size:11px; font-weight:400; color:var(--sp-t2)}
+.pg-msum-sep{width:1px; align-self:stretch; background:var(--sp-line)}
+.pg-msum-fl{display:flex; flex-wrap:wrap; gap:6px}
+.pg-chip{display:inline-block; padding:4px 10px; border:1px solid var(--sp-line); background:#f4f4f4; font-size:12px; color:var(--sp-t2)}
+.pg-rcards{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px}
+.pg-meas.is-side .pg-rcards{grid-template-columns:1fr}
+.pg-rcard{all:unset; box-sizing:border-box; cursor:pointer; background:var(--sp-bg); border:1px solid var(--sp-line); padding:14px; display:flex; flex-direction:column; gap:10px}
+.pg-rcard:hover{border-color:var(--sp-t2)}
+.pg-rcard.is-on{border:2px solid var(--sp-ink); padding:13px}
+.pg-rcard-hd{display:flex; justify-content:space-between; align-items:baseline; gap:8px}
+.pg-rcard-hd b{font:600 15px var(--body)}
+.pg-rcard-hd small{font-size:11px; color:var(--sp-t2); white-space:nowrap}
+.pg-shape{align-self:center; color:var(--sp-ink)}
+.pg-rcard-row{display:flex; justify-content:space-between; align-items:baseline; padding-bottom:8px; border-bottom:1px solid var(--sp-line)}
+.pg-rcard-row b{font-weight:600}
+.pg-rcard-row small{font-weight:400; color:var(--sp-t2); font-size:11px}
+.pg-rcard-fl{font-size:12px; color:var(--sp-ink)}
+.pg-rcard-fl i{color:var(--sp-t2)}
+/* View table pop-up */
+.pg-mmodal{position:fixed; inset:0; z-index:60; display:grid; place-items:center}
+.pg-mmodal-c{position:relative; z-index:1; width:min(860px, 92vw); max-height:86vh; overflow:auto; background:var(--sp-bg); border:1px solid var(--sp-ink); padding:20px 24px; display:flex; flex-direction:column; gap:12px}
+.pg-mmodal-c h4{margin:6px 0 0}
+.pg-mtot td{background:#f2f2f2}
+.pg-mdim{display:inline-flex; align-items:center; gap:8px}
+.pg-mdim .pg-shape{width:18px; height:18px}
+/* one location chip instead of three controls */
+.sp-ful{position:relative}
+.sp-ful-chip{display:inline-flex; align-items:center; gap:8px; border:1px solid var(--sp-line); background:var(--sp-bg); padding:6px 12px; font-size:13px; cursor:pointer}
+.sp-ful-chip:hover, .sp-ful-chip.is-open{border-color:var(--sp-ink)}
+.sp-ful-chip svg{width:15px; height:15px}
+.sp-ful-chip b{font-weight:600}
+.sp-ful-pop{left:0; top:calc(100% + 4px); width:360px; gap:8px; padding:12px}
+.sp-ful-pop > .sp-k{margin-top:4px}
+.sp-ful-pop .sp-combo-in{width:100%; box-sizing:border-box}
+.sp-ful-pop .sp-ful-in{width:100%}
+.sp-ful-show{display:flex; flex-direction:column}
+.sp-fdd-opt.is-last{cursor:default} .sp-fdd-opt.is-last input{opacity:.6}
+.sp-ful-pop{gap:0; padding:0}
+.sp-ful-sec{display:flex; flex-direction:column; gap:8px; padding:12px}
+.sp-ful-sec + .sp-ful-sec{border-top:1px solid var(--sp-line)}
+.sp-ful-h{display:flex; align-items:center; gap:8px; font-weight:600; font-size:14px; cursor:pointer}
+.sp-ful-h input{accent-color:#1a1a1a; width:15px; height:15px}
+.sp-ful-sec.is-off .sp-ful-h{color:var(--sp-t2); font-weight:500}
+.sp-ful-chip b{max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+/* Still needed: every text line is one line (ends in "…"), so cards line up with no gaps */
+.sp-forget-c > b, .sp-forget-c .sp-forget-p, .sp-forget-c > small{display:block; -webkit-line-clamp:unset; min-height:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.sp-forget-c button.sp-forget-p{display:block; width:100%}
+/* Room boards: selections around the room plan */
+.pg-boards{display:grid; grid-template-columns:1fr; gap:14px}
+@container (min-width:1500px){ .pg-boards{grid-template-columns:1fr 1fr} }
+.pg-board{background:var(--sp-bg); border:1px solid var(--sp-line); padding:14px 16px 10px}
+.pg-board.is-on{border:2px solid var(--sp-ink); padding:13px 15px 9px}
+.pg-board-hd{display:flex; align-items:baseline; gap:10px; cursor:pointer; padding-bottom:8px; border-bottom:1px solid var(--sp-line)}
+.pg-board-hd b{font:600 17px var(--body)}
+.pg-board-svg{display:block; width:100%; height:auto; margin-top:6px}
+.pg-board-none{padding:16px 0}
+.pg-board-room{fill:#fafafa; stroke:#1a1a1a; stroke-width:4}
+.pg-board-rn{font:600 10px var(--mono); letter-spacing:.08em; text-transform:uppercase; fill:#8a8a8a; text-anchor:middle}
+.pg-sw{cursor:pointer}
+.pg-sw-img{fill:#d6d6d6}
+.pg-sw.is-empty .pg-sw-img{fill:#fff; stroke:#9a9a9a; stroke-dasharray:4 3}
+.pg-sw-plus{font:400 20px var(--body); fill:#9a9a9a; text-anchor:middle}
+.pg-sw-k{font:700 9px var(--mono); letter-spacing:.08em; fill:#1a1a1a}
+.pg-sw-n{font:500 12px var(--body); fill:#1a1a1a}
+.pg-sw-m{font:400 10px var(--body); fill:#6a6a6a}
+.pg-sw.is-empty .pg-sw-n{fill:#8a8a8a; font-style:italic}
+.pg-lead{fill:none; stroke:#1a1a1a; stroke-width:1}
+.pg-sw.is-empty .pg-lead{stroke:#b0b0b0; stroke-dasharray:3 3}
+.pg-dot{fill:#1a1a1a}
+.pg-sw.is-empty .pg-dot{fill:#fff; stroke:#9a9a9a}
+.pg-sw:hover .pg-sw-img{stroke:#1a1a1a; stroke-width:2}
+.pg-sw:hover .pg-lead{stroke-width:2}
+.pg-sw:hover .pg-sw-n{text-decoration:underline}
+#pgMain:has(.pg-meas.is-rooms){container-type:inline-size}
+/* bigger swatches; light plan symbols */
+.pg-sw-k{font-size:10px}
+.pg-sw-n{font-size:14px}
+.pg-sw-m{font-size:12px}
+.pg-sw-plus{font-size:28px}
+.pg-board-room.is-line{fill:none}
+.pg-sym{fill:none; stroke:#8a8a8a; stroke-width:1.2}
+.pg-sym text{fill:#8a8a8a; stroke:none; text-anchor:middle; font-family:var(--mono); font-weight:700}
+.pg-sym pattern path{stroke:#dcdcdc; stroke-width:1}
+.pg-sym-tag{fill:#fff}
+.pg-sym.is-empty{stroke:#bdbdbd}
+.pg-sym.is-empty text{fill:#bdbdbd}
+.pg-sw:hover ~ .pg-sym{}
+/* existing items: hatched photo swatch, solid darker plan symbol */
+.pg-sw.is-existing .pg-sw-img{stroke:#bdbdbd}
+.pg-sw.is-existing .pg-sw-n{fill:#555; font-style:normal}
+.pg-sw.is-existing .pg-lead{stroke:#8a8a8a}
+.pg-sw.is-existing .pg-dot{fill:#8a8a8a}
+.pg-sw-cam rect, .pg-sw-cam circle{fill:#fff; stroke:#8a8a8a; stroke-width:1.2}
+.is-existing .pg-sym{stroke:#4a4a4a; stroke-width:1.4}
+.is-existing .pg-sym text{fill:#4a4a4a}
+.pg-legend{display:flex; gap:18px; padding:6px 2px 2px; font-size:11px; color:var(--sp-t2)}
+.pg-legend span{display:inline-flex; align-items:center; gap:6px}
+.pg-legend i{display:inline-block; width:14px; height:14px}
+.pg-legend i.is-chosen{background:#d6d6d6}
+.pg-legend i.is-needed{border:1px dashed #9a9a9a; background:#fff}
+.pg-legend i.is-existing{background:repeating-linear-gradient(45deg, #e4e4e4 0 4px, #cfcfcf 4px 6px); border:1px solid #bdbdbd}
+/* hide / show the left pane */
+.pg-navcaret{all:unset; box-sizing:border-box; cursor:pointer; display:inline-grid; place-items:center; width:26px; height:26px; border:1px solid var(--sp-line, #d6d6d6); color:#555; flex:none; margin-left:8px; background:#fff}
+.pg-navcaret svg{width:12px; height:12px}
+.pg-navcaret:hover{border-color:#1a1a1a; color:#1a1a1a}
+.pg-nav-t{display:flex; align-items:center}
+.sb-state-bar .pg-navcaret{align-self:center}
+#pgRail{display:none}
+body.sb-collapsed #pgRail{all:unset; box-sizing:border-box; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:10px; flex:0 0 30px; padding-top:14px; border-right:1px solid #d6d6d6; background:#fafafa; color:#555}
+body.sb-collapsed #pgRail:hover{background:#f0f0f0; color:#1a1a1a}
+#pgRail svg{width:12px; height:12px}
+#pgRail span{writing-mode:vertical-rl; font:700 10px var(--mono, monospace); letter-spacing:.1em; text-transform:uppercase}
+body.sb-collapsed #pgNav{display:none}
+body.sb-collapsed .sidebar{overflow:hidden}
+body.sb-collapsed.pg-has-side .sidebar, body.sb-collapsed .sidebar{min-width:0 !important; width:0; flex-basis:0 !important}
+/* edge tab replaces the header caret and the rail */
+.sb-state-bar .pg-navcaret{display:none}
+body.sb-collapsed #pgRail{display:none}
+#pgEdge{all:unset; box-sizing:border-box; position:absolute; left:0; top:50%; transform:translateY(-50%); z-index:55; width:16px; height:40px; display:grid; place-items:center; background:#fff; border:1px solid #d6d6d6; border-left:0; color:#555; cursor:pointer}
+#pgEdge:hover{border-color:#1a1a1a; color:#1a1a1a}
+#pgEdge svg{width:11px; height:11px}
+#pgEdge{top:calc(50% + 40px)}   /* clear of the resize grip */
+.pg-room.is-flash{outline:2px solid #1a1a1a; outline-offset:6px; transition:outline-color .6s}
+/* in-cart actions in the pop-up: browse replacements (main) + remove */
+.sp-detail-acts{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.sp-detail-acts .sp-detail-add:not(.is-remove){background:#fff; color:#1a1a1a; border:1px solid #1a1a1a}
+/* board: Swap link on a chosen swatch */
+.pg-sw-swap{font:600 12px var(--body); fill:#1a1a1a; cursor:pointer; text-decoration:underline}
+.pg-sw-swap:hover{fill:#000}
+.sp-active-cur{display:block; width:100%; font-size:11px; color:var(--sp-t2); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis} .sp-active{flex-wrap:wrap}
+/* card text: one line each for availability, no stacking */
+.sp-card-av{display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.sp-card-row{white-space:nowrap}
+/* dragging a product onto a room board: items it fits light up; the one under the pointer is bold */
+body.pg-dragging .pg-sw[data-slot]{opacity:.35}
+body.pg-dragging .pg-sw.can-drop{opacity:1}
+body.pg-dragging .pg-sw.can-drop .pg-sw-img{stroke:#1a1a1a; stroke-width:2; stroke-dasharray:6 4}
+body.pg-dragging .pg-sw.is-over .pg-sw-img{stroke-width:4; stroke-dasharray:none; fill:#c4c4c4}
+body.pg-dragging .pg-sw.is-over .pg-lead{stroke-width:2.5; stroke-dasharray:none; stroke:#1a1a1a}
+/* scope building on the boards */
+.pg-sw-keep{font:500 11px var(--body); fill:#6a6a6a; cursor:pointer; text-decoration:underline}
+.pg-sw-keep:hover{fill:#1a1a1a}
+.pg-sw-new{font:700 8px var(--mono); letter-spacing:.1em; fill:#1a1a1a}
+.pg-addroom select{font:inherit; font-size:12px; padding:3px 6px; border:1px solid #1a1a1a; background:#fff; color:#1a1a1a; cursor:pointer}
+.sidebar .task.pg-new{outline:2px solid #1a1a1a; outline-offset:-2px; transition:outline-color 1s}
+/* Measurements as the main page: no left navigator, no hide/show tab */
+
+.pg-board-hd{flex-wrap:wrap; row-gap:6px} .pg-board-hd > .sp-meta{white-space:nowrap}
+/* one control on the edge: the caret replaces the resize grip's dots (the edge still drags to resize) */
+.handle .grip{display:none !important}
+#pgEdge{top:50%}
+/* room boards never grow past their comfortable size; extra width is just margin */
+.pg-board-svg{display:block; width:100%; max-width:940px; height:auto; margin:0 auto}
+
+.sp-relax{margin:0 0 10px; font-size:12px; color:var(--sp-t2, #6a6a6a)}
+
+/* ── Reference panel (Media · Measurements) ───────────────────────────
+   Not tabs: toggle buttons at the far right of the tab bar that show or hide
+   the right-hand panel, like Figma's side panels. Bordered and icon-led so they
+   read as controls, not as more places to go. Pressed = showing. */
+.pg-ref-tools{margin-left:auto; align-self:center; display:flex; align-items:center; gap:6px; padding-left:14px; border-left:1px solid #e6e6e6; height:28px; flex-shrink:0}
+.wmode-expand + .pg-ref-tools, .wmode-tool + .pg-ref-tools{margin-left:12px}
+.pg-ref-btn{display:inline-flex; align-items:center; gap:7px; height:28px; padding:0 10px; border:1px solid #d4d4d4; border-radius:3px; background:#fff; color:#555;
+  font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; white-space:nowrap; transition:color .12s, border-color .12s, background .12s}
+.pg-ref-btn svg{width:14px; height:12px; flex:none}
+.pg-ref-btn .pg-ic-fill,.pg-ref-btn .pg-ic-left{opacity:0}
+.pg-ref-btn:hover{color:#1a1a1a; border-color:#1a1a1a}
+.pg-ref-btn.on{background:#1a1a1a; border-color:#1a1a1a; color:#fff}
+.pg-ref-btn.on .pg-ic-fill{opacity:1}
+.pg-ref-btn:focus-visible{outline:2px solid #1a1a1a; outline-offset:2px}
+
+/* Panel header: switch between the two reference pages, close on the right. */
+.pg-side-tabs{display:flex; align-self:stretch; gap:2px}
+.pg-side-tabs button{position:relative; padding:0 10px; border:0; background:none; font:700 10px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--sp-t3)}
+.pg-side-tabs button:hover{color:var(--sp-ink)}
+.pg-side-tabs button.on{color:var(--sp-ink)}
+.pg-side-tabs button.on::after{content:''; position:absolute; left:8px; right:8px; bottom:-1px; height:2px; background:var(--sp-ink)}
+.pg-side-x:hover{color:var(--sp-ink)}
+.pg-side-opts{flex:none; padding:10px 14px 0}
+/* Open, the panel's own tabs and ✕ do the work: the tab-bar buttons are only the way in. */
+body.pg-has-side .pg-ref-tools{display:none}
+/* Media toolbar: one row — view on the left, show + size on the right. */
+.pg-side-opts{display:flex; align-items:center; gap:8px; padding:10px 14px}
+.pg-side-opts + .pg-side-b .pg-media{padding-top:2px}
+.pg-media-show{height:26px; padding:0 22px 0 8px; border:1px solid var(--sp-line); border-radius:3px; background:var(--sp-bg) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%23555' stroke-width='1.3'/></svg>") right 7px center/9px 6px no-repeat;
+  -webkit-appearance:none; appearance:none; font:inherit; font-size:11px; color:var(--sp-ink); cursor:pointer}
+.pg-media-show:hover{border-color:var(--sp-ink)}
+.pg-seg-ic button{display:inline-grid; place-items:center; width:28px; height:26px; padding:0; color:var(--sp-t2)}
+.pg-seg-ic button svg{width:12px; height:12px}
+
+/* ── Linked panels (calm): the selection label, highlights, Go-to pills ── */
+.pg-focus{display:inline-flex; align-items:center; gap:7px; align-self:center; margin-left:16px; height:28px; padding:0 4px 0 10px;
+  background:#f2f2f2; border:1px solid #d4d4d4; border-radius:14px; font-size:12px; color:#1a1a1a; white-space:nowrap; min-width:0}
+.pg-focus b{font-weight:600}
+.pg-focus-k{font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#8a8a8a}
+.pg-focus-sep{color:#8a8a8a}
+.pg-focus-x{width:22px; height:22px; border:0; border-radius:50%; background:none; color:#555; cursor:pointer; font-size:11px}
+.pg-focus-x:hover{background:#1a1a1a; color:#fff}
+
+/* Shelf names in Shop are the way to select a whole shelf. */
+.sp-shelf-pick{border:0; background:none; padding:0; cursor:pointer; color:inherit}
+.sp-shelf-pick:hover{text-decoration:underline; text-underline-offset:3px}
+.sp-shelf.is-focus .sp-shelf-pick::before{content:'● '; }
+
+/* What matches: one strong mark per panel; related lines get a dot. */
+.sp-slot.is-focus{outline:2px solid var(--sp-ink); outline-offset:-1px}
+.sp-slot.is-rel{position:relative}
+.sp-slot.is-rel::after{content:''; position:absolute; top:8px; right:8px; width:7px; height:7px; border-radius:50%; background:var(--sp-ink); opacity:.55}
+.pg-board.is-focus{border:2px solid var(--sp-ink); padding:13px 15px 9px}
+.pg-board .pg-sw.is-focus .pg-sw-img{stroke:var(--sp-ink); stroke-width:3}
+.pg-room.is-focus > .sp-grp-hd{border-bottom-color:var(--sp-ink)}
+.pg-room.is-focus > .sp-grp-hd > span:first-child::before{content:'● '}
+.pg-room-g.is-focus rect{stroke-width:2.5}
+.pg-meas-room.is-focus{border:2px solid var(--sp-ink); padding:8px 9px}
+
+/* Arriving after a Go-to: a short flash so the eye lands. */
+@keyframes pgArrive{0%{box-shadow:0 0 0 4px rgba(26,26,26,.35)}100%{box-shadow:0 0 0 4px rgba(26,26,26,0)}}
+.is-arrive{animation:pgArrive 1.2s ease-out}
+
+/* The Go-to pill: floats over the edge of the panel, never moves the panel itself. */
+#pgSide{position:relative}
+.pg-go{position:absolute; left:50%; transform:translateX(-50%); z-index:60; display:flex; align-items:center; gap:4px; padding:4px;
+  background:#1a1a1a; color:#fff; border-radius:16px; box-shadow:0 4px 14px rgba(0,0,0,.22); white-space:nowrap; animation:pgGoIn .18s ease-out}
+.pg-go button{border:0; background:none; color:#fff; font:600 12px var(--body); padding:4px 10px; border-radius:12px; cursor:pointer}
+.pg-go button:hover{background:rgba(255,255,255,.16)}
+.pg-go-k{font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; opacity:.6; padding:0 4px 0 8px}
+@keyframes pgGoIn{from{opacity:0; transform:translate(-50%, 4px)} to{opacity:1; transform:translate(-50%, 0)}}
+
+/* Shop toolbar, minimal: search, then one quiet chip for the set-once things
+   (delivery address, pickup area, which stores). The chip is text, not a box,
+   until you point at it. */
+.sp-shop-tools{flex-wrap:nowrap; gap:12px}
+.sp-shop-tools .sp-search{flex:1; min-width:0}
+.sp-shop-tools .sp-search input{width:100%; max-width:420px}
+.sp-shop-tools .sp-ful{margin-left:auto; flex:none}
+.sp-shop-tools .sp-ful-chip{border-color:transparent; padding:6px 8px; color:var(--sp-t2); font-size:12px; gap:6px}
+.sp-shop-tools .sp-ful-chip:hover, .sp-shop-tools .sp-ful-chip.is-open{border-color:var(--sp-line); color:var(--sp-ink)}
+.sp-shop-tools .sp-ful-chip svg{width:13px; height:13px}
+.sp-ful-sum{white-space:nowrap}
+.sp-shop-tools .sp-ful-pop{left:auto; right:0}
+
+/* Picking a Shopping List item: the shelf it lands on flashes once. */
+.sp-shelf-hd.is-arrive{animation:none; position:relative}
+.sp-shelf-hd.is-arrive::after{content:''; position:absolute; inset:-6px -8px; background:rgba(26,26,26,.08); pointer-events:none; animation:spHdFlash 1.1s ease-out forwards}
+@keyframes spHdFlash{from{opacity:1} to{opacity:0}}
+
+/* Narrowed to one Shopping List item: the way back to every shelf, on the
+   shelf heading itself (right side). Esc does the same. */
+.sp-showall{order:2; margin-left:auto; border:0; background:none; padding:0; cursor:pointer; font-size:12px; color:var(--sp-t2); white-space:nowrap}
+.sp-showall::before{content:'← '}
+.sp-showall:hover{color:var(--sp-ink); text-decoration:underline; text-underline-offset:3px}
+
+/* ── The store: aisles (the list's groups) and one shelf per item ── */
+.sp-aisle{margin-bottom:28px}
+.sp-aisle-hd{position:sticky; top:var(--sp-hd-h, 0px); z-index:1; background:var(--sp-bg); padding:10px 0 8px; margin-bottom:6px;
+  font:700 12px var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--sp-ink); border-bottom:1px solid var(--sp-line)}
+.sp-aisle .sp-shelf{margin-bottom:22px}
+.sp-aisle .sp-shelf-hd{justify-content:flex-start; gap:10px; border-bottom-width:1px}
+.sp-aisle .sp-shelf-t{font:600 13px var(--body); letter-spacing:0; text-transform:none}
+.sp-shelf-st{margin-left:auto; font-size:11px; color:var(--sp-t3)}
+.sp-shelf.is-cur > .sp-shelf-hd{border-bottom:2px solid var(--sp-ink)}
+.sp-shelf.is-cur .sp-shelf-t::before{content:'● '; font-size:10px}
+.sp-shelf-none{margin:4px 0 0; font-size:12px; color:var(--sp-t3); font-style:italic}
+
+/* Aisle heading = jump menu. The whole heading is the button. */
+.sp-aisle-btn{display:inline-flex; align-items:center; gap:8px; border:0; background:none; padding:2px 6px 2px 0; margin:0; cursor:pointer;
+  font:inherit; letter-spacing:inherit; text-transform:inherit; color:inherit}
+.sp-aisle-car{font-size:10px; color:var(--sp-t3); transition:transform .15s}
+.sp-aisle-btn:hover .sp-aisle-car, .sp-aisle-btn[aria-expanded="true"] .sp-aisle-car{color:var(--sp-ink)}
+.sp-aisle-btn[aria-expanded="true"] .sp-aisle-car{transform:rotate(180deg)}
+.sp-aisle-btn:hover{text-decoration:underline; text-underline-offset:4px; text-decoration-thickness:1px}
+.sp-aisle-btn:focus-visible{outline:2px solid var(--sp-ink); outline-offset:2px}
+.sp-aisle-menu{position:absolute; left:0; top:calc(100% + 4px); z-index:30; min-width:280px; padding:6px; background:var(--sp-bg);
+  border:1px solid var(--sp-ink); box-shadow:0 8px 24px rgba(0,0,0,.14); display:flex; flex-direction:column}
+.sp-aisle-menu button{display:grid; grid-template-columns:16px 1fr auto; align-items:baseline; gap:8px; padding:8px 10px; border:0; background:none; cursor:pointer;
+  text-align:left; font:500 13px var(--body); letter-spacing:0; text-transform:none; color:var(--sp-ink)}
+.sp-aisle-menu button:hover, .sp-aisle-menu button:focus-visible{background:var(--sp-fill); outline:none}
+.sp-aisle-menu .is-here{font-weight:700}
+.sp-am-p{font-size:11px; color:var(--sp-t3); font-weight:400}
+

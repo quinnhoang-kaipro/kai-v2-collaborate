@@ -1,0 +1,47 @@
+/* ════ KaiWeb in the Shop with Kai layout's styling ════
+   Outer page (app bar, rail, demo menus).
+   Generated from a rule-by-rule diff of KaiWeb against the published layout
+   prototype (origin/main: shop/ShopwithKai_layout.html). For every rule the two
+   share, the layout's values come back for type, colour, borders, radius,
+   spacing and control heights; layout properties (display, grid, position,
+   widths) stay KaiWeb's because its markup has moved on. The tab bar and the
+   sidebar's tools row come back whole. Hand edits go at the end, under
+   "By eye". */
+
+.gnav{padding:8px 0 10px}
+.gnav-item{gap:5px; padding:11px 2px 9px}
+.gnav-item svg{height:20px; stroke-width:1.4}
+.gnav-item .lbl{font-size:7.5px; letter-spacing:.07em; padding:0 2px}
+body.kai-photo-overlay-open::before{background:rgba(26,26,26,.68)}
+.tb-role-btn{font-size:10.5px}
+.tb-role-opt .d{font-size:11.5px}
+.btn{font-size:10.5px}
+.stage-num{font-size:11px}
+.stage-track-tag{border-radius:3px}
+.ver-chip-tag{border-radius:3px}
+.ver-item-badge{border-radius:3px}
+.ver-item-meta{font-size:11.5px}
+.ver-notice{font-size:12.5px}
+.ver-notice-tag{border-radius:3px}
+.app-toolbar .tb-address{font-family:var(--display); font-size:15px; font-weight:700; color:var(--white); letter-spacing:-.01em}
+.app-toolbar .btn-primary{font-size:11px}
+.app-toolbar .btn-ghost{font-size:10.5px}
+.stages-completed-sub{font-size:13.5px}
+.stage-cap{font-size:11.5px}
+.lock-overlay-title{font-size:20px}
+.modal-title{font-size:20px}
+.modal-body{font-size:13.5px}
+.tb-set-btn{font-size:10.5px}
+.tb-set-row .ll{font-size:12.5px}
+.tb-set-row .sub{font-size:11px}
+.tb-set-foot{gap:16px}
+.tb-preset-n{font-size:12.5px}
+.tb-preset-d{font-size:11px}
+.dsp-addr{font-size:16px}
+.dsp-ref{font-size:11px}
+.dsp-av{font-size:11px}
+.dsp-btn{font-size:11px}
+
+/* ── By eye ── */
+/* The stepper's steps sit apart with no arrows between them, as in the layout. */
+.app-toolbar .stage:not(:last-child)::after{display:none}

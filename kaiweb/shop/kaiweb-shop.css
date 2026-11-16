@@ -1,0 +1,213 @@
+/* ════ Shop with Kai inside KaiWeb ════
+   Loaded after the panel's own styles and the Shop styles (shop-cart, shop-v2,
+   spree), so it can settle the two into one product. */
+
+/* Tabs: Overview · Scope · Shop · Documents. Media and Floorplan live in the
+   right panel now, so no tab pairs with another — the split glyphs go. */
+.wmode-split{display:none !important}
+
+/* ── Right panel: KaiWeb's own Media / Floorplan ── */
+.pg-side-b.pg-kw-pane{overflow:hidden; display:flex; flex-direction:column; padding:0}
+.pg-kw-host{flex:1 1 auto; min-height:0; overflow:auto; position:relative; width:100%}
+.pg-kw-host[hidden]{display:block !important}
+.pg-kw-view-wrap{position:relative; display:inline-flex; align-items:center; margin-right:6px}
+.pg-kw-view{display:inline-flex; align-items:center; gap:5px; height:26px; padding:0 9px;
+  font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+  color:var(--t2); background:none; border:1px solid var(--stroke); cursor:pointer}
+.pg-kw-view svg{width:10px; height:10px}
+.pg-kw-view:hover, .pg-kw-view.is-open{color:var(--ink); border-color:var(--ink)}
+.pg-kw-menu .view-menu{top:30px; right:0}
+
+/* ── Shop in KaiWeb's palette ──
+   The Shop styles were drawn grayscale for the wireframe and all read these
+   tokens, so pointing them at KaiWeb's palette carries the whole workspace
+   over: warm ink, warm greys, the cream ground and the yellow highlight. */
+.pg-scope{
+  --sp-ink:var(--ink); --sp-t2:var(--t2); --sp-t3:var(--t3);
+  --sp-line:var(--stroke); --sp-hair:#E9E3D6;
+  --sp-fill:var(--sunken); --sp-bg:var(--app-bg); --sp-hl:var(--accent);
+}
+
+/* Shopping List's Department / Room / Task: the same switch as the Scope
+   sidebar's All / Labor / Materials — a sunken track with a raised white pill. */
+.pg-nav-hd .pg-by{background:var(--sunken); border:0; border-radius:0; padding:3px; gap:2px; height:30px}
+.pg-nav-hd .pg-by button{color:var(--t2); border-radius:0; font-size:12px; padding:0 9px; height:100%}
+.pg-nav-hd .pg-by button:hover{color:var(--ink)}
+.pg-nav-hd .pg-by button.active{background:var(--white); color:var(--ink); box-shadow:0 1px 3px rgba(26,26,26,.10)}
+
+/* ════ Shop, high fidelity ════
+   The workspace was drawn as a grayscale sketch; here it takes KaiWeb's own
+   components, so it reads as the same product as Scope and Overview:
+   Maxeville for headings, Maxeville Construct (mono, uppercase) for labels,
+   buttons and status chips, Circular for reading text; square cards on the
+   cream ground; status in Kai's success / info colours; the step you are on
+   in Kai yellow. */
+
+/* ── Shopping List (left) ── */
+.pg-nav-hd .sp-sec-t{font-family:var(--display); font-size:13px; letter-spacing:0; font-weight:700; text-transform:uppercase; color:var(--ink)}
+.pg-nav-hd .sp-sec-sub{font-size:12.5px; color:var(--t2)}
+.sp-grp-hd{font-family:var(--display); font-size:13px; letter-spacing:0; text-transform:uppercase; color:var(--ink); border-bottom:1px solid var(--ink); padding:8px 0}
+.sp-grp-hd .sp-allow, .sp-grp-hd .sp-grp-n{font-family:var(--body); font-size:12.5px; text-transform:none; font-weight:500; color:var(--t2)}
+.sp-slot{border:1px solid var(--stroke); border-radius:0; background:var(--white); transition:border-color .12s, background .12s}
+.sp-slot:hover{border-color:var(--midtone)}
+.sp-slot.is-on, .sp-slot.is-focus{outline:0; border-color:var(--ink); background:var(--wash); box-shadow:inset 3px 0 0 var(--ink)}
+.sp-slot.is-blank{border:1px dashed var(--stroke); background:transparent}
+.sp-slot.is-blank .sp-slot-img{background:var(--sunken); border:1px dashed var(--stroke); color:var(--t3)}
+.sp-slot-l{font-family:var(--body); font-size:14.5px; font-weight:500; color:var(--ink)}
+.sp-slot-n{font-size:13px; color:var(--t2)}
+.sp-slot-s{font-size:12px; color:var(--t3)}
+.sp-slot-img{border-radius:0}
+
+/* ── Status chips: the scope's tag shape (mono, uppercase, small radius) ── */
+.sp-std, .sp-fin{font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  line-height:14px; padding:2px 6px; border-radius:var(--r-tag, 3px); border:1px solid transparent}
+.sp-std.is-hi{background:var(--success-fill); color:var(--success); border-color:transparent}
+.sp-std.is-lo{background:var(--sunken); color:var(--t2); border:1px dashed var(--stroke)}
+.sp-fin{background:var(--white); color:var(--t2); border-color:var(--stroke)}
+.sp-fin.is-in{background:var(--info-fill); color:var(--info); border-color:transparent}
+
+/* ── Store header: steps, totals, tools ── */
+.sp-tabs button{display:inline-flex; align-items:center; height:34px; padding:0 14px; border:1px solid var(--stroke); border-radius:0;
+  background:var(--white); color:var(--t2); font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+.sp-tabs button:hover{border-color:var(--ink); color:var(--ink)}
+.sp-tabs button b{width:18px; height:18px; margin-right:8px; border:1px solid currentColor; border-radius:50%; font-family:var(--mono); font-size:9.5px}
+.sp-tabs button.on{background:var(--accent); border-color:var(--ink); color:var(--ink)}
+.sp-tabs button.on b{background:var(--ink); border-color:var(--ink); color:var(--accent)}
+.pg-main-hd .sp-meta{font-size:12.5px; color:var(--t2)}
+.pg-main-hd .sp-save{color:var(--success); font-weight:600}
+.pg-main-hd .sp-allow{color:var(--ink)}
+.sp-search input{height:34px; border:1px solid var(--stroke); border-radius:0; background:var(--white); font-family:var(--body); font-size:13px; padding:0 12px}
+.sp-search input:focus{outline:0; border-color:var(--ink)}
+.sp-ful-chip{height:34px; padding:0 12px; border:1px solid var(--stroke); border-radius:0; background:var(--white); font-family:var(--body); font-size:12px; font-weight:600; color:var(--t2)}
+.sp-ful-chip:hover{border-color:var(--ink); color:var(--ink)}
+
+/* ── Aisles and shelves ── */
+.sp-aisle-hd{background:var(--app-bg)}
+.sp-aisle-btn{font-family:var(--display); font-size:15px; font-weight:700; letter-spacing:0; text-transform:uppercase; color:var(--ink)}
+.sp-shelf-hd{border-bottom:1px solid var(--ink)}
+.sp-shelf-t{font-family:var(--display); font-size:15px; font-weight:700; letter-spacing:-.01em; text-transform:none; color:var(--ink)}
+.sp-shelf.is-cur > .sp-shelf-hd{border-bottom:2px solid var(--ink)}
+.sp-shelf.is-cur .sp-shelf-t::before{content:none}
+.sp-shelf-st{font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  padding:2px 6px; border-radius:var(--r-tag, 3px); background:var(--sunken); color:var(--t2)}
+.sp-shelf:has(.sp-card.is-picked) .sp-shelf-st{background:var(--success-fill); color:var(--success)}
+
+/* ── Product cards ── */
+.sp-card{border:1px solid var(--stroke); border-radius:0; background:var(--white); padding:10px; gap:4px; transition:border-color .12s, box-shadow .12s}
+.sp-card:hover{border-color:var(--midtone)}
+.sp-card.is-picked{border-color:var(--ink)}
+.sp-card.is-open{outline:2px solid var(--ink)}
+.sp-card-img{border-radius:0}
+.sp-card-ret{font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--t3); margin-top:6px}
+.sp-card-br{font-size:12px; color:var(--t3)}
+.sp-card-n{font-size:14px; font-weight:500; color:var(--ink)}
+.sp-card-row b{font-family:var(--display); font-size:17px; font-weight:700; color:var(--ink)}
+.sp-card-row small{color:var(--t3)}
+.sp-card-av{font-size:12px; color:var(--t2)}
+.sp-card-av b{color:var(--ink); font-weight:600}
+.sp-card-add{height:34px; margin-top:8px; padding:0 12px; border:1px solid var(--ink); border-radius:0; background:var(--white); color:var(--ink);
+  font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; transition:background .12s}
+.sp-card-add:hover{background:var(--accent)}
+/* The chosen product's button: solid ink, so the card that's in the cart reads at a glance. */
+.sp-card-add.is-remove{background:var(--ink); color:var(--white); border-color:var(--ink)}
+.sp-card-add.is-remove:hover{background:#000; color:var(--white); border-color:#000}
+.sp-pager-n{font-size:12px; color:var(--t3)}
+.sp-pager-b{width:30px; height:30px; border:1px solid var(--stroke); border-radius:0; background:var(--white); color:var(--ink)}
+.sp-pager-b:hover:not(:disabled){border-color:var(--ink)}
+.sp-pager-b:disabled{color:var(--stroke)}
+/* The step you're on: Kai yellow (the sketch's blanket rule paints every .on
+   control black with !important, so this has to answer in kind). */
+.pg-scope .sp-tabs button.on{background:var(--accent) !important; border-color:var(--ink) !important; color:var(--ink) !important}
+.pg-scope .sp-tabs button.on b{background:var(--ink); border-color:var(--ink); color:var(--accent)}
+.sp-aisle .sp-shelf-t{font-family:var(--display); font-size:15px; font-weight:700; letter-spacing:-.01em}
+.sp-shelf.is-focus .sp-shelf-pick::before{content:none}
+/* Mood board tiles: square, like every other picture in the product. */
+.sp-mood .sp-ph, .sp-mood img, .sp-mood figure, .sp-mood-tile{border-radius:0 !important}
+.sp-mood figcaption{font-size:11.5px; color:var(--t2)}
+
+/* ── Left panel's top row, the same on every tab ──
+   Scope (and Overview, Documents): Filters, Search and settings on the left,
+   All / Labor / Materials at the far right. Shop: "Shopping List" and its
+   count on the left, Department / Room / Task at the far right — the same
+   52px row, the same switch, in the same place. */
+#sbStateBar > .sb-tools-af{order:1}
+#sbStateBar > .sb-search{order:2}
+#sbStateBar > .sb-more{order:3}
+#sbStateBar > .sb-state-bar-sp{order:4; flex:1 1 auto}
+#sbStateBar > .sb-tools-seg{order:5; margin-left:auto}
+
+.pg-nav-hd{flex-direction:row !important; align-items:center; gap:12px; height:52px; padding:0 16px !important;
+  border-bottom:1px solid var(--stroke) !important; box-sizing:border-box}
+.pg-nav-hd .pg-nav-t{flex:1 1 auto; min-width:0; display:flex; align-items:baseline; gap:8px; justify-content:flex-start}
+.pg-nav-hd .pg-nav-t .pg-sp{display:none}
+.pg-nav-hd .sp-sec-t{white-space:nowrap}
+.pg-nav-hd .sp-sec-sub{white-space:nowrap; font-size:12px; color:var(--t3)}
+.pg-nav-hd .pg-by{align-self:center !important; flex:none; margin-left:auto}
+/* No settings gear in the left panel's row. */
+#sbStateBar > .sb-more{display:none}
+/* The switch takes the width its labels need — never squeezed or clipped. */
+#sbStateBar > .sb-tools-seg, .pg-nav-hd .pg-by{flex:none; overflow:visible; min-width:max-content}
+#sbStateBar > .sb-tools-seg button, .pg-nav-hd .pg-by button{flex:none; white-space:nowrap}
+
+/* ── Shopping List rows, in the Scope sidebar's pattern ──
+   Flat full-width rows on hairline dividers (no card boxes), group headers as
+   sunken bands, the item's name on top, what's chosen under it, its match as
+   the status line, and the amount on the right — like a task's. */
+#pgNav .pg-nav-b{padding:0 !important}
+#pgNav .sp-grp{margin:0 !important}
+#pgNav .sp-grp-hd{height:42px; margin:0; padding:10px 16px; box-sizing:border-box; align-items:center;
+  background:var(--sunken); border-bottom:1px solid var(--stroke); border-top:0}
+#pgNav .sp-grp-hd .sp-clip{font-family:var(--display); font-size:13px; font-weight:700; text-transform:uppercase}
+#pgNav .sp-grp-hd .sp-allow, #pgNav .sp-grp-hd .sp-grp-n{font-family:var(--body); font-size:14px; font-weight:400; color:var(--ink)}
+#pgNav .sp-slots{display:block; gap:0; padding:0; margin:0}
+#pgNav .sp-slot{margin:0 !important; border:0; border-bottom:1px solid rgba(0,0,0,.05); border-radius:0; background:transparent; box-shadow:none}
+#pgNav .sp-slot:hover{background:rgba(26,26,26,.025); border-color:rgba(0,0,0,.05)}
+#pgNav .sp-slot.is-on, #pgNav .sp-slot.is-focus{background:var(--wash); box-shadow:none; outline:0; border-bottom-color:rgba(0,0,0,.05)}
+#pgNav .sp-slot.is-blank{border:0; border-bottom:1px solid rgba(0,0,0,.05); background:transparent}
+#pgNav .sp-slot-btn{display:flex; align-items:center !important; gap:11px; width:100%; padding:11px 16px; text-align:left; background:none; border:0}
+#pgNav .sp-slot-img{width:36px; height:36px; flex:none; border-radius:0}
+#pgNav .sp-slot.is-blank .sp-slot-img{display:grid; place-items:center; background:transparent; border:1px dashed var(--stroke); color:var(--t3)}
+#pgNav .sp-slot-b{flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:3px}
+#pgNav .sp-slot-l{font-size:16px; font-weight:400; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+#pgNav .sp-slot-n{font-size:13px; color:var(--t2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+#pgNav .sp-slot-n .sp-slot-s, #pgNav .sp-slot-s{font-size:13px; color:var(--t3)}
+#pgNav .sp-slot-tags{display:flex; gap:6px; margin-top:3px}
+#pgNav .sp-slot-amt{flex:none; align-self:center; font-size:16px; color:var(--ink); font-variant-numeric:tabular-nums; padding-left:8px}
+#pgNav .sp-slot-amt.is-none{color:var(--t3)}
+
+/* ── Shelves + Cart (no Shop / Review / Cart steps) ── */
+.pg-main-hd .sp-tabs{display:none}
+.sp-cart-btn{display:inline-flex; align-items:center; gap:8px; height:34px; padding:0 12px; margin-left:12px; cursor:pointer;
+  border:1px solid var(--ink); background:var(--white); color:var(--ink);
+  font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+.sp-cart-btn svg{width:16px; height:16px}
+.sp-cart-btn:hover{background:var(--accent)}
+.pg-scope .sp-cart-btn.on{background:var(--accent) !important; color:var(--ink) !important; border-color:var(--ink) !important}
+.sp-cart-n{display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 5px; background:var(--ink); color:var(--white); font-size:9.5px; letter-spacing:0}
+.sp-cart-t{font-family:var(--body); font-size:12.5px; font-weight:600; letter-spacing:0; text-transform:none}
+.sp-back{display:inline-flex; align-items:center; gap:6px; height:34px; padding:0 12px 0 8px; margin-right:12px; border:1px solid var(--stroke); background:var(--white);
+  color:var(--ink); font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; cursor:pointer}
+.sp-back:hover{border-color:var(--ink)}
+.sp-back span{font-size:16px; line-height:1}
+
+.sp-cart-page{padding:18px 24px 40px}
+.sp-cart-page .sp-cart-hd{margin-bottom:14px}
+.sp-cart-page .sp-cart-hd .sp-sec-t{font-family:var(--display); font-size:20px; font-weight:700; letter-spacing:-.01em; text-transform:none; color:var(--ink); margin-right:10px}
+.sp-cart-page .sp-cart-hd .sp-sec-sub{font-size:13px; color:var(--t2)}
+.sp-cart-cols{display:flex; align-items:flex-start; gap:20px; flex-wrap:wrap}
+.sp-cart-main{flex:1 1 460px; min-width:0}
+.sp-cart-sum{flex:0 0 260px; position:sticky; top:12px; background:var(--white); border:1px solid var(--stroke); padding:16px 18px}
+.sp-cart-sum dl{display:grid; grid-template-columns:1fr auto; gap:8px 12px; margin:0 0 14px; font-size:13.5px}
+.sp-cart-sum dt{color:var(--t2)} .sp-cart-sum dd{margin:0; text-align:right; font-variant-numeric:tabular-nums}
+.sp-cart-sum .is-save{color:var(--success)}
+.sp-cart-sum .is-tot{padding-top:10px; border-top:1px solid var(--stroke); font-family:var(--display); font-size:17px; font-weight:700; color:var(--ink)}
+.sp-order{width:100%; height:40px; border:0; background:var(--accent); color:var(--ink); cursor:pointer;
+  font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+.sp-order:hover{background:var(--accent-deep)}
+.sp-cart-note{margin:10px 0 0; font-size:12px; color:var(--t3)}
+.sp-rv-forget-hd .sp-rv-h{white-space:nowrap}
+/* Search and Delivery & pickup live in the header row, left of the budget and Cart. */
+.pg-main-hd .sp-hd-tools{display:flex; align-items:center; gap:10px; flex:1 1 auto; min-width:0; margin:0; padding:0; border:0; background:none; position:static}
+.pg-main-hd .sp-hd-tools .sp-search{flex:1 1 auto; min-width:140px; max-width:420px}
+.pg-main-hd .sp-hd-tools .sp-search input{width:100%}
+.pg-main-hd .sp-hd-tools .sp-ful{flex:none}
