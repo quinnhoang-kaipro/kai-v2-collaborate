@@ -45,3 +45,283 @@ body.kai-photo-overlay-open::before{background:rgba(26,26,26,.68)}
 /* ── By eye ── */
 /* The stepper's steps sit apart with no arrows between them, as in the layout. */
 .app-toolbar .stage:not(:last-child)::after{display:none}
+
+/* ════ Tabs in the dark bar; the stepper as a status chip (kaiweb-shell.js) ════ */
+body.kw-shell-tabs #stages{display:none !important}
+body.kw-shell-tabs .app-toolbar .tb-address{padding:0 14px 0 22px; flex-shrink:1; min-width:0; max-width:260px}
+body.kw-shell-tabs .tb-address b{display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis}
+
+/* Status chip */
+.kw-stage-wrap{position:relative; flex:none; margin-right:20px}
+.kw-stage{all:unset; box-sizing:border-box; cursor:pointer; display:inline-flex; align-items:center; gap:9px; height:32px; padding:0 10px;
+  border:1px solid rgba(255,255,255,.22); color:var(--white); font-family:var(--body); font-size:12px; white-space:nowrap}
+.kw-stage:hover, .kw-stage[aria-expanded="true"]{border-color:rgba(255,255,255,.6); background:rgba(255,255,255,.06)}
+.kw-stage:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.kw-stage > svg{width:10px; height:10px; opacity:.7}
+.kw-marks{display:inline-flex; gap:3px}
+.kw-marks i{width:14px; height:4px; background:rgba(255,255,255,.25)}
+.kw-marks i.is-done{background:var(--white)}
+.kw-marks i.is-cur{background:var(--accent)}
+.kw-stage-t{display:inline-flex; align-items:baseline; gap:7px}
+.kw-stage-k{font-family:var(--mono); font-size:9.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:rgba(255,255,255,.55)}
+
+/* Stage popover */
+.kw-stage-pop{position:absolute; top:calc(100% + 10px); left:0; z-index:300; width:300px; background:var(--white); color:var(--ink);
+  border:1px solid var(--stroke, #DDD6C8); box-shadow:0 12px 32px rgba(26,26,26,.18); padding:14px 0 6px}
+.kw-stage-pop[hidden]{display:none}
+.kw-pop-hd{display:flex; align-items:baseline; justify-content:space-between; padding:0 16px 10px; border-bottom:1px solid var(--stroke, #DDD6C8)}
+.kw-pop-hd b{font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase}
+.kw-pop-hd span{font-size:12px; color:var(--t2, #5C5750)}
+.kw-pop-list{list-style:none; margin:0; padding:6px 0}
+.kw-pop-st{all:unset; box-sizing:border-box; cursor:pointer; display:flex; align-items:center; gap:12px; width:100%; padding:9px 16px; font-size:14px}
+.kw-pop-st:hover:not([disabled]){background:var(--sunken, #F4F0E6)}
+.kw-pop-st[disabled]{cursor:default}
+.kw-pop-st.is-view{background:var(--wash, #FDFDEA)}
+.kw-pop-n{flex:none; width:22px; height:22px; display:grid; place-items:center; border:1px solid var(--stroke, #DDD6C8); font-family:var(--mono); font-size:10px; font-weight:700; color:var(--t2, #5C5750)}
+.kw-pop-st.is-done .kw-pop-n{background:var(--ink); border-color:var(--ink); color:var(--white)}
+.kw-pop-st.is-cur .kw-pop-n{background:var(--accent); border-color:var(--accent); color:var(--ink)}
+.kw-pop-l{flex:1 1 auto; min-width:0}
+.kw-pop-st:not(.is-done):not(.is-cur) .kw-pop-l{color:var(--t2, #5C5750)}
+.kw-pop-s{flex:none; font-family:var(--mono); font-size:9.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--t3, #8A8470)}
+.kw-pop-st.is-cur .kw-pop-s{color:var(--ink)}
+.kw-pop-hint{margin:2px 16px 8px; padding-top:10px; border-top:1px solid var(--stroke, #DDD6C8); font-size:12.5px; line-height:1.45; color:var(--t2, #5C5750)}
+
+/* Page tabs */
+.kw-tabs{display:flex; align-items:stretch; height:56px; flex:none}
+.kw-tab{position:relative; display:flex; align-items:center}
+.kw-tab-b{all:unset; box-sizing:border-box; cursor:pointer; height:100%; padding:0 13px; display:flex; align-items:center;
+  font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:rgba(255,255,255,.6); white-space:nowrap}
+.kw-tab-b:hover{color:var(--white)}
+.kw-tab.is-on .kw-tab-b{color:var(--white)}
+.kw-tab.is-on::after{content:''; position:absolute; left:8px; right:8px; bottom:0; height:3px; background:var(--accent)}
+.kw-tab-b:focus-visible, .kw-tab-menu:focus-visible, .kw-ref:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+.kw-tab-menu{all:unset; box-sizing:border-box; cursor:pointer; width:22px; height:26px; margin:0 4px 0 -8px; display:grid; place-items:center; color:rgba(255,255,255,.7)}
+.kw-tab-menu:hover{color:var(--white); background:rgba(255,255,255,.08)}
+.kw-tab-menu svg{width:11px; height:11px}
+.kw-sp{flex:1 1 auto; min-width:8px}
+
+/* Media / Floorplan */
+.kw-refs{display:flex; gap:6px; margin-right:14px; flex:none}
+.kw-ref{all:unset; box-sizing:border-box; cursor:pointer; display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 10px;
+  border:1px solid rgba(255,255,255,.22); color:rgba(255,255,255,.8); font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; white-space:nowrap}
+.kw-ref:hover{border-color:rgba(255,255,255,.6); color:var(--white)}
+.kw-ref.is-on{background:var(--white); border-color:var(--white); color:var(--ink)}
+.kw-ref svg{width:14px; height:14px; flex:none}
+
+/* Tight bars: the panel buttons drop to icons, then the chip drops its "Stage n of 3". */
+@media (max-width:1280px){ .kw-ref span{display:none} .kw-ref{padding:0 8px} }
+@media (max-width:1180px){ .kw-stage-k{display:none} body.kw-shell-tabs .app-toolbar .tb-address{max-width:190px} .kw-tab-b{padding:0 10px} }
+/* Narrowest: the chip keeps its three marks (the stage is in its tooltip and its pop-up). */
+@media (max-width:1060px){ body.kw-shell-tabs .app-toolbar .tb-address{max-width:150px; padding-left:16px} .kw-stage-wrap{margin-right:8px} .kw-tab-b{padding:0 8px} .kw-tab-menu{margin-left:-6px} .kw-stage{gap:7px; padding:0 8px} }
+@media (max-width:980px){ .kw-stage-t{display:none} }
+.kw-ref .pg-ic-fill, .kw-ref .pg-ic-left{opacity:0}
+.kw-ref.is-on .pg-ic-fill{opacity:1}
+
+/* Whose turn — the hand-off pill beside the stage chip, and its card */
+.kw-turn-wrap{position:relative; flex:none; margin-right:20px}
+.kw-turn-wrap[hidden]{display:none}
+.kw-turn{all:unset; box-sizing:border-box; cursor:pointer; display:inline-flex; align-items:stretch; height:26px; border-radius:999px; overflow:hidden;
+  background:rgba(255,255,255,.14); color:rgba(255,255,255,.85); font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap;
+  transition:background .12s, color .12s, box-shadow .12s}
+.kw-turn-l{display:flex; align-items:center; padding:0 9px 0 12px}
+.kw-turn-car{display:flex; align-items:center; padding:0 7px; background:rgba(0,0,0,.16); box-shadow:inset 1px 0 0 rgba(255,255,255,.18)}
+.kw-turn-car svg{width:10px; height:10px; transition:transform .16s}
+.kw-turn:hover{background:rgba(255,255,255,.26); color:var(--white)}
+.kw-turn:hover .kw-turn-car svg{transform:translateY(1px)}
+.kw-turn.is-mine{background:var(--accent); color:var(--ink)}
+.kw-turn.is-mine .kw-turn-car{background:rgba(26,26,26,.14); box-shadow:inset 1px 0 0 rgba(26,26,26,.16)}
+.kw-turn.is-open{background:var(--white); color:var(--ink); box-shadow:0 0 0 2px rgba(253,255,134,.55)}
+.kw-turn.is-open .kw-turn-car{background:rgba(26,26,26,.1); box-shadow:inset 1px 0 0 rgba(26,26,26,.14)}
+.kw-turn.is-open .kw-turn-car svg{transform:rotate(180deg)}
+.kw-turn.is-mine.is-open{background:var(--accent)}
+.kw-turn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+.kw-turn-pop{width:320px; padding:16px 18px 10px}
+.kw-turn-doc{display:flex; align-items:center; gap:7px; margin-bottom:12px; font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase}
+.kw-turn-doc svg{width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+.kw-turn-p{margin:0 0 10px; font-size:13.5px; line-height:1.45; color:var(--ink)}
+.kw-turn-p b{font-weight:700}
+.kw-turn-hist{list-style:none; margin:12px 0 0; padding:12px 0 0; border-top:1px solid var(--stroke, #DDD6C8); display:flex; flex-direction:column; gap:10px}
+.kw-turn-hist li{display:flex; gap:10px; align-items:flex-start; font-size:13px; line-height:1.4}
+.kw-turn-ck{flex:none; width:18px; height:18px; border-radius:50%; background:var(--ink); color:var(--white); display:grid; place-items:center; font-size:10px; margin-top:1px}
+.kw-turn-d{display:block; font-family:var(--mono); font-size:9.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--t3, #8A8470)}
+
+@media (max-width:1180px){ .kw-turn-wrap{margin-right:12px} .kw-stage-wrap{margin-right:8px} }
+
+/* Narrow bars: the address keeps room for itself. The chip's three bars and the
+   pill's "With" go first — the stage name and the person's name stay. */
+@media (max-width:1100px){
+  .kw-marks{display:none}
+  .kw-turn-wrap{margin-right:6px}
+  .kw-tab-b{padding:0 7px}
+  body.kw-shell-tabs .app-toolbar .tb-address{min-width:120px; padding-right:10px}
+}
+
+.kw-stage-wrap[hidden]{display:none !important}
+.kw-turn-w{margin-right:.4em}
+/* The stage chip is gone, so the address gets its room back. */
+@media (max-width:1180px){ body.kw-shell-tabs .app-toolbar .tb-address{max-width:230px} }
+@media (max-width:1060px){ body.kw-shell-tabs .app-toolbar .tb-address{max-width:210px} }
+
+/* Tabs centred in the bar; Media / Floorplan off the bar (right-edge rail in the page). */
+.kw-refs[hidden]{display:none !important}
+.kw-sp-l{flex:1 1 auto; min-width:12px}
+@media (min-width:1360px){
+  .app-toolbar{position:relative}
+  .kw-tabs{position:absolute; left:50%; top:0; transform:translateX(-50%)}
+}
+
+/* Cart, always on screen */
+.kw-cart{all:unset; box-sizing:border-box; cursor:pointer; flex:none; display:inline-flex; align-items:center; gap:8px; height:32px; padding:0 12px; margin-right:14px;
+  border:1px solid rgba(255,255,255,.3); color:var(--white); font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; white-space:nowrap}
+.kw-cart[hidden]{display:none}
+.kw-cart:hover{border-color:rgba(255,255,255,.7); background:rgba(255,255,255,.06)}
+.kw-cart.is-on{background:var(--accent); border-color:var(--accent); color:var(--ink)}
+.kw-cart:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.kw-cart svg{width:15px; height:15px}
+.kw-cart-n{min-width:18px; height:18px; padding:0 5px; display:inline-grid; place-items:center; background:var(--accent); color:var(--ink); font-size:10px}
+.kw-cart.is-on .kw-cart-n{background:var(--ink); color:var(--accent)}
+.kw-cart-t{font-family:var(--body); font-size:12.5px; font-weight:600; letter-spacing:0; text-transform:none}
+@media (max-width:1100px){ .kw-cart-l{display:none} .kw-cart{padding:0 9px; gap:6px} }
+
+/* No app-wide nav rail on the project page; its Kai mark leads the dark bar. */
+body.kw-no-gnav .global-nav{display:none !important}
+.app-toolbar .kw-logo{flex:0 0 72px; width:72px !important; height:56px; align-self:stretch; display:flex; align-items:center; justify-content:center; background:var(--app-bg, #FFFEF6); padding:0}
+.app-toolbar .kw-logo svg{height:18px; width:auto; display:block}
+
+/* Documents menu — shortcuts to each part of the long Documents page */
+.kw-tab.is-menu .kw-tab-b{color:var(--white)}
+.kw-docs-menu{position:fixed; z-index:400; background:var(--white); color:var(--ink); border:1px solid var(--stroke, #DDD6C8); border-top:3px solid var(--accent);
+  box-shadow:0 14px 34px rgba(26,26,26,.18); padding:18px 22px 16px; max-width:calc(100vw - 16px)}
+.kw-docs-menu[hidden]{display:none}
+.kw-dm-cols{display:flex; gap:28px; align-items:flex-start}
+.kw-dm-col{display:flex; flex-direction:column; align-items:flex-start; gap:2px; min-width:0; max-width:220px}
+.kw-dm-h{all:unset; box-sizing:border-box; cursor:pointer; display:inline-flex; align-items:baseline; gap:7px; margin-bottom:6px; font-family:var(--body); font-size:14px; font-weight:700; color:var(--ink)}
+.kw-dm-h span{font-family:var(--mono); font-size:10px; font-weight:700; color:var(--t3, #8A8470)}
+.kw-dm-h:hover{text-decoration:underline; text-underline-offset:3px}
+.kw-dm-l{all:unset; box-sizing:border-box; cursor:pointer; max-width:100%; padding:4px 0; font-family:var(--body); font-size:13px; color:var(--t2, #5C5750); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.kw-dm-l:hover{color:var(--ink); text-decoration:underline; text-underline-offset:3px}
+.kw-dm-l.is-more{color:var(--ink); font-weight:600; margin-top:2px}
+.kw-dm-h:focus-visible, .kw-dm-l:focus-visible, .kw-dm-seg button:focus-visible{outline:2px solid var(--ink); outline-offset:2px}
+.kw-dm-col.is-view{padding-left:24px; border-left:1px solid var(--stroke, #DDD6C8); align-self:stretch}
+.kw-dm-k{margin-bottom:8px; font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--t3, #8A8470)}
+.kw-dm-seg{display:flex; border:1px solid var(--stroke, #DDD6C8)}
+.kw-dm-seg button{all:unset; box-sizing:border-box; cursor:pointer; padding:7px 12px; font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink); white-space:nowrap}
+.kw-dm-seg button.is-on{background:var(--ink); color:var(--white)}
+@media (max-width:1100px){ .kw-dm-cols{flex-wrap:wrap; row-gap:16px} .kw-dm-col.is-view{border-left:0; padding-left:0} }
+/* Layout sits along the bottom of the Documents menu, under the shortcuts. */
+.kw-dm-foot{display:flex; align-items:center; gap:14px; margin-top:16px; padding-top:14px; border-top:1px solid var(--stroke, #DDD6C8)}
+.kw-dm-foot .kw-dm-k{margin:0}
+/* Cart button: no item count, just "Cart" and the total. Keeps its label at
+   narrow widths now that the count is gone. */
+@media (max-width:1100px){ .kw-cart-l{display:inline} .kw-cart{padding:0 10px; gap:7px} }
+
+/* Address: street larger, city beneath */
+body.kw-shell-tabs .tb-address b{font-size:16px; line-height:1.15; letter-spacing:-.01em}
+body.kw-shell-tabs .tb-address .kw-city{display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; font-size:11.5px; color:rgba(255,255,255,.6); margin-top:2px}
+/* the street gets the room it needs at 16px; tabs and spacers give a little */
+body.kw-shell-tabs .app-toolbar .tb-address{min-width:0; flex-shrink:0}
+@media (max-width:1100px){ body.kw-shell-tabs .app-toolbar .tb-address{max-width:200px; padding-left:14px; padding-right:10px} .kw-sp-l{min-width:4px} .kw-sp{min-width:4px} }
+@media (max-width:1100px){
+  .kw-tab-b{padding:0 6px}
+  .kw-cart{margin-right:8px}
+  .app-toolbar .btn-primary{margin-right:6px; padding:0 12px}
+  .app-toolbar .app-notif{margin-right:4px}
+  .app-toolbar .app-avatar{margin:0 12px 0 2px}
+  .kw-turn-wrap{margin-right:4px}
+}
+@media (max-width:1100px){ .kw-turn-w{display:none} }
+@media (max-width:1100px){ body.kw-shell-tabs .app-toolbar .tb-address{flex-shrink:1; min-width:140px} }
+
+/* Turn + hand-off, side by side: whose move it is, then the move */
+.kw-turn-group{display:flex; align-items:center; gap:8px; flex:none}
+.kw-turn-group .kw-turn-wrap{margin-right:0}
+.kw-turn-group .btn-primary, .kw-turn-group .btn-ghost{height:30px; margin-right:0; padding:0 14px}
+.kw-turn-group .btn-tooltip-wrap .btn-tooltip{left:0; right:auto}
+.kw-turn-group .btn-tooltip-wrap .btn-tooltip::before{left:14px; right:auto}
+
+/* Kai mark: white on the bar's own dark ground, so the bar reads as one piece */
+.app-toolbar .kw-logo{background:transparent !important}
+.app-toolbar .kw-logo svg path, .app-toolbar .kw-logo svg rect, .app-toolbar .kw-logo svg polygon{fill:var(--white, #fff) !important}
+/* Turn + hand-off at the right end of the bar */
+.kw-turn-group{margin-right:14px}
+.kw-turn-group .btn-tooltip-wrap .btn-tooltip{left:auto; right:0}
+.kw-turn-group .btn-tooltip-wrap .btn-tooltip::before{left:auto; right:14px}
+/* the pill's card opens leftward from the right end */
+.kw-turn-pop{left:auto; right:0}
+@media (max-width:1100px){ .kw-turn-group{margin-right:6px; gap:6px} }
+
+/* ── Account + notifications, one menu on the avatar ── */
+.app-toolbar .app-notif[hidden]{display:none !important}
+.app-toolbar .app-avatar[role="button"]{position:relative; cursor:pointer; overflow:visible}
+.app-toolbar .app-avatar[role="button"]:hover, .app-toolbar .app-avatar[aria-expanded="true"]{background:#5a5a5a}
+.app-toolbar .app-avatar:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.kw-badge{position:absolute; top:-6px; right:-8px; min-width:18px; height:18px; padding:0 5px; display:grid; place-items:center;
+  background:#B4332A; color:#fff; font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:0; box-shadow:0 0 0 2px var(--ink)}
+
+.kw-acct{position:fixed; z-index:400; width:340px; max-width:calc(100vw - 16px); max-height:calc(100vh - 80px); overflow:auto;
+  background:#1F1E1B; color:rgba(255,255,255,.85); border:1px solid rgba(255,255,255,.08); box-shadow:0 18px 40px rgba(0,0,0,.35)}
+.kw-acct[hidden]{display:none}
+.kw-acct button{all:unset; box-sizing:border-box; cursor:pointer}
+.kw-acct button:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+.kw-acct-hd{padding:16px 18px 14px; background:#33312C}
+.kw-acct-hd b{display:block; font-family:var(--display); font-size:17px; color:#fff}
+.kw-acct-hd span{font-size:12.5px; color:rgba(255,255,255,.7)}
+.kw-acct-nh{display:flex; align-items:baseline; justify-content:space-between; padding:14px 18px 6px}
+.kw-acct-nh b{font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.55)}
+.kw-acct .kw-acct-lnk{font-size:12px; color:rgba(255,255,255,.7)}
+.kw-acct .kw-acct-lnk:hover{color:#fff; text-decoration:underline}
+.kw-acct-tabs{display:flex; gap:16px; padding:0 18px; border-bottom:1px solid rgba(255,255,255,.1)}
+.kw-acct-tabs button{padding:8px 0 9px; font-size:13px; color:rgba(255,255,255,.6); border-bottom:2px solid transparent; margin-bottom:-1px}
+.kw-acct-tabs button.is-on{color:#fff; border-bottom-color:var(--accent)}
+.kw-acct-list{display:flex; flex-direction:column}
+.kw-acct .kw-note{display:grid; grid-template-columns:28px 1fr auto; gap:10px; align-items:start; padding:11px 18px; border-bottom:1px solid rgba(255,255,255,.06)}
+.kw-acct .kw-note:hover{background:rgba(255,255,255,.04)}
+.kw-acct .kw-note-ic{width:28px; height:28px; display:grid; place-items:center; background:rgba(255,255,255,.06); position:relative}
+.kw-acct .kw-note-ic svg{width:15px; height:15px}
+.kw-acct .kw-note.is-unread .kw-note-ic::after{content:''; position:absolute; top:-2px; right:-2px; width:7px; height:7px; border-radius:50%; background:var(--accent)}
+.kw-acct .kw-note-b{display:flex; flex-direction:column; gap:2px; min-width:0}
+.kw-acct .kw-note-b b{font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:rgba(255,255,255,.6)}
+.kw-acct .kw-note.is-unread .kw-note-b b{color:#fff}
+.kw-acct .kw-note-b span{font-size:13px; line-height:1.35; color:rgba(255,255,255,.8)}
+.kw-acct .kw-note-w{font-size:11px; color:rgba(255,255,255,.45); white-space:nowrap}
+.kw-acct-empty{margin:0; padding:16px 18px; font-size:13px; color:rgba(255,255,255,.55)}
+.kw-acct .kw-acct-more{display:block; width:100%; padding:11px 18px; text-align:center; font-size:13px; font-weight:600; color:var(--accent) !important; border-bottom:1px solid rgba(255,255,255,.1)}
+.kw-acct .kw-acct-more:hover{background:rgba(255,255,255,.04)}
+.kw-acct-links{padding:6px 0}
+.kw-acct-links button{display:flex; align-items:center; gap:12px; width:100%; padding:9px 18px; font-size:14px; color:rgba(255,255,255,.75)}
+.kw-acct-links button:hover{background:rgba(255,255,255,.05); color:#fff}
+.kw-acct-links svg{width:18px; height:18px; flex:none; opacity:.8}
+
+/* Notifications first; the account is one row at the bottom */
+.kw-acct{width:360px}
+.kw-acct .kw-acct-nh{display:flex; align-items:center; gap:10px; padding:14px 18px 10px; border-bottom:1px solid rgba(255,255,255,.1)}
+.kw-acct .kw-acct-nh b{font-family:var(--display); font-size:15px; letter-spacing:0; text-transform:none; color:#fff}
+.kw-acct-n{font-size:12px; color:var(--accent)}
+.kw-acct-sp{flex:1}
+.kw-acct-tg{display:inline-flex; align-items:center; gap:5px; font-size:12px; color:rgba(255,255,255,.7); cursor:pointer; white-space:nowrap}
+.kw-acct-tg input{accent-color:var(--accent); margin:0}
+.kw-acct .kw-acct-list{max-height:min(380px, calc(100vh - 260px)); overflow:auto}
+.kw-acct-me{display:flex; align-items:center; gap:4px; padding:10px 12px 10px 18px; background:#33312C}
+.kw-acct-av{flex:none; width:30px; height:30px; display:grid; place-items:center; margin-right:8px; background:#5a5a5a; color:#fff; font-family:var(--mono); font-size:10px; font-weight:700}
+.kw-acct-who{flex:1; min-width:0; display:flex; flex-direction:column}
+.kw-acct-who b{font-size:13.5px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.kw-acct-who span{font-size:11.5px; color:rgba(255,255,255,.6)}
+.kw-acct .kw-acct-ib{flex:none; width:32px; height:32px; display:grid; place-items:center; color:rgba(255,255,255,.7)}
+.kw-acct .kw-acct-ib:hover, .kw-acct .kw-acct-ib.is-on{color:#fff; background:rgba(255,255,255,.08)}
+.kw-acct-ib svg{width:17px; height:17px}
+.kw-acct .kw-acct-links{background:#33312C; padding:0 0 6px; border-top:1px solid rgba(255,255,255,.08)}
+.kw-acct .kw-acct-links button{font-size:13px; padding:8px 18px}
+.kw-acct-n{min-width:18px; height:18px; padding:0 5px; display:inline-grid; place-items:center; background:#B4332A; color:#fff; font-family:var(--mono); font-size:10px; font-weight:700}
+.kw-acct .kw-acct-nh{gap:8px; white-space:nowrap}
+.kw-acct .kw-acct-lnk{white-space:nowrap}
+
+/* Bell back: it carries the unread count and opens the notifications menu */
+.app-toolbar .app-notif{position:relative; overflow:visible}
+.app-toolbar .app-notif .kw-badge{top:0; right:-2px}
+.app-toolbar .app-notif[aria-expanded="true"]{color:var(--white); background:rgba(255,255,255,.08)}
+.app-toolbar .app-notif:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+/* The avatar opens the account menu: name, then the links */
+.kw-acct.is-acct{width:280px}
+.kw-acct.is-acct .kw-acct-links{background:transparent; border-top:0; padding:6px 0}
+.kw-acct.is-acct .kw-acct-links button{font-size:14px; padding:10px 18px}

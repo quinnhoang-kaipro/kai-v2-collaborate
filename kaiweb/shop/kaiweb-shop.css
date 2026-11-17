@@ -211,3 +211,169 @@
 .pg-main-hd .sp-hd-tools .sp-search{flex:1 1 auto; min-width:140px; max-width:420px}
 .pg-main-hd .sp-hd-tools .sp-search input{width:100%}
 .pg-main-hd .sp-hd-tools .sp-ful{flex:none}
+
+/* ── Shopping List: sub-headers and bulk groups ──
+   A line's sub-header (e.g. "Tile") sits on the same 16px gutter as the rows.
+   A bulk buy is one boxed group: a green-edged card with its own header row,
+   so the items that share the discount read as one set. */
+#pgNav .sp-line{gap:0; border:0; padding:0; background:none}
+#pgNav .sp-line-items{gap:0}
+#pgNav .sp-line > .sp-line-hd{display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:14px 16px 6px; font:600 11px/16px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--t2)}
+#pgNav .sp-line.is-bundle{margin:10px 12px; border:1px solid var(--stroke); border-left:3px solid var(--success);
+  background:var(--white); padding:0}
+#pgNav .sp-line.is-bundle > .sp-line-hd{padding:9px 12px; color:var(--ink); background:var(--success-fill);
+  border-bottom:1px solid var(--stroke)}
+#pgNav .sp-line.is-bundle .sp-line-n{font:600 13px/16px var(--body); letter-spacing:0; text-transform:none; color:var(--success-deep)}
+#pgNav .sp-line.is-bundle .sp-slot-btn{padding:11px 12px}
+#pgNav .sp-line.is-bundle .sp-slot:last-child{border-bottom:0}
+#pgNav .sp-line.is-bundle + .sp-slot, #pgNav .sp-line.is-bundle + .sp-line{border-top:1px solid rgba(0,0,0,.05)}
+
+/* Cart · Still needed: the price leads each card, in the item name's own style. */
+.sp-forget-c > b.sp-forget-amt{font-variant-numeric:tabular-nums; margin-bottom:-2px}
+
+/* Unit price × quantity under every total */
+.sp-forget-amt{display:flex; flex-direction:column; gap:1px}
+.sp-forget-amt b{font-weight:600; font-variant-numeric:tabular-nums}
+.sp-forget-amt small{font-size:12px; color:var(--t2); font-variant-numeric:tabular-nums}
+
+/* ── Cart: one order per retailer, then one group per arrival ──
+   Common checkout layout: picture · what it is · price on the right, with the
+   row's actions underneath. The date is said once, on its group. */
+.sp-rv-when{margin-top:14px}
+.sp-rv-when-hd{display:flex; align-items:baseline; gap:10px; padding:8px 12px; background:var(--sunken); font-size:14px}
+.sp-rv-when-hd b{font-weight:600}
+.sp-rv-when.is-issue .sp-rv-when-hd b{color:var(--error)}
+.sp-rv-when.is-later .sp-rv-when-hd{background:transparent; border-bottom:1px solid var(--stroke); padding-left:0}
+.sp-rv-when > .sp-rv-row:first-of-type{border-top:0}
+.sp-rv-row{grid-template-columns:80px 1fr auto; gap:16px; padding:16px 0}
+.sp-rv-txt{gap:3px}
+.sp-rv-txt > b{font-size:15px}
+.sp-rv-txt > span{font-size:14px}
+.sp-rv-pref{margin-top:8px}
+.sp-rv-acts{display:flex; gap:16px; margin-top:10px}
+.sp-rv-acts .sp-rv-save{margin:0; font-size:13px}
+.sp-rv-amt{display:flex; flex-direction:column; align-items:flex-end; gap:3px; text-align:right; white-space:nowrap}
+.sp-rv-amt b{font-size:16px; font-weight:600; font-variant-numeric:tabular-nums}
+.sp-rv-amt small{font-size:12px; color:var(--t2); font-variant-numeric:tabular-nums}
+.sp-rv-row.is-later .sp-rv-amt{opacity:.45}
+/* Still needed: where the item comes from — its task and department */
+.sp-forget-ctx{font-size:12px; color:var(--t2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:-3px}
+
+/* Cart's right column: the order summary, then Your margin under it. */
+.sp-cart-side{flex:0 0 300px; position:sticky; top:12px; display:flex; flex-direction:column; gap:14px; min-width:0}
+.sp-cart-side .sp-cart-sum{position:static; flex:none}
+.sp-cart-side .sp-future-row{display:block; margin:0}
+.sp-cart-side .sp-fcard{margin:0; padding:14px 16px}
+.sp-cart-side .sp-fcard .sp-sec-hd{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.sp-cart-side .sp-fcard .sp-dl{font-size:13px}
+
+/* The page tabs now live in the app's dark bar (kaiweb-shell.js mirrors them
+   there). The panel's own row is kept, collapsed to nothing, because it still
+   owns the tabs' state and their option menus — which open from it. */
+body.kw-tabs-shell #workHdr{height:0 !important; min-height:0 !important; padding:0 !important; border:0 !important; overflow:visible; visibility:hidden}
+body.kw-tabs-shell #workHdr .view-menu{visibility:visible; z-index:500}
+body.kw-tabs-shell #workHdr .view-menu{position:fixed !important; top:6px !important; left:var(--kw-menu-x, 8px) !important; right:auto !important}
+
+/* Overview · the full project stepper */
+.kw-ov-stepper{background:var(--white); border:1px solid var(--stroke); padding:14px 16px 12px; margin:0 0 20px}
+.kw-ov-hd{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px}
+.kw-ov-hd b{font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase}
+.kw-ov-hd span{font-size:12px; color:var(--t2)}
+.kw-ov-steps{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:8px}
+.kw-ov-step{all:unset; box-sizing:border-box; cursor:pointer; width:100%; display:grid; grid-template-columns:auto 1fr; grid-template-rows:auto auto; column-gap:10px; row-gap:2px;
+  padding:10px 12px; border:1px solid var(--stroke); border-top:3px solid var(--stroke); background:var(--app-bg)}
+.kw-ov-step:hover:not([disabled]){border-color:var(--ink)}
+.kw-ov-step[disabled]{cursor:default}
+.kw-ov-step.is-done{border-top-color:var(--ink)}
+.kw-ov-step.is-cur{border-top-color:var(--accent); background:var(--white)}
+.kw-ov-step.is-view{box-shadow:inset 0 0 0 1px var(--ink)}
+.kw-ov-n{grid-row:1 / span 2; width:24px; height:24px; display:grid; place-items:center; border:1px solid var(--stroke); font-family:var(--mono); font-size:10px; font-weight:700; color:var(--t2)}
+.kw-ov-step.is-done .kw-ov-n{background:var(--ink); border-color:var(--ink); color:var(--white)}
+.kw-ov-step.is-cur .kw-ov-n{background:var(--accent); border-color:var(--accent); color:var(--ink)}
+.kw-ov-l{font-size:14px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.kw-ov-step:not(.is-done):not(.is-cur) .kw-ov-l{color:var(--t2)}
+.kw-ov-s{font-family:var(--mono); font-size:9.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--t3)}
+.kw-ov-hint{margin:10px 0 0; font-size:12.5px; line-height:1.45; color:var(--t2)}
+
+/* Media / Floorplan rail, at the page's right edge */
+.kw-rail{flex:0 0 40px; display:flex; flex-direction:column; align-items:stretch; gap:2px; padding:8px 0; background:var(--app-bg); border-left:1px solid var(--stroke); z-index:5}
+.kw-rail-b{all:unset; box-sizing:border-box; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:8px; padding:12px 0;
+  color:var(--t2); font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase}
+.kw-rail-b span{writing-mode:vertical-rl; transform:rotate(180deg)}
+.kw-rail-b svg{width:15px; height:15px; flex:none}
+.kw-rail-b .pg-ic-fill, .kw-rail-b .pg-ic-left{opacity:0}
+.kw-rail-b.is-on .pg-ic-fill{opacity:1}
+.kw-rail-b:hover{color:var(--ink); background:var(--sunken)}
+.kw-rail-b.is-on{color:var(--ink); background:var(--white); box-shadow:inset 3px 0 0 var(--accent)}
+.kw-rail-b:focus-visible{outline:2px solid var(--ink); outline-offset:-2px}
+
+/* ── One money story (kwMoney in kaiweb-shop.js) ── */
+.pg-main-hd .kw-money-hd{font-size:13px; color:var(--t2); white-space:nowrap}
+.pg-main-hd .kw-money-hd b{color:var(--ink); font-weight:600; font-variant-numeric:tabular-nums}
+.pg-main-hd .kw-money-hd.is-over b:first-of-type{color:var(--error)}
+.sp-tip-go{white-space:normal}
+
+.kw-money{margin-top:16px; padding-top:14px; border-top:1px solid var(--stroke); font-size:13px; font-variant-numeric:tabular-nums}
+.kw-money-t{margin:0 0 10px; font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--t2)}
+.kw-money-r{display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding:4px 0; position:relative}
+.kw-money-r span{min-width:0; color:var(--t2)}
+.kw-money-r span i{display:block; font-style:normal; font-size:11.5px; color:var(--t3)}
+.kw-money-r b{font-weight:600; color:var(--ink); white-space:nowrap}
+.kw-money .is-1{padding-left:12px} .kw-money .is-2{padding-left:24px} .kw-money .is-3{padding-left:36px}
+.kw-money-r.is-1::before, .kw-money-r.is-2::before, .kw-money-r.is-3::before{content:''; position:absolute; top:4px; height:10px; width:7px; border-left:1px solid var(--stroke); border-bottom:1px solid var(--stroke)}
+.kw-money-r.is-1::before{left:2px} .kw-money-r.is-2::before{left:14px} .kw-money-r.is-3::before{left:26px}
+.kw-money-r.is-here span, .kw-money-r.is-here b{color:var(--ink); font-weight:700}
+.kw-money-n{margin:0 0 4px; font-size:11.5px; color:var(--t3)}
+.kw-money-bar{height:6px; margin:4px 0 4px 36px; padding:0 !important; background:var(--sunken); position:relative}
+.kw-money-bar i{position:absolute; inset:0 auto 0 0; background:var(--ink)}
+
+.kw-reg-note{display:block; margin-top:3px; font-size:12px; color:var(--t2)}
+.kw-reg-note .ov-link{font-size:12px}
+
+/* Documents menu: the section or row a shortcut lands on flashes once */
+@keyframes kwFlash{0%{box-shadow:0 0 0 3px var(--accent); background-color:var(--sel-wash, #FDFDD6)}100%{box-shadow:0 0 0 3px transparent}}
+.kw-flash{animation:kwFlash 1.5s ease-out}
+
+/* Overview: the current project stage, one fact across the top of the property card */
+.ov-id-facts > .kw-ov-stage{grid-column:1 / -1}
+.kw-ov-stage .ov-v{display:flex; align-items:baseline; gap:10px}
+.kw-ov-stage-v{font-weight:600}
+.kw-ov-stage-n{font-size:12px; color:var(--t3)}
+/* Cart heading: one line — "Cart (35 items – 1 supplier)" */
+.sp-cart-page .sp-cart-h{margin:0; font-family:var(--display); font-size:20px; font-weight:700; letter-spacing:-.01em; color:var(--ink)}
+.sp-cart-page .sp-cart-hn{font-family:var(--body); font-size:15px; font-weight:400; letter-spacing:0; color:var(--t2)}
+
+/* Rail, readable: icon with its label written normally underneath — the same
+   pattern as the app's own left nav — instead of sideways text. */
+.kw-rail{flex:0 0 64px; padding:6px 0; gap:4px}
+.kw-rail-b{gap:6px; padding:12px 4px 10px; font-family:var(--body); font-size:11.5px; font-weight:500; letter-spacing:0; text-transform:none; color:var(--t2)}
+.kw-rail-b span{writing-mode:horizontal-tb; transform:none; line-height:1.15; text-align:center}
+.kw-rail-b svg{width:20px; height:20px}
+.kw-rail-b.is-on{color:var(--ink); font-weight:600}
+
+/* Cart in the rail, and its panel */
+.kw-rail-sep{display:block; height:1px; margin:4px 10px; background:var(--stroke)}
+.mc{display:flex; flex-direction:column; min-height:100%}
+.mc-sum{margin:0; padding:12px 16px 8px; font-size:13px; color:var(--t2)}
+.mc-miss{margin:0 16px 10px; padding:10px 12px; background:var(--sel-wash, #FDFDD6); border:1px solid var(--stroke); display:flex; flex-direction:column; align-items:flex-start; gap:4px; font-size:13px}
+.mc-miss b{font-weight:600}
+.mc-list{list-style:none; margin:0; padding:0; border-top:1px solid var(--stroke); flex:1}
+.mc-row{border-bottom:1px solid rgba(0,0,0,.05)}
+.mc-it{all:unset; box-sizing:border-box; cursor:pointer; width:100%; display:grid; grid-template-columns:40px 1fr auto; gap:10px; align-items:center; padding:9px 16px}
+.mc-it:hover{background:rgba(26,26,26,.03)}
+.mc-it:focus-visible{outline:2px solid var(--ink); outline-offset:-2px}
+.mc-ph{width:40px; height:40px}
+.mc-tx{min-width:0; display:flex; flex-direction:column; gap:1px}
+.mc-tx b{font-weight:500; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.mc-tx span{font-size:12px; color:var(--t2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.mc-amt{font-size:13.5px; font-variant-numeric:tabular-nums}
+.mc-foot{position:sticky; bottom:0; background:var(--white); border-top:1px solid var(--stroke); padding:12px 16px 14px}
+.mc-tot{display:grid; grid-template-columns:1fr auto; gap:5px 12px; margin:0 0 6px; font-size:13px; font-variant-numeric:tabular-nums}
+.mc-tot dt{color:var(--t2)} .mc-tot dd{margin:0; text-align:right}
+.mc-tot .is-save{color:var(--success)}
+.mc-tot .is-tot{padding-top:7px; border-top:1px solid var(--stroke); font-family:var(--display); font-size:16px; font-weight:700; color:var(--ink)}
+.mc-est{margin:0 0 10px; font-size:12px; color:var(--t3)}
+.mc-go{all:unset; box-sizing:border-box; cursor:pointer; display:block; width:100%; padding:11px; text-align:center; background:var(--accent); color:var(--ink); font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+.mc-go:hover{filter:brightness(.97)}
+.mc-go:focus-visible{outline:2px solid var(--ink); outline-offset:2px}

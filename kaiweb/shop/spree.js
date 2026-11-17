@@ -330,6 +330,10 @@ function _allowHtml(g, list){
 }
 // Shop header: everything spent so far (cart after bulk savings + labor already priced) / budget.
 function _budgetHtml(cart){
+  /* KaiWeb: one money story (kwMoney in kaiweb-shop.js). The cart is materials,
+     so it is read against the scope's materials estimate; the hover shows the
+     whole chain up to the job budget. */
+  if(typeof window.kwMoneyShopHtml === 'function'){ const h = window.kwMoneyShopHtml(); if(h) return h; }
   const BUDGET = _budget();
   if(!BUDGET || typeof TASKS === 'undefined') return '';
   const lab = TASKS.reduce((a, t) => a + _laborOf(t), 0), sp = cart + lab, over = sp > BUDGET;
@@ -827,7 +831,7 @@ function slotHtml(s){
   if(!p) return `<div class="sp-slot is-blank${on ? ' is-on' : ''}" data-id="${s.id}" ${drop}>
     <button type="button" class="sp-slot-btn" onclick="spreeSlot(${s.id})" aria-pressed="${on}">
       <span class="sp-slot-img">+</span>
-      <span class="sp-slot-b"><span class="sp-slot-l">${esc(slotLabel(s.t, s.l))}</span><span class="sp-slot-s">Not chosen yet</span></span>
+      <span class="sp-slot-b"><span class="sp-slot-l">${esc(slotLabel(s.t, s.l))}</span><span class="sp-slot-s">Choose a product</span></span>
       <span class="sp-slot-amt is-none">—</span>
     </button></div>`;
   return `<div class="sp-slot is-filled${on ? ' is-on' : ''}" data-id="${s.id}" ${drop}>
@@ -1207,9 +1211,9 @@ window.spreeChooseHelp = function(sku){
    Step 2, between Shop and Cart: settle the decisions before the logistics.
    · Still needed — Shopping List items still empty, with a way back to shop.
    · Items, by retailer (each is its own order): delivery or store pickup per
-     retailer; per item, "Save for later" (greyed, kept out of the cart) and a
-     substitution preference that opens under the item: don't substitute
-     (the default) or a specific product. */
+     retailer; per item, its price and quantity. (Save for later and substitution
+     preferences were removed from the cart.) REV.later stays empty.
+     */
 const REV = {later:new Set(), how:{}, pref:{}, open:null, f:{how:new Set(), room:new Set(), dept:new Set(), task:new Set()}, fopen:null};
 /* Review filters: Room, Department and Task, each a dropdown of checkboxes.
    Ticks within one are inclusive (Kitchen OR Living Room); across them they
@@ -1268,26 +1272,44 @@ function _prefText(s){
   if(_PREF_T[v]) return _PREF_T[v];
   const x = catalogFind(v); return `Substitute with ${x ? x.name : 'a chosen item'}`;
 }
+/* Unit price × quantity, the way a checkout writes it: "4 × $98.00 each",
+   "32 SF × $26.00 / SF". The total sits above it. */
+function _qtyX(qty, unit, rate){
+  const u = String(unit || 'ea');
+  const measure = /^(SF|LF|SY|CY|CF|SQ|gal|qt|lb|ft|in)$/i.test(u);   // a suite, a set, a box: counted, not measured
+  return !measure ? `${fmt(qty)} × ${money(rate)} each` : `${fmt(qty)} ${esc(u)} × ${money(rate)} / ${esc(u)}`;
+}
+/* When an item comes: the part of its availability that is the same for a
+   whole delivery or pickup ("Arrives Nov 22–24", "Pickup today"), and what is
+   left for the row itself ("3 left", "ship to store"). */
+function _when(s){
+  const p = s.picked[0], o = _offer(p.sku, supOf(p));
+  const av = _avail({...(o || {}), sku:p.sku}, _howOf(supOf(p)));
+  if(!av.ok) return {key:av.t || 'Unavailable', note:'', ok:false};
+  const [key, ...rest] = av.t.split(' · ');
+  return {key, note:rest.join(' · ').replace(/^\d+ in stock$/, ''), ok:true};
+}
+function _whenRank(w){
+  if(!w.ok) return 1e9;
+  if(/today/i.test(w.key)) return 0;
+  if(/tomorrow/i.test(w.key)) return 1;
+  const m = w.key.match(/([A-Z][a-z]{2}) (\d+)/); if(!m) return 5e8;
+  const now = new Date(), d = new Date(`${m[1]} ${m[2]}, ${now.getFullYear()}`);
+  let days = (d - now) / 864e5; if(days < -30) days += 365;
+  return days;
+}
 function _revRow(s){
   const p = s.picked[0], c = _v2Cat(s.l, p.sku) || {name:p.sku};
-  const o = _offer(p.sku, supOf(p)), later = REV.later.has(s.id), open = REV.open === s.id;
-  const cost = s.picked.reduce((a, x) => a + x.cost, 0), v = REV.pref[s.id] || 'none';
-  const av = _avail({...(o || {}), sku:p.sku}, _howOf(supOf(p)));
-  const issue = av.t ? `<span class="${av.ok ? '' : 'sp-rv-issue'}">${esc(av.t)}</span>` : '';
-  const opt = (k, body) => `<button type="button" class="sp-pref${v === k ? ' is-sel' : ''}" onclick="spreePref(${s.id},'${esc(k)}')">${body}</button>`;
-  return `<div class="sp-rv-row${later ? ' is-later' : ''}">
+  const cost = s.picked.reduce((a, x) => a + x.cost, 0);
+  const w = _when(s), qty = s.picked.reduce((a, x) => a + _num(x.qty), 0);
+  const note = w.ok ? w.note : '';
+  return `<div class="sp-rv-row">
       ${PH('sp-rv-ph', ART.product(c))}
       <div class="sp-rv-txt">
         <b>${esc(slotLabel(s.t, s.l))}</b><span>${esc(c.name)}</span>
-        <small>${money(cost)}${issue ? ' · ' + issue : ''}${later ? ' · <span class="sp-rv-later">Saved for later</span>' : ''}</small>
-        ${later ? '' : `<button type="button" class="sp-rv-pref" onclick="spreePrefOpen(${s.id})" aria-expanded="${open}"><b>${esc(_prefText(s))}</b> <span class="sp-link">Change ${open ? '▴' : '▾'}</span></button>`}
+        ${note ? `<small>${esc(note)}</small>` : ''}
       </div>
-      <button type="button" class="sp-link sp-rv-save" onclick="spreeLater(${s.id})">${later ? 'Move to cart' : 'Save for later'}</button>
-      ${open && !later ? `<div class="sp-prefs">
-        ${opt('none', "<b>Don't substitute</b><small>Leave it out of the order if it's unavailable</small>")}
-        ${_subsFor(s).map(a => opt(a.x.sku, `<b>Substitute with this item</b><span class="sp-pref-p">${PH('sp-rv-ph', ART.product(a.x))}<span>${esc(a.x.name)}<small>${esc(supplierName(a.o.supplier))} · ${money(a.o.price)} / ${esc(a.x.unit || 'ea')}${Math.abs(a.d) >= 0.5 ? ` · ${a.d < 0 ? '−' : '+'}${money(Math.abs(a.d))}` : ''}${a.hi ? ' · High match' : ''}</small></span></span>`)).join('')}
-        <button type="button" class="sp-link" onclick="spreeShopFor(${s.id})">Search other options</button>
-      </div>` : ''}
+      <div class="sp-rv-amt"><b>${money(cost)}</b>${s.picked.length === 1 ? `<small>${_qtyX(qty, _v2Unit(s.l), _num(p.rate))}</small>` : ''}</div>
     </div>`;
 }
 // Kai's pick for an empty item: closest to the standard, in stock, then lowest price (the shelf's own order).
@@ -1315,8 +1337,10 @@ function reviewHtml(allItems){
         <button type="button" class="sp-pager-b" onclick="this.closest('.sp-rv-sec').querySelector('.sp-forget').scrollBy({left:this.closest('.sp-rv-sec').querySelector('.sp-forget').clientWidth,behavior:'smooth'})" aria-label="Next">›</button></div>
       <div class="sp-forget">${empty.map(s => { const r = _recFor(s); return `<div class="sp-forget-c">
         ${r ? `<button type="button" class="sp-forget-open" onclick="spreeForgetDetail(event,'${esc(r.x.sku)}')" aria-label="See ${esc(r.x.name)}">${PH('sp-forget-ph', ART.product(r.x))}</button>` : '<span class="sp-forget-ph">+</span>'}
+        ${r ? `<div class="sp-forget-amt"><b>${money(r.total)}</b><small>${_qtyX(_num(_v2NeedQty(s.t, s.l)) || 1, _v2Unit(s.l), r.o.price)}</small></div>` : ''}
         <b title="${esc(slotLabel(s.t, s.l))}">${esc(slotLabel(s.t, s.l))}</b>
-        ${r ? `<button type="button" title="${esc(r.x.name)}" class="sp-forget-p" onclick="spreeForgetDetail(event,'${esc(r.x.sku)}')">${esc(r.x.name)}</button><small title="${esc(supplierName(r.o.supplier))} · ${money(r.total)}${r.hi ? ' · High match' : ''}">${esc(supplierName(r.o.supplier))} · ${money(r.total)}${r.hi ? ' · High match' : ''}</small>
+        <div class="sp-forget-ctx" title="Task: ${esc(s.t.name)} · Department: ${esc(s.l.dept)}">${esc(s.t.name)} · ${esc(s.l.dept)}</div>
+        ${r ? `<button type="button" title="${esc(r.x.name)}" class="sp-forget-p" onclick="spreeForgetDetail(event,'${esc(r.x.sku)}')">${esc(r.x.name)}</button><small title="${esc(supplierName(r.o.supplier))}${r.hi ? ' · High match' : ''}">${esc(supplierName(r.o.supplier))}${r.hi ? ' · High match' : ''}</small>
         <button type="button" class="sp-done" onclick="spreeAddRec(${s.id},'${esc(r.x.sku)}','${esc(r.o.supplier)}')">Add</button>` : ''}
         <button type="button" class="sp-link sp-forget-more" onclick="spreeShopFor(${s.id})">View other options</button>
       </div>`; }).join('')}</div></section>` : ''}
@@ -1325,7 +1349,13 @@ function reviewHtml(allItems){
         <div class="sp-rv-ret-hd"><b>${esc(supplierName(k))}</b><span class="sp-meta">${l.length} item${l.length === 1 ? '' : 's'} · ${money(sum(l.filter(s => !REV.later.has(s.id))))}</span><span class="pg-sp"></span>
           ${_storeOf(k) ? _seg([['delivery', 'Delivery'], ['pickup', 'Pickup']], _howOf(k), `(h=>spreeHow('${k}',h))`) : '<span class="sp-meta">Delivery only</span>'}</div>
         <p class="sp-rv-how">${_howOf(k) === 'pickup' ? `At ${esc(supplierName(k))} ${esc(_storeOf(k)[0])} · ${_mi(_storeOf(k)[1])} mi` : `To ${esc(FUL.addr)}`}</p>
-        ${l.map(_revRow).join('')}
+        ${(() => {
+          const live = l;
+          const by = new Map(); live.forEach(s => { const w = _when(s); if(!by.has(w.key)) by.set(w.key, {w, list:[]}); by.get(w.key).list.push(s); });
+          const grp = (t, list, cls) => `<div class="sp-rv-when${cls ? ' ' + cls : ''}"><div class="sp-rv-when-hd"><b>${esc(t)}</b><span class="sp-meta">${list.length} item${list.length === 1 ? '' : 's'}</span></div>${list.map(_revRow).join('')}</div>`;
+          return [...by.values()].sort((a, b) => _whenRank(a.w) - _whenRank(b.w)).map(g => grp(g.w.key, g.list, g.w.ok ? '' : 'is-issue')).join('')
+            ;
+        })()}
       </div>`).join('') || '<p class="sp-meta">Nothing chosen yet.</p>'}
     </section>
     <div class="sp-rv-foot"><span class="pg-sp"></span><button type="button" class="sp-done is-pri" onclick="spreeSet('view','cart')">Continue to cart</button></div>
@@ -1337,7 +1367,6 @@ window.spreeShopFor = function(id){
   const el = document.querySelector(`#pgNav .sp-slot[data-id="${id}"]`); if(el) el.scrollIntoView({block:'center'});
   const m = document.getElementById('pgMain'); if(m) m.scrollTop = 0;
 };
-window.spreeLater = function(id){ REV.later.has(id) ? REV.later.delete(id) : REV.later.add(id); if(REV.open === id) REV.open = null; render(); };
 window.spreeHow = function(sup, h){ REV.how[sup] = h; render(); };
 window.spreePrefOpen = function(id){ REV.open = REV.open === id ? null : id; render(); };
 window.spreePref = function(id, v){ REV.pref[id] = v; REV.open = null; render(); };
@@ -1349,14 +1378,18 @@ function cartPageHtml(all){
   const grand = inCart.reduce((a, s) => a + s.picked.reduce((b, p) => b + p.cost, 0), 0);
   const saveTot = bundles().reduce((a, b) => a + b.savings, 0);
   const n = inCart.filter(s => s.picked.length).length, missing = all.filter(s => !s.picked.length).length;
+  const nSup = new Set(inCart.filter(s => s.picked.length).map(s => supOf(s.picked[0]))).size;   // one order per supplier
   const rv = reviewHtml(all).replace(/<div class="sp-rv-foot">[\s\S]*?Continue to cart<\/button><\/div>/, '');
   const c = cartHtml(inCart), i = c.search(/<section class="sp-bundles"|<div class="sp-future-row"/);
-  const tail = i >= 0 ? c.slice(i).replace(/<\/div>\s*$/, '') : '';
+  let tail = i >= 0 ? c.slice(i).replace(/<\/div>\s*$/, '') : '';
+  // Your margin sits under the order summary, not under the items.
+  const fi = tail.indexOf('<div class="sp-future-row">'), future = fi >= 0 ? tail.slice(fi) : '';
+  if(fi >= 0) tail = tail.slice(0, fi);
   return `<div class="sp-cart-page">
-    <div class="sp-cart-hd"><div><span class="sp-sec-t">Cart</span><span class="sp-sec-sub">${n} item${n === 1 ? '' : 's'} · one order per retailer${REV.later.size ? ` · ${REV.later.size} saved for later` : ''}</span></div></div>
+    <div class="sp-cart-hd"><h2 class="sp-cart-h">Cart <span class="sp-cart-hn">(${n} item${n === 1 ? '' : 's'} – ${nSup} supplier${nSup === 1 ? '' : 's'})</span></h2></div>
     <div class="sp-cart-cols">
       <div class="sp-cart-main">${rv}${tail}</div>
-      <aside class="sp-cart-sum">
+      <div class="sp-cart-side"><aside class="sp-cart-sum">
         <dl>
           <dt>Subtotal</dt><dd>${money(grand)}</dd>
           ${saveTot ? `<dt>Bulk savings</dt><dd class="is-save">−${money(saveTot)}</dd>` : ''}
@@ -1364,7 +1397,8 @@ function cartPageHtml(all){
         </dl>
         <button type="button" class="sp-order" onclick="toast('Order placed (prototype)')">Place order</button>
         ${missing ? `<p class="sp-cart-note">${missing} item${missing === 1 ? '' : 's'} on the Shopping List still need${missing === 1 ? 's' : ''} a product.</p>` : ''}
-      </aside>
+        ${typeof window.kwMoneyCartHtml === 'function' ? window.kwMoneyCartHtml() : ''}
+      </aside>${future}</div>
     </div>
   </div>`;
 }
@@ -1478,6 +1512,7 @@ const PAGES = {
   artifact:{label:'Documents', native:true},
   media:{label:'Media', native:false, kw:'pano'},
   floorplan:{label:'Floorplan', native:false, kw:'floorplan'},
+  cart:{label:'Cart', native:false},   // the cart beside the page (right-edge rail)
 };
 const KW_TAB = {pano:'media', floorplan:'floorplan'};   // KaiWeb tab id → right-panel page
 const NESTED = /pgnested=1/.test(window.__KAI_QS || '');
@@ -1489,7 +1524,7 @@ const MEDIA = {view:'photos', show:'all', size:'small', room:''};   // view: pho
    instead of in the tab bar. The tabs pick what you work on; this panel is what
    you look at while you work, so it stays open across tab switches and is
    remembered between visits. */
-const REF_PAGES = ['media', 'floorplan'];
+const REF_PAGES = ['media', 'floorplan', 'cart'];
 let _sideSaved = false;
 try{ const v = localStorage.getItem('kai_wf_side'); if(v !== null){ _sideSaved = true; if(REF_PAGES.includes(v)) PG.side = v; } }catch(e){}
 function _saveSide(){ try{ localStorage.setItem('kai_wf_side', PG.side || ''); _sideSaved = true; }catch(e){} }
@@ -1502,7 +1537,7 @@ function _el(id, parent, cls){
   if(!el && parent){ el = document.createElement('div'); el.id = id; if(cls) el.className = cls; parent.appendChild(el); }
   return el;
 }
-let _lastPrimary = null, _autoTucked = false;
+let _lastPrimary = null, _autoTucked = false, _lastCart = false, _cartTucked = false;
 function render(){
   if(NESTED) return;
   // Shop always sits on the left and Media on the right when both are open.
@@ -1520,6 +1555,15 @@ function render(){
   if(PG.primary === 'floorplan' && _lastPrimary !== 'floorplan' && !document.body.classList.contains('sb-collapsed') && window.collapseSidebar){ _wrapNavToggle(); collapseSidebar(); _autoTucked = true; }
   else if(PG.primary !== 'floorplan' && _lastPrimary === 'floorplan' && _autoTucked && document.body.classList.contains('sb-collapsed') && window.expandSidebar){ expandSidebar(); _autoTucked = false; }
   _lastPrimary = PG.primary;
+  // The cart repeats the Shopping List item for item, so opening it tucks the
+  // list away (its caret stays, to bring it back); Back to shelves, or leaving
+  // Shop, brings it back — unless you reopened it yourself in the meantime.
+  const cartOpen = shopMain && (S.view === 'cart' || S.view === 'review');
+  const shut = document.body.classList.contains('sb-collapsed');
+  if(cartOpen && !_lastCart && !shut && window.kaiCollapseSidebar){ kaiCollapseSidebar(); _cartTucked = true; }
+  else if(!cartOpen && _lastCart && _cartTucked && shut && window.kaiExpandSidebar){ kaiExpandSidebar(); }
+  if(!cartOpen) _cartTucked = false;
+  _lastCart = cartOpen;
   // Left pane: the shopping navigator replaces the scope navigator.
   const nav = _el('pgNav', side, 'pg-scope');
   nav.hidden = !shopMain;
@@ -1533,7 +1577,7 @@ function render(){
   const main = _el('pgMain', work, 'pg-scope');
   main.hidden = !PG.primary;
   const hdr = document.getElementById('workHdr');
-  main.style.top = (hdr ? hdr.offsetHeight : 44) + 'px';
+  main.style.top = (hdr && work.contains(hdr) ? hdr.offsetHeight : 0) + 'px';   // 0 once the tab bar sits above the whole page
   if(shopMain) main.innerHTML = shopMainHtml();
   else if(mediaMain) main.innerHTML = mediaHtml('main');
   else if(measMain) main.innerHTML = measureHtml('main');
@@ -1602,7 +1646,7 @@ function _paintNavToggle(){
   const work = document.querySelector('.work'); if(!work) return;
   let t = document.getElementById('pgEdge');
   if(!t){ t = document.createElement('button'); t.type = 'button'; t.id = 'pgEdge';
-    t.onclick = e => { e.stopPropagation(); _autoTucked = false; document.body.classList.contains('sb-collapsed') ? expandSidebar() : collapseSidebar(); _paintNavToggle(); }; }
+    t.onclick = e => { e.stopPropagation(); _autoTucked = false; _cartTucked = false; document.body.classList.contains('sb-collapsed') ? expandSidebar() : collapseSidebar(); _paintNavToggle(); }; }
   if(t.parentNode !== work) work.appendChild(t);
   const shut = document.body.classList.contains('sb-collapsed'), label = PG.primary === 'shopkai' ? 'Shopping List' : 'navigator';
   const k = (shut ? 'r' : 'l') + label;
@@ -1755,6 +1799,34 @@ function _kwRefreshSide(opts){
 }
 window.pgKwMenu = function(e){ if(e) e.stopPropagation(); _kwMenu = !_kwMenu; const sp = document.getElementById('pgSide'); if(sp) sp.dataset.key = ''; render(); };
 document.addEventListener('click', e => { if(_kwMenu && !e.target.closest('.pg-kw-menu, .pg-kw-view')){ _kwMenu = false; const sp = document.getElementById('pgSide'); if(sp) sp.dataset.key = ''; render(); } });
+/* ── Cart, beside the page ──
+   Opened from the right-edge rail, so you can keep shopping and watch it
+   fill. What's in it (by item), what's still to choose, the totals, how it sits
+   against the materials estimate, and the way on to the full cart, where the
+   orders are reviewed and placed. */
+function miniCartHtml(){
+  const all = slots();
+  if(!all.length) return `<p class="sp-empty">Nothing to buy for this job yet.</p>`;
+  const inCart = all.filter(s => !REV.later.has(s.id) && s.picked.length), missing = all.filter(s => !s.picked.length);
+  const sub = inCart.reduce((a, s) => a + s.picked.reduce((b, p) => b + p.cost, 0), 0);
+  const sv = bundles().reduce((a, b) => a + b.savings, 0);
+  const nSup = new Set(inCart.map(s => supOf(s.picked[0]))).size;
+  const m = typeof window.kwMoney === 'function' ? window.kwMoney() : null;
+  const onCart = PG.primary === 'shopkai' && S.view === 'cart';
+  const row = s => { const p = s.picked[0], c = _v2Cat(s.l, p.sku) || {name:p.sku}, cost = s.picked.reduce((a, x) => a + x.cost, 0);
+    return `<li class="mc-row"><button type="button" class="mc-it" onclick="spreeShopFor(${s.id})" title="Show on the shelves">
+      ${PH('mc-ph', ART.product(c))}<span class="mc-tx"><b>${esc(slotLabel(s.t, s.l))}</b><span>${esc(c.name)}</span></span><span class="mc-amt">${money(cost)}</span></button></li>`; };
+  return `<div class="mc">
+    <p class="mc-sum">${inCart.length} item${inCart.length === 1 ? '' : 's'} – ${nSup} supplier${nSup === 1 ? '' : 's'}</p>
+    ${missing.length ? `<div class="mc-miss"><b>${missing.length} still to choose</b>${missing.map(s => `<button type="button" class="sp-link" onclick="spreeShopFor(${s.id})">${esc(slotLabel(s.t, s.l))}</button>`).join('')}</div>` : ''}
+    <ul class="mc-list">${inCart.map(row).join('')}</ul>
+    <div class="mc-foot">
+      <dl class="mc-tot"><dt>Subtotal</dt><dd>${money(sub)}</dd>${sv > 0.005 ? `<dt>Bulk savings</dt><dd class="is-save">−${money(sv)}</dd>` : ''}<dt class="is-tot">Total</dt><dd class="is-tot">${money(sub - sv)}</dd></dl>
+      ${m && m.mat ? `<p class="mc-est">${money(sub - sv)} of the ${money(m.mat)} materials estimate</p>` : ''}
+      <button type="button" class="mc-go" onclick="${onCart ? "spreeSet('view','shop')" : 'pgCloseSide();kwOpenCart()'}">${onCart ? 'Back to the shelves' : 'Review &amp; order'}</button>
+    </div>
+  </div>`;
+}
 function renderSide(sp){
   const id = PG.side, pg = PAGES[id];
   const kwMode = _kwSideMode();
@@ -1763,10 +1835,11 @@ function renderSide(sp){
   let head = sp.querySelector('.pg-side-hd');
   const key = id + '|' + (id === 'media' ? MEDIA.view + S.guide : '') + (kw ? '|' + JSON.stringify(kw.spec && kw.spec.groups.map(g => g.opts.filter(o => o.on).map(o => o.id || o.label))) + JSON.stringify(kw.acts.map(a => a.on)) + _kwMenu : '');
   if(sp.dataset.key === key && (pg.native || kwMode)) return;   // keep a native page's frame alive
+  if(id === 'cart'){ const k2 = 'cart|' + miniCartHtml().length + '|' + (S.view || ''); if(sp.dataset.key === k2) return; sp.dataset.key = k2; } else
   sp.dataset.key = key;
   const oldB = sp.querySelector('.pg-side-b'), keepSide = oldB ? oldB.scrollTop : 0;
-  const title = REF_PAGES.includes(id)
-    ? `<nav class="pg-side-tabs" aria-label="Side panel">${REF_PAGES.map(k => `<button type="button" class="${k === id ? 'on' : ''}" ${k === id ? 'aria-current="page"' : ''} onclick="pgShowSide('${k}')">${esc(PAGES[k].label)}</button>`).join('')}</nav>`
+  const title = REF_PAGES.includes(id) && id !== 'cart'
+    ? `<nav class="pg-side-tabs" aria-label="Side panel">${REF_PAGES.filter(k => k !== 'cart').map(k => `<button type="button" class="${k === id ? 'on' : ''}" ${k === id ? 'aria-current="page"' : ''} onclick="pgShowSide('${k}')">${esc(PAGES[k].label)}</button>`).join('')}</nav>`
     : `<span class="pg-side-t">${esc(pg.label)}</span>`;
   sp.innerHTML = `<div class="pg-side-hd">
       ${title}
@@ -1775,7 +1848,7 @@ function renderSide(sp){
       <button type="button" class="pg-side-x" onclick="pgCloseSide()" title="Close side panel" aria-label="Close side panel">✕</button>
     </div>
     ${opts ? `<div class="pg-side-opts">${opts}</div>` : ''}
-    <div class="pg-side-b${kwMode ? ' pg-kw-pane' : ''}">${kwMode ? `<div class="pg-kw-host work-body is-paneb" data-kw="${kwMode}"></div>` : pg.native ? '' : id === 'media' ? mediaHtml('side') : id === 'floorplan' ? measureHtml('side') : shopSideHtml()}</div>`;
+    <div class="pg-side-b${kwMode ? ' pg-kw-pane' : ''}">${kwMode ? `<div class="pg-kw-host work-body is-paneb" data-kw="${kwMode}"></div>` : pg.native ? '' : id === 'media' ? mediaHtml('side') : id === 'floorplan' ? measureHtml('side') : id === 'cart' ? miniCartHtml() : shopSideHtml()}</div>`;
   if(kwMode) _kwDrawPane(sp.querySelector('.pg-kw-host'), kwMode);
   { const b = sp.querySelector('.pg-side-b'); if(b) b.scrollTop = keepSide; }
   if(pg.native){
@@ -1826,9 +1899,7 @@ function shopMainHtml(){
       </div>`}
       <span class="pg-sp"></span>
       ${_budgetHtml(all.reduce((a, s) => a + s.picked.reduce((b, p) => b + p.cost, 0), 0) - sv)}
-      <button type="button" class="sp-cart-btn${onCart ? ' on' : ''}" onclick="spreeSet('view','${onCart ? 'shop' : 'cart'}')" aria-pressed="${onCart}">
-        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 3.5h2.2l2 9.5h8.6l1.7-6.6H5.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="8" cy="16.2" r="1.2" fill="currentColor"/><circle cx="14.3" cy="16.2" r="1.2" fill="currentColor"/></svg>
-        Cart<span class="sp-cart-n">${inCart}</span><span class="sp-cart-t">${money(total - sv)}</span></button>
+      ${/* The Cart button lives in the app's dark bar now, visible on every tab (kaiweb-shell.js). */''}
     </div>`;
   if(S.view === 'cart') return head + cartPageHtml(all);
   // The search and Delivery & pickup sit in the header row now (see head).
@@ -2273,6 +2344,22 @@ window.spreeOpen = function(taskId){
   render();
 };
 window.spreeClose = function(){ PG.primary = null; render(); };
+/* For the app bar's Cart button, which is on screen whatever tab is open:
+   what's in the cart, and a way to open it (or go back to the shelves). */
+window.kwCartInfo = function(){
+  if(!document.querySelector('#workHdr .pg-tab')) return null;   // no Shop at this stage (e.g. a completed job)
+  const all = slots(); if(!all.length) return null;
+  const sv = bundles().reduce((a, b) => a + b.savings, 0);
+  const inCart = all.filter(s => !REV.later.has(s.id) && s.picked.length);
+  const total = inCart.reduce((a, s) => a + s.picked.reduce((b, p) => b + p.cost, 0), 0) - sv;
+  return {n:inCart.length, total:money(total), on:PG.primary === 'shopkai' && S.view === 'cart',
+    totalNum:total, slots:all.length, missing:all.filter(s => !s.picked.length).length};
+};
+window.kwOpenCart = function(){
+  if(PG.primary === 'shopkai' && S.view === 'cart'){ S.view = 'shop'; render(); return; }
+  S.view = 'cart'; S.help = null;
+  if(PG.primary !== 'shopkai') spreeOpen(); else render();
+};
 window.spreeSet = function(k, v){
   S[k] = v;
   if(k === 'by' || k === 'view') S.help = null;
@@ -2361,7 +2448,9 @@ document.addEventListener('scroll', e => { if(e.target && e.target.id === 'pgMai
 window.spreeSearch = function(v){ S.q = v; renderShelves(); };
 document.addEventListener('keydown', e => { if(e.key === 'Escape' && S.help != null){ S.help = null; render(); } });
 
-/* Land on Shop with the mood board beside it, once per page load. */
+/* The project opens on Overview (KaiWeb's default). The wireframe used to land
+   on Shop here, once per page load; now this only sets Media to the mood board
+   for when Shop is first opened. */
 if(!NESTED){
   window.addEventListener('load', () => setTimeout(() => {
     let top = window; try{ top = window.parent || window; }catch(e){}
@@ -2371,7 +2460,6 @@ if(!NESTED){
     if(!slots().length) return;
     top.__spreeAuto = true;
     MEDIA.view = 'mood';
-    spreeOpen();
   }, 400));
   // The Editor's product tiles and v2 shopping panel link here too.
   new MutationObserver(() => {

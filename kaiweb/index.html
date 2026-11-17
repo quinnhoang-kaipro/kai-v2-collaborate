@@ -22362,7 +22362,7 @@ const PROJECT = {name:'Main St Renovation', id:'WG-244171'};
 const PROPERTY = {
   address:   '3484 South Main Street',
   locality:  'Wilmington, NC 28401',
-  budget:    '$74,500.00',
+  budget:    '$50,000.00',   // one budget: the same figure as JOB_BUDGET (Register, Shop)
   scopeDue:  '03-14-26',
   jobEnd:    '04-28-26',
   with:      'T. Oyelaran',
@@ -42592,6 +42592,9 @@ function toast(msg, act){
   function expand(){ if(!collapsed) return; collapsed = false; apply(); save(); }
   // Exposed so anything else that needs the rail back can ask for it.
   window.kaiExpandSidebar = expand;
+  // Shop's cart tucks the rail away for as long as it is open; not saved, so a
+  // reload never comes back with the list hidden.
+  window.kaiCollapseSidebar = function(){ if(collapsed) return; collapsed = true; apply(); };
 
   function onMove(e){
     if(!dragging) return;
@@ -46589,6 +46592,7 @@ try{ localStorage.removeItem('kai_tb_hidden'); }catch(e){}
 /* ════════════ INIT ════════════ */
 render();
 </script>
+<script src="shop/kaiweb-shell.js"></script>
 </body>
 </html>
 
