@@ -67,6 +67,7 @@
    panel opens rather than in the page tabs' bar. The rail stays put; the
    panel slides out to its left. Each button is a toggle (pgSide). */
 (function(){
+  return;   // Retired: Media / Floorplan / Cart moved up to the dark bar (kaiweb-shell.js).
   const ITEMS = [['media', 'Media'], ['floorplan', 'Floorplan'], ['cart', 'Cart']];
   const CART_IC = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 3.5h2.2l2 9.5h8.6l1.7-6.6H5.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="8" cy="16.2" r="1.2" fill="currentColor"/><circle cx="14.3" cy="16.2" r="1.2" fill="currentColor"/></svg>';
   function draw(){
@@ -194,4 +195,143 @@
     window.renderWork = function(){ const r = _rw.apply(this, arguments); try{ decorateRegister(); }catch(e){} return r; };
   }
   setInterval(() => { try{ decorateRegister(); }catch(e){} }, 1000);
+})();
+
+/* ── Cart as a dropdown ──
+   The cart opens over the page, under the Cart button in the dark bar, so
+   the page doesn't get squeezed by a side panel. It lives in this frame so
+   its links (spreeShopFor, kwOpenCart) work as they do in the Shop.
+   kwCartPop(true|false|'toggle', right) — right is the gap from the frame's
+   right edge to the button's right edge, so the box lines up under it. */
+(function(){
+  let pop = null, timer = null, lastHtml = '';
+  function draw(){
+    if(!pop || typeof window.kwMiniCartHtml !== 'function') return;
+    const html = window.kwMiniCartHtml();
+    if(html !== lastHtml){ const list = pop.querySelector('.mc-list'), top = list ? list.scrollTop : 0; pop.innerHTML = html; lastHtml = html; const l2 = pop.querySelector('.mc-list'); if(l2) l2.scrollTop = top; }
+  }
+  function close(){
+    if(!pop) return;
+    pop.remove(); pop = null; lastHtml = ''; clearInterval(timer);
+  }
+  window.kwCartPopOpen = () => !!pop;
+  window.kwCartPop = function(open, right){
+    if(open === 'toggle') open = !pop;
+    if(!open){ close(); return; }
+    // A cart left open as a side panel (older layout, remembered) gives way.
+    try{ const b = document.querySelector('#pgRefTools .pg-ref-btn[data-ref="cart"].on'); if(b && typeof window.pgCloseSide === 'function') window.pgCloseSide(); }catch(e){}
+    if(!pop){
+      pop = document.createElement('div'); pop.id = 'kwCartPop'; pop.className = 'kw-cart-pop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Cart');
+      // Picking an item jumps to its shelf: the dropdown has done its job.
+      pop.addEventListener('click', e => { e.stopPropagation(); if(e.target.closest('.mc-it, .mc-miss .sp-link')) setTimeout(close, 0); });
+      document.body.appendChild(pop);
+      timer = setInterval(draw, 500);
+    }
+    if(right != null) pop.style.right = Math.max(8, Math.round(right)) + 'px';
+    draw();
+  };
+  document.addEventListener('click', e => { if(pop && !e.target.closest('#kwCartPop')) close(); });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') close(); });
+  // On load, a cart remembered as an open side panel is closed: it opens as a dropdown now.
+  setTimeout(() => { try{ const b = document.querySelector('#pgRefTools .pg-ref-btn[data-ref="cart"].on'); if(b && typeof window.pgCloseSide === 'function') window.pgCloseSide(); }catch(e){} }, 300);
+})();
+
+/* ── Scope: the task header from the layout file ──
+   Copied from ShopwithKai_layout.html's Editor (shop/js/editor.js, its
+   __KAI_SHOP_LAYOUT branch): "Task" over the title with Task cost / Allowance
+   top right, then an Overview band — Group, Department, Product type, Task ID,
+   Contractor (and Status during the work) — and a Description band on one
+   line with See all. Replaces KaiWeb's older header of the same name. */
+(function(){
+  if(typeof _shopTaskHeaderHtml !== 'function') return;
+  const has = n => { try{ return typeof eval(n) !== 'undefined'; }catch(e){ return false; } };
+  if(typeof window._lineKeyArg !== 'function') window._lineKeyArg = key => esc(String(key).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+  if(typeof window.goUpRoom !== 'function') window.goUpRoom = function(room){
+    if(groupBy !== 'room') setGroupBy('room');
+    selLineKey = null; selId = null;
+    selectGroup(room);
+    if(workMode !== 'shop') setWorkMode('shop');
+    if(typeof renderAll === 'function') renderAll();
+  };
+  window._shopTaskHeaderHtml = function(t){
+    if(!t) return '';
+    const isTracking = !!__TASK_ORIGINALS[t.id];
+    const wDesc = isTracking ? wasIndicator(t.id, 'desc', t.desc) : '';
+    const wGc   = isTracking ? wasIndicator(t.id, 'gc', t.gc) : '';
+    const ch = (field, cur) => isTracking && hasChanged(t.id, field, cur) ? ' is-changed' : '';
+    // Description: one line, cut off, with See all / Show less once it runs long.
+    const descText = t.desc || '';
+    const isExpanded = _taskDetailsOpen(t);
+    const body = descText ? esc(descText) : `<span class="sec-taskcard-desc-empty">No description</span>`;
+    const descSection = `<div class="tk-band"><h3 class="tk-band-h">Description</h3>
+      <div class="tk-desc${isExpanded ? ' is-open' : ''}">
+        <div class="sec-taskdesc-trunc">${body}</div>
+        ${descText.length > 80 ? `<button type="button" class="tk-desc-more" onclick="event.stopPropagation();toggleDescExpanded(${t.id})" aria-expanded="${isExpanded}">${isExpanded ? 'Show less' : 'See all'}</button>` : ''}
+      </div>${wDesc}
+    </div>`;
+    // Change-order approval: the job manager's decision, two steps.
+    const _ckSvg = `<svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-11"/></svg>`;
+    const _coOpen = (typeof taskHasOpenChangeOrder === 'function') && taskHasOpenChangeOrder(t);
+    const _coConfirming = typeof coApproveConfirmId !== 'undefined' && coApproveConfirmId === t.id;
+    const _coBtn = (!_coOpen || (typeof USER_ROLE !== 'undefined' && USER_ROLE === 'field_agent')) ? ''
+      : _coConfirming
+        ? `<button class="act cancel" onclick="event.stopPropagation();cancelCoApprove()">Cancel</button><button class="act approve" onclick="event.stopPropagation();confirmCoApprove(${t.id})">${_ckSvg} Confirm approve</button>`
+        : `<button class="act approve" onclick="event.stopPropagation();askCoApprove(${t.id})">${_ckSvg} Approve change</button>`;
+    const headerActions = `<div class="sec-taskhdr-acts">${_coBtn}</div>`;
+    // Change-order note at the top, once there is a change order to speak of.
+    const coApplies = PROJ_MODE === 'work' || PROJ_MODE === 'closeout';
+    const _coDraft = coApplies && ((typeof _coTaskChanges === 'function' ? _coTaskChanges(t).length : (isTracking && taskHasSnapshotChanges(t)))
+      || (typeof __CO_REMOVED !== 'undefined' && __CO_REMOVED.has(t.id)));
+    const coBannerInner = _coDraft ? `<div class="sec-taskcard-co-banner has-changes">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.5L14.5 5v6L8 14.5 1.5 11V5z"/><path d="M8 8v3.5M8 5.2v.2"/></svg>
+      <span class="sec-taskcard-co-banner-body">${_coOpen
+        ? `<b>Change order is in review.</b> It becomes part of the scope once it's approved.`
+        : `<b>Change order is in draft.</b> Submit it for review and approval before it's finalized and shareable to contractors.`}</span>
+    </div>` : '';
+    // Status: a field in the Overview band, during the work and closeout.
+    const _statusHtml = (() => {
+      if(PROJ_MODE !== 'work' && PROJ_MODE !== 'closeout') return '';
+      const opts = [{key:'not_started', label:'Not started'}, {key:'in_progress', label:'In progress'}, {key:'needs_rework', label:'Rework'}, {key:'complete', label:'Completed'}];
+      let curKey;
+      if(t.editRequested) curKey = 'needs_rework';
+      else if(approved.has(t.id)) curKey = 'complete';
+      else if((t.flags || []).includes('missing')) curKey = 'not_started';
+      else if(t.status === 'in_review') curKey = 'needs_rework';
+      else if(t.status === 'pending') curKey = 'not_started';
+      else if(STATUS[t.status]) curKey = t.status;
+      else curKey = 'not_started';
+      const curCls = (STATUS[curKey] && STATUS[curKey].cls) || 's-notstarted';
+      return `<div class="sec-taskhdr-status-inline is-field">${hdrDdHtml('ddStatus-' + t.id, curKey, opts.map(o => ({value:o.key, label:o.label})), 'setTaskStatus(' + t.id + ', __V__)', 'is-status ' + curCls)}</div>`;
+    })();
+    const tl = taskLine(t);
+    const q = v => esc(String(v)).replace(/'/g, "\\'");
+    const link = (v, on) => `<button type="button" class="task-crumb-a tk-f-link" onclick="${on}" title="Open ${esc(v)}">${esc(v)}</button>`;
+    const cell = (k, v) => `<div class="tk-f"><span class="ov-stat-k">${k}</span><div class="tk-f-v">${v}</div></div>`;
+    const infoBand = `<div class="tk-band"><h3 class="tk-band-h">Overview</h3><div class="tk-grid">
+      ${cell('Group', link(t.room, `goUpRoom('${q(t.room)}')`))}
+      ${/* KaiWeb has no department or product type page (the layout file does), so these two are plain text. */''}
+      ${cell('Department', esc(tl.dept))}
+      ${cell('Product type', esc(tl.line))}
+      ${cell('Task ID', esc(t.code))}
+      ${cell('Contractor', hdrDdHtml('ddGc-' + t.id, t.gc || '', [{value:'', label:'Unassigned'}].concat(CONTRACTORS.map(c => ({value:c, label:c}))), 'setTaskContractor(' + t.id + ', __V__);requestSecTaskcardRerender()', (t.gc ? '' : 'is-un') + ch('gc', t.gc)) + wGc)}
+      ${_statusHtml ? cell('Status', _statusHtml) : ''}
+    </div></div>`;
+    const figure = (typeof ALLOW_ON !== 'undefined' && ALLOW_ON && typeof taskAllowanceRowHtml === 'function' && taskAllowanceRowHtml(t, 'corner'))
+      || `<span class="sec-taskcard-amt-line"><span class="sec-taskcard-amt">${esc(t.cost || '$0')}</span>${deltaChipHtml(taskDelta(t))}</span>`;
+    return `<div class="pgd-hdr-box sec-taskhdr kw-tk-layout">
+      ${coBannerInner}
+      <div class="sec-taskcard-hdr">
+        <div class="sec-taskcard-hdr-l">
+          <div class="pg-kind">Task</div>
+          <div class="sec-taskhdr-title-row">
+            <div class="sec-taskcard-title">${esc(t.name)}</div>
+            ${typeof _coPillHtml === 'function' ? _coPillHtml(t) : ''}
+            <div class="sec-taskcard-hdr-chips">${isTracking && taskHasSnapshotChanges(t) ? `<button class="sec-taskcard-undo" onclick="event.stopPropagation();undoTaskChanges(${t.id})" title="Revert every field on this task back to the approved snapshot"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a4 4 0 1 1 1.2 2.8"/><path d="M3 4v3h3"/></svg> Undo changes</button>` : ''}</div>
+            ${figure}
+          </div>
+        </div>
+      </div>
+      ${infoBand}${descSection}${headerActions}
+    </div>`;
+  };
 })();

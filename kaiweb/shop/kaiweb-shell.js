@@ -28,6 +28,18 @@
   const spacer = document.createElement('span'); spacer.className = 'kw-sp';
   const spacerL = document.createElement('span'); spacerL.className = 'kw-sp kw-sp-l';
   const refs = document.createElement('div'); refs.className = 'kw-refs'; refs.id = 'kwRefs'; refs.setAttribute('role', 'group'); refs.setAttribute('aria-label', 'Side panel');
+  /* Media / Floorplan / Cart: panels that open beside whatever page is showing.
+     Icon over a word, so they read as tools, not as more page tabs. */
+  const REF_IC = {
+    media: '<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="4" width="15" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="8.2" r="1.4" fill="currentColor"/><path d="M3.5 14.5l4.2-4 3 2.8 2.3-2 3.5 3.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+    floorplan: '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3.5h14v13H3z M9.5 3.5v5 M9.5 11.5v5 M9.5 10H13 M3 10h3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+    property: '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 9.2 10 3.5l7 5.7V16.5H3z M8 16.5v-4.5h4v4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+    cart: '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 3.5h2.2l2 9.5h8.6l1.7-6.6H5.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="8" cy="16.2" r="1.2" fill="currentColor"/><circle cx="14.3" cy="16.2" r="1.2" fill="currentColor"/></svg>'
+  };
+  let propOpen = false;
+  const f0w = () => { try{ return frame().contentWindow; }catch(e){ return null; } };
+  document.addEventListener('click', e => { if(propOpen && !e.target.closest('.kw-ref-prop-wrap')){ propOpen = false; drawTabs(); } });
+  document.addEventListener('click', e => { if(e.target.closest('.kw-ref[data-ref="cart"]')) return; try{ const w = frame().contentWindow; if(w.kwCartPopOpen && w.kwCartPopOpen()){ w.kwCartPop(false); drawTabs(); } }catch(err){} });
   if(address) address.after(chipWrap); else bar.prepend(chipWrap);
   /* Retired from the bar: Overview is where a project opens, and it carries the
      full stepper, so a second stage readout up here only repeated it. Kept in
@@ -50,7 +62,6 @@
   spacer.after(refs);
   /* Media / Floorplan moved off the bar to a rail on the page's right edge
      (kaiweb-shop.js); the bar keeps the mirror code but shows nothing there. */
-  refs.hidden = true;
   /* Cart: on screen whatever tab is open. Shows what's in it; opens it (or,
      from the cart, goes back to the shelves). Asks the panel (spree.js). */
   const cart = document.createElement('button'); cart.type = 'button'; cart.className = 'kw-cart'; cart.id = 'kwCart'; cart.hidden = true;
@@ -107,68 +118,137 @@
   const docsMenu = document.createElement('div'); docsMenu.id = 'kwDocsMenu'; docsMenu.className = 'kw-docs-menu'; docsMenu.setAttribute('role', 'menu'); docsMenu.hidden = true;
   document.body.appendChild(docsMenu);
   const DOCS_FALLBACK = ['Current', 'Purchase orders', 'Shared copies', 'Outdated'].map(t => ({title:t, meta:'', rows:[]}));
-  let docsSnap = null;
+  let docsSnap = null; const menuSnap = {};
   const ROWS = '.rec-row:not(.rec-head), .po-row:not(.po-head), .cp-row:not(.cp-head)';
   const rowLabel = r => { const t = (r.innerText || '').replace(/\s+/g, ' ').trim(); return t.split(/\s(?:SOW|PO)-[0-9A-F]+/)[0].trim(); };
-  function readDocs(){
+  /* Jump menus: Documents and Overview are both long pages, so each tab opens
+     a menu of its sections and what's in them. menuPg is the page whose menu
+     is open. pageSecs reads the live page: [{title, el, rows:[{label, el}]}]. */
+  let menuPg = 'artifact';
+  const MENU_FALLBACK = {
+    artifact: DOCS_FALLBACK,
+    overview: ['Register', 'Job details', 'Contractors', 'Activity'].map(t => ({title:t, meta:'', rows:[]})),
+    shop: []
+  };
+  const secTitle = h => { const t = h.querySelector('.art-sec-title'); return t ? ((t.childNodes[0] || {}).textContent || t.textContent).trim() : ''; };
+  function pageSecs(pg){
     const d = fdoc(); if(!d) return null;
-    // only off the Documents page itself (Overview's Register uses the same section markup)
-    let mode = ''; try{ mode = frame().contentWindow.eval('typeof workMode !== "undefined" ? workMode : ""'); }catch(e){}
-    if(mode !== 'artifact' || !tabs.querySelector('.kw-tab.is-on[data-page="artifact"]')) return null;
-    const secs = [...d.querySelectorAll('#workBody .art-sec')].filter(sec => sec.querySelector('.art-sec-title') && sec.querySelector('.rec-row:not(.rec-head), .po-row:not(.po-head), .cp-row:not(.cp-head)'));
-    if(!secs.length) return null;
-    return secs.map(sec => {
-      const tEl = sec.querySelector('.art-sec-title'), title = ((tEl.childNodes[0] || {}).textContent || tEl.textContent).trim();
-      const rows = [...sec.querySelectorAll('.rec-row:not(.rec-head), .po-row:not(.po-head), .cp-row:not(.cp-head)')].map(rowLabel).filter(Boolean);
-      return {title, meta:(sec.querySelector('.art-sec-hdr .art-sec-desc') || {}).textContent || '', rows};
+    if(pg === 'artifact'){
+      return [...d.querySelectorAll('#workBody .art-sec')].filter(sec => sec.querySelector('.art-sec-title') && sec.querySelector(ROWS))
+        .map(sec => ({title:secTitle(sec), el:sec, meta:(sec.querySelector('.art-sec-hdr .art-sec-desc') || {}).textContent || '',
+          rows:[...sec.querySelectorAll(ROWS)].map(r => ({label:rowLabel(r), el:r})).filter(r => r.label)}));
+    }
+    // Overview: the Register is its own section; the rest are flat runs under
+    // the page, each a header followed by its blocks until the next header.
+    const ov = d.querySelector('#workBody .ov'); if(!ov) return null;
+    const out = [];
+    const card = ov.querySelector('.ov-id, [class*="ov-id"]');
+    if(card) out.push({title:'Property', el:card, meta:'', rows:[]});
+    [...ov.querySelectorAll('.art-sec-hdr')].forEach(h => {
+      const title = secTitle(h); if(!title) return;
+      const sec = h.closest('.art-sec');
+      const rows = [];
+      if(sec) sec.querySelectorAll(ROWS).forEach(r => { const l = rowLabel(r).split(/\s+(?:\d+ purchase orders?|[A-Z][a-z]{2} \d{1,2}, \d{4})/)[0].trim(); if(l) rows.push({label:l, el:r}); });
+      else for(let n = h.nextElementSibling; n && !n.matches('.art-sec-hdr, .art-sec'); n = n.nextElementSibling){
+        [n, ...n.querySelectorAll('.ov-sec')].filter(x => x.matches('.ov-sec')).forEach(x => {
+          const lbl = x.querySelector('.ov-sec-lbl');
+          const l = lbl ? lbl.textContent.trim() : x.firstElementChild && x.firstElementChild.matches('.ov-grid') ? 'Property facts' : ((x.textContent || '').trim().split(/\s*\n\s*/)[0] || '').trim();
+          if(l) rows.push({label:l, el:x});
+        });
+      }
+      out.push({title, el:sec || h, meta:'', rows});
     });
+    return out;
+  }
+  /* Scope's menu: the job's groups as the left panel lists them under All
+     (by room), whatever the panel is set to now, with the whole scope first. */
+  function scopeGroups(){
+    let rooms = [];
+    try{ rooms = frame().contentWindow.eval("(() => { const by = []; TASKS.forEach(t => { if(!t.room) return; let g = by.find(x => x.room === t.room); if(!g) by.push(g = {room:t.room, tasks:[]}); g.tasks.push({id:t.id, name:t.name, cost:t.cost || ''}); }); return by; })()"); }catch(e){}
+    return [{title:'All scope', meta:'', rows:[], all:true}].concat(rooms.map(r => ({title:r.room, meta:'', rows:[], tasks:r.tasks})));
+  }
+  function goScope(title){
+    closeDocs();
+    const w = frame() && frame().contentWindow; if(!w) return;
+    try{
+      if(typeof w.setRailKind === 'function') w.setRailKind('all');
+      if(title === 'All scope'){ if(w.eval('workMode') !== 'shop') w.setWorkMode('shop'); w.selectScope(); if(typeof w.renderAll === 'function') w.renderAll(); }
+      else w.goUpRoom(title);
+    }catch(e){}
+    setTimeout(drawTabs, 60);
+  }
+  function goScopeTask(id){
+    closeDocs();
+    const w = frame() && frame().contentWindow; if(!w) return;
+    try{
+      if(typeof w.setRailKind === 'function') w.setRailKind('all');
+      if(w.eval('groupBy') !== 'room') w.setGroupBy('room');
+      if(w.eval('workMode') !== 'shop') w.setWorkMode('shop');
+      w.selectTask(+id);
+    }catch(e){}
+    setTimeout(drawTabs, 60);
+  }
+  function readDocs(pg){
+    pg = pg || menuPg;
+    // only off the page itself (Overview's Register uses the same section markup as Documents)
+    let mode = ''; try{ mode = frame().contentWindow.eval('typeof workMode !== "undefined" ? workMode : ""'); }catch(e){}
+    if(mode !== pg || !tabs.querySelector(`.kw-tab.is-on[data-page="${pg}"]`)) return null;
+    const secs = pageSecs(pg);
+    if(!secs || !secs.length) return null;
+    return secs.map(x => ({title:x.title, meta:x.meta, rows:x.rows.map(r => r.label)}));
   }
   function docsView(){ try{ return frame().contentWindow.eval('typeof DOCS_VIEW !== "undefined" ? DOCS_VIEW : "list"'); }catch(e){ return 'list'; } }
   function drawDocsMenu(){
-    docsSnap = readDocs() || docsSnap;
-    const secs = docsSnap || DOCS_FALLBACK, MAX = 5, v = docsView();
+    const snap = menuPg === 'shop' ? null : readDocs(); if(snap) menuSnap[menuPg] = snap;
+    const secs = menuPg === 'shop' ? scopeGroups() : (menuSnap[menuPg] || MENU_FALLBACK[menuPg]), MAX = 5, v = docsView();
+    docsMenu.classList.toggle('is-ov', menuPg === 'overview' || menuPg === 'shop');
+    docsMenu.classList.toggle('is-scope', menuPg === 'shop');
+    subCol = null;
     docsMenu.innerHTML = `<div class="kw-dm-cols">${secs.map((sec, si) => `<div class="kw-dm-col">
-        <button type="button" class="kw-dm-h" role="menuitem" data-sec="${esc(sec.title)}">${esc(sec.title)}${sec.rows.length ? `<span>${sec.rows.length}</span>` : ''}</button>
-        ${sec.rows.slice(0, MAX).map(r => `<button type="button" class="kw-dm-l" role="menuitem" data-sec="${esc(sec.title)}" data-row="${esc(r)}">${esc(r)}</button>`).join('')}
-        ${sec.rows.length > MAX ? `<button type="button" class="kw-dm-l is-more" role="menuitem" data-sec="${esc(sec.title)}">All ${sec.rows.length} ${esc(sec.title.toLowerCase())}</button>` : ''}
+        <button type="button" class="kw-dm-h${sec.tasks ? ' has-sub' : ''}" role="menuitem" data-sec="${esc(sec.title)}"${sec.tasks ? ' aria-haspopup="menu"' : ''}>${esc(sec.title)}${sec.rows.length && menuPg === 'artifact' ? `<span>${sec.rows.length}</span>` : ''}${sec.tasks ? `<span class="kw-dm-n">${sec.tasks.length}</span><svg class="kw-dm-chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 3l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ''}</button>
+        ${sec.tasks ? `<div class="kw-dm-sub" role="menu" aria-label="${esc(sec.title)} tasks"><div class="kw-dm-sub-h">${esc(sec.title)}</div>${sec.tasks.map(t => `<button type="button" class="kw-dm-t" role="menuitem" data-task="${t.id}"><span>${esc(t.name)}</span><span class="kw-dm-tc">${esc(t.cost)}</span></button>`).join('')}</div>` : ''}
+        ${menuPg !== 'artifact' ? '' : sec.rows.slice(0, MAX).map(r => `<button type="button" class="kw-dm-l" role="menuitem" data-sec="${esc(sec.title)}" data-row="${esc(r)}">${esc(r)}</button>`).join('')}
+        ${menuPg === 'artifact' && sec.rows.length > MAX ? `<button type="button" class="kw-dm-l is-more" role="menuitem" data-sec="${esc(sec.title)}">All ${sec.rows.length} ${esc(sec.title.toLowerCase())}</button>` : ''}
       </div>`).join('')}</div>
-      <div class="kw-dm-foot"><span class="kw-dm-k">Layout</span>
+      ${menuPg !== 'artifact' ? '' : `<div class="kw-dm-foot"><span class="kw-dm-k">Layout</span>
         <div class="kw-dm-seg" role="group" aria-label="Layout">
           <button type="button" data-view="list" aria-pressed="${v !== 'cards'}" class="${v !== 'cards' ? 'is-on' : ''}">List</button><button type="button" data-view="cards" aria-pressed="${v === 'cards'}" class="${v === 'cards' ? 'is-on' : ''}">Thumbnails</button>
-        </div></div>`;
+        </div></div>`}`;
   }
   function placeDocsMenu(){
-    const tab = tabs.querySelector('.kw-tab[data-page="artifact"]'); if(!tab) return;
+    const tab = tabs.querySelector(`.kw-tab[data-page="${menuPg}"]`); if(!tab) return;
     const r = tab.getBoundingClientRect(), w = docsMenu.offsetWidth;
     docsMenu.style.top = Math.round(r.bottom) + 'px';
     docsMenu.style.left = Math.round(Math.max(8, Math.min(r.left, window.innerWidth - w - 8))) + 'px';
   }
-  function openDocs(){ drawDocsMenu(); docsMenu.hidden = false; placeDocsMenu(); const c = tabs.querySelector('[data-docs]'); if(c) c.setAttribute('aria-expanded', 'true'); tabs.querySelector('.kw-tab[data-page="artifact"]')?.classList.add('is-menu'); }
-  function closeDocs(){ if(docsMenu.hidden) return; docsMenu.hidden = true; const c = tabs.querySelector('[data-docs]'); if(c) c.setAttribute('aria-expanded', 'false'); tabs.querySelector('.kw-tab.is-menu')?.classList.remove('is-menu'); }
+  function openDocs(pg){
+    if(pg && pg !== menuPg){ closeDocs(); menuPg = pg; }
+    drawDocsMenu(); docsMenu.hidden = false; placeDocsMenu();
+    tabs.querySelectorAll('[data-docs]').forEach(c => c.setAttribute('aria-expanded', String(c.dataset.docs === menuPg)));
+    tabs.querySelectorAll('.kw-tab.is-menu').forEach(t => t.classList.remove('is-menu'));
+    tabs.querySelector(`.kw-tab[data-page="${menuPg}"]`)?.classList.add('is-menu');
+  }
+  function closeDocs(){ if(docsMenu.hidden) return; docsMenu.hidden = true; tabs.querySelectorAll('[data-docs]').forEach(c => c.setAttribute('aria-expanded', 'false')); tabs.querySelector('.kw-tab.is-menu')?.classList.remove('is-menu'); }
   // Open Documents if needed, wait for the page, then scroll to the target and flash it.
   function goDocs(secTitle, rowText){
+    const pg = menuPg;
     closeDocs();
-    const tabB = tabs.querySelector('.kw-tab[data-page="artifact"] .kw-tab-b');
+    const tabB = tabs.querySelector(`.kw-tab[data-page="${pg}"] .kw-tab-b`);
     if(tabB && !tabB.closest('.kw-tab').classList.contains('is-on')){ const t = src[+tabB.dataset.i]; if(t) t.click(); }
     let tries = 0;
+    // The page can redraw just after a tab switch, so the target is re-found
+    // from the live page each time.
+    const find = () => {
+      const secs = pageSecs(pg) || [];
+      const sc = secs.find(x => x.title === secTitle); if(!sc) return null;
+      const rw = rowText ? sc.rows.find(r => r.label === rowText) : null;
+      return rw ? rw.el : sc.el;
+    };
     (function seek(){
-      const d = fdoc(); const secs = d ? [...d.querySelectorAll('#workBody .art-sec')] : [];
-      const sec = secs.find(x => { const t = x.querySelector('.art-sec-title'); return t && ((t.childNodes[0] || {}).textContent || '').trim() === secTitle; });
-      if(!sec){ if(++tries < 40) setTimeout(seek, 60); return; }
-      const row = rowText ? [...sec.querySelectorAll('.rec-row:not(.rec-head), .po-row:not(.po-head), .cp-row:not(.cp-head)')].find(r => rowLabel(r) === rowText) : null;
-      // The page can redraw just after a tab switch, so wait for it to settle,
-      // then scroll the Documents column (#workBody) to the target, re-finding
-      // it in case the redraw replaced it.
-      const find = () => {
-        const dd = fdoc(); const ss = dd ? [...dd.querySelectorAll('#workBody .art-sec')] : [];
-        const sc = ss.find(x => { const t = x.querySelector('.art-sec-title'); return t && ((t.childNodes[0] || {}).textContent || '').trim() === secTitle; });
-        if(!sc) return null;
-        const rw = rowText ? [...sc.querySelectorAll(ROWS)].find(r => rowLabel(r) === rowText) : null;
-        return rw || sc;
-      };
+      if(!find()){ if(++tries < 40) setTimeout(seek, 60); return; }
       setTimeout(() => {
         const el = find(); if(!el) return;
-        const body = fdoc().getElementById('workBody') || el.parentElement;
+        let body = el.parentElement; while(body && body.scrollHeight <= body.clientHeight + 2) body = body.parentElement; body = body || fdoc().getElementById('workBody');
         const top = el.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - (rowText ? Math.max(0, body.clientHeight / 2 - el.offsetHeight / 2) : 12);
         // Our own glide: the browser's smooth scroll doesn't survive here (the
         // Shop code works around the same thing). Lands exactly either way.
@@ -187,14 +267,31 @@
     e.stopPropagation();
     const vb = e.target.closest('[data-view]');
     if(vb){ try{ frame().contentWindow.docsSetView(vb.dataset.view); }catch(err){} drawDocsMenu(); return; }
-    const b = e.target.closest('[data-sec]'); if(b) goDocs(b.dataset.sec, b.dataset.row || '');
+    const tk = e.target.closest('[data-task]'); if(tk){ goScopeTask(tk.dataset.task); return; }
+    const b = e.target.closest('[data-sec]'); if(!b) return;
+    if(menuPg === 'shop') goScope(b.dataset.sec); else goDocs(b.dataset.sec, b.dataset.row || '');
   });
+  /* Scope's task flyouts: the open group stays open while the pointer is on
+     its way to the tasks (crossing other group rows on the diagonal), and
+     another group takes over only once the pointer rests on it. */
+  let subCol = null, subT = null;
+  const setSub = col => { if(subCol === col) return; if(subCol) subCol.classList.remove('is-sub'); subCol = col; if(col) col.classList.add('is-sub'); };
+  docsMenu.addEventListener('mouseover', e => {
+    if(menuPg !== 'shop') return;
+    if(e.target.closest('.kw-dm-sub')){ clearTimeout(subT); return; }
+    const col = e.target.closest('.kw-dm-col'); if(!col) return;
+    clearTimeout(subT);
+    if(!subCol) setSub(col.querySelector('.kw-dm-sub') ? col : null);
+    else subT = setTimeout(() => setSub(col.querySelector('.kw-dm-sub') ? col : null), 220);
+  });
+  docsMenu.addEventListener('mouseleave', () => { clearTimeout(subT); subT = setTimeout(() => setSub(null), 300); });
+  docsMenu.addEventListener('focusin', e => { const col = e.target.closest('.kw-dm-col'); if(menuPg === 'shop' && col && !e.target.closest('.kw-dm-sub')) setSub(col.querySelector('.kw-dm-sub') ? col : null); });
   // Hover opens it too, the way a site's top menu does; a short grace period
   // lets the pointer travel from the tab down into the menu.
   let docsT = null;
-  const hoverIn = () => { clearTimeout(docsT); docsT = setTimeout(openDocs, 140); };
+  const hoverIn = pg => { clearTimeout(docsT); if(!docsMenu.hidden && pg !== menuPg){ openDocs(pg); return; } docsT = setTimeout(() => openDocs(pg), 140); };
   const hoverOut = () => { clearTimeout(docsT); docsT = setTimeout(closeDocs, 260); };
-  tabs.addEventListener('mouseover', e => { if(e.target.closest('.kw-tab[data-page="artifact"]')) hoverIn(); else if(e.target.closest('.kw-tab')) hoverOut(); });
+  tabs.addEventListener('mouseover', e => { const t = e.target.closest('.kw-tab'); if(t && MENU_FALLBACK[t.dataset.page]) hoverIn(t.dataset.page); else if(t) hoverOut(); });
   tabs.addEventListener('mouseleave', hoverOut);
   docsMenu.addEventListener('mouseenter', () => clearTimeout(docsT));
   docsMenu.addEventListener('mouseleave', hoverOut);
@@ -221,21 +318,30 @@
       const tools = page === 'shop' ? null : w.querySelector('.wmode-tools');
       const on = w.classList.contains('active');
       const i = src.push(b) - 1, j = tools ? src.push(tools) - 1 : -1;
-      const caret = page === 'artifact'
-        ? `<button type="button" class="kw-tab-menu" data-docs="1" aria-haspopup="menu" aria-expanded="${!docsMenu.hidden}" aria-controls="kwDocsMenu" title="Jump to a part of Documents" aria-label="Documents menu">${CARET}</button>`
+      const caret = MENU_FALLBACK[page]
+        ? `<button type="button" class="kw-tab-menu" data-docs="${page}" aria-haspopup="menu" aria-expanded="${!docsMenu.hidden && menuPg === page}" aria-controls="kwDocsMenu" title="Jump to a part of ${esc(b.textContent.trim())}" aria-label="${esc(b.textContent.trim())} menu">${CARET}</button>`
         : j >= 0 && on ? `<button type="button" class="kw-tab-menu" data-i="${j}" data-menu="1" aria-haspopup="menu" title="${esc(tools.title || 'Options')}" aria-label="${esc(tools.title || 'Options')}">${CARET}</button>` : '';
       return `<span class="kw-tab${on ? ' is-on' : ''}" data-page="${esc(page)}"><button type="button" class="kw-tab-b" data-i="${i}"${on ? ' aria-current="page"' : ''}>${esc(b.textContent.trim())}</button>${caret}</span>`;
     }).join('');
     if(tabs.innerHTML !== html) tabs.innerHTML = html;
     const rt = d.getElementById('pgRefTools');
-    const rhtml = rt ? [...rt.querySelectorAll('.pg-ref-btn')].map(b => {
-      const i = src.push(b) - 1, on = b.classList.contains('on'), label = (b.querySelector('span') || b).textContent.trim();
-      const svg = b.querySelector('svg');
-      return `<button type="button" class="kw-ref${on ? ' is-on' : ''}" data-i="${i}" aria-pressed="${on}" title="${esc(b.title || label)}">${svg ? svg.outerHTML : ''}<span>${esc(label)}</span></button>`;
-    }).join('') : '';
+    let hasShop = false; try{ hasShop = !!(f0w() && f0w().kwCartInfo && f0w().kwCartInfo()); }catch(e){}
+    // Lit only while its panel is really on screen (a remembered choice can be set with no panel drawn).
+    const sp = d.getElementById('pgSide'), sideShown = !!(sp && sp.getBoundingClientRect().width > 40 && sp.querySelector('.pg-side-hd'));
+    let cartOpen = false; try{ cartOpen = !!frame().contentWindow.kwCartPopOpen(); }catch(e){}
+    const rb = rt ? [...rt.querySelectorAll('.pg-ref-btn')].filter(b => b.dataset.ref !== 'cart' || hasShop).map(b => {
+      const id = b.dataset.ref, i = src.push(b) - 1, on = id === 'cart' ? cartOpen : b.classList.contains('on') && sideShown, label = (b.querySelector('span') || b).textContent.trim();
+      return {id, i, on, label, title: b.title || label};
+    }) : [];
+    const one = r => `<button type="button" class="kw-ref${r.on ? ' is-on' : ''}" data-ref="${r.id}" data-i="${r.i}" aria-pressed="${r.on}" title="${esc(r.title)}">${REF_IC[r.id] || ''}<span>${esc(r.label)}</span></button>`;
+    const prop = rb.filter(r => r.id !== 'cart'), cartR = rb.find(r => r.id === 'cart');
+    const propOn = prop.some(r => r.on);
+    // Narrow screens: Media + Floorplan fold into one "Property" button with a menu.
+    const merged = prop.length ? `<span class="kw-ref-prop-wrap"><button type="button" class="kw-ref kw-ref-prop${propOn ? ' is-on' : ''}" data-prop="1" aria-haspopup="menu" aria-expanded="${propOpen}" title="Media and floorplan">${REF_IC.property}<span>Property ${CARET}</span></button>${propOpen ? `<div class="kw-prop-menu" role="menu">${prop.map(r => `<button type="button" role="menuitem" class="${r.on ? 'is-on' : ''}" data-i="${r.i}">${REF_IC[r.id] || ''}${esc(r.label)}</button>`).join('')}</div>` : ''}</span>` : '';
+    const rhtml = rb.length ? `<span class="kw-refs-wide">${prop.map(one).join('')}</span>${merged}${cartR ? '<span class="kw-refs-sep" aria-hidden="true"></span>' + one(cartR) : ''}` : '';
     if(refs.innerHTML !== rhtml) refs.innerHTML = rhtml;
     d.body.classList.add('kw-tabs-shell');
-    const snap = readDocs(); if(snap) docsSnap = snap;
+    ['artifact', 'overview'].forEach(pg => { const snap = readDocs(pg); if(snap) menuSnap[pg] = snap; });
   }
   // A forwarded menu opens inside the panel, from its collapsed tab row. The
   // panel pins it (position:fixed, CSS) at --kw-menu-x, which is set here to
@@ -248,8 +354,18 @@
   }
   bar.addEventListener('click', e => {
     const dm = e.target.closest('[data-docs]');
-    if(dm){ e.stopPropagation(); clearTimeout(docsT); docsMenu.hidden ? openDocs() : closeDocs(); return; }
+    if(dm){ e.stopPropagation(); clearTimeout(docsT); (docsMenu.hidden || menuPg !== dm.dataset.docs) ? openDocs(dm.dataset.docs) : closeDocs(); return; }
+    const pp = e.target.closest('[data-prop]');
+    if(pp){ e.stopPropagation(); propOpen = !propOpen; drawTabs(); return; }
+    const cb = e.target.closest('.kw-ref[data-ref="cart"]');
+    if(cb){
+      // Cart opens as a dropdown over the page, lined up under this button.
+      e.stopPropagation(); closeDocs(); propOpen = false;
+      try{ const f = frame(); f.contentWindow.kwCartPop('toggle', f.getBoundingClientRect().right - cb.getBoundingClientRect().right); }catch(err){}
+      drawTabs(); return;
+    }
     const b = e.target.closest('.kw-tabs [data-i], .kw-refs [data-i]'); if(!b) return;
+    propOpen = false;
     closeDocs();
     const t = src[+b.dataset.i]; if(!t) return;
     e.stopPropagation();
@@ -521,4 +637,37 @@
   const f0 = frame(); if(f0) f0.addEventListener('load', () => setTimeout(arm, 0));
   setInterval(() => { arm(); drawTabs(); }, 800);
   arm();
+})();
+
+/* ── Tabs line up with the page ──
+   The first tab's word starts where the page's content starts (the work
+   column's edge plus its 28px inset: Register, Job details…), following the
+   left panel as it's resized or collapsed. The gap before the tabs absorbs
+   the difference; when the address is too wide for that, it keeps its minimum. */
+(function(){
+  const INSET = 28, MIN = 18;
+  let last = '';
+  function align(){
+    const tabs = document.getElementById('kwTabs'), gap = document.querySelector('.app-toolbar .kw-sp-l');
+    const f = document.getElementById('iframe');
+    if(!tabs || !gap || !f) return;
+    let work = null; try{ work = f.contentDocument.querySelector('#main .work') || f.contentDocument.querySelector('.work'); }catch(e){}
+    const first = tabs.querySelector('.kw-tab-b');
+    if(!work || !first || !work.getBoundingClientRect().width){ if(last){ gap.style.flexBasis = ''; last = ''; } return; }
+    const target = f.getBoundingClientRect().left + work.getBoundingClientRect().left + INSET;
+    const pad = parseFloat(getComputedStyle(first).paddingLeft) || 0;
+    // Measure with the gap at its minimum: the free space then sits in the
+    // right-hand spacer, and the gap may take only that much, so the address
+    // never gets squeezed and nothing runs off the bar.
+    gap.style.flexBasis = MIN + 'px';
+    const right = document.querySelector('.app-toolbar .kw-sp:not(.kw-sp-l)');
+    const slack = right ? Math.max(0, right.getBoundingClientRect().width - 8) : 0;
+    const start = gap.getBoundingClientRect().left;
+    const w = Math.max(MIN, Math.min(MIN + slack, Math.round(target - pad - start)));
+    const v = w + 'px';
+    gap.style.flexBasis = v; gap.style.minWidth = MIN + 'px'; last = v;
+  }
+  window.addEventListener('resize', align);
+  setInterval(align, 250);
+  align();
 })();

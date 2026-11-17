@@ -325,3 +325,74 @@ body.kw-shell-tabs .app-toolbar .tb-address{min-width:0; flex-shrink:0}
 .kw-acct.is-acct{width:280px}
 .kw-acct.is-acct .kw-acct-links{background:transparent; border-top:0; padding:6px 0}
 .kw-acct.is-acct .kw-acct-links button{font-size:14px; padding:10px 18px}
+
+/* ── Media / Floorplan / Cart in the dark bar ──
+   Icon over a word, like a toolbar: these open a panel beside the page,
+   so they look different from the four page tabs. Lit while open. */
+.kw-refs{display:flex; align-items:stretch; gap:2px; margin-right:12px; flex:none; align-self:stretch}
+.kw-refs-wide{display:flex; gap:2px}
+.kw-ref{all:unset; box-sizing:border-box; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+  min-width:62px; padding:0 8px; color:rgba(255,255,255,.72); font-family:var(--body); font-size:11px; font-weight:500; letter-spacing:0; text-transform:none; line-height:1; position:relative}
+.kw-ref svg{width:18px; height:18px; flex:none}
+.kw-ref span{display:inline-flex; align-items:center; gap:2px; white-space:nowrap}
+.kw-ref span svg{width:10px; height:10px}
+.kw-ref:hover{color:#fff; background:rgba(255,255,255,.07)}
+.kw-ref.is-on{color:#fff; background:rgba(255,255,255,.1)}
+.kw-ref.is-on::after{content:''; position:absolute; left:10px; right:10px; bottom:0; height:2px; background:var(--accent)}
+.kw-ref:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+.kw-refs-sep{width:1px; margin:14px 4px; background:rgba(255,255,255,.18)}
+.kw-ref-prop-wrap{position:relative; display:none}
+.kw-prop-menu{position:absolute; top:100%; left:0; z-index:400; min-width:170px; padding:6px; background:var(--white); color:var(--ink); border:1px solid var(--stroke, #DDD6C8); border-top:3px solid var(--accent); box-shadow:0 10px 28px rgba(0,0,0,.18)}
+.kw-prop-menu button{all:unset; box-sizing:border-box; cursor:pointer; display:flex; align-items:center; gap:10px; width:100%; padding:9px 10px; font-family:var(--body); font-size:13px}
+.kw-prop-menu button svg{width:17px; height:17px}
+.kw-prop-menu button:hover{background:var(--sunken, #F3EFE6)}
+.kw-prop-menu button.is-on{font-weight:600}
+/* Tabs sit after the address now; centring them needs room the toolbar uses. */
+@media (min-width:1360px){ .kw-tabs{position:static; transform:none} }
+.kw-sp-l{flex:0 0 18px; min-width:18px}
+@media (max-width:1180px){ .kw-ref{min-width:0; padding:0 9px} .kw-ref > span{display:none} .kw-refs{margin-right:8px} }
+@media (max-width:1060px){ .kw-refs-wide{display:none} .kw-ref-prop-wrap{display:flex} .kw-ref-prop > span{display:inline-flex !important; font-size:0} .kw-ref-prop > span svg{width:10px; height:10px} .kw-ref-prop{flex-direction:row; gap:2px} }
+
+/* A little narrower, so the tabs can line up with the page at 1440. */
+.kw-ref{min-width:54px; padding:0 6px}
+@media (max-width:1180px){ .kw-ref{padding:0 8px} }
+
+/* Overview menu: just the section names, one per line. */
+.kw-docs-menu.is-ov{padding:8px; min-width:200px}
+.kw-docs-menu.is-ov .kw-dm-cols{flex-direction:column; gap:0}
+.kw-docs-menu.is-ov .kw-dm-col{padding:0; border:0; min-width:0}
+.kw-docs-menu.is-ov .kw-dm-h{display:block; width:100%; box-sizing:border-box; margin:0; padding:9px 12px; font-size:14px}
+.kw-docs-menu.is-ov .kw-dm-h:hover{background:var(--sunken, #F3EFE6)}
+
+/* Documents menu: vertical too, like Overview's. Each section name is a row,
+   its documents sit indented under it, and Layout stays at the bottom. */
+.kw-docs-menu{padding:8px; min-width:220px; max-width:340px; max-height:calc(100vh - 140px); overflow:auto}
+.kw-docs-menu .kw-dm-cols{flex-direction:column; flex-wrap:nowrap; gap:0; align-items:stretch}
+.kw-docs-menu .kw-dm-col{padding:0; border:0; min-width:0; max-width:none; align-items:stretch; gap:0}
+.kw-docs-menu .kw-dm-col + .kw-dm-col{margin-top:4px}
+.kw-docs-menu .kw-dm-h{display:flex; width:100%; box-sizing:border-box; margin:0; padding:9px 12px; font-size:14px; text-decoration:none}
+.kw-docs-menu .kw-dm-h span{margin-left:auto}
+.kw-docs-menu .kw-dm-l{display:block; width:100%; padding:6px 12px 6px 24px; text-decoration:none}
+.kw-docs-menu .kw-dm-h:hover, .kw-docs-menu .kw-dm-l:hover{background:var(--sunken, #F3EFE6); text-decoration:none}
+.kw-docs-menu .kw-dm-foot{margin:8px 0 0; padding:12px 12px 4px}
+
+/* Scope menu: hover a group and its tasks open to the right. */
+.kw-docs-menu.is-scope{overflow:visible; max-height:none}
+.kw-docs-menu.is-scope .kw-dm-col{position:relative}
+.kw-docs-menu .kw-dm-h.has-sub{align-items:center; gap:8px}
+.kw-docs-menu .kw-dm-h .kw-dm-n{margin-left:auto; font-family:var(--mono); font-size:10px; font-weight:700; color:var(--t3, #8A8470)}
+.kw-dm-chev{width:12px; height:12px; flex:none; color:var(--t3, #8A8470)}
+.kw-dm-sub{display:none; position:absolute; left:100%; top:-9px; z-index:2; width:300px; max-height:min(70vh, 520px); overflow:auto; padding:8px;
+  background:var(--white); border:1px solid var(--stroke, #DDD6C8); border-top:3px solid var(--accent); box-shadow:0 10px 28px rgba(0,0,0,.18); margin-left:8px}
+/* a bridge over the gap so the pointer can travel into the flyout */
+.kw-dm-sub::before{content:''; position:absolute; left:-12px; top:0; bottom:0; width:12px}
+.kw-docs-menu.is-scope .kw-dm-col.is-sub > .kw-dm-sub{display:block}
+.kw-docs-menu.is-scope .kw-dm-col.is-sub > .kw-dm-h{background:var(--sunken, #F3EFE6)}
+.kw-dm-sub-h{padding:6px 10px 8px; font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--t3, #8A8470)}
+.kw-dm-t{all:unset; box-sizing:border-box; cursor:pointer; display:flex; align-items:baseline; gap:12px; width:100%; padding:8px 10px; font-family:var(--body); font-size:13.5px; color:var(--ink)}
+.kw-dm-t span:first-child{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.kw-dm-tc{font-size:12.5px; color:var(--t2, #5C5750); font-variant-numeric:tabular-nums; white-space:nowrap}
+.kw-dm-t:hover{background:var(--sunken, #F3EFE6)}
+.kw-dm-t:focus-visible{outline:2px solid var(--ink); outline-offset:-2px}
+.kw-docs-menu.is-scope .kw-dm-h{display:flex; align-items:center}
+.kw-docs-menu.is-scope{min-width:220px}

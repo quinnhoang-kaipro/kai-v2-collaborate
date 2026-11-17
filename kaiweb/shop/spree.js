@@ -839,7 +839,7 @@ function slotHtml(s){
       ${PH('sp-slot-img', ART.product(cat))}
       <span class="sp-slot-b"><span class="sp-slot-l">${esc(slotLabel(s.t, s.l))}</span>
         <span class="sp-slot-n">${esc(cat ? cat.name : p.sku)} <span class="sp-slot-s">· ${esc(supplierName(supOf(p)))}</span></span>
-        ${cat ? `<span class="sp-slot-tags">${stdBadge(cat)}</span>` : ''}</span>
+        </span>
       <span class="sp-slot-amt">${money(p.cost)}</span>
     </button>
     <!-- The quick ✕ that removed the product is gone: remove it from its shelf in the store (Remove on the card). -->
@@ -1363,6 +1363,8 @@ function reviewHtml(allItems){
 }
 // From Review: back to Shop with that one item selected, so only its shelves show.
 window.spreeShopFor = function(id){
+  // From the cart dropdown this can come from any tab: go to the Shop first.
+  if(PG.primary !== 'shopkai') PG.primary = 'shopkai';
   S.view = 'shop'; S.active = id; S.q = ''; S.help = null; render();
   const el = document.querySelector(`#pgNav .sp-slot[data-id="${id}"]`); if(el) el.scrollIntoView({block:'center'});
   const m = document.getElementById('pgMain'); if(m) m.scrollTop = 0;
@@ -1818,12 +1820,21 @@ function miniCartHtml(){
       ${PH('mc-ph', ART.product(c))}<span class="mc-tx"><b>${esc(slotLabel(s.t, s.l))}</b><span>${esc(c.name)}</span></span><span class="mc-amt">${money(cost)}</span></button></li>`; };
   return `<div class="mc">
     <p class="mc-sum">${inCart.length} item${inCart.length === 1 ? '' : 's'} – ${nSup} supplier${nSup === 1 ? '' : 's'}</p>
+    <div class="mc-top"><button type="button" class="mc-go" onclick="${onCart ? "spreeSet('view','shop')" : "(window.kwCartPop&&kwCartPop(false));kwOpenCart()"}">${onCart ? 'Back to the shelves' : 'Review &amp; order'}</button></div>
     ${missing.length ? `<div class="mc-miss"><b>${missing.length} still to choose</b>${missing.map(s => `<button type="button" class="sp-link" onclick="spreeShopFor(${s.id})">${esc(slotLabel(s.t, s.l))}</button>`).join('')}</div>` : ''}
-    <ul class="mc-list">${inCart.map(row).join('')}</ul>
+    <div class="mc-list">${(() => {
+      // One block per supplier, like the full cart: name, how it arrives, count and subtotal.
+      const by = new Map(); inCart.forEach(x => { const k = supOf(x.picked[0]); if(!by.has(k)) by.set(k, []); by.get(k).push(x); });
+      return [...by.entries()].map(([k, l]) => {
+        const tot = l.reduce((a, x) => a + x.picked.reduce((b, p) => b + p.cost, 0), 0);
+        const how = _howOf(k) === 'pickup' && _storeOf(k) ? `Pickup at ${_storeOf(k)[0]}` : 'Delivery';
+        return `<section class="mc-sup"><div class="mc-sup-hd"><b>${esc(supplierName(k))}</b><span>${esc(how)} · ${l.length} item${l.length === 1 ? '' : 's'}</span><span class="mc-sup-amt">${money(tot)}</span></div>
+          <ul class="mc-sup-list">${l.map(row).join('')}</ul></section>`;
+      }).join('');
+    })()}</div>
     <div class="mc-foot">
       <dl class="mc-tot"><dt>Subtotal</dt><dd>${money(sub)}</dd>${sv > 0.005 ? `<dt>Bulk savings</dt><dd class="is-save">−${money(sv)}</dd>` : ''}<dt class="is-tot">Total</dt><dd class="is-tot">${money(sub - sv)}</dd></dl>
       ${m && m.mat ? `<p class="mc-est">${money(sub - sv)} of the ${money(m.mat)} materials estimate</p>` : ''}
-      <button type="button" class="mc-go" onclick="${onCart ? "spreeSet('view','shop')" : 'pgCloseSide();kwOpenCart()'}">${onCart ? 'Back to the shelves' : 'Review &amp; order'}</button>
     </div>
   </div>`;
 }
@@ -1838,9 +1849,8 @@ function renderSide(sp){
   if(id === 'cart'){ const k2 = 'cart|' + miniCartHtml().length + '|' + (S.view || ''); if(sp.dataset.key === k2) return; sp.dataset.key = k2; } else
   sp.dataset.key = key;
   const oldB = sp.querySelector('.pg-side-b'), keepSide = oldB ? oldB.scrollTop : 0;
-  const title = REF_PAGES.includes(id) && id !== 'cart'
-    ? `<nav class="pg-side-tabs" aria-label="Side panel">${REF_PAGES.filter(k => k !== 'cart').map(k => `<button type="button" class="${k === id ? 'on' : ''}" ${k === id ? 'aria-current="page"' : ''} onclick="pgShowSide('${k}')">${esc(PAGES[k].label)}</button>`).join('')}</nav>`
-    : `<span class="pg-side-t">${esc(pg.label)}</span>`;
+  // The right-edge rail switches Media / Floorplan / Cart, so the panel just names itself.
+  const title = `<span class="pg-side-t">${esc(pg.label)}</span>`;
   sp.innerHTML = `<div class="pg-side-hd">
       ${title}
       <span class="pg-sp"></span>
@@ -1869,7 +1879,7 @@ function navHtml(){
   const all = slots();
   const done = all.filter(s => s.picked.length).length;
   return `<div class="pg-nav-hd">
-      <div class="pg-nav-t"><span class="sp-sec-t">Shopping List</span><span class="pg-sp"></span><span class="sp-sec-sub">${done} of ${all.length} filled</span></div>
+      <div class="pg-nav-t"><span class="sp-sec-t">Shopping List</span><span class="pg-sp"></span></div>
       <div class="sb-tools-seg pg-by" role="tablist" aria-label="Shop by">
         ${BY.map(([k, t]) => `<button type="button" class="${S.by === k ? 'active' : ''}" onclick="spreeSet('by','${k}')">${t}</button>`).join('')}
       </div>
@@ -2355,6 +2365,7 @@ window.kwCartInfo = function(){
   return {n:inCart.length, total:money(total), on:PG.primary === 'shopkai' && S.view === 'cart',
     totalNum:total, slots:all.length, missing:all.filter(s => !s.picked.length).length};
 };
+window.kwMiniCartHtml = () => miniCartHtml();
 window.kwOpenCart = function(){
   if(PG.primary === 'shopkai' && S.view === 'cart'){ S.view = 'shop'; render(); return; }
   S.view = 'cart'; S.help = null;
