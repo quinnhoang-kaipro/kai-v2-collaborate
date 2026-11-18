@@ -868,6 +868,22 @@ body.dragging .board,body.dragging .grid{pointer-events:none}
 .look-mood img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .look-mood .tag{position:absolute;left:10px;bottom:10px;background:rgba(255,255,255,.92);color:var(--ink)}
 .look-mood:hover .tag{background:var(--ink);color:var(--white)}
+.look.has-ph{grid-template-columns:190px 190px minmax(0,1fr)}
+/* The room's site photos, one at a time, left of the mood board. */
+.look-ph{position:relative;min-height:150px;border-right:1px solid var(--stroke);background:var(--sunken);overflow:hidden}
+.look-ph-im{position:absolute;inset:0;display:block;cursor:zoom-in}
+.look-ph-im img{width:100%;height:100%;object-fit:cover}
+.look-ph-cap{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:1px;padding:22px 10px 9px;
+  background:linear-gradient(to top,rgba(26,26,26,.72),rgba(26,26,26,0));color:#fff;pointer-events:none}
+.look-ph-cap b{font-size:12px;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.look-ph-cap span{font-size:11px;opacity:.85}
+.look-ph-n{position:absolute;top:8px;right:8px;padding:2px 7px;background:rgba(26,26,26,.62);color:#fff;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.04em;pointer-events:none}
+.look-ph-b{position:absolute;top:calc(50% - 30px);width:28px;height:28px;display:grid;place-items:center;background:rgba(255,255,255,.92);color:var(--ink);
+  border:1px solid var(--stroke);font-size:17px;line-height:1;cursor:pointer;opacity:.9;transition:opacity .12s}
+.look-ph-b.prev{left:8px}
+.look-ph-b.next{right:8px}
+.look-ph-b:hover{opacity:1;border-color:var(--ink)}
+.look-ph-b:focus-visible{outline:2px solid var(--ink);outline-offset:1px;opacity:1}
 .look-items{min-width:0;padding:12px 14px 14px;display:flex;flex-direction:column;gap:9px}
 .look-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:2px}
 .lk{flex:1 0 84px;max-width:124px;min-width:0;display:flex;flex-direction:column;gap:4px;text-align:left}
@@ -886,7 +902,9 @@ body.dragging .board,body.dragging .grid{pointer-events:none}
 .nb-hd h3{font-family:var(--display);font-size:19px;font-weight:700;letter-spacing:-.01em}
 .nb-hd h3 button:hover{text-decoration:underline;text-underline-offset:4px}
 .nb-hd .sub{font-size:13px;color:var(--t2)}
-.nb-hd .tag{margin-left:auto;align-self:center}
+.nb-hd-r{margin-left:auto;align-self:center;display:flex;align-items:center;gap:12px}
+.nb-amt{font-size:13px;color:var(--t2);white-space:nowrap}
+.nb-hd .nb-amt .tip{left:auto;right:0}
 .nb-notes{display:flex;flex-direction:column;gap:6px;margin-top:10px}
 .nb-note{display:flex;align-items:center;gap:9px;padding:8px 12px;font-size:12.5px;line-height:1.4}
 .nb-note.info{background:var(--info-fill);color:#174a72}
@@ -916,6 +934,12 @@ body.dragging .board,body.dragging .grid{pointer-events:none}
 .nb-pick .tx{padding:10px 12px 12px;display:flex;flex-direction:column;gap:5px}
 .nb-pick .brand,.nb-alt .brand{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t3)}
 .nb-pick .nm{font-size:14.5px;font-weight:600;line-height:1.3;cursor:pointer}
+/* The pick's quantity, and a plain way to take it off the list (Undo in the toast). */
+.nb-pick-acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.nb-rm{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:1px solid var(--stroke);background:var(--white);color:var(--ink);font-size:12.5px;cursor:pointer}
+.nb-rm svg{width:15px;height:15px;flex:none}
+.nb-rm:hover{border-color:#b4463c;color:#b4463c}
+.nb-rm:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
 .nb-pick .nm:hover,.nb-alt .nm:hover{text-decoration:underline;text-underline-offset:3px}
 .nb-pick .ln{font-size:12.5px;color:var(--t2)}
 .nb-pick .ln b{font-family:var(--display);font-size:18px;font-weight:700;color:var(--ink)}
@@ -950,10 +974,15 @@ body.dragging .board,body.dragging .grid{pointer-events:none}
   .nb-pick .im{aspect-ratio:auto;min-height:150px}
   .nb-alt .im{aspect-ratio:16/10}
 }
+/* Two pictures leave the strip of products little room on a mid-width shelf: both narrow a little. */
+@container shelf (max-width:900px){ .look.has-ph{grid-template-columns:150px 150px minmax(0,1fr)} }
 @container shelf (max-width:720px){
   .roomv{padding:0 22px 120px}
   .look{grid-template-columns:1fr}
   .look-mood{border-right:0;border-bottom:1px solid var(--stroke);min-height:130px}
+  .look.has-ph{grid-template-columns:1fr 1fr}
+  .look.has-ph .look-ph{min-height:130px;border-bottom:1px solid var(--stroke)}
+  .look.has-ph .look-items{grid-column:1 / -1}
   .rcar,.nb-bd.none .rcar{--per:2}
   .nb-pick{grid-template-columns:1fr}
   .nb-pick .im{aspect-ratio:16/9;min-height:0}

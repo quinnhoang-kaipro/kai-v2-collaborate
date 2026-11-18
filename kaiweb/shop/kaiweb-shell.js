@@ -33,6 +33,7 @@
   const REF_IC = {
     media: '<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="4" width="15" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="8.2" r="1.4" fill="currentColor"/><path d="M3.5 14.5l4.2-4 3 2.8 2.3-2 3.5 3.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
     floorplan: '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3.5h14v13H3z M9.5 3.5v5 M9.5 11.5v5 M9.5 10H13 M3 10h3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+    beside: '<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="4" width="15" height="12" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 4v12" stroke="currentColor" stroke-width="1.5"/><rect x="10" y="4" width="7.5" height="12" fill="currentColor" opacity=".35"/></svg>',
     property: '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 9.2 10 3.5l7 5.7V16.5H3z M8 16.5v-4.5h4v4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
     cart: '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 3.5h2.2l2 9.5h8.6l1.7-6.6H5.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="8" cy="16.2" r="1.2" fill="currentColor"/><circle cx="14.3" cy="16.2" r="1.2" fill="currentColor"/></svg>'
   };
@@ -326,6 +327,7 @@
 
   /* ── Tabs: mirror the panel's tab row ── */
   const CARET = '<svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const BESIDE = {media:'Media', floorplan:'Floorplan'};   // tabs that can also open beside the page
   let src = [];   // the panel's buttons, by index, for click forwarding
   function shown(d, el){
     if(!el || el.hidden) return false;
@@ -346,7 +348,8 @@
       const caret = MENU_FALLBACK[page]
         ? `<button type="button" class="kw-tab-menu" data-docs="${page}" aria-haspopup="menu" aria-expanded="${!docsMenu.hidden && menuPg === page}" aria-controls="kwDocsMenu" title="Jump to a part of ${esc(b.textContent.trim())}" aria-label="${esc(b.textContent.trim())} menu">${CARET}</button>`
         : j >= 0 && on ? `<button type="button" class="kw-tab-menu" data-i="${j}" data-menu="1" aria-haspopup="menu" title="${esc(tools.title || 'Options')}" aria-label="${esc(tools.title || 'Options')}">${CARET}</button>` : '';
-      return `<span class="kw-tab${on ? ' is-on' : ''}" data-page="${esc(page)}"><button type="button" class="kw-tab-b" data-i="${i}"${on ? ' aria-current="page"' : ''}>${esc(b.textContent.trim())}</button>${caret}</span>`;
+      const hint = BESIDE[page] && !on ? ` title="⌘-click to open ${esc(BESIDE[page])} beside this page"` : '';
+      return `<span class="kw-tab${on ? ' is-on' : ''}" data-page="${esc(page)}"><button type="button" class="kw-tab-b" data-i="${i}"${on ? ' aria-current="page"' : ''}${hint}>${esc(b.textContent.trim())}</button>${caret}</span>`;
     }).join('');
     if(tabs.innerHTML !== html) tabs.innerHTML = html;
     const rt = d.getElementById('pgRefTools');
@@ -359,11 +362,23 @@
       return {id, i, on, label, title: b.title || label};
     }) : [];
     const one = r => `<button type="button" class="kw-ref${r.on ? ' is-on' : ''}" data-ref="${r.id}" data-i="${r.i}" aria-pressed="${r.on}" title="${esc(r.title)}">${REF_IC[r.id] || ''}<span>${esc(r.label)}</span></button>`;
-    const prop = rb.filter(r => r.id !== 'cart'), cartR = rb.find(r => r.id === 'cart');
-    const propOn = prop.some(r => r.on);
-    // Narrow screens: Media + Floorplan fold into one "Property" button with a menu.
-    const merged = prop.length ? `<span class="kw-ref-prop-wrap"><button type="button" class="kw-ref kw-ref-prop${propOn ? ' is-on' : ''}" data-prop="1" aria-haspopup="menu" aria-expanded="${propOpen}" title="Media and floorplan">${REF_IC.property}<span>Property ${CARET}</span></button>${propOpen ? `<div class="kw-prop-menu" role="menu">${prop.map(r => `<button type="button" role="menuitem" class="${r.on ? 'is-on' : ''}" data-i="${r.i}">${REF_IC[r.id] || ''}${esc(r.label)}</button>`).join('')}</div>` : ''}</span>` : '';
-    const rhtml = rb.length ? `<span class="kw-refs-wide">${prop.map(one).join('')}</span>${merged}${cartR ? '<span class="kw-refs-sep" aria-hidden="true"></span>' + one(cartR) : ''}` : '';
+    /* Media and Floorplan are page tabs now, so the bar keeps one button for
+       opening either of them beside the page instead: Side by side, with a
+       menu. The page showing full width isn't offered beside itself. While a
+       panel is open the button is lit and names it. */
+    const curW = wraps.find(w => w.classList.contains('active')), curB = curW && curW.querySelector('.wmode');
+    const curPage = curB ? curB.dataset.page || '' : '', curName = curB ? curB.textContent.trim() : '';
+    const cartR = rb.find(r => r.id === 'cart'), openR = rb.find(r => r.id !== 'cart' && r.on);
+    const prop = rb.filter(r => r.id !== 'cart' && r.id !== curPage);
+    if(!prop.length && !openR) propOpen = false;
+    const ck = '<svg class="kw-pm-ck" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6.2l2.4 2.4 4.6-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const menu = propOpen ? `<div class="kw-prop-menu kw-beside-menu" role="menu">
+        <div class="kw-pm-hd">Open beside ${esc(curName || 'this page')}</div>
+        ${prop.map(r => `<button type="button" role="menuitemcheckbox" aria-checked="${r.on}" class="${r.on ? 'is-on' : ''}" data-i="${r.i}">${REF_IC[r.id] || ''}<span>${esc(r.label)}</span>${r.on ? ck : ''}</button>`).join('')}
+        ${openR ? `<span class="kw-pm-sep" role="separator"></span><button type="button" role="menuitem" class="kw-pm-close" data-close-side="1">Close ${esc(openR.label)}</button>` : ''}
+      </div>` : '';
+    const beside = (prop.length || openR) ? `<span class="kw-ref-prop-wrap"><button type="button" class="kw-ref kw-ref-prop${openR ? ' is-on' : ''}" data-prop="1" aria-haspopup="menu" aria-expanded="${propOpen}" title="${openR ? `${esc(openR.label)} is open beside the page` : 'Open Media or Floorplan beside the page'}">${REF_IC.beside}<span><em>${esc(openR ? openR.label : 'Side by side')}</em>${CARET}</span></button>${menu}</span>` : '';
+    const rhtml = rb.length ? `${beside}${cartR ? '<span class="kw-refs-sep" aria-hidden="true"></span>' + one(cartR) : ''}` : '';
     if(refs.innerHTML !== rhtml) refs.innerHTML = rhtml;
     d.body.classList.add('kw-tabs-shell');
     ['artifact', 'overview'].forEach(pg => { const snap = readDocs(pg); if(snap) menuSnap[pg] = snap; });
@@ -380,8 +395,17 @@
   bar.addEventListener('click', e => {
     const dm = e.target.closest('[data-docs]');
     if(dm){ e.stopPropagation(); clearTimeout(docsT); (docsMenu.hidden || menuPg !== dm.dataset.docs) ? openDocs(dm.dataset.docs) : closeDocs(); return; }
+    const cs = e.target.closest('[data-close-side]');
+    if(cs){ e.stopPropagation(); propOpen = false; try{ frame().contentWindow.pgCloseSide(); }catch(err){} drawTabs(); return; }
     const pp = e.target.closest('[data-prop]');
     if(pp){ e.stopPropagation(); propOpen = !propOpen; drawTabs(); return; }
+    // ⌘ / Ctrl-click on the Media or Floorplan tab: beside the page, not instead of it.
+    const bt = (e.metaKey || e.ctrlKey) && e.target.closest('.kw-tab:not(.is-on) .kw-tab-b');
+    if(bt && BESIDE[bt.closest('.kw-tab').dataset.page]){
+      e.stopPropagation(); e.preventDefault(); propOpen = false; closeDocs();
+      try{ frame().contentWindow.pgSide(bt.closest('.kw-tab').dataset.page); }catch(err){}
+      drawTabs(); return;
+    }
     const cb = e.target.closest('.kw-ref[data-ref="cart"]');
     if(cb){
       // Cart opens as a dropdown over the page, lined up under this button.
@@ -706,12 +730,12 @@
    does, so its Overview, Scope and Documents tabs are these real pages. Then
    the demo strip, the dark bar and the left rail hide, the starting tab comes
    from ?tab=, and the framing page switches tabs with a message:
-   {type:'kw-embed-tab', page:'overview' | 'scope' | 'documents'}. */
+   {type:'kw-embed-tab', page:'overview' | 'scope' | 'shop' | 'media' | 'floorplan' | 'documents'}. */
 (function(){
   const qs = new URLSearchParams(location.search);
   if(qs.get('embed') !== '1') return;
   document.documentElement.classList.add('kw-embed');
-  const MAP = {overview:'overview', scope:'shop', media:'pano', floorplan:'floorplan', documents:'artifact', shop:'shopkai'};
+  const MAP = {overview:'overview', scope:'shop', media:'media', floorplan:'floorplan', documents:'artifact', shop:'shopkai'};   // the mirrored tabs' data-page
   const go = page => {
     const pg = MAP[page] || page; let n = 0;
     (function tryIt(){

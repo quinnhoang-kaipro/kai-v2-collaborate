@@ -1612,19 +1612,28 @@ if(ART.product){
 }
 const FUT = '<span class="sp-future">Future</span>';
 const PG = {primary:null, side:null, nativePrimary:'overview'};
-/* KaiWeb: the tab bar is Overview · Scope · Shop · Documents. Media and
-   Floorplan are KaiWeb's own tabs (ids pano / floorplan) drawn in the right
-   panel instead (kw: the KaiWeb mode that panel draws). */
+/* KaiWeb: the tab bar is Overview · Scope · Shop · Media · Floorplan ·
+   Documents. Media and Floorplan are KaiWeb's own tabs (ids pano /
+   floorplan): their tab opens them as a whole page, like any other, and the
+   bar's Side by side menu opens them in the right panel beside a page
+   instead (kw: the KaiWeb mode that panel draws; full: the mode their tab
+   shows full width). */
 const PAGES = {
   overview:{label:'Overview', native:true},
   shop:{label:'Scope', native:true},
   shopkai:{label:'Shop', native:false},
   artifact:{label:'Documents', native:true},
-  media:{label:'Media', native:false, kw:'pano'},
-  floorplan:{label:'Floorplan', native:false, kw:'floorplan'},
+  media:{label:'Media', native:false, kw:'pano', full:'pano'},
+  floorplan:{label:'Floorplan', native:false, kw:'floorplan', full:'floorplan'},
   cart:{label:'Cart', native:false},   // the cart beside the page (right-edge rail)
 };
 const KW_TAB = {pano:'media', floorplan:'floorplan'};   // KaiWeb tab id → right-panel page
+/* The KaiWeb mode (pano / floorplan) its own tab opened full width, or null.
+   Only a tab click — or ?tab= on the address — opens one full; KaiWeb code
+   that jumps there on its own (a photo, "see on the plan") still opens the
+   right panel beside the page you were on. */
+let _kwFull = (q => KW_TAB[q] ? q : null)(new URLSearchParams(window.__KAI_QS || window.location.search).get('tab'));
+let _kwLastMain = 'overview';   // the last page that wasn't Media / Floorplan
 const NESTED = /pgnested=1/.test(window.__KAI_QS || '');
 let _pgSideW = 440;
 try{ const v = +localStorage.getItem('kai_wf_side_w'); if(v > 200) _pgSideW = v; }catch(e){}
@@ -1637,6 +1646,15 @@ const MEDIA = {view:'photos', show:'all', size:'small', room:''};   // view: pho
 const REF_PAGES = ['media', 'floorplan', 'cart'];
 let _sideSaved = false;
 try{ const v = localStorage.getItem('kai_wf_side'); if(v !== null){ _sideSaved = true; if(REF_PAGES.includes(v)) PG.side = v; } }catch(e){}
+// Opened on Media / Floorplan full width (?tab=): not the same page beside it too.
+if(_kwFull && PG.side === KW_TAB[_kwFull]) PG.side = null;
+/* Leaving a full-width Media / Floorplan for one of Shop's own pages: KaiWeb's
+   mode goes back to the last page underneath, so nothing later reads it as a
+   jump to the side panel, or as Media still showing. */
+function _leaveKwFull(){
+  if(typeof workMode !== 'undefined' && KW_TAB[workMode]) workMode = _kwLastMain || 'overview';
+  _kwFull = null;
+}
 function _saveSide(){ try{ localStorage.setItem('kai_wf_side', PG.side || ''); _sideSaved = true; }catch(e){} }
 
 // A tall page with its right half filled when open: reads as "panel", not a checkbox.
@@ -1785,7 +1803,7 @@ function paintTabs(){
     const id = b.dataset.pg || (m && (KW_TAB[m[1]] || m[1])); if(!id || !PAGES[id]) return;
     b.dataset.page = id;
     const bw = b.closest('.wmode-wrap') || b;
-    if(REF_PAGES.includes(id)){ bw.hidden = true; bw.style.display = 'none'; return; }
+    if(REF_PAGES.includes(id) && !PAGES[id].full){ bw.hidden = true; bw.style.display = 'none'; return; }
     if(PAGES[id].off){
       // Not part of this wireframe: shown, not openable.
       b.removeAttribute('onclick'); b.onclick = null;
@@ -1793,7 +1811,7 @@ function paintTabs(){
       b.title = `${PAGES[id].label} isn't part of this wireframe`;
       return;
     }
-    const isMain = PG.primary ? PG.primary === id : (typeof workMode !== 'undefined' && workMode === id);
+    const isMain = PG.primary ? PG.primary === id : (typeof workMode !== 'undefined' && (workMode === id || workMode === PAGES[id].full));
     b.classList.toggle('active', isMain);
     if(bw !== b){ bw.classList.toggle('active', isMain); bw.querySelectorAll('.wmode-tools, .view-menu').forEach(x => { x.hidden = !isMain; }); }
   });
@@ -1817,8 +1835,10 @@ function paintTabs(){
 
 window.pgPrimary = function(id){
   if(PAGES[id] && PAGES[id].off) return;
-  // Media and Measurements only ever open in the side panel.
+  // Asked for by its page id (pgPrimary('media')), Media / Floorplan open in the
+  // side panel; their tabs open them full width through pickWorkMode instead.
   if(REF_PAGES.includes(id)){ pgShowSide(id); return; }
+  if(!(PAGES[id] && PAGES[id].native)) _leaveKwFull(); else _kwFull = null;
   // The side panel stays as it is when the main page changes.
   if(PAGES[id] && PAGES[id].native){ PG.primary = null; if(_origPick) _origPick(id); else if(_origSetWorkMode) _origSetWorkMode(id); render(); return; }
   PG.primary = id;
@@ -1837,32 +1857,43 @@ window.pgCloseSide = function(){ PG.side = null; _saveSide(); render(); };
 // Clicking any native tab leaves Shop; the side panel stays put.
 const _origSetWorkMode = typeof setWorkMode === 'function' ? setWorkMode : null;
 const _origPick = typeof pickWorkMode === 'function' ? pickWorkMode : null;
-// Media / Floorplan asked for as a tab, from anywhere: they open in the right panel.
-const _asSide = m => { const pid = KW_TAB[m]; if(pid && REF_PAGES.includes(pid)){ pgShowSide(pid); return true; } return false; };
+// Media / Floorplan asked for by KaiWeb code (not their tab): they open in the
+// right panel — unless that page is already showing full width.
+const _asSide = m => { if(m === _kwFull) return false; const pid = KW_TAB[m]; if(pid && REF_PAGES.includes(pid)){ pgShowSide(pid); return true; } return false; };
 if(_origSetWorkMode && !NESTED){
   setWorkMode = function(m){ if(_asSide(m)) return; if(PAGES[m] && PAGES[m].off) return; if(PAGES[m] && !PAGES[m].native){ pgPrimary(m); return; } PG.primary = null; const r = _origSetWorkMode.apply(this, arguments); render(); return r; };
 }
 if(_origPick && !NESTED){
-  pickWorkMode = function(m){ if(_asSide(m)) return; if(PAGES[m] && !PAGES[m].native){ pgPrimary(m); return; } PG.primary = null; const r = _origPick.apply(this, arguments); render(); return r; };
+  /* A tab click. Media / Floorplan open full width, like any page; the side
+     panel closes if it was showing the same thing. */
+  pickWorkMode = function(m){
+    const pid = KW_TAB[m];
+    if(pid){ _kwFull = m; if(PG.side === pid){ PG.side = null; _saveSide(); } }
+    else { _kwFull = null; if(PAGES[m] && !PAGES[m].native){ pgPrimary(m); return; } }
+    PG.primary = null; const r = _origPick.apply(this, arguments); render(); return r;
+  };
 }
 /* KaiWeb code that sets workMode = 'pano' / 'floorplan' itself (opening a
    photo, "see on the plan"…) and redraws: the page stays where it was and the
    right panel opens on it instead. No split panes either — the right panel
    replaced them. */
-let _kwLastMain = 'overview', _kwInSide = false;
+let _kwInSide = false;
 if(typeof _applyWorkMode === 'function' && !NESTED){
   const _origApply = _applyWorkMode;
   _applyWorkMode = function(){
     if(!_kwInSide){
-      const ref = [workMode, splitMode].find(x => KW_TAB[x]);
+      // The full-width Media / Floorplan its tab opened stays; any other jump
+      // to them opens the right panel beside the page instead.
+      const ref = [workMode, splitMode].find(x => KW_TAB[x] && x !== _kwFull);
       if(ref){
-        const keep = [workMode, splitMode].find(x => x && !KW_TAB[x]);
-        workMode = keep || _kwLastMain || 'shop';
+        const keep = [workMode, splitMode].find(x => x && x !== ref);
+        workMode = keep || _kwFull || _kwLastMain || 'shop';
         PG.side = KW_TAB[ref]; _saveSide();
         const sp = document.getElementById('pgSide'); if(sp) sp.dataset.key = '';
       }
       splitMode = null;
-      _kwLastMain = workMode;
+      if(workMode !== _kwFull) _kwFull = null;
+      if(!KW_TAB[workMode]) _kwLastMain = workMode;
     }
     const r = _origApply.apply(this, arguments);
     if(!_kwInSide) render();
@@ -2409,7 +2440,7 @@ window.spreeBoardShop = function(id){
   if(PG.primary === 'shopkai'){ spreeShopFor(id); return; }
   S.active = id; S.view = 'shop'; S.q = ''; S.help = null;
   // Shop opens as the main page; the side panel (Measurements) stays put.
-  PG.primary = 'shopkai'; render(); spreeShopFor(id);
+  _leaveKwFull(); PG.primary = 'shopkai'; render(); spreeShopFor(id);
 };
 window.spreeRoomMedia = function(room){
   MEDIA.view = 'photos'; MEDIA.show = 'all'; MEDIA.room = room;
@@ -2456,7 +2487,7 @@ function moodHtml(){
 /* ── open / state ── */
 window.spreeOpen = function(taskId){
   if(taskId != null) S.active = taskId;
-  PG.primary = 'shopkai';
+  _leaveKwFull(); PG.primary = 'shopkai';
   // First visit: open the panel on Media. After that, keep whatever the person left it as.
   if(!PG.side && !_sideSaved) PG.side = 'media';
   render();

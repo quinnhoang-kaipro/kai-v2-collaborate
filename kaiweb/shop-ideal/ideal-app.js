@@ -455,8 +455,24 @@ function pickHtml(needs){
    item with your pick, what happens if it's out, and the next best options. "See all" opens
    the full shelf. "All" stacks the whole list, like a long scroll. */
 function needTotal(n){ const p = n.pick && CATALOG[n.pick]; return p ? buy(p, n.qty, offerOf(n, p)).total : 0; }
+/* The room's own site photos, one at a time, in the slot left of the mood
+   board: what's there now beside the look it's going to. ‹ › step through them
+   (round and round); the photo opens in Media. Remembered per room. */
+const LOOK_PH = {};   // room id → photo shown
+function lookPhHtml(rid){
+  const L = PHOTOS[rid] || []; if(!L.length) return '';
+  const i = ((LOOK_PH[rid] || 0) % L.length + L.length) % L.length, p = L[i], many = L.length > 1;
+  return `<div class="look-ph" data-room="${rid}">
+    <button type="button" class="look-ph-im" data-act="ref-photo" data-k="${rid}:${i}" title="Open this photo in Media"><img src="${ART.photo(ROOM[rid].scene, i)}" alt="${esc(p[0])}"></button>
+    ${many ? `<span class="look-ph-n">${i + 1} / ${L.length}</span>
+    <button type="button" class="look-ph-b prev" data-act="look-ph" data-room="${rid}" data-d="-1" aria-label="Previous photo">‹</button>
+    <button type="button" class="look-ph-b next" data-act="look-ph" data-room="${rid}" data-d="1" aria-label="Next photo">›</button>` : ''}
+    <span class="look-ph-cap"><b>${esc(p[0])}</b><span>Site photo · ${esc(p[1])}</span></span>
+  </div>`;
+}
 function lookHtml(ns){
-  return `<div class="look"><button type="button" class="look-mood" data-act="ref-photo" data-k="mood" title="Open the mood board in Media"><img src="${ART.mood()}" alt="Mood board"><span class="tag">Mood board</span></button>
+  const ph = ns.length ? lookPhHtml(ns[0].room) : '';
+  return `<div class="look${ph ? ' has-ph' : ''}">${ph}<button type="button" class="look-mood" data-act="ref-photo" data-k="mood" title="Open the mood board in Media"><img src="${ART.mood()}" alt="Mood board"><span class="tag">Mood board</span></button>
     <div class="look-items"><span class="k">All selected products</span><div class="look-row">${ns.map(n => {
       const p = n.pick && CATALOG[n.pick];
       return `<button type="button" class="lk${p ? '' : ' empty'}" data-act="room-jump" data-id="${n.id}" title="${esc(n.task)}${p ? ' — ' + esc(p.name) : ''}">
@@ -470,7 +486,10 @@ function needBlock(n){
   const alts = BY_CAT[n.cat].filter(c => c.sku !== n.pick && fitsNeed(c, n))
     .sort((a, b) => ((b.mood ? 1 : 0) - (a.mood ? 1 : 0)) || (score(b, [n]) - score(a, [n])));
   const st = !p ? '<span class="tag warn">Needs product</span>'
-    : n.swap ? '<span class="tag ok">Swapped at pickup</span>' : isOver(n) ? '<span class="tag warn">Needs review</span>' : '<span class="tag ok">Chosen</span>';
+    : n.swap ? '<span class="tag ok">Swapped at pickup</span>' : isOver(n) ? '<span class="tag warn">Needs review</span>' : '';
+  /* The task's cost against its allowance takes the header's right end, where
+     a "Chosen" tag used to sit: a pick is already plain from the card below. */
+  const amt = n.allow ? `<span class="nb-amt">Task ${needAmtHtml(n, `${money0(taskCost(n))} / ${money0(n.allow)}`)}</span>` : '';
   const notes = [];
   if(n.swap) notes.push(`<div class="nb-note ok">${IC.swap}<span><b>Swapped at pickup</b> · ${esc(CATALOG[n.swap.from].name.split(/,|\(/)[0])} was out → ${esc(n.swap.how)} · ${n.swap.co ? 'in the next change order' : 'no change order'}</span></div>`);
   if(isOver(n)) notes.push(`<div class="nb-note warn"><span>!</span><span><b>Needs review</b> · ${money0(overBy(n))} over the ${money0(n.allow)} allowance</span></div>`);
@@ -482,7 +501,7 @@ function needBlock(n){
         <b class="nm" data-act="detail" data-sku="${p.sku}" data-id="${n.id}">${esc(p.name)}</b>
         <span class="ln"><b class="num">${money(b.total)}</b> · ${b.label} at ${money(o.price)} / ${perUnit(p)}</span>
         <span class="avail"><span class="dot ${av.cls}"></span><span>${av.short}</span></span>
-        ${stepperHtml(n, 'mini')}
+        <div class="nb-pick-acts">${stepperHtml(n, 'mini')}<button type="button" class="nb-rm" data-act="remove" data-sku="${p.sku}" data-ids="${n.id}" title="Take ${esc(p.name.split(/,|\(/)[0].trim())} off the list">${TRASH}<span>Remove</span></button></div>
         <div class="pb"><span class="k">If it's out of stock</span>${subLineHtml([n])}</div></div></div>`;
   }
   const alt = c => {
@@ -496,7 +515,7 @@ function needBlock(n){
       <span class="acts"><button type="button" class="btn ${p ? 'ghost' : 'pri'} sm" data-act="choose" data-sku="${c.sku}" data-id="${n.id}" title="${p ? `Add it in place of ${esc(p.name.split(/,|\(/)[0])}` : 'Add to the list'}">Add</button></span></article>`;
   };
   return `<section class="nb" data-need="${n.id}">
-    <header class="nb-hd"><h3><button type="button" data-act="sel-need" data-id="${n.id}">${esc(n.task)}</button></h3><span class="sub">${qtyText(n.cat, n.qty)}${n.fit ? ` · ${n.fit}″ opening` : ''}${n.allow ? ` · task ${needAmtHtml(n, `${money0(taskCost(n))} / ${money0(n.allow)}`)}` : ''}</span>${st}</header>
+    <header class="nb-hd"><h3><button type="button" data-act="sel-need" data-id="${n.id}">${esc(n.task)}</button></h3><span class="sub">${qtyText(n.cat, n.qty)}${n.fit ? ` · ${n.fit}″ opening` : ''}</span>${st || amt ? `<span class="nb-hd-r">${st}${amt}</span>` : ''}</header>
     ${notes.length ? `<div class="nb-notes">${notes.join('')}</div>` : ''}
     <div class="nb-bd${p ? '' : ' none'}">${pick}
       <div class="rcar" data-car="${n.id}"><div class="rcar-track" role="list">${alts.map(alt).join('')}</div>
@@ -1177,6 +1196,12 @@ document.addEventListener('click', e => {
     case 'qty': { const n = need(id), p = n && CATALOG[n.pick]; if(!p) break;
       const k = buy(p, n.qty, offerOf(n, p)).n + (+t.dataset.d);
       if(k < 1) removePick([n]); else { setCount(n, p, k); render(); } break; }
+    case 'look-ph': { const rid = t.dataset.room, L = PHOTOS[rid] || [], slot = t.closest('.look-ph');
+      if(!L.length || !slot) break;
+      LOOK_PH[rid] = ((LOOK_PH[rid] || 0) + (+t.dataset.d) + L.length) % L.length;
+      slot.outerHTML = lookPhHtml(rid);   // just the slot: the page doesn't move
+      const b = document.querySelector(`.look-ph[data-room="${rid}"] .look-ph-b.${+t.dataset.d < 0 ? 'prev' : 'next'}`); if(b) b.focus();
+      break; }
     case 'car': { const c = t.closest('.rcar'), g = carGeo(c); g.tr.scrollBy({left: (+t.dataset.d) * g.per * g.step, behavior: 'smooth'}); break; }
     case 'dqty': { const p = CATALOG[S.detail], n = S.detailFor ? need(S.detailFor) : selNeeds()[0]; if(!p || !n) break;
       S.dQty = Math.max(1, (S.dQty || buy(p, n.qty, offerOf(n, p)).n) + (+t.dataset.d)); renderWork(); break; }

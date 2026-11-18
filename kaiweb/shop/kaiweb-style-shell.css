@@ -326,9 +326,11 @@ body.kw-shell-tabs .app-toolbar .tb-address{min-width:0; flex-shrink:0}
 .kw-acct.is-acct .kw-acct-links{background:transparent; border-top:0; padding:6px 0}
 .kw-acct.is-acct .kw-acct-links button{font-size:14px; padding:10px 18px}
 
-/* ── Media / Floorplan / Cart in the dark bar ──
+/* ── Side by side / Cart in the dark bar ──
    Icon over a word, like a toolbar: these open a panel beside the page,
-   so they look different from the four page tabs. Lit while open. */
+   so they look different from the page tabs. Media and Floorplan are page
+   tabs; Side by side opens either of them beside the page instead. Lit
+   while a panel is open. */
 .kw-refs{display:flex; align-items:stretch; gap:2px; margin-right:12px; flex:none; align-self:stretch}
 .kw-refs-wide{display:flex; gap:2px}
 .kw-ref{all:unset; box-sizing:border-box; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
@@ -341,7 +343,14 @@ body.kw-shell-tabs .app-toolbar .tb-address{min-width:0; flex-shrink:0}
 .kw-ref.is-on::after{content:''; position:absolute; left:10px; right:10px; bottom:0; height:2px; background:var(--accent)}
 .kw-ref:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
 .kw-refs-sep{width:1px; margin:14px 4px; background:rgba(255,255,255,.18)}
-.kw-ref-prop-wrap{position:relative; display:none}
+.kw-ref-prop-wrap{position:relative; display:flex}
+.kw-ref-prop em{font-style:normal}
+.kw-prop-menu.kw-beside-menu{left:auto; right:0; min-width:230px}
+.kw-pm-hd{padding:6px 10px 8px; font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--t3, #8A8478)}
+.kw-prop-menu button span{flex:1}
+.kw-prop-menu .kw-pm-ck{width:13px; height:13px; flex:none; color:var(--ink)}
+.kw-pm-sep{display:block; height:1px; margin:5px 4px; background:var(--stroke, #DDD6C8)}
+.kw-prop-menu .kw-pm-close{color:var(--t2, #5C574E)}
 .kw-prop-menu{position:absolute; top:100%; left:0; z-index:400; min-width:170px; padding:6px; background:var(--white); color:var(--ink); border:1px solid var(--stroke, #DDD6C8); border-top:3px solid var(--accent); box-shadow:0 10px 28px rgba(0,0,0,.18)}
 .kw-prop-menu button{all:unset; box-sizing:border-box; cursor:pointer; display:flex; align-items:center; gap:10px; width:100%; padding:9px 10px; font-family:var(--body); font-size:13px}
 .kw-prop-menu button svg{width:17px; height:17px}
@@ -351,7 +360,6 @@ body.kw-shell-tabs .app-toolbar .tb-address{min-width:0; flex-shrink:0}
 @media (min-width:1360px){ .kw-tabs{position:static; transform:none} }
 .kw-sp-l{flex:0 0 18px; min-width:18px}
 @media (max-width:1180px){ .kw-ref{min-width:0; padding:0 9px} .kw-ref > span{display:none} .kw-refs{margin-right:8px} }
-@media (max-width:1060px){ .kw-refs-wide{display:none} .kw-ref-prop-wrap{display:flex} .kw-ref-prop > span{display:inline-flex !important; font-size:0} .kw-ref-prop > span svg{width:10px; height:10px} .kw-ref-prop{flex-direction:row; gap:2px} }
 
 /* A little narrower, so the tabs can line up with the page at 1440. */
 .kw-ref{min-width:54px; padding:0 6px}
@@ -399,3 +407,20 @@ body.kw-shell-tabs .app-toolbar .tb-address{min-width:0; flex-shrink:0}
 
 /* Embedded in another page (?embed=1): that page supplies the chrome. */
 html.kw-embed .tb,html.kw-embed .app-toolbar,html.kw-embed .global-nav,html.kw-embed .kw-docs-menu{display:none !important}
+
+/* Six page tabs since Media and Floorplan joined them, and one Side by side
+   button in place of two: a little tighter below 1340 so the bar still fits.
+   Below 1300 the address gives way first (it already ends in an ellipsis),
+   so nothing runs off the right of the bar. */
+@media (max-width:1340px){ .kw-tab-b{padding:0 10px} }
+@media (max-width:1300px){ body.kw-shell-tabs .app-toolbar .tb-address{flex-shrink:1; min-width:116px} }
+@media (max-width:1260px){ .kw-tab-b{padding:0 7px} body.kw-shell-tabs .app-toolbar .tb-address{max-width:190px} }
+@media (max-width:1180px){
+  .kw-tab-b{padding:0 5px; letter-spacing:.02em}
+  .kw-tab-menu{margin-right:2px}
+  .kw-refs{margin-right:4px}
+  .kw-ref{min-width:44px}
+}
+/* Side by side drops its word a little earlier than the others (icon and
+   caret stay), since it's the longest one in the bar. */
+@media (max-width:1300px){ .kw-ref-prop > span{display:inline-flex !important} .kw-ref-prop > span em{display:none} .kw-ref-prop{flex-direction:row; gap:2px; min-width:44px} }
