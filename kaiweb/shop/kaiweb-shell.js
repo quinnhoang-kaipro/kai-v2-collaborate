@@ -708,17 +708,27 @@
     const first = tabs.querySelector('.kw-tab-b');
     if(!work || !first || !work.getBoundingClientRect().width){ if(last){ gap.style.flexBasis = ''; last = ''; } return; }
     const target = f.getBoundingClientRect().left + work.getBoundingClientRect().left + INSET;
-    const pad = parseFloat(getComputedStyle(first).paddingLeft) || 0;
     // Measure with the gap at its minimum: the free space then sits in the
     // right-hand spacer, and the gap may take only that much, so the address
-    // never gets squeezed and nothing runs off the bar.
-    gap.style.flexBasis = MIN + 'px';
+    // never gets squeezed and nothing runs off the bar. Returns how far short
+    // of the page's text the first tab still falls.
     const right = document.querySelector('.app-toolbar .kw-sp:not(.kw-sp-l)');
-    const slack = right ? Math.max(0, right.getBoundingClientRect().width - 8) : 0;
-    const start = gap.getBoundingClientRect().left;
-    const w = Math.max(MIN, Math.min(MIN + slack, Math.round(target - pad - start)));
-    const v = w + 'px';
-    gap.style.flexBasis = v; gap.style.minWidth = MIN + 'px'; last = v;
+    function place(){
+      const pad = parseFloat(getComputedStyle(first).paddingLeft) || 0;
+      gap.style.flexBasis = MIN + 'px';
+      const slack = right ? Math.max(0, right.getBoundingClientRect().width - (parseFloat(getComputedStyle(right).minWidth) || 0)) : 0;
+      const want = Math.round(target - pad - gap.getBoundingClientRect().left);
+      const w = Math.max(MIN, Math.min(MIN + slack, want));
+      gap.style.flexBasis = w + 'px'; gap.style.minWidth = MIN + 'px'; last = w + 'px';
+      return want - w;
+    }
+    /* Short of room, the bar tightens one step at a time until the tabs reach
+       the text: first Side by side and Cart drop to their icons (their tooltips
+       stay), then the tabs and the right-hand items close up a little. If even
+       that can't line them up, nothing tightens: closer isn't worth the labels. */
+    const b = document.body, set = n => { b.classList.toggle('kw-fit-1', n >= 1); b.classList.toggle('kw-fit-2', n >= 2); };
+    for(let n = 0; n <= 2; n++){ set(n); if(place() <= 1) return; }
+    set(0); place();
   }
   window.addEventListener('resize', align);
   setInterval(align, 250);

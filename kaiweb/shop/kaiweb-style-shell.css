@@ -424,3 +424,18 @@ html.kw-embed .tb,html.kw-embed .app-toolbar,html.kw-embed .global-nav,html.kw-e
 /* Side by side drops its word a little earlier than the others (icon and
    caret stay), since it's the longest one in the bar. */
 @media (max-width:1300px){ .kw-ref-prop > span{display:inline-flex !important} .kw-ref-prop > span em{display:none} .kw-ref-prop{flex-direction:row; gap:2px; min-width:44px} }
+
+/* ── Tabs over the page's text, when the bar is short of room ──
+   kaiweb-shell.js (align) steps these on only as far as the first tab needs to
+   reach the page's text: 1 · Side by side and Cart show just their icons (their
+   tooltips stay); 2 · the tabs and the right-hand items close up a little. */
+body.kw-fit-1 .kw-ref > span{display:none !important}
+body.kw-fit-1 .kw-ref{min-width:0; padding:0 10px}
+body.kw-fit-1 .kw-refs{margin-right:8px}
+body.kw-fit-2 .kw-tab-b{padding:0 8px}
+body.kw-fit-2 .kw-tab-menu{margin:0 2px 0 -6px}
+body.kw-fit-2 .kw-refs{margin-right:6px}
+body.kw-fit-2 .kw-turn-group{margin-right:8px}
+body.kw-fit-2 .app-toolbar .app-notif{margin-right:8px}
+body.kw-fit-2 .app-toolbar .app-avatar{margin-right:10px}
+body.kw-fit-2 .app-toolbar .kw-sp:not(.kw-sp-l){min-width:2px}
