@@ -454,6 +454,11 @@ function pickHtml(needs){
    Every shelf in a room, stacked: the room's look at the top, then one row per
    item with your pick, what happens if it's out, and the next best options. "See all" opens
    the full shelf. "All" stacks the whole list, like a long scroll. */
+// Every other product that fits a room row, best matches first: its carousel, and the modal's pager.
+function roomAlts(n){
+  return BY_CAT[n.cat].filter(c => c.sku !== n.pick && fitsNeed(c, n))
+    .sort((a, b) => ((b.mood ? 1 : 0) - (a.mood ? 1 : 0)) || (score(b, [n]) - score(a, [n])));
+}
 function needTotal(n){ const p = n.pick && CATALOG[n.pick]; return p ? buy(p, n.qty, offerOf(n, p)).total : 0; }
 /* The room's own site photos, one at a time, in the slot left of the mood
    board: what's there now beside the look it's going to. ‹ › step through them
@@ -483,8 +488,7 @@ function lookHtml(ns){
 function needBlock(n){
   const p = n.pick && CATALOG[n.pick], all = BY_CAT[n.cat].length, pt = needTotal(n);
   // Every other product that fits, best matches first, in a carousel: no leaving the room.
-  const alts = BY_CAT[n.cat].filter(c => c.sku !== n.pick && fitsNeed(c, n))
-    .sort((a, b) => ((b.mood ? 1 : 0) - (a.mood ? 1 : 0)) || (score(b, [n]) - score(a, [n])));
+  const alts = roomAlts(n);
   const st = !p ? '<span class="tag warn">Needs product</span>'
     : n.swap ? '<span class="tag ok">Swapped at pickup</span>' : isOver(n) ? '<span class="tag warn">Needs review</span>' : '';
   /* The task's cost against its allowance takes the header's right end, where
@@ -617,7 +621,31 @@ function trayHtml(){
     <button type="button" class="btn pri" data-act="cmp-open" ${S.compare.length < 2 ? 'disabled' : ''}>Compare ${S.compare.length}</button><button type="button" class="clr" data-act="cmp-clear">Clear</button></div>`;
 }
 
-/* product detail */
+/* Product detail: a modal over the page, like KaiWeb's own product view. The
+   pictures take the left half (‹ › and the dots step through them); the right
+   half is everything about the product, scrolling, with the add pinned at its
+   foot. The pager under it steps through the other products on the same shelf,
+   in the order the shelf shows them, without closing. */
+function pdList(needs){
+  if(S.detailFor){ const n = need(S.detailFor); if(n) return [n.pick, ...roomAlts(n).map(c => c.sku)].filter(Boolean); }
+  const ps = shelfProducts(needs);
+  if(S.chips.size || S.q || S.sort !== 'rec') return ps.map(p => p.sku);
+  const good = ps.filter(p => p.mood && needs.some(n => fitsNeed(p, n)));
+  return [...good, ...ps.filter(p => !good.includes(p))].map(p => p.sku);
+}
+/* The measurements the task was planned from: the room's size, the task's
+   amount and where that number came from (and an opening's width), as facts. */
+function measHtml(ns, p){
+  if(ns.length === 1){
+    const n = ns[0], r = ROOM[n.room];
+    return `<span class="k">${esc(r.name)} · ${esc(n.task)}</span><dl class="specs pd-ms">
+      <dt>Room</dt><dd>${r.w}′ × ${r.h}′ · ${r.w * r.h} SF</dd>
+      <dt>${esc(CAT_INFO[n.cat].label)}</dt><dd><b>${qtyText(n.cat, n.planQty)}</b>${n.src ? `<small>${esc(n.src)}</small>` : ''}</dd>
+      ${n.fit ? `<dt>Opening</dt><dd>${n.fit}″ wide</dd>` : ''}</dl>`;
+  }
+  return `<span class="k">${esc(CAT_INFO[p.cat].label)} · ${ns.length} rooms</span><dl class="specs pd-ms">${ns.map(n => { const r = ROOM[n.room];
+    return `<dt>${esc(r.name)}</dt><dd><b>${qtyText(n.cat, n.planQty)}</b> · ${r.w}′ × ${r.h}′${n.fit ? ` · ${n.fit}″ opening` : ''}</dd>`; }).join('')}</dl>`;
+}
 function detailHtml(needs){
   const p = CATALOG[S.detail]; if(!p) return '';
   const single = S.sel.kind === 'need' || !!S.detailFor, n0 = needs[0], tgt = single ? needs : inclNeeds();
@@ -627,14 +655,19 @@ function detailHtml(needs){
   const room = single ? ROOM[n0.room].name : `${tgt.length} rooms`;
   // What you'd buy: the live count once it's added, the sheet's own count before.
   const plan = single ? n0.planQty : tgt.reduce((a, n) => a + n.planQty, 0), o0 = single ? offerOf(n0, p) : p.offers[0];
-  const cnt = single ? (isPick ? buy(p, n0.qty, o0).n : (S.dQty || buy(p, n0.qty, o0).n)) : 0;
+  const live = single && isPick ? buy(p, n0.qty, o0).n : 0;
+  const cnt = single ? (S.dQty || buy(p, n0.qty, o0).n) : 0;
   const bb = single ? buy(p, qtyForCount(p, cnt), o0) : buy(p, tgt.reduce((a, n) => a + n.qty, 0));
+  /* The foot always ends in plain buttons. Not added: a count and Add. Your
+     pick: the count is a draft that Update saves, beside Remove. Several rooms:
+     where it is, and Remove from them (amounts are set per room on the shelf). */
+  const draft = `<div class="stp draft" role="group" aria-label="Quantity"><button type="button" data-act="dqty" data-d="-1" ${cnt <= 1 ? 'disabled' : ''} aria-label="One less">−</button><span class="stp-n"><b>${bb.label}</b></span><button type="button" data-act="dqty" data-d="1" aria-label="One more">+</button></div>`;
+  const rmBtn = (ids, lbl) => `<button type="button" class="btn ghost pdm-rm" data-act="remove" data-sku="${p.sku}" data-ids="${ids}">${TRASH}${lbl}</button>`;
   const ft = !single
-    ? (isPick ? `<div class="stp in"><span class="stp-n"><b>✓ In ${fitT.length} ${fitT.length === 1 ? 'room' : 'rooms'}</b><small>set amounts on the shelf</small></span><button type="button" data-act="remove" data-sku="${p.sku}" data-ids="${fitT.map(n => n.id).join(',')}" aria-label="Remove from these rooms" title="Remove from these rooms">${TRASH}</button></div>`
-      : `<button class="btn pri" style="flex:1" data-act="choose" data-sku="${p.sku}" ${fitT.length ? '' : 'disabled'}>${fitT.length ? `Add to ${fitT.length} ${fitT.length === 1 ? 'room' : 'rooms'} · ${money(bb.total)}` : 'Doesn’t fit'}</button>`)
-    : isPick ? `${stepperHtml(n0, 'grow')}`
-    : `<div class="stp draft" role="group" aria-label="Quantity"><button type="button" data-act="dqty" data-d="-1" ${cnt <= 1 ? 'disabled' : ''} aria-label="One less">−</button><span class="stp-n"><b>${bb.label}</b></span><button type="button" data-act="dqty" data-d="1" aria-label="One more">+</button></div>
-       <button class="btn pri" style="flex:1" data-act="choose" data-sku="${p.sku}" data-k="${cnt}"${fid}>Add · ${money(bb.total)}</button>`;
+    ? (isPick ? `<span class="pdm-ft-note"><b>✓ In ${fitT.length} ${fitT.length === 1 ? 'room' : 'rooms'}</b>Amounts are set per room on the shelf</span>${rmBtn(fitT.map(n => n.id).join(','), `Remove from ${fitT.length} ${fitT.length === 1 ? 'room' : 'rooms'}`)}`
+      : `<button class="btn pri pdm-go" data-act="choose" data-sku="${p.sku}" ${fitT.length ? '' : 'disabled'}>${fitT.length ? `Add to ${fitT.length} ${fitT.length === 1 ? 'room' : 'rooms'} · ${money(bb.total)}` : 'Doesn’t fit'}</button>`)
+    : isPick ? `${draft}${rmBtn(n0.id, 'Remove')}<button class="btn pri pdm-go" data-act="pd-update" data-k="${cnt}" ${cnt === live ? 'disabled title="Change the amount to update it"' : ''}>Update · ${money(bb.total)}</button>`
+    : `${draft}<button class="btn pri pdm-go" data-act="choose" data-sku="${p.sku}" data-k="${cnt}"${fid}>Add · ${money(bb.total)}</button>`;
   const whys = [];
   if(p.mood) whys.push(`Matches the mood board (${esc(MOOD.name)})`); else whys.push(['no', esc(p.why || 'Not on the mood board')]);
   if(p.std) whys.push(`Your team's standard — used on ${p.used} jobs`);
@@ -642,28 +675,73 @@ function detailHtml(needs){
   if(single && n0.fit) whys.push(fitsNeed(p, n0) ? `Fits the ${n0.fit}″ opening` : ['no', `${p.size}″ wide — the opening is ${n0.fit}″`]);
   const av = avail(p, q); whys.push(av.ok ? `${av.short} for this job` : ['no', av.short]);
   if(single && n0.allow){ const t = buy(p, n0.qty).total; if(t <= n0.allow) whys.push(`Within the ${money0(n0.allow)} task allowance`); }
-  const imgs = [0, 1, 2].map(v => ART.product(p, v));
-  return `<div class="scrim" data-act="close-detail"></div><aside class="sheet" aria-label="${esc(p.name)}">
-    <div class="sheet-hd"><span class="k">${esc(CAT_INFO[p.cat].label)} · for ${esc(room)}</span>${S.detailFor ? `<button class="link" data-act="sel-need" data-id="${S.detailFor}" style="margin-left:auto;font-size:12.5px">See all ${esc(CAT_INFO[p.cat].label.toLowerCase())}</button>` : ''}<button class="x" data-act="close-detail" aria-label="Close"${S.detailFor ? ' style="margin-left:0"' : ''}>×</button></div>
-    <div class="sheet-bd">
-      <div class="pd-hero"><img src="${imgs[S.detailImg]}" alt=""></div>
-      <div class="pd-thumbs">${imgs.map((u, i) => `<img src="${u}" class="${i === S.detailImg ? 'on' : ''}" data-act="img" data-i="${i}" alt="View ${i + 1}">`).join('')}</div>
-      <div class="pd-sec"><span class="k" style="margin:0">${esc(p.brand)}</span><h3>${esc(p.name)}</h3>
-        <div class="pd-price"><b class="num">${money(p.price)}</b><span>/ ${perUnit(p)} · ★ ${p.rating.toFixed(1)} (${p.reviews})</span></div>
-        <div class="pd-qty"><div><span class="k" style="margin-bottom:3px">For ${esc(room)}</span>The plan calls for <b>${qtyText(p.cat, plan)}</b><br>You'll buy <b>${bb.label}</b>${bb.sub ? ` <span style="font-size:12px;color:var(--t2)">(${p.pack} ${p.unit} per ${p.packName} · covers ${bb.sub})</span>` : ''}</div>
-          <div class="tt"><b class="num">${money(bb.total)}</b><span>${single ? 'this task' : 'all checked rooms'}</span></div></div></div>
-      <div class="pd-sec"><span class="k">If this item is out of stock</span>${subLineHtml(single ? [n0] : tgt, '', p.sku)}</div>
-      <div class="pd-sec"><span class="k">Why it ${p.mood ? 'fits' : 'may not fit'} this job</span><ul class="whys">${whys.map(w => Array.isArray(w) ? `<li class="no">${w[1]}</li>` : `<li>${w}</li>`).join('')}</ul></div>
-      <div class="pd-sec"><span class="k">Where to get it</span><div class="stores">${p.offers.map((o, i) => {
-        const s = SUPPLIERS[o.sup], bb = buy(p, q, o), ok = o.stock >= bb.n;
-        return `<div class="store${i === 0 ? ' best' : ''}"><span class="mono" style="background:${s.tone}">${s.mono}</span><span class="tx"><b>${esc(s.name)} · ${esc(s.store)}</b>
-          <span>${ok ? `${o.stock} in stock · pickup today · ${esc(o.aisle)}` : `${o.stock ? `Only ${o.stock}` : 'None'} in store · ships ${wmd(o.ship)}`} · ${s.mi} mi</span><span>Delivery to the job: ${wmd(o.ship)}</span></span><span class="p num">${money(o.price)}</span></div>`;
-      }).join('')}</div></div>
-      ${TEAM_SAYS[p.sku] ? `<div class="pd-sec"><span class="k">From your team</span>${TEAM_SAYS[p.sku].map(([w, t, where]) => `<div class="said"><span class="av sm" style="background:${TEAM[w].tone}">${w}</span><div>${esc(t)}<small>${TEAM[w].name} · ${esc(where)}</small></div></div>`).join('')}</div>` : ''}
-      <div class="pd-sec"><span class="k">Details</span><dl class="specs"><dt>SKU</dt><dd>${esc(p.sku)}</dd><dt>Sold by</dt><dd>${esc(p.unit === 'SF' && p.pack > 1 ? `${p.packName} of ${p.pack} SF` : perUnit(p))}</dd>${p.size ? `<dt>Width</dt><dd>${p.size}″</dd>` : ''}<dt>Finish</dt><dd><span class="dot" style="background:${p.color};border:1px solid var(--stroke);width:12px;height:12px;vertical-align:-2px"></span> ${esc(p.name.split(/,|\(/).pop().trim())}</dd></dl></div>
+  const imgs = [0, 1, 2].map(v => ART.product(p, v)), im = S.detailImg % imgs.length;
+  const label = CAT_INFO[p.cat].label;
+  // The same tag the product's card wears, with the reason beside it.
+  const tag = p.std ? ['ink', 'Team standard', `Your team's standard · used on ${p.used} jobs`]
+    : !p.mood ? ['warn', 'Lower match', esc(p.why || 'Outside the mood board')]
+    : p.up ? ['', 'Upgrade', `On the ${esc(MOOD.name)} mood board · a step up`]
+    : ['ok', 'High match', `On the ${esc(MOOD.name)} mood board`];
+  // Delivery or pickup is the store's, for everything bought there on this order.
+  const s0 = SUPPLIERS[o0.sup], need0 = buy(p, single ? n0.qty : q, o0).n, pickup = S.ful[o0.sup] === 'pickup';
+  const ful = (v, on, t, sub) => `<label class="pdm-ful${on ? ' on' : ''}" data-act="pd-ful" data-sup="${o0.sup}" data-v="${v}"><input type="radio" name="pdm-ful" ${on ? 'checked' : ''}><span><b>${t}</b><small>${sub}</small></span></label>`;
+  const L = pdList(needs), at = L.indexOf(p.sku);
+  return `<div class="pdm-wrap" data-act="close-detail"><div class="pdm" role="dialog" aria-modal="true" aria-label="${esc(p.name)}" tabindex="-1" data-stop>
+    <div class="pdm-media">
+      <div class="pdm-hero" style="--bg:url('${imgs[im]}')"><img src="${imgs[im]}" alt="${esc(p.name)}, picture ${im + 1}">
+        <button type="button" class="pdm-arr prev" data-act="img-step" data-d="-1" aria-label="Previous picture">‹</button>
+        <button type="button" class="pdm-arr next" data-act="img-step" data-d="1" aria-label="Next picture">›</button>
+        <span class="pdm-n">${im + 1} / ${imgs.length}</span></div>
+      <div class="pdm-dots">${imgs.map((u, i) => `<button type="button" class="${i === im ? 'on' : ''}" data-act="img" data-i="${i}" aria-label="Picture ${i + 1}"></button>`).join('')}</div>
     </div>
-    <div class="sheet-ft">${ft}</div>
-  </aside>`;
+    <div class="pdm-info">
+      <div class="pdm-hd">
+        <div class="pdm-eye"><span class="k">${esc(label)} · for ${esc(room)}</span>${S.detailFor ? `<button class="link" data-act="sel-need" data-id="${S.detailFor}">See all ${esc(label.toLowerCase())}</button>` : ''}</div>
+        <span class="brand">${esc(p.brand)}</span>
+        <h3>${esc(p.name)}</h3>
+        <div class="pdm-match"><span class="tag ${tag[0]}">${tag[1]}</span><span>${tag[2]}</span></div>
+        <button type="button" class="pdm-x" data-act="close-detail" aria-label="Close">×</button>
+      </div>
+      <div class="pdm-bd">
+        <div class="pdm-sec">
+          <div class="pd-price"><b class="num">${money(p.price)}</b><span>/ ${perUnit(p)} · ★ ${p.rating.toFixed(1)} (${p.reviews})</span></div>
+          <div class="pd-qty"><div class="pd-meas">${measHtml(single ? [n0] : tgt, p)}</div>
+            <div class="tt"><b class="num">${money(bb.total)}</b><span>${single ? 'this task' : 'all checked rooms'}</span></div></div>
+        </div>
+        <div class="pdm-sec"><span class="k">Details</span><dl class="specs">
+          <dt>Brand</dt><dd>${esc(p.brand)}</dd><dt>SKU</dt><dd>${esc(p.sku)}</dd><dt>Category</dt><dd>${esc(label)}</dd>
+          <dt>Sold by</dt><dd>${esc(p.unit === 'SF' && p.pack > 1 ? `${p.packName} of ${p.pack} SF` : perUnit(p))}</dd>${p.size ? `<dt>Width</dt><dd>${p.size}″</dd>` : ''}
+          ${/,|\(/.test(p.name) ? `<dt>Finish</dt><dd><span class="dot" style="background:${p.color};border:1px solid var(--stroke);width:12px;height:12px;vertical-align:-2px"></span> ${esc(p.name.split(/,|\(/).pop().replace(/\)\s*$/, '').trim())}</dd>` : ''}</dl></div>
+        <div class="pdm-sec"><span class="k">Delivery or pickup</span>
+          ${ful('delivery', !pickup, `Delivery to ${esc(JOB.street)}`, `Arrives ${wmd(o0.ship)} · ${esc(s0.name)}`)}
+          ${ful('pickup', pickup, `Pickup at ${esc(s0.name)} ${esc(s0.store)}`, o0.stock >= need0 ? `Pickup today · ${o0.stock} in stock · ${s0.mi} mi` : `${o0.stock ? `Only ${o0.stock}` : 'None'} in stock · ${s0.mi} mi`)}
+          <p class="pdm-note">For everything from ${esc(s0.name)} on this order.</p></div>
+        <div class="pdm-sec"><span class="k">Prices</span><div class="pdm-prices">${p.offers.map(o => {
+          const s = SUPPLIERS[o.sup], ok = o.stock >= buy(p, single ? n0.qty : q, o).n;
+          return `<div class="pdm-pr${o.sup === o0.sup ? ' on' : ''}"><b>${esc(s.name)}</b><span class="num"><b>${money(o.price)}</b> / ${perUnit(p)}</span>
+            <span>Arrives ${wmd(o.ship)}<br>${ok ? `Pickup today · ${o.stock} in stock` : `${o.stock ? `Only ${o.stock}` : 'None'} in store`}</span></div>`;
+        }).join('')}</div></div>
+        <div class="pdm-sec"><span class="k">If this item is out of stock</span>${subLineHtml(single ? [n0] : tgt, '', p.sku)}</div>
+        <div class="pdm-sec"><span class="k">Why it ${p.mood ? 'fits' : 'may not fit'} this job</span><ul class="whys">${whys.map(w => Array.isArray(w) ? `<li class="no">${w[1]}</li>` : `<li>${w}</li>`).join('')}</ul></div>
+      </div>
+      <div class="pdm-ft">${ft}</div>
+    </div>
+    ${at >= 0 && L.length > 1 ? `<div class="pdm-pager"><button type="button" data-act="pd-step" data-d="-1" ${at === 0 ? 'disabled' : ''} aria-label="Previous product">‹</button><span>${at + 1} of ${L.length} ${esc(label.toLowerCase())}</span><button type="button" data-act="pd-step" data-d="1" ${at === L.length - 1 ? 'disabled' : ''} aria-label="Next product">›</button></div>` : ''}
+  </div></div>`;
+}
+/* The modal lives on the page's body, over everything, and is redrawn with the
+   work area. Its right column keeps its scroll while the same product is open. */
+function renderDetail(needs){
+  let root = document.getElementById('pdmRoot');
+  if(!root){ root = document.createElement('div'); root.id = 'pdmRoot'; document.body.appendChild(root); }
+  const was = root.dataset.sku || '', bd = root.querySelector('.pdm-bd'), keep = bd ? bd.scrollTop : 0;
+  const on = S.screen === 'shop' && S.detail && CATALOG[S.detail];
+  root.innerHTML = on ? detailHtml(needs || (S.detailFor ? [need(S.detailFor)] : selNeeds())) : '';
+  root.dataset.sku = on ? S.detail : '';
+  if(!on) return;
+  if(was){ const wr = root.querySelector('.pdm-wrap'); if(wr) wr.classList.add('still'); }   // already open: no fade-in again
+  if(was === S.detail){ const b2 = root.querySelector('.pdm-bd'); if(b2) b2.scrollTop = keep; }
+  else { const d = root.querySelector('.pdm'); if(d) d.focus({preventScroll: true}); }
 }
 
 /* floor plan drawing, used on the reference board */
@@ -889,7 +967,8 @@ function renderWork(resetScroll){
   const body = S.sel.kind === 'room' ? roomHtml(needs)
     : `${headHtml(needs)}${bannersHtml(needs)}${ctxHtml(needs)}${pickHtml(needs)}${toolsHtml(needs)}<div class="grid" id="grid">${gridHtml(needs)}</div>`;
   el.innerHTML = `<div class="work-main">${body}</div>
-    ${boardHtml(tabRefOn() ? NEEDS : needs)}${S.detail ? detailHtml(S.detailFor ? [need(S.detailFor)] : needs) : ''}${S.sel.kind === 'room' ? '' : trayHtml()}`;
+    ${boardHtml(tabRefOn() ? NEEDS : needs)}${S.sel.kind === 'room' ? '' : trayHtml()}`;
+  renderDetail(S.detailFor ? [need(S.detailFor)] : needs);
   el.querySelector('.work-main').scrollTop = keep;
   if(hadBoard){ const bd = el.querySelector('.board'); if(bd) bd.classList.add('still'); }
   if(S.ref.flash){ const sec = el.querySelector(`[data-sec="${S.ref.flash}"]`); if(sec) sec.scrollIntoView({block: 'nearest'}); S.ref.flash = null; }
@@ -1219,6 +1298,16 @@ document.addEventListener('click', e => {
     case 'detail': S.dQty = null; S.detail = sku; S.detailFor = S.sel.kind === 'room' ? (id || null) : null; S.detailImg = 0; renderWork(); break;
     case 'close-detail': S.detail = null; S.detailFor = null; renderWork(); break;
     case 'img': S.detailImg = +t.dataset.i; renderWork(); break;
+    case 'img-step': S.detailImg = (S.detailImg + (+t.dataset.d) + 3) % 3; renderWork(); break;
+    case 'pd-step': { const L = pdList(S.detailFor ? [need(S.detailFor)] : selNeeds()), i = L.indexOf(S.detail) + (+t.dataset.d);
+      if(i < 0 || i >= L.length) break;
+      S.detail = L[i]; S.detailImg = 0; S.dQty = null; renderWork();
+      const b = document.querySelector(`.pdm-pager [data-d="${t.dataset.d}"]`); if(b && !b.disabled) b.focus(); break; }
+    case 'pd-update': { const p = CATALOG[S.detail], n = S.detailFor ? need(S.detailFor) : selNeeds()[0]; if(!p || !n || n.pick !== p.sku) break;
+      const q0 = n.qty; setCount(n, p, +t.dataset.k); S.detail = null; S.dQty = null;
+      toast(`Updated ${esc(p.name.split(/,|\(/)[0].trim())} to ${buy(p, n.qty, offerOf(n, p)).label}.`, () => { n.qty = q0; render(); });
+      render(); break; }
+    case 'pd-ful': S.ful[t.dataset.sup] = t.dataset.v; renderWork(); break;
     case 'cmp': {
       const i = S.compare.indexOf(sku);
       if(i >= 0) S.compare.splice(i, 1); else if(S.compare.length < 4) S.compare.push(sku); else toast('Compare up to 4 at a time.');
@@ -1307,6 +1396,9 @@ document.addEventListener('submit', e => {
   toast('Posted on the job. Whoever takes the turn next will see it.'); render();
 });
 document.addEventListener('keydown', e => {
+  if(S.detail && !S.subDraft && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !(e.target.closest && e.target.closest('input, select, textarea'))){
+    S.detailImg = (S.detailImg + (e.key === 'ArrowLeft' ? -1 : 1) + 3) % 3; renderWork(); e.preventDefault(); return;
+  }
   if(e.key !== 'Escape') return;
   if(S.subDraft){ S.subDraft = null; renderSub(); return; }
   if(S.showCompare){ S.showCompare = false; renderCompare(); return; }
@@ -1323,6 +1415,7 @@ function render(reset){
   if(S.screen === 'shop'){ renderList(); renderWork(reset); }
   if(S.screen === 'review') renderReview();
   if(S.screen === 'pickup') renderPickup();
+  if(S.screen !== 'shop') renderDetail();
   renderCompare();
 }
 window.__ideal = {S, go, select};

@@ -374,7 +374,7 @@ i.team{font-style:normal;margin-left:7px;padding:1px 6px;font-family:var(--mono)
 .stp.draft button:hover{background:var(--sunken)}
 .stp.draft button:disabled{opacity:.3;cursor:default;background:none}
 .stp.grow{height:40px}
-.sheet-ft .stp.in{height:40px}
+.pdm-ft .stp.in{height:40px}
 .empty-grid{grid-column:1 / -1;padding:50px;text-align:center;color:var(--t2);border:1.5px dashed var(--stroke)}
 
 /* compare tray */
@@ -385,20 +385,86 @@ i.team{font-style:normal;margin-left:7px;padding:1px 6px;font-family:var(--mono)
 .tray .btn{height:36px}
 .tray .clr{font-size:12.5px;color:rgba(255,255,255,.7);border-bottom:1px solid currentColor}
 
-/* side sheets: product detail and references */
-.scrim{position:absolute;inset:0;background:rgba(26,26,26,.18);z-index:40}
-.sheet{position:absolute;top:0;right:0;bottom:0;width:min(520px,92%);background:var(--white);border-left:1px solid var(--stroke);box-shadow:var(--shadow);z-index:41;display:flex;flex-direction:column;animation:slide .22s ease-out}
-@keyframes slide{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
-.sheet-hd{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--stroke)}
-.sheet-hd .x{margin-left:auto;width:34px;height:34px;display:grid;place-items:center;font-size:18px;color:var(--t2)}
-.sheet-hd .x:hover{color:var(--ink);background:var(--sunken)}
-.sheet-bd{flex:1;overflow:auto}
-.sheet-ft{padding:14px 18px;border-top:1px solid var(--stroke);display:flex;gap:8px;background:var(--white)}
-.pd-hero{aspect-ratio:4/3;background:var(--sunken)}
-.pd-hero img{width:100%;height:100%;object-fit:cover}
-.pd-thumbs{display:flex;gap:6px;padding:8px 18px 0}
-.pd-thumbs img{width:56px;height:42px;object-fit:cover;border:1px solid var(--stroke);cursor:pointer}
-.pd-thumbs img.on{border:2px solid var(--ink)}
+/* Product detail: a modal over the page. Pictures left, the product right
+   (its own scroll, the add pinned at the foot), and a pager under it that
+   steps through the rest of the shelf. */
+@keyframes slide{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}   /* the reference board */
+@keyframes pdmIn{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+.pdm-wrap{position:fixed;inset:0;z-index:150;background:rgba(26,26,26,.42);display:flex;align-items:center;justify-content:center;padding:28px 28px 56px;animation:fadeIn .15s ease-out}
+.pdm{position:relative;width:min(1180px,100%);height:min(780px,calc(100vh - 84px));background:var(--white);box-shadow:0 24px 64px rgba(0,0,0,.25);
+  display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:0 36px;padding:28px 0 0 28px;animation:pdmIn .18s ease-out;outline:none}
+.pdm-wrap.still,.pdm-wrap.still .pdm{animation:none}
+.pdm-media{display:flex;flex-direction:column;gap:12px;min-height:0;padding-bottom:28px}
+.pdm-hero{position:relative;flex:1;min-height:0;background:var(--sunken);overflow:hidden}
+/* The picture whole, and the space around it filled with a soft blur of itself. */
+.pdm-hero::before{content:'';position:absolute;inset:-40px;background:var(--bg) center / cover no-repeat;filter:blur(28px);opacity:.9}
+.pdm-hero img{position:relative;width:100%;height:100%;object-fit:contain}
+.pdm-arr{position:absolute;top:calc(50% - 22px);width:44px;height:44px;display:grid;place-items:center;background:var(--white);color:var(--ink);font-size:20px;border:1px solid var(--stroke);opacity:.92}
+.pdm-arr:hover{opacity:1;border-color:var(--ink)}
+.pdm-arr.prev{left:12px}
+.pdm-arr.next{right:12px}
+.pdm-n{position:absolute;right:12px;bottom:12px;padding:3px 9px;background:var(--white);border:1px solid var(--stroke);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em}
+.pdm-dots{display:flex;justify-content:center;gap:7px}
+.pdm-dots button{width:9px;height:9px;background:var(--stroke)}
+.pdm-dots button.on{background:var(--ink)}
+.pdm-info{display:flex;flex-direction:column;min-height:0;min-width:0}
+.pdm-hd{position:relative;padding:0 72px 16px 0;border-bottom:1px solid var(--stroke);margin-right:28px}
+.pdm-eye{display:flex;align-items:baseline;gap:14px;margin-bottom:10px}
+.pdm-eye .link{font-size:12.5px}
+.pdm-hd .brand{display:block;font-size:13px;color:var(--t2)}
+.pdm-hd h3{font-family:var(--display);font-size:26px;font-weight:700;letter-spacing:-.01em;line-height:1.15;margin-top:3px}
+.pdm-match{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13.5px;color:var(--t2)}
+.pdm-x{position:absolute;top:-8px;right:-14px;width:40px;height:40px;display:grid;place-items:center;font-size:26px;line-height:1;color:var(--t2)}
+.pdm-x:hover{color:var(--ink);background:var(--sunken)}
+.pdm-bd{flex:1;min-height:0;overflow:auto;padding-right:28px}
+.pdm-sec{padding:18px 0;border-bottom:1px solid var(--stroke)}
+.pdm-sec:last-child{border-bottom:0}
+.pdm-sec > .k{display:block;margin-bottom:10px}
+.pdm-sec .pd-price{margin-top:0}
+.pd-qty .k{display:block;margin-bottom:8px}
+.pd-qty{align-items:flex-start}
+.pd-meas{min-width:0}
+.specs.pd-ms{grid-template-columns:auto 1fr;gap:5px 16px;font-size:13.5px}
+.pd-ms dd b{font-weight:600}
+.pd-ms dd small{display:block;font-size:12px;color:var(--t2);margin-top:1px}
+.pdm-ful{display:grid;grid-template-columns:20px minmax(0,1fr);gap:10px;align-items:start;padding:8px 0;cursor:pointer}
+.pdm-ful input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--ink);pointer-events:none}
+.pdm-ful b{display:block;font-size:14px;font-weight:600}
+.pdm-ful small{display:block;font-size:12.5px;color:var(--t2);margin-top:2px}
+.pdm-note{font-size:12px;color:var(--t3);margin-top:4px}
+.pdm-prices{display:flex;flex-direction:column}
+.pdm-pr{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1.3fr);gap:16px;align-items:start;padding:11px 10px;border-top:1px solid var(--stroke);font-size:13px}
+.pdm-pr:first-child{border-top:0}
+.pdm-pr > b{font-weight:500}
+.pdm-pr .num{white-space:nowrap;color:var(--t2)}
+.pdm-pr .num b{color:var(--ink);font-weight:700}
+.pdm-pr > span:last-child{color:var(--t2);line-height:1.45}
+.pdm-pr.on{background:var(--sunken-lift)}
+.pdm-ft{display:flex;align-items:center;gap:8px;padding:14px 28px 22px 0;border-top:1px solid var(--stroke);background:var(--white)}
+.pdm-ft .stp.draft{width:168px}
+.pdm-ft .pdm-go{flex:1}
+.pdm-rm{gap:7px}
+.pdm-rm svg{width:15px;height:15px}
+.pdm-rm:hover{border-color:#b4463c;color:#b4463c;background:var(--white)}
+.pdm-ft-note{flex:1;display:flex;flex-direction:column;gap:2px;font-size:12.5px;color:var(--t2)}
+.pdm-ft-note b{font-size:14px;color:var(--ink);font-weight:600}
+.pdm-pager{position:absolute;left:50%;bottom:-44px;transform:translateX(-50%);display:flex;align-items:center;background:var(--white);border:1px solid var(--stroke);box-shadow:var(--shadow)}
+.pdm-pager span{padding:0 14px;font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+.pdm-pager button{width:36px;height:34px;display:grid;place-items:center;font-size:17px}
+.pdm-pager button:hover:not(:disabled){background:var(--sunken)}
+.pdm-pager button:disabled{opacity:.3;cursor:default}
+/* Narrow windows: one column, the pictures on top, everything scrolls together. */
+@media (max-width:860px){
+  .pdm-wrap{align-items:flex-start;overflow:auto;padding:12px 12px 60px}
+  .pdm{display:flex;flex-direction:column;height:auto;padding:20px 0 0 20px;gap:0}
+  .pdm-media{flex:none;padding:0 20px 16px 0}
+  .pdm-hero{flex:none;height:min(60vw,40vh)}
+  .pdm-info{flex:none}
+  .pdm-hd{margin-right:20px;padding-right:40px}
+  .pdm-x{top:-14px;right:-6px}
+  .pdm-bd{overflow:visible;padding-right:20px}
+  .pdm-ft{position:sticky;bottom:0;padding-right:20px}
+}
 .pd-sec{padding:16px 18px;border-bottom:1px solid var(--stroke)}
 .pd-sec:last-child{border-bottom:0}
 .pd-sec h3{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:-.01em;line-height:1.2;margin-top:4px}
