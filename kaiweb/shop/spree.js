@@ -215,7 +215,7 @@ let _w = {l:280, r:340};
 try{ const v = JSON.parse(localStorage.getItem('kai_wf_spree_w') || 'null'); if(v && v.l && v.r) _w = v; }catch(e){}
 const S = {open:false, view:'shop', by:'room', ret:'all', active:null, ref:'mood', guide:'supplied', help:null, helpRef:0, q:''};
 const RET = [['all', 'All'], ['hd', 'The Home Depot'], ['low', "Lowe's"], ['wf', 'Wayfair']];
-const BY = [['dept', 'Department', 'Wedgewood'], ['room', 'Room', 'AMH'], ['task', 'Task', 'Contractors · Kairos, Fannie Mae']];
+const BY = [['dept', 'Department', 'Wedgewood'], ['room', 'Room', 'AMH'], ['task', 'Task', 'Contractors · Kairos, Fannie Mae'], ['product', 'Product', 'The same product across rooms, chosen once']];
 const money = n => _v2Money(n), fmt = n => _v2Fmt(n);
 const supOf = p => { const k = p.supplier || (typeof rowSupplier === 'function' ? rowSupplier({sku:p.sku, parts:String(p.rate)}) : '') || 'hd';
   return _GONE.has(k) ? ((offersForSku(p.sku) || [])[0] || {}).supplier || 'hd' : k; };
@@ -244,11 +244,14 @@ function slots(){
   if(typeof TASKS === 'undefined') return [];
   return TASKS.map(t => { const l = _v2Line(t); return l ? {t, l, id:t.id, picked:_v2Picked(l, t)} : null; }).filter(Boolean);
 }
-function groupOf(s){ return S.by === 'dept' ? s.l.dept : S.by === 'room' ? s.t.room : s.t.name; }
+function groupOf(s){ return S.by === 'dept' ? s.l.dept : S.by === 'room' ? s.t.room : S.by === 'product' ? _v2LineName(s.l) : s.t.name; }
 function groups(list){
   const m = new Map();
   list.forEach(s => { const k = groupOf(s); if(!m.has(k)) m.set(k, []); m.get(k).push(s); });
-  return [...m.entries()];
+  const out = [...m.entries()];
+  // Product view: what's bought for more than one room comes first, most rooms first.
+  if(S.by === 'product') out.sort((a, b) => (b[1].length > 1) - (a[1].length > 1) || b[1].length - a[1].length);
+  return out;
 }
 /* ── allowances: spent so far / allowance, at the top of each group ──
    The owner (e.g. Wedgewood) sets allowances at two levels:
@@ -307,6 +310,9 @@ function _taskAllow(t){
 function _allowHtml(g, list){
   const whole = n => '$' + Math.round(n).toLocaleString('en-US');
   const mat = _spent(list);
+  // Product view: allowances belong to rooms and tasks, so a product group shows what's spent and where.
+  if(S.by === 'product'){ const rooms = new Set(list.map(s => s.t.room)).size;
+    return `<span class="sp-grp-n">${rooms > 1 ? `${rooms} rooms · ` : ''}${money(mat)}</span>`; }
   let a, sp, why;
   if(S.by === 'dept'){
     a = _deptAllow(g, list); sp = mat;
@@ -482,6 +488,7 @@ function place(s, sku, sup){
   return true;
 }
 window.spreeAdd = function(sku, key, hostId){
+  { const lk = _lineOfKey(key); if(lk){ spreeShareAdd(sku, lk); return; } }
   // Shop page: the slot selected in the Shopping List. Side panel: also the task open in the Editor.
   let s = _slotOfKey(key) || (S.active != null ? slots().find(x => x.id === S.active) : (hostId ? _sideTarget() : null));
   if(!s){
@@ -501,6 +508,7 @@ function _inCartFor(sku, act){
 }
 // Remove a product: from the selected item if it's there, else from every item holding it.
 window.spreeRemoveSku = function(sku, key){
+  { const lk = _lineOfKey(key); if(lk){ spreeShareRemove(sku, lk); return; } }
   const act = _slotOfKey(key) || (S.active != null ? slots().find(s => s.id === S.active) : null);
   const from = act && act.picked.some(p => p.sku === sku) ? [act] : slots().filter(s => s.picked.some(p => p.sku === sku));
   if(!from.length) return;
@@ -1082,8 +1090,8 @@ function renderShelves(hostId){
 function _renderStore(host, all, cols, q){
   const keepPage = {};
   const html = groups(all).map(([g, list]) => `<section class="sp-aisle" data-group="${esc(g)}">
-      <div class="sp-aisle-hd"><button type="button" class="sp-aisle-btn" onclick="spreeAisleMenu(event,this)" aria-haspopup="menu" aria-expanded="false" title="Jump to another ${S.by === 'dept' ? 'department' : S.by === 'room' ? 'room' : 'task'}">${esc(g)}<span class="sp-aisle-car" aria-hidden="true">▾</span></button></div>
-      ${list.map(s => {
+      <div class="sp-aisle-hd"><button type="button" class="sp-aisle-btn" onclick="spreeAisleMenu(event,this)" aria-haspopup="menu" aria-expanded="false" title="Jump to another ${S.by === 'dept' ? 'department' : S.by === 'room' ? 'room' : S.by === 'product' ? 'product' : 'task'}">${esc(g)}<span class="sp-aisle-car" aria-hidden="true">▾</span></button></div>
+      ${S.by === 'product' && list.length > 1 ? _shareShelfHtml(g, list, cols, q) : list.map(s => {
         const seen = new Set();
         const rows = _v2Pool(s.l).filter(x => !seen.has(x.sku) && seen.add(x.sku))
           .filter(x => !q || `${x.brand} ${x.name}`.toLowerCase().includes(q))
@@ -1115,6 +1123,96 @@ function _renderStore(host, all, cols, q){
   const m = host.closest('#pgMain'), hd = m && m.querySelector('.pg-main-hd');
   if(m && hd) m.style.setProperty('--sp-hd-h', hd.offsetHeight + 'px');
 }
+/* ── One shelf for the same product in several rooms ─────────────────
+   Product view: flooring for four rooms is one choice on one shelf, not
+   four. A row per room says what it needs and what it has; a box on each
+   row says whether this choice applies to it (uncheck a room to give it
+   its own product from its row). Add puts the product on every checked
+   room at once, and a flag says when rooms have drifted apart, with one
+   button to match them. Bought from one store, the rooms then go on the
+   order together (the cart's bulk line). */
+const SHARE_EX = {};    // line key -> slot ids left out of this shelf's choice
+const _shareEx = lk => SHARE_EX[lk] || (SHARE_EX[lk] = new Set());
+const _shareSlots = lk => slots().filter(s => s.l.key === lk);
+function _shareMajority(ss){
+  const n = new Map(); ss.forEach(s => { const p = s.picked[0]; if(p) n.set(p.sku, (n.get(p.sku) || 0) + 1); });
+  return [...n.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+}
+function _shareShelfHtml(g, list, cols, q){
+  const lk = list[0].l.key, ex = _shareEx(lk), inc = list.filter(s => !ex.has(s.id));
+  const picks = [...new Set(list.filter(s => s.picked.length).map(s => s.picked[0].sku))];
+  const maj = _shareMajority(list), majCat = maj ? _v2Cat(list[0].l, maj) : null;
+  const dupRoom = new Set(list.map(s => s.t.room)).size < list.length;
+  const rows = list.map(s => {
+    const p = s.picked[0], cat = p ? _v2Cat(s.l, p.sku) : null, out = ex.has(s.id), diff = p && maj && p.sku !== maj && picks.length > 1;
+    const where = dupRoom ? `${s.t.room} · ${s.t.name}` : s.t.room;
+    return `<div class="sp-share-row${out ? ' is-out' : ''}${diff ? ' is-diff' : ''}${S.active === s.id ? ' is-cur' : ''}" data-row="${s.id}">
+      <label class="sp-share-chk" title="${out ? 'Include this room in the choice' : 'Leave this room out, to give it its own product'}"><input type="checkbox"${out ? '' : ' checked'} onchange="spreeShareToggle(${s.id},'${arg(lk)}')"><span>${esc(where)}</span></label>
+      <span class="sp-share-q">${esc(slotLabel(s.t, s.l).replace(/ – .*$/, ''))}</span>
+      <button type="button" class="sp-share-pk" onclick="spreeSlot(${s.id})" title="Show this room in the Shopping List">${cat ? `${PH('sp-share-img', ART.product(cat))}<span>${esc(cat.name)}</span>` : '<span class="sp-share-none">Not chosen yet</span>'}${diff ? '<span class="sp-share-tag">Different</span>' : ''}</button>
+      <span class="sp-share-amt">${p ? money(p.cost) : '—'}</span>
+    </div>`;
+  }).join('');
+  const flag = picks.length > 1 && majCat
+    ? `<div class="sp-share-flag"><span><b>${picks.length} different products across ${list.length} rooms.</b> Matching them keeps one look through the house and one line on the order.</span>
+        <button type="button" class="sp-share-match" onclick="spreeShareMatch('${arg(maj)}','${arg(lk)}')">Use ${esc(majCat.name)} everywhere</button></div>` : '';
+  const seen = new Set();
+  const cards = _v2Pool(list[0].l).filter(x => !seen.has(x.sku) && seen.add(x.sku))
+    .filter(x => !q || `${x.brand} ${x.name}`.toLowerCase().includes(q))
+    .map(x => ({x, o:offerFor(x)})).filter(r => r.o)
+    .sort((a, b) => standard(b.x).cls.localeCompare(standard(a.x).cls) * -1 || a.o.price - b.o.price);
+  if(maj) cards.sort((a, b) => (b.x.sku === maj) - (a.x.sku === maj));
+  const key = 'main|l:' + lk;
+  _shelfLists[key] = cards.map(r => r.x.sku);
+  const pages = Math.max(1, Math.ceil(cards.length / cols));
+  const pg = Math.min(_shelfPage[key] || 0, pages - 1); _shelfPage[key] = pg;
+  const shown = cards.slice(pg * cols, pg * cols + cols);
+  const sec = (_v2Pool(list[0].l)[0] || {}).section || 'other';
+  const done = list.filter(s => s.picked.length).length;
+  const grp = {ss: inc, lk};
+  return `<section class="sp-shelf is-share${list.some(s => s.id === S.active) ? ' is-cur' : ''}" data-slot="${list[0].id}" data-slots="${list.map(s => s.id).join(' ')}" data-sec="${esc(sec)}">
+    <div class="sp-shelf-hd"><span class="sp-shelf-t">${list.length} rooms · one shelf</span>
+      <span class="sp-shelf-st">${done === list.length ? 'Chosen' : done ? `Chosen for ${done} of ${list.length}` : 'Not chosen yet'}</span></div>
+    <div class="sp-share">
+      <div class="sp-share-hd"><span>${inc.length === list.length ? `One choice for all ${list.length} rooms` : `One choice for ${inc.length} of ${list.length} rooms`}</span><span>Uncheck a room to give it its own product</span></div>
+      ${rows}${flag}
+    </div>
+    ${cards.length ? `<div class="sp-shelf-row" style="grid-template-columns:repeat(${cols},minmax(0,300px))">${shown.map(r => cardHtml(r.x, r.o, null, key, '', grp)).join('')}</div>
+    ${pages > 1 ? `<div class="sp-pager"><span class="sp-pager-n">${pg * cols + 1}–${pg * cols + shown.length} of ${cards.length}</span>
+      <button type="button" class="sp-pager-b" onclick="spreePage('${arg(key)}',-1,'')" ${pg === 0 ? 'disabled' : ''} aria-label="Previous products">‹</button>
+      <button type="button" class="sp-pager-b" onclick="spreePage('${arg(key)}',1,'')" ${pg >= pages - 1 ? 'disabled' : ''} aria-label="More products">›</button></div>` : ''}`
+    : '<p class="sp-shelf-none">No products in the catalog for this yet.</p>'}
+  </section>`;
+}
+const _lineOfKey = key => { const m = /\|l:(.+)$/.exec(key || ''); return m ? m[1] : null; };
+function _shareApply(ss, sku){ ss.forEach(s => { const from = s.picked[0] ? s.picked[0].sku : null; if(from !== sku) _v2Apply(s.t, s.l, sku, from, _retOne()); }); }
+window.spreeShareToggle = function(id, lk){ const ex = _shareEx(lk); ex.has(id) ? ex.delete(id) : ex.add(id); render(); };
+window.spreeShareAdd = function(sku, lk){
+  const ex = _shareEx(lk), ss = _shareSlots(lk).filter(s => !ex.has(s.id) && fits(s, sku));
+  if(!ss.length){ toast('Check at least one room first.'); return; }
+  _shareApply(ss, sku);
+  const x = catalogFind(sku);
+  toast(`${x ? x.name : 'Product'} → ${ss.length === 1 ? ss[0].t.room : ss.length + ' rooms'}`);
+  if(typeof renderAll === 'function') renderAll();
+  render();
+};
+window.spreeShareRemove = function(sku, lk){
+  const ex = _shareEx(lk), ss = _shareSlots(lk).filter(s => !ex.has(s.id) && s.picked.some(p => p.sku === sku));
+  ss.forEach(s => _swapTaskProduct(s.l, s.t, sku, null));
+  const x = catalogFind(sku);
+  toast(`Removed ${x ? x.name : 'product'} from ${ss.length === 1 ? ss[0].t.room : ss.length + ' rooms'}`);
+  if(typeof renderAll === 'function') renderAll();
+  render();
+};
+window.spreeShareMatch = function(sku, lk){
+  const ss = _shareSlots(lk).filter(s => fits(s, sku) && (!s.picked[0] || s.picked[0].sku !== sku));
+  _shareApply(ss, sku); _shareEx(lk).clear();
+  const x = catalogFind(sku);
+  toast(`Every room uses ${x ? x.name : 'the same product'} now.`);
+  if(typeof renderAll === 'function') renderAll();
+  render();
+};
+
 /* Jump menu on the aisle heading: the same groups as the Shopping List (Room,
    Department or Task — whatever the list is set to), each with its progress.
    Picking one glides the store there; the list's highlight follows by scroll-spy. */
@@ -1153,8 +1251,9 @@ document.addEventListener('keydown', e => {
 function _slotOfKey(key){ const m = /\|s(\d+)$/.exec(key || ''); return m ? slots().find(s => s.id === +m[1]) || null : null; }
 let _relaxing = 0, _relaxNote = '', _relaxAll = false; const _cardH = {}, _rowsMemo = {};
 window.addEventListener('resize', () => { clearTimeout(window.__shH); window.__shH = setTimeout(() => { renderShelves(); renderShelves('pgSideShelves'); }, 150); });
-function cardHtml(x, o, act, key, hostId){
+function cardHtml(x, o, act, key, hostId, grp){
   const picked = slots().some(s => s.picked.some(p => p.sku === x.sku));
+  const inAll = grp && grp.ss.length && grp.ss.every(s => s.picked.some(p => p.sku === x.sku));
   return `<article class="sp-card${picked ? ' is-picked' : ''}" draggable="true" ondragstart="spreeDrag(event,'${arg(x.sku)}')" ondragend="spreeDragEnd()"
     onclick="spreeDetail(event,'${arg(key)}','${arg(x.sku)}','${hostId || ''}')" role="button" tabindex="0" aria-haspopup="dialog"
     onkeydown="if(event.key==='Enter'||event.key===' '){spreeDetail(event,'${arg(key)}','${arg(x.sku)}','${hostId || ''}')}">
@@ -1165,7 +1264,9 @@ function cardHtml(x, o, act, key, hostId){
     <span class="sp-card-row"><b>${money(o.price)}</b><small>/ ${esc(x.unit || 'ea')}</small></span>
     ${(FUL.mode === 'both' ? ['ship', 'pickup'] : [FUL.mode]).map(h => (a => `<span class="sp-card-av${a.ok ? '' : ' is-no'}">${FUL.mode === 'both' ? `<b>${h === 'ship' ? 'Delivery' : 'Pickup'}</b> ` : ''}${esc(FUL.mode === 'both' && h === 'pickup' && a.t === 'Delivery only' ? 'Not available' : a.t.replace(/^Pickup /, FUL.mode === 'both' ? '' : 'Pickup '))}</span>`)(_avail({...o, sku:x.sku}, h))).join('')}
     <span class="sp-card-tags">${stdBadge(x)}${picked ? '<span class="sp-fin is-in">In cart</span>' : ''}</span>
-    ${_inCartFor(x.sku, act) ? `<button type="button" class="sp-card-add is-remove" onclick="event.stopPropagation();spreeRemoveSku('${arg(x.sku)}','${arg(key || '')}')">Remove</button>`
+    ${grp ? (inAll ? `<button type="button" class="sp-card-add is-remove" onclick="event.stopPropagation();spreeShareRemove('${arg(x.sku)}','${arg(grp.lk)}')">Remove</button>`
+        : `<button type="button" class="sp-card-add" ${grp.ss.length ? '' : 'disabled'} onclick="event.stopPropagation();spreeShareAdd('${arg(x.sku)}','${arg(grp.lk)}')">${grp.ss.length > 1 ? `Add to ${grp.ss.length} rooms` : grp.ss.length ? 'Add' : 'Check a room'}</button>`)
+    : _inCartFor(x.sku, act) ? `<button type="button" class="sp-card-add is-remove" onclick="event.stopPropagation();spreeRemoveSku('${arg(x.sku)}','${arg(key || '')}')">Remove</button>`
       : `<button type="button" class="sp-card-add" onclick="event.stopPropagation();spreeAdd('${arg(x.sku)}','${arg(key || '')}','${hostId || ''}')">Add</button>`}
   </article>`;
 }
@@ -1298,18 +1399,24 @@ function _whenRank(w){
   let days = (d - now) / 864e5; if(days < -30) days += 365;
   return days;
 }
+/* Cart row, read like a checkout table: the product, then the task and room
+   it's for; quantity, unit price and the line total each in their own column. */
+const _isMeasure = u => /^(SF|LF|SY|CY|CF|SQ|gal|qt|lb|ft|in)$/i.test(String(u || ''));
 function _revRow(s){
   const p = s.picked[0], c = _v2Cat(s.l, p.sku) || {name:p.sku};
   const cost = s.picked.reduce((a, x) => a + x.cost, 0);
   const w = _when(s), qty = s.picked.reduce((a, x) => a + _num(x.qty), 0);
-  const note = w.ok ? w.note : '';
+  const note = w.ok ? w.note : '', u = _v2Unit(s.l), meas = _isMeasure(u);
+  const rate = s.picked.length === 1 ? _num(p.rate) : null;   // several packs: no single unit price
   return `<div class="sp-rv-row">
       ${PH('sp-rv-ph', ART.product(c))}
       <div class="sp-rv-txt">
-        <b>${esc(slotLabel(s.t, s.l))}</b><span>${esc(c.name)}</span>
+        <b>${esc(c.name)}</b><span>${esc(s.t.name)} – ${esc(s.t.room)}</span>
         ${note ? `<small>${esc(note)}</small>` : ''}
       </div>
-      <div class="sp-rv-amt"><b>${money(cost)}</b>${s.picked.length === 1 ? `<small>${_qtyX(qty, _v2Unit(s.l), _num(p.rate))}</small>` : ''}</div>
+      <div class="sp-rv-qty">${fmt(qty)}${meas ? ` ${esc(u)}` : ''}</div>
+      <div class="sp-rv-rate">${rate != null ? `${money(rate)}${meas ? ` / ${esc(u)}` : ' each'}` : '<span class="sp-meta">Varies</span>'}</div>
+      <div class="sp-rv-amt"><b>${money(cost)}</b></div>
     </div>`;
 }
 // Kai's pick for an empty item: closest to the standard, in stock, then lowest price (the shelf's own order).
@@ -1349,6 +1456,7 @@ function reviewHtml(allItems){
         <div class="sp-rv-ret-hd"><b>${esc(supplierName(k))}</b><span class="sp-meta">${l.length} item${l.length === 1 ? '' : 's'} · ${money(sum(l.filter(s => !REV.later.has(s.id))))}</span><span class="pg-sp"></span>
           ${_storeOf(k) ? _seg([['delivery', 'Delivery'], ['pickup', 'Pickup']], _howOf(k), `(h=>spreeHow('${k}',h))`) : '<span class="sp-meta">Delivery only</span>'}</div>
         <p class="sp-rv-how">${_howOf(k) === 'pickup' ? `At ${esc(supplierName(k))} ${esc(_storeOf(k)[0])} · ${_mi(_storeOf(k)[1])} mi` : `To ${esc(FUL.addr)}`}</p>
+        <div class="sp-rv-cols" aria-hidden="true"><span></span><span>Item</span><span>Quantity</span><span>Unit price</span><span>Total</span></div>
         ${(() => {
           const live = l;
           const by = new Map(); live.forEach(s => { const w = _when(s); if(!by.has(w.key)) by.set(w.key, {w, list:[]}); by.get(w.key).list.push(s); });
@@ -2406,7 +2514,7 @@ function _glide(el, target, ms, done){
 }
 // The item's shelf: the first of the shelves its products sit on that is showing.
 const _shelfFor = (m, s) => { if(!s) return null;
-  const own = m.querySelector(`.sp-shelf[data-slot="${s.id}"]`); if(own) return own;
+  const own = m.querySelector(`.sp-shelf[data-slot="${s.id}"]`) || m.querySelector(`.sp-shelf[data-slots~="${s.id}"]`); if(own) return own;
   for(const sec of [...new Set(_v2Pool(s.l).map(x => x.section || 'other'))]){ const el = m.querySelector(`.sp-shelf[data-sec="${CSS.escape(sec)}"]`); if(el) return el; }
   return null; };
 // Room for what's pinned at the top: the steps header and the sticky aisle name.
@@ -2421,7 +2529,7 @@ window.spreeSlot = function(id){
   S.focusSec = null; S.active = id; render();
   const m = document.getElementById('pgMain');
   if(!m || m.hidden || PG.primary !== 'shopkai' || S.view !== 'shop') return;
-  const find = () => m.querySelector(`.sp-shelf[data-slot="${id}"]`);
+  const find = () => m.querySelector(`.sp-shelf[data-slot="${id}"]`) || m.querySelector(`.sp-shelf[data-slots~="${id}"]`);
   const el = find(); if(!el) return;
   const calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(calm){ m.scrollTop = _yOf(m, el); _flashHd(el); return; }

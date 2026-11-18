@@ -250,18 +250,35 @@
         const el = find(); if(!el) return;
         let body = el.parentElement; while(body && body.scrollHeight <= body.clientHeight + 2) body = body.parentElement; body = body || fdoc().getElementById('workBody');
         const top = el.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - (rowText ? Math.max(0, body.clientHeight / 2 - el.offsetHeight / 2) : 12);
-        // Our own glide: the browser's smooth scroll doesn't survive here (the
-        // Shop code works around the same thing). Lands exactly either way.
-        const from = body.scrollTop, to = Math.max(0, Math.min(top, body.scrollHeight - body.clientHeight)), t0 = performance.now(), MS = 420;
-        const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const step = now => { const k = Math.min(1, (now - t0) / MS), e = 1 - Math.pow(1 - k, 3); body.scrollTop = from + (to - from) * e; if(k < 1) requestAnimationFrame(step); };
-        if(reduce) body.scrollTop = to; else requestAnimationFrame(step);
-        setTimeout(() => { body.scrollTop = to; }, MS + 80);
+        glideTo(body, top);
         el.classList.remove('kw-flash'); void el.offsetWidth; el.classList.add('kw-flash');
         setTimeout(() => el.classList.remove('kw-flash'), 1600);
       }, 250);
       drawTabs();
     })();
+  }
+  // Our own glide: the browser's smooth scroll doesn't survive here (the Shop
+  // code works around the same thing). Lands exactly either way.
+  function glideTo(body, top){
+    const from = body.scrollTop, to = Math.max(0, Math.min(top, body.scrollHeight - body.clientHeight)), t0 = performance.now(), MS = 420;
+    if(Math.abs(to - from) < 2){ body.scrollTop = to; return; }
+    const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const step = now => { const k = Math.min(1, (now - t0) / MS), e = 1 - Math.pow(1 - k, 3); body.scrollTop = from + (to - from) * e; if(k < 1) requestAnimationFrame(step); };
+    if(reduce) body.scrollTop = to; else requestAnimationFrame(step);
+    setTimeout(() => { body.scrollTop = to; }, MS + 80);
+  }
+  /* Clicking a tab's name (not its menu) lands at the top of that page, the
+     way a site's top menu item opens that section's front page. Scope's front
+     page is the whole scope, the first item in its menu. Already on the page:
+     glide up. Coming from another page: start at the top (the pages share one
+     scroller, so it would otherwise keep the last page's position). */
+  function toPageTop(pg, already){
+    // Scope: the whole scope, leaving the panel's All / Labor / Material choice as it is.
+    if(pg === 'shop'){ try{ const w = frame().contentWindow; if(w.eval('workMode') !== 'shop') w.setWorkMode('shop'); w.selectScope(); if(typeof w.renderAll === 'function') w.renderAll(); }catch(e){} setTimeout(drawTabs, 60); }
+    const body = () => { const d = fdoc(); return d && d.getElementById(pg === 'shopkai' ? 'pgMain' : 'workBody'); };
+    if(already){ const b = body(); if(b) glideTo(b, 0); return; }
+    // The page can redraw (and restore a position) just after the switch.
+    [0, 80, 260].forEach(ms => setTimeout(() => { const b = body(); if(b) b.scrollTop = 0; }, ms));
   }
   docsMenu.addEventListener('click', e => {
     e.stopPropagation();
@@ -291,8 +308,16 @@
   let docsT = null;
   const hoverIn = pg => { clearTimeout(docsT); if(!docsMenu.hidden && pg !== menuPg){ openDocs(pg); return; } docsT = setTimeout(() => openDocs(pg), 140); };
   const hoverOut = () => { clearTimeout(docsT); docsT = setTimeout(closeDocs, 260); };
-  tabs.addEventListener('mouseover', e => { const t = e.target.closest('.kw-tab'); if(t && MENU_FALLBACK[t.dataset.page]) hoverIn(t.dataset.page); else if(t) hoverOut(); });
-  tabs.addEventListener('mouseleave', hoverOut);
+  // After a click on a tab's name, its menu stays shut until the pointer leaves that tab.
+  let hoverHold = null;
+  tabs.addEventListener('mouseover', e => {
+    const t = e.target.closest('.kw-tab');
+    if(!t) return;   // the gap between tabs, or the row just redrawn under the pointer
+    if(t.dataset.page === hoverHold) return;
+    hoverHold = null;
+    if(MENU_FALLBACK[t.dataset.page]) hoverIn(t.dataset.page); else hoverOut();
+  });
+  tabs.addEventListener('mouseleave', () => { hoverHold = null; hoverOut(); });
   docsMenu.addEventListener('mouseenter', () => clearTimeout(docsT));
   docsMenu.addEventListener('mouseleave', hoverOut);
   document.addEventListener('click', e => { if(!e.target.closest('#kwDocsMenu, [data-docs]')) closeDocs(); });
@@ -366,12 +391,16 @@
     }
     const b = e.target.closest('.kw-tabs [data-i], .kw-refs [data-i]'); if(!b) return;
     propOpen = false;
+    clearTimeout(docsT);
     closeDocs();
     const t = src[+b.dataset.i]; if(!t) return;
     e.stopPropagation();
     if(b.dataset.menu) placeMenu(b);
+    const tab = b.classList.contains('kw-tab-b') && b.closest('.kw-tab'), already = !!(tab && tab.classList.contains('is-on'));
+    if(tab) hoverHold = tab.dataset.page;
     t.click();
     drawTabs();
+    if(tab) toPageTop(tab.dataset.page, already);
   });
   // A click anywhere out here closes a menu left open in the panel.
   document.addEventListener('click', e => {
@@ -670,4 +699,27 @@
   window.addEventListener('resize', align);
   setInterval(align, 250);
   align();
+})();
+
+/* ── Embedded (?embed=1&tab=overview|scope|documents) ──────────────────
+   Another page can frame KaiWeb and bring its own chrome — the Shop concept
+   does, so its Overview, Scope and Documents tabs are these real pages. Then
+   the demo strip, the dark bar and the left rail hide, the starting tab comes
+   from ?tab=, and the framing page switches tabs with a message:
+   {type:'kw-embed-tab', page:'overview' | 'scope' | 'documents'}. */
+(function(){
+  const qs = new URLSearchParams(location.search);
+  if(qs.get('embed') !== '1') return;
+  document.documentElement.classList.add('kw-embed');
+  const MAP = {overview:'overview', scope:'shop', media:'pano', floorplan:'floorplan', documents:'artifact', shop:'shopkai'};
+  const go = page => {
+    const pg = MAP[page] || page; let n = 0;
+    (function tryIt(){
+      const b = document.querySelector(`.kw-tab[data-page="${pg}"] .kw-tab-b`);
+      if(b){ if(!b.closest('.kw-tab').classList.contains('is-on')) b.click(); return; }
+      if(++n < 80) setTimeout(tryIt, 100);   // the panel draws its tabs once it has loaded
+    })();
+  };
+  if(qs.get('tab')) go(qs.get('tab'));
+  window.addEventListener('message', e => { const d = e.data || {}; if(d.type === 'kw-embed-tab' && d.page) go(d.page); });
 })();

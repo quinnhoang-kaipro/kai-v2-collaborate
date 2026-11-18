@@ -396,3 +396,6 @@ body.kw-shell-tabs .app-toolbar .tb-address{min-width:0; flex-shrink:0}
 .kw-dm-t:focus-visible{outline:2px solid var(--ink); outline-offset:-2px}
 .kw-docs-menu.is-scope .kw-dm-h{display:flex; align-items:center}
 .kw-docs-menu.is-scope{min-width:220px}
+
+/* Embedded in another page (?embed=1): that page supplies the chrome. */
+html.kw-embed .tb,html.kw-embed .app-toolbar,html.kw-embed .global-nav,html.kw-embed .kw-docs-menu{display:none !important}
