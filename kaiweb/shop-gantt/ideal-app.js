@@ -282,6 +282,18 @@ if(window.ResizeObserver){ const _bar = document.querySelector('.bar'); if(_bar)
    never steered toward something cheaper. Clicking opens the Cost Book. */
 const LABOR = {k1: 1200, k2: 1450, k3: 680, k4: 350, k7: 920, l1: 1100, p1: 450, p2: 2400};   // labor priced so far
 const ROOM_ALLOW = {kitchen: 18000, pbath: 6000, pbed: 3500};
+/* Tasks and their options. Most tasks have one option; a second option names its
+   task with of: (Kitchen Paint: walls, then trim and doors). */
+const tkOf = n => n.of || n.id;
+const optsOf = n => NEEDS.filter(x => tkOf(x) === tkOf(n));
+const multiOpt = n => optsOf(n).length > 1;
+const taskCount = ns => new Set(ns.map(tkOf)).size;
+const firstPerTask = ns => ns.filter((n, i) => ns.findIndex(x => tkOf(x) === tkOf(n)) === i);
+const optShort = n => (n.opt || n.task).split(' : ').pop();
+// Where a line goes: the room, plus the option when its task has more than one.
+const whereOf = n => ROOM[n.room].name + (multiOpt(n) ? ` · ${optShort(n)}` : '');
+// A task's name, plus the option when it has more than one ("Paint · Trim and doors").
+const taskLabel = n => n.task + (multiOpt(n) ? ` · ${optShort(n)}` : '');
 const taskCost = n => needTotal(n) + (LABOR[n.id] || 0);
 const overBy = n => (n.pick && n.allow) ? Math.max(0, taskCost(n) - n.allow) : 0;
 const isOver = n => overBy(n) > .5;
@@ -335,10 +347,10 @@ function typeRow(cat){
   const p = picks.length ? CATALOG[majorityPick(ns)] : null;
   const total = ns.filter(n => n.pick).reduce((a, n) => a + buy(CATALOG[n.pick], n.qty, offerOf(n, CATALOG[n.pick])).total, 0);
   const qty = ns.reduce((a, n) => a + n.qty, 0);
-  const rooms = ns.map(n => ROOM[n.room].name);
+  const rooms = [...new Set(ns.map(n => ROOM[n.room].name))];
   return `<button type="button" class="row${on ? ' on' : ''}" data-act="sel-type" data-cat="${cat}">
     <span class="th${p ? '' : ' empty'}">${p ? `<img src="${ART.product(p)}" alt="">` : '+'}</span>
-    <span class="tx"><b>${esc(CAT_INFO[cat].label)}</b><span>${ns.length > 1 ? `${ns.length} rooms · ` : esc(rooms[0]) + ' · '}${qtyText(cat, qty)}</span></span>
+    <span class="tx"><b>${esc(CAT_INFO[cat].label)}</b><span>${rooms.length > 1 ? `${rooms.length} rooms · ` : esc(rooms[0]) + ' · '}${qtyText(cat, qty)}</span></span>
     <span class="rt">${todo ? `<span class="tag warn">${todo} ${todo === 1 ? 'needs' : 'need'} product</span>` : `<span class="amt num">${money(total)}</span>`}${picks.length > 1 ? `<span class="tag warn">${picks.length} products</span>` : ''}</span>
   </button>`;
 }
@@ -377,12 +389,14 @@ function renderList(){
   const selId = S.sel.kind === 'need' ? S.sel.id : null;
   const isOpen = (k, ns, dflt) => S.pvOpen.has(k) || (!S.pvShut.has(k) && (dflt || ns.some(n => n.id === selId)));
   const car = (k, o) => `<span class="nv-car${o ? ' o' : ''}" data-act="nv-tog" data-k="${esc(k)}" data-o="${o ? 1 : 0}" role="button" aria-label="${o ? 'Collapse' : 'Expand'}" title="Expand / collapse"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
-  const task = (n, withRoom) => {
-    const st = TASK_ST[n.id] || 'Not started', tg = TASK_TAG[n.id];
-    return `<button type="button" class="nv-task${n.id === selId ? ' on' : ''}" data-act="sel-need" data-id="${n.id}">
-      <span class="nv-tn">${isOver(n) ? `<span class="nv-flag" title="Over its allowance · needs review">${FLAG}</span>` : ''}${withRoom ? `<span class="nv-rm">${esc(ROOM[n.room].name)} ›</span> ` : ''}<b>${esc(n.task)}</b></span>
-      <span class="nv-amt num">${amt(amtOf(n))}</span>
-      <span class="nv-pills"><span class="nv-st${st === 'In progress' ? ' ip' : ''}">${st === 'In progress' ? '◆' : '◇'} ${st}</span>${tg ? `<span class="nv-tag">${tg}</span>` : ''}${pv !== 'labor' && !n.pick ? '<span class="nv-tag warn">Needs product</span>' : ''}</span></button>`;
+  /* One row per task. Under a product type (Materials) the row covers only that
+     type's options: a Cabinets task's knobs sit under Door hardware, not Cabinets. */
+  const task = (n, withRoom, cat) => {
+    const st = TASK_ST[tkOf(n)] || 'Not started', tg = TASK_TAG[tkOf(n)], os = optsOf(n).filter(x => !cat || x.cat === cat);
+    return `<button type="button" class="nv-task${os.some(x => x.id === selId) ? ' on' : ''}" data-act="sel-need" data-id="${n.id}">
+      <span class="nv-tn">${os.some(isOver) ? `<span class="nv-flag" title="Over its allowance · needs review">${FLAG}</span>` : ''}${withRoom ? `<span class="nv-rm">${esc(ROOM[n.room].name)} ›</span> ` : ''}<b>${esc(cat && os.length < optsOf(n).length ? taskLabel(n) : n.task)}</b></span>
+      <span class="nv-amt num">${amt(os.reduce((a, x) => a + amtOf(x), 0))}</span>
+      <span class="nv-pills"><span class="nv-st${st === 'In progress' ? ' ip' : ''}">${st === 'In progress' ? '◆' : '◇'} ${st}</span>${tg ? `<span class="nv-tag">${tg}</span>` : ''}${pv !== 'labor' && os.some(x => !x.pick) ? '<span class="nv-tag warn">Needs product</span>' : ''}</span></button>`;
   };
   const head = (k, o, name, n, sum, act, extra) => `<div class="nv-gh${extra || ''}">${car(k, o)}<button type="button" class="nv-gn" ${act}><b>${name}</b><i>${cnt(n, 'task')}</i></button><span class="nv-gamt num">${amt(sum)}</span></div>`;
   let body = '', sum;
@@ -390,8 +404,8 @@ function renderList(){
     ROOMS.forEach((r, ri) => {
       const all = NEEDS.filter(n => n.room === r.id), ns = all.filter(pass); if(!ns.length) return;
       const roomOn = S.sel.kind === 'room' && S.sel.room === r.id, o = isOpen('r:' + r.id, ns, roomOn || (q && true));
-      body += `<section class="nv-grp${o ? '' : ' shut'}">${head('r:' + r.id, o, esc(r.name), all.length, all.reduce((a, n) => a + taskCost(n), 0), `data-act="sel-room" data-room="${r.id}" title="Every ${esc(r.name)} task together"`, roomOn ? ' on' : '')}
-        ${o ? `<button type="button" class="nv-new" data-act="inert">+ New task</button>${ns.map(n => task(n)).join('')}` : ''}</section>`;
+      body += `<section class="nv-grp${o ? '' : ' shut'}">${head('r:' + r.id, o, esc(r.name), taskCount(all), all.reduce((a, n) => a + taskCost(n), 0), `data-act="sel-room" data-room="${r.id}" title="Every ${esc(r.name)} task together"`, roomOn ? ' on' : '')}
+        ${o ? `<button type="button" class="nv-new" data-act="inert">+ New task</button>${firstPerTask(ns).map(n => task(n)).join('')}` : ''}</section>`;
     });
     sum = ['All scope', 'Total cost', NEEDS.reduce((a, n) => a + taskCost(n), 0)];
   } else if(pv === 'labor'){
@@ -399,8 +413,8 @@ function renderList(){
     crews.forEach(c => {
       const all = NEEDS.filter(n => crew(n) === c), ns = all.filter(pass); if(!ns.length) return;
       const o = isOpen('l:' + c, ns, !!q);
-      body += `<section class="nv-grp${o ? '' : ' shut'}">${head('l:' + c, o, esc(c), all.length, all.reduce((a, n) => a + (LABOR[n.id] || 0), 0), `data-act="nv-tog" data-k="l:${esc(c)}" data-o="${o ? 1 : 0}"`)}
-        ${o ? ns.map(n => task(n, true)).join('') : ''}</section>`;
+      body += `<section class="nv-grp${o ? '' : ' shut'}">${head('l:' + c, o, esc(c), taskCount(all), all.reduce((a, n) => a + (LABOR[n.id] || 0), 0), `data-act="nv-tog" data-k="l:${esc(c)}" data-o="${o ? 1 : 0}"`)}
+        ${o ? firstPerTask(ns).map(n => task(n, true)).join('') : ''}</section>`;
     });
     sum = ['All labor', 'Labor cost', NEEDS.reduce((a, n) => a + (LABOR[n.id] || 0), 0)];
   } else {
@@ -411,15 +425,15 @@ function renderList(){
       let inner = '';
       if(o) CAT_ORDER.filter(c => DEPT[c] === d && ns.some(n => n.cat === c)).forEach(c => {
         const cn = ns.filter(n => n.cat === c), cAll = all.filter(n => n.cat === c), on = S.sel.kind === 'type' && S.sel.cat === c, co = isOpen('c:' + c, cn, true);
-        inner += `<div class="nv-sh${on ? ' on' : ''}">${car('c:' + c, co)}<button type="button" class="nv-gn" data-act="sel-type" data-cat="${c}" title="Shop ${esc(CAT_INFO[c].label.toLowerCase())} for every room at once"><b>${esc(CAT_INFO[c].label)}</b><i>${cnt(cAll.length, 'task')}</i></button><span class="nv-gamt num">${amt(cAll.reduce((a, n) => a + needTotal(n), 0))}</span></div>
-          ${co ? cn.map(n => task(n, true)).join('') : ''}`;
+        inner += `<div class="nv-sh${on ? ' on' : ''}">${car('c:' + c, co)}<button type="button" class="nv-gn" data-act="sel-type" data-cat="${c}" title="Shop ${esc(CAT_INFO[c].label.toLowerCase())} for every room at once"><b>${esc(CAT_INFO[c].label)}</b><i>${cnt(taskCount(cAll), 'task')}</i></button><span class="nv-gamt num">${amt(cAll.reduce((a, n) => a + needTotal(n), 0))}</span></div>
+          ${co ? firstPerTask(cn).map(n => task(n, true, c)).join('') : ''}`;
       });
-      body += `<section class="nv-grp${o ? '' : ' shut'}">${head('d:' + d, o, esc(d), all.length, all.reduce((a, n) => a + needTotal(n), 0), `data-act="nv-tog" data-k="d:${esc(d)}" data-o="${o ? 1 : 0}"`)}${inner}</section>`;
+      body += `<section class="nv-grp${o ? '' : ' shut'}">${head('d:' + d, o, esc(d), taskCount(all), all.reduce((a, n) => a + needTotal(n), 0), `data-act="nv-tog" data-k="d:${esc(d)}" data-o="${o ? 1 : 0}"`)}${inner}</section>`;
     });
     sum = ['All materials', 'Materials cost', NEEDS.reduce((a, n) => a + needTotal(n), 0)];
   }
   const allOn = S.sel.kind === 'room' && S.sel.room === 'all';
-  const band = `<button type="button" class="nv-all${allOn ? ' on' : ''}" data-act="sel-room" data-room="all"><span class="nv-all-n"><b>${sum[0]}</b><i>${cnt(NEEDS.length, 'task')}</i></span><span class="nv-all-r"><i>${sum[1]}</i><b class="num">${money(sum[2])}</b></span></button>`;
+  const band = `<button type="button" class="nv-all${allOn ? ' on' : ''}" data-act="sel-room" data-room="all"><span class="nv-all-n"><b>${sum[0]}</b><i>${cnt(taskCount(NEEDS), 'task')}</i></span><span class="nv-all-r"><i>${sum[1]}</i><b class="num">${money(sum[2])}</b></span></button>`;
   if(!body) body = `<div class="nv-none">Nothing here. ${q ? '<button class="link" data-act="nv-clear">Clear the search</button>' : '<button class="link" data-act="filter" data-v="all">Show everything</button>'}</div>`;
   const vb = (v, t) => `<button type="button" class="${pv === v ? 'on' : ''}" data-act="pv" data-v="${v}" aria-pressed="${pv === v}">${t}</button>`;
   el.innerHTML = `<div class="list-hd nv-bar">
@@ -457,9 +471,9 @@ function headHtml(needs){
     sub = `<b>${qtyText(cat, n0.qty)}</b><span class="sep">|</span><span>${esc(r.name)}</span>${n0.allow ? `<span class="sep">|</span><span>Task ${needAmtHtml(n0, `${money0(taskCost(n0))} / ${money0(n0.allow)}`)}</span>${isOver(n0) ? ` <span class="tag warn">Needs review</span>` : p && taskCost(n0) < n0.allow * .92 ? ` <span class="tag ok">Room to upgrade · ${money0(n0.allow - taskCost(n0))}</span>` : ''}` : '<span class="sep">|</span><span class="na">Allowance N/A</span>'}`;
   } else {
     const q = needs.reduce((a, n) => a + n.qty, 0);
-    sub = `<b>${qtyText(cat, q)}</b><span class="sep">|</span><span>${needs.length} ${needs.length === 1 ? 'room' : 'rooms'}: ${needs.map(n => esc(ROOM[n.room].name)).join(', ')}</span>`;
+    sub = `<b>${qtyText(cat, q)}</b><span class="sep">|</span><span>${(rs => `${rs.length} ${rs.length === 1 ? 'room' : 'rooms'}: ${rs.map(esc).join(', ')}`)([...new Set(needs.map(n => ROOM[n.room].name))])}</span>`;
   }
-  return `${crumbsHtml(needs)}<div class="shelf-hd"><div><h2>${esc(single ? n0.task : CAT_INFO[cat].label)}</h2><div class="shelf-sub">${sub}</div></div>
+  return `${crumbsHtml(needs)}<div class="shelf-hd"><div><h2>${esc(single ? (n0.opt || n0.task) : CAT_INFO[cat].label)}</h2><div class="shelf-sub">${sub}</div>${single && multiOpt(n0) ? `<div class="sh-opts"><span class="k">${esc(n0.task)} · ${optsOf(n0).length} options</span>${optsOf(n0).map(o => `<button type="button" class="sh-opt${o.id === n0.id ? ' on' : ''}" data-act="sel-need" data-id="${o.id}" aria-pressed="${o.id === n0.id}">${esc(o.opt)}</button>`).join('')}</div>` : ''}</div>
 </div>`;
 }
 /* Banners: a short headline and one line of facts, never a paragraph. */
@@ -473,8 +487,11 @@ function bannersHtml(needs){
   if(S.sel.kind === 'need'){
     if(n0.swap) out.push(bannerHtml('info', IC.swap, 'Swapped at pickup',
       `${short(n0.swap.from)} was out → ${esc(n0.swap.how)} · by ${TEAM.JR.name} · ${n0.swap.co ? 'approved, in the next change order' : n0.swap.pre ? 'pre-approved substitution' : 'no change order'}`));
-    const others = NEEDS.filter(m => m.cat === n0.cat && m.id !== n0.id);
-    if(others.length && ['floor', 'paint', 'ceilingfan', 'toilet', 'exhaust', 'blinds', 'vanity'].includes(n0.cat) && !S.ack.has('rep' + n0.cat)){
+    /* The same product type in other rooms. A task's own other options are a separate
+       choice (trim paint isn't meant to match the walls), so they're left out, and a
+       task's second option isn't compared with other rooms at all. */
+    const others = NEEDS.filter(m => m.cat === n0.cat && tkOf(m) !== tkOf(n0));
+    if(others.length && !n0.of && ['floor', 'paint', 'ceilingfan', 'toilet', 'exhaust', 'blinds', 'vanity'].includes(n0.cat) && !S.ack.has('rep' + n0.cat)){
       const diff = others.filter(m => m.pick && n0.pick && m.pick !== n0.pick);
       const maj = diff.length ? majorityPick(others) : null;
       const dPicks = [...new Set(diff.map(m => m.pick))];
@@ -508,8 +525,8 @@ function ctxHtml(needs){
   const facts = true, ph = '';
   return `<div class="look ctx-look${ph ? ' has-ph' : ''}${facts ? ' look-only' : ''}">${ph}${facts ? '' : lookMoodHtml()}
     <div class="ctx-facts">
-      <div class="cf"><span class="k">${single ? 'The task' : 'Where it goes'}<em>${single ? esc(JOB.contractor.split(' · ')[0]) : ''}</em></span>
-        ${single ? `<p>${esc(n0.desc)}</p>` : `<p>${needs.map(n => `${esc(ROOM[n.room].name)} — ${qtyText(n.cat, n.qty)}`).join('<br>')}</p>`}</div>
+      <div class="cf"><span class="k">${single ? 'The task' : 'Where it goes'}<em>${single ? esc(installerOf(n0)) : ''}</em></span>
+        ${single ? `<p>${esc(n0.desc)}</p>` : `<p>${needs.map(n => `${esc(whereOf(n))} — ${qtyText(n.cat, n.qty)}`).join('<br>')}</p>`}</div>
       <button type="button" class="cf" data-act="ref-add" data-tab="plan" title="Open the floor plan beside the shelf"><span class="k">Measurements${curPanes().includes('floorplan') ? '' : '<em class="cf-go">Open floorplan</em>'}</span>
         <span class="ctx-qty">${q.toLocaleString()}<small>${unitWord(n0.cat, q)}</small></span></button>
       <button type="button" class="cf" data-act="ref-add" data-tab="notes" title="Open the notes"><span class="k">Notes<em>${notes.length}</em></span>
@@ -527,8 +544,8 @@ function pickHtml(needs){
   const rows = needs.map(n => {
     const p = n.pick && CATALOG[n.pick], inc = !exclSet(n.cat).has(n.id);
     const tot = p ? buy(p, n.qty, offerOf(n, p)).total : 0;
-    return `<div class="split-row"><input type="checkbox" ${inc ? 'checked' : ''} data-act="incl" data-id="${n.id}" aria-label="Include ${esc(ROOM[n.room].name)}">
-      <b>${esc(ROOM[n.room].name)}</b>${p ? stepperHtml(n, 'mini line') : `<span>${qtyText(n.cat, n.qty)}${n.fit ? ` · ${n.fit}″` : ''}</span>`}
+    return `<div class="split-row"><input type="checkbox" ${inc ? 'checked' : ''} data-act="incl" data-id="${n.id}" aria-label="Include ${esc(whereOf(n))}">
+      <b>${esc(whereOf(n))}</b>${p ? stepperHtml(n, 'mini line') : `<span>${qtyText(n.cat, n.qty)}${n.fit ? ` · ${n.fit}″` : ''}</span>`}
       <span class="pr${p && maj && p.sku !== maj ? ' diff' : ''}">${p ? `<img src="${ART.product(p)}" alt=""><span>${esc(p.name)}</span>` : '<span style="color:var(--warn)">Choose a product</span>'}</span>
       <span class="a num">${p ? money(tot) : '—'}</span></div>`;
   }).join('');
@@ -567,12 +584,36 @@ function lookHtml(ns){
   return `<div class="look look-only">
     <div class="look-items"><span class="k">All selected products</span><div class="look-row">${ns.map(n => {
       const p = n.pick && CATALOG[n.pick];
-      return `<button type="button" class="lk${p ? '' : ' empty'}" data-act="room-jump" data-id="${n.id}" title="${esc(n.task)}${p ? ' — ' + esc(p.name) : ''}">
+      return `<button type="button" class="lk${p ? '' : ' empty'}" data-act="room-jump" data-id="${n.id}" title="${esc(taskLabel(n))}${p ? ' — ' + esc(p.name) : ''}">
         <span class="im">${p ? `<img src="${ART.product(p)}" alt="">` : '+'}</span><span class="c">${esc(CAT_INFO[n.cat].label)}</span>
         <span class="nm">${p ? esc(p.name.split(/,|\(/)[0]) : 'Needs product'}</span></button>`;
     }).join('')}</div></div></div>`;
 }
-function needBlock(n){
+/* What the products are for. The option leads, since it names the thing to buy
+   ("Replace : Shaker cabinets") and usually repeats the task's name anyway. The
+   task sits above it as a label, with its contractor and description under it.
+   A task with several options shows the task once, then each option. */
+const taskKickHtml = (n, amt, extra) => `<div class="nb-kick"><span class="nb-tk">${esc(n.task)}${extra || ''}</span>${amt || ''}</div>`;
+// The task's cost against its allowance, which sits on the task's first option.
+function taskAmtHtml(os){
+  const t = os.find(n => !n.of) || os[0];
+  if(!t.allow) return '<span class="nb-amt na">Allowance N/A</span>';
+  if(os.length === 1) return `<span class="nb-amt">Task ${needAmtHtml(t, `${money0(taskCost(t))} / ${money0(t.allow)}`)}</span>`;
+  const mat = os.reduce((a, n) => a + needTotal(n), 0), lab = LABOR[t.id] || 0;
+  return `<span class="nb-amt">Task <span class="alw has-tip${mat + lab - t.allow > .5 ? ' is-over' : ''}" tabindex="0" role="link" data-act="cost-book">${money0(mat + lab)} / ${money0(t.allow)}${tipHtml(allowRows(mat, lab, t.allow, 'Task allowance'))}</span></span>`;
+}
+function taskBlocks(ns){
+  return firstPerTask(ns).map(t => {
+    if(!multiOpt(t)) return needBlock(t);
+    const os = optsOf(t), shown = ns.filter(n => tkOf(n) === tkOf(t));
+    return `<div class="nb-grp" data-task="${tkOf(t)}"><header class="nb-ghd">${taskKickHtml(t, taskAmtHtml(os), `<em>${os.length} options</em>`)}${taskFactsHtml(t)}</header>
+      ${shown.map(n => needBlock(n, true)).join('')}</div>`;
+  }).join('');
+}
+const taskFactsHtml = n => `<dl class="nb-task">
+  <dt class="k">Contractor</dt><dd>${esc(installerOf(n))}</dd>
+  ${n.desc ? `<dt class="k">Description</dt><dd>${esc(n.desc)}</dd>` : ''}</dl>`;
+function needBlock(n, inTask){
   const p = n.pick && CATALOG[n.pick], all = BY_CAT[n.cat].filter(sold).length, pt = needTotal(n);
   // Every other product that fits, best matches first, in a carousel: no leaving the room.
   const alts = roomAlts(n);
@@ -606,7 +647,8 @@ function needBlock(n){
       <span class="acts"><button type="button" class="btn ${p ? 'ghost' : 'pri'} sm" data-act="choose" data-sku="${c.sku}" data-id="${n.id}" title="${p ? `Add it in place of ${esc(p.name.split(/,|\(/)[0])}` : 'Add to the list'}">Add</button></span></article>`;
   };
   return `<section class="nb" data-need="${n.id}">
-    <header class="nb-hd"><h3><button type="button" data-act="sel-need" data-id="${n.id}">${esc(n.task)}</button></h3><span class="sub">${qtyText(n.cat, n.qty)}${n.fit ? ` · ${n.fit}″ opening` : ''}</span>${st || amt ? `<span class="nb-hd-r">${st}${amt}</span>` : ''}</header>
+    <header class="nb-hd${inTask ? ' nb-hd-o' : ''}">${inTask ? '' : taskKickHtml(n, amt)}<h3><button type="button" data-act="sel-need" data-id="${n.id}">${esc(n.opt || n.task)}</button></h3><span class="sub">${qtyText(n.cat, n.qty)}${n.fit ? ` · ${n.fit}″ opening` : ''}</span>${st ? `<span class="nb-hd-r">${st}</span>` : ''}
+      ${inTask ? '' : taskFactsHtml(n)}</header>
     ${notes.length ? `<div class="nb-notes">${notes.join('')}</div>` : ''}
     <div class="nb-bd${p ? '' : ' none'}">${pick}
       <div class="rcar" data-car="${n.id}"><div class="rcar-track" role="list">${alts.map(alt).join('')}</div>
@@ -628,7 +670,7 @@ function roomHtml(){
     const all = NEEDS.filter(n => n.room === r.id), ns = all.filter(listFilter);
     if(!ns.length) return isAll ? '' : `<div class="nb-empty">Nothing in ${esc(r.name)} matches “${fl}”. <button class="link" data-act="filter" data-v="all">Show everything</button></div>`;
     return `<div class="rm" data-room="${r.id}">${isAll ? `<div class="rm-hd"><h3>${esc(r.name)}</h3><span>${all.filter(n => n.pick).length} of ${all.length} chosen · ${money(all.reduce((a, n) => a + needTotal(n), 0))}</span><button type="button" class="link" data-act="sel-room" data-room="${r.id}">Just this room</button></div>` : ''}
-      ${lookHtml(all)}${ns.map(needBlock).join('')}</div>`;
+      ${lookHtml(all)}${taskBlocks(ns)}</div>`;
   };
   let foot = '';
   if(!isAll){
@@ -911,7 +953,7 @@ function secPlan(needs){
   const n0 = needs[0], rooms = [...new Set(needs.map(n => n.room))];
   const rows = needs.map(n => {
     const p = n.pick && CATALOG[n.pick], b = p && buy(p, n.qty);
-    return `<div><span>${esc(ROOM[n.room].name)} — ${esc(n.src)}</span><b>${qtyText(n.cat, n.qty)}</b></div>${p && b.sub ? `<div><span>${esc(p.name.split(',')[0])}: ${p.pack} ${p.unit} per ${p.packName}</span><b>${b.label} · ${b.sub}</b></div>` : ''}`;
+    return `<div><span>${esc(whereOf(n))} — ${esc(n.src)}</span><b>${qtyText(n.cat, n.qty)}</b></div>${p && b.sub ? `<div><span>${esc(p.name.split(',')[0])}: ${p.pack} ${p.unit} per ${p.packName}</span><b>${b.label} · ${b.sub}</b></div>` : ''}`;
   }).join('');
   return `<div class="plan">${planSvg(rooms)}</div>
     <div class="math">${rows}<div><span>To cover, waste included</span><b>${qtyText(n0.cat, needs.reduce((a, n) => a + n.qty, 0))}</b></div></div>
@@ -929,7 +971,7 @@ function secNotes(needs){
 function boardProducts(needs){
   const out = [], n0 = needs[0], single = S.sel.kind === 'need';
   const add = (sku, tag) => { if(sku && CATALOG[sku] && !out.some(x => x.sku === sku)) out.push({sku, tag}); };
-  needs.forEach(n => add(n.pick, single ? 'Picked' : `Picked · ${ROOM[n.room].name}`));
+  needs.forEach(n => add(n.pick, single ? 'Picked' : `Picked · ${whereOf(n)}`));
   needs.forEach(n => n.backups.forEach((s, i) => add(s, `Substitute ${i + 1}`)));
   if(out.length < 3) shelfProducts(needs).filter(p => p.mood && needs.some(n => fitsNeed(p, n))).forEach(p => { if(out.length < 4) add(p.sku, 'Best match'); });
   return out;
@@ -1045,7 +1087,7 @@ function scopePageHtml(needs){
   const o = p && offerOf(n, p), b = p && buy(p, n.qty, o);
   return `<div class="scp">
     <div class="crumbs"><button data-act="sel-room" data-room="all">All</button><span>›</span><button data-act="sel-room" data-room="${n.room}">${esc(r.name)}</button><span>›</span><span class="cur">${esc(n.task)}</span></div>
-    <h2 class="scp-t">${esc(n.task)}</h2>
+    <h2 class="scp-t">${esc(taskLabel(n))}</h2>
     <div class="shelf-sub"><b>${qtyText(n.cat, n.qty)}</b><span class="sep">|</span><span>${esc(r.name)}</span><span class="sep">|</span>${n.allow ? `<span>Task ${needAmtHtml(n, `${money0(taskCost(n))} / ${money0(n.allow)}`)}</span>` : '<span class="na">Allowance N/A</span>'}${isOver(n) ? ' <span class="tag warn">Needs review</span>' : ''}</div>
     <div class="scp-grid">
       <section class="scp-c scp-wide"><span class="k">The task<em>${esc(installerOf(n))}</em></span><p>${esc(n.desc || '')}</p></section>
@@ -1062,10 +1104,10 @@ function pgScope(needs, full){
   return `<div class="pg-hd"><b>${esc(JOB.name)}</b><span>Scope V3 · approved · ${esc(JOB.stage)}</span><span class="pg-amt">${money(tot)} <i>materials chosen</i></span></div>
     ${ROOMS.map(r => {
       const ns = NEEDS.filter(n => n.room === r.id); if(!ns.length) return '';
-      return `<div class="pg-grp"><b>${esc(r.name)}</b><span>${ns.length} ${ns.length === 1 ? 'task' : 'tasks'}</span><span class="pg-amt">${money(ns.reduce((a, n) => a + needTotal(n), 0))}</span></div>
+      return `<div class="pg-grp"><b>${esc(r.name)}</b><span>${taskCount(ns)} ${taskCount(ns) === 1 ? 'task' : 'tasks'}</span><span class="pg-amt">${money(ns.reduce((a, n) => a + needTotal(n), 0))}</span></div>
         ${ns.map(n => { const hit = on.has(n.id), pk = n.pick && CATALOG[n.pick];
           return `<button type="button" class="pg-task${hit ? ' on' : ''}" data-act="sel-need" data-id="${n.id}" title="${full ? 'Open this task' : 'Shop for this task'}">
-            <span class="pg-t"><b>${esc(n.task)}</b><span>${qtyText(n.cat, n.qty)}${pk ? ` · ${esc(pk.brand)} ${esc(pk.name.split(/,|\(/)[0])}` : ''}</span>
+            <span class="pg-t"><b>${esc(n.task)}${multiOpt(n) ? ` · ${esc(optShort(n))}` : ''}</b><span>${qtyText(n.cat, n.qty)}${pk ? ` · ${esc(pk.brand)} ${esc(pk.name.split(/,|\(/)[0])}` : ''}</span>
               ${hit && n.desc && !full ? `<p>${esc(n.desc)}</p>` : ''}</span>
             <span class="pg-r">${hit && !full ? '<span class="tag acc">Shopping now</span>' : !pk ? '<span class="tag warn">Needs product</span>' : ''}<span class="pg-amt">${pk ? money(needTotal(n)) : '—'}</span></span></button>`;
         }).join('')}`;
@@ -1253,7 +1295,7 @@ function checksHtml(lines){
   const cnt = (k, w) => `${k} ${w}${k === 1 ? '' : 's'}`;
   const c = (cls, ic, title, p, act) => `<div class="check ${cls}"><span class="ic">${ic}</span><div><b>${title}</b><p>${p}</p></div>${act || ''}</div>`;
   return `<div class="checks">
-    ${todo.length ? c('todo', todo.length, todo.length === 1 ? '1 task needs a product' : `${todo.length} tasks need products`, `${todo.map(n => esc(n.task)).join(', ')}.`, '<button class="btn" data-act="fix-todo">Choose now</button>')
+    ${todo.length ? c('todo', todo.length, todo.length === 1 ? '1 task needs a product' : `${todo.length} tasks need products`, `${todo.map(n => esc(taskLabel(n))).join(', ')}.`, '<button class="btn" data-act="fix-todo">Choose now</button>')
       : c('ok', '✓', 'Every task has a product', `All ${NEEDS.length} tasks have products.`)}
     ${c('ok', '↻', 'Substitution policy', 'Only products within template are pre-approved')}
     ${over.length || overRooms.length ? c('todo', '!', `${[over.length ? cnt(over.length, 'task') : '', overRooms.length ? cnt(overRooms.length, 'department') : ''].filter(Boolean).join(', ')} over allowance`,
@@ -1277,7 +1319,7 @@ function orderCard(ord, lines){
   // The tasks a line is for, each with its room, amount and installer, each opening in Scope. Long lists fold to two.
   const tasks = L => {
     const open = S.rvMore.has(L.key), many = L.needs.length > 3, show = many && !open ? L.needs.slice(0, 2) : L.needs;
-    return `<span class="ots">${show.map(n => `<button type="button" class="ot" data-act="rv-task" data-id="${n.id}" title="Open ${esc(n.task)} in Scope"><u>${esc(ROOM[n.room].name)} › ${esc(n.task)}</u><span>${qtyText(n.cat, n.qty)}</span><span>${esc(installerOf(n))}</span></button>`).join('')}${many ? `<button type="button" class="ot-more" data-act="rv-more" data-key="${L.key}">${open ? 'Show fewer' : `+${L.needs.length - 2} more`}</button>` : ''}</span>`;
+    return `<span class="ots">${show.map(n => `<button type="button" class="ot" data-act="rv-task" data-id="${n.id}" title="Open ${esc(n.task)} in Scope"><u>${esc(ROOM[n.room].name)} › ${esc(taskLabel(n))}</u><span>${qtyText(n.cat, n.qty)}</span><span>${esc(installerOf(n))}</span></button>`).join('')}${many ? `<button type="button" class="ot-more" data-act="rv-more" data-key="${L.key}">${open ? 'Show fewer' : `+${L.needs.length - 2} more`}</button>` : ''}</span>`;
   };
   // The out-of-stock rule shows only where a line has its own; the team's is the default and needs no word.
   const own = L => L.needs.some(n => n.sub);
@@ -1385,7 +1427,7 @@ function dropsHtml(lines){
     return `<div class="dx-col" tabindex="0" aria-label="${esc(`${c.kind} ${when} from ${c.kind === 'Delivery' ? sp.name : store}`)}"><b>${when}</b><span>${c.kind}</span><span class="dx-at">${esc(sp.name.replace(/^The /, ''))}${c.kind === 'Delivery' ? '' : ` ${esc(sp.store.split(' · ')[0].replace('Wilmington ', ''))}`}</span><span class="dx-by">${buyers.map(esc).join(' + ')}</span><i>${c.lines.length}</i>${tip}</div>`; }).join('');
   const taskRow = n => {
     const L = lineOf.get(n.id), byRoom = S.gtGroup === 'room';
-    const label = byRoom ? esc(n.task) : `${esc(ROOM[n.room].name)} › ${esc(n.task)}`;
+    const label = byRoom ? esc(taskLabel(n)) : `${esc(ROOM[n.room].name)} › ${esc(taskLabel(n))}`;
     const sub = L ? `${esc(short(L.p))} · ${qtyText(n.cat, n.qty)}${byRoom ? ` · ${esc(installerOf(n))}` : ''}${L.buyer !== ORG ? ` · ${buyerTxt(L.buyer)}` : ''}` : `${qtyText(n.cat, n.qty)} · no product yet`;
     const cells = cols.map((c, i) => `<div class="dx-c">${L && dropOf.get(L.key) === i ? `<span class="dx-dot" tabindex="0" aria-label="${esc(L.p.name)}, ${esc(c.kind)} ${esc(inHand(c.date))}"><img src="${ART.product(L.p)}" alt=""><span class="dx-pop" hidden>${popHtml(L, n, c)}</span></span>` : ''}</div>`).join('');
     const nd = neededBy(n), late = lateOf(n);
@@ -1405,7 +1447,7 @@ function dropsHtml(lines){
     const cells = cols.map((c, i) => { const k = ns.filter(n => { const L = lineOf.get(n.id); return L && dropOf.get(L.key) === i; }).length;
       return `<div class="dx-c">${k ? `<span class="dx-n" title="${cnt(k, 'item')}">${'●'.repeat(Math.min(k, 5))}${k > 5 ? `<i>+${k - 5}</i>` : ''}</span>` : ''}</div>`; }).join('');
     const st = `<span class="dx-st ${late ? 'late' : todo ? 'warn' : 'ok'}"><b>${late || todo ? '!' : '✓'}</b><span>${!ls.length ? 'Not sourced' : [late ? `${late} late` : '', todo ? `${todo} not sourced` : ''].filter(Boolean).join(' · ') || 'On time'}</span></span>`;
-    return `<div class="dx-row dx-grp"><div class="dx-l"><span class="nv-car${shut ? '' : ' o'}" data-act="dx-tog" data-k="${esc(key)}" role="button" aria-label="${shut ? 'Show' : 'Hide'} the tasks"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span><b>${esc(name)}</b><i>${cnt(ns.length, 'task')}</i></div>${cells}<div class="dx-d${late ? ' late' : ''}">${ls.length ? span(ls.map(L => +L.arrive)) : '<span class="dx-na">—</span>'}</div><div class="dx-d">${span(ns.map(n => +neededBy(n)))}</div><div class="dx-r">${st}</div><div class="dx-p">${ls.length ? money(ns.reduce((a, n) => { const L = lineOf.get(n.id); return L ? a + share(L, n) : a; }, 0)) : '<span class="dx-na">—</span>'}</div></div>${shut ? '' : ns.map(taskRow).join('')}`;
+    return `<div class="dx-row dx-grp"><div class="dx-l"><span class="nv-car${shut ? '' : ' o'}" data-act="dx-tog" data-k="${esc(key)}" role="button" aria-label="${shut ? 'Show' : 'Hide'} the tasks"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span><b>${esc(name)}</b><i>${cnt(taskCount(ns), 'task')}</i></div>${cells}<div class="dx-d${late ? ' late' : ''}">${ls.length ? span(ls.map(L => +L.arrive)) : '<span class="dx-na">—</span>'}</div><div class="dx-d">${span(ns.map(n => +neededBy(n)))}</div><div class="dx-r">${st}</div><div class="dx-p">${ls.length ? money(ns.reduce((a, n) => { const L = lineOf.get(n.id); return L ? a + share(L, n) : a; }, 0)) : '<span class="dx-na">—</span>'}</div></div>${shut ? '' : ns.map(taskRow).join('')}`;
   };
   const groups = S.gtGroup === 'room' ? ROOMS.map(r => ['r:' + r.id, r.name, NEEDS.filter(n => n.room === r.id)])
     : [...new Set(NEEDS.map(installerOf))].sort((a, b) => (a === 'Unassigned') - (b === 'Unassigned') || a.localeCompare(b)).map(c => ['i:' + c, c, NEEDS.filter(n => installerOf(n) === c)]);

@@ -304,7 +304,9 @@ const NEEDS = [
   {id: 'k5', room: 'kitchen', cat: 'lighting',  task: 'Kitchen lighting', qty: 3, src: '3 ceiling boxes (photo, Mar 9)', pick: 'PL-GULL', backups: [],
    desc: 'Replace three ceiling fixtures with close-to-ceiling LED fixtures in brushed nickel.'},
   {id: 'k6', room: 'kitchen', cat: 'paint',     task: 'Paint', qty: 2, src: 'Walls: 350 SF, 2 coats ≈ 2 gallons', pick: 'SW-7029', backups: [],
-   desc: 'Patch, prime stains and paint walls Agreeable Gray. Ceilings flat white (by the crew, not in this list).'},
+   desc: 'Patch, prime stains and paint walls Agreeable Gray. Trim and the four interior doors Pure White. Ceilings flat white (by the crew, not in this list).'},
+  // A second option on the same task (of: its task's id): the task's name, room and description come from k6.
+  {id: 'k6t', of: 'k6', cat: 'paint', qty: 1, src: 'Base, casing and 4 doors, 1 coat over primer ≈ 1 gallon', pick: 'SW-7005', backups: []},
   {id: 'k7', room: 'kitchen', cat: 'floor',     task: 'Kitchen flooring', qty: 185, src: 'Floor plan: 14′ × 12′ = 168 SF, +10% waste', pick: 'SH-PAR', backups: ['SH-PST'],
    desc: 'Remove sheet vinyl. Level and install click-lock LVP. Transition to the hallway at the existing seam.'},
   {id: 'k8', room: 'kitchen', cat: 'door',      task: 'Interior doors', qty: 4, src: '4 openings: pantry, laundry, 2 closets', pick: null, backups: [],
@@ -334,6 +336,21 @@ const NEEDS = [
   {id: 'e2', room: 'bed2',    cat: 'paint',     task: 'Paint', qty: 2, src: 'Walls: 400 SF, 2 coats ≈ 2 gallons', pick: 'SW-7029', backups: [], desc: 'Paint walls Agreeable Gray.'},
   {id: 'e3', room: 'bed2',    cat: 'blinds',    task: 'Blinds', qty: 2, src: '2 windows, 35″ wide', pick: 'BA-2FW', backups: [], desc: 'Install 2″ white faux wood blinds.'}
 ];
+/* Each task's chosen option, named as Scope names it ("Replace : LVP"): what the
+   products on the shelf are for. */
+const OPT = {
+  k1: 'Replace : Shaker cabinets', k2: 'Replace : Quartz', k3: 'Install : Subway tile', k4: 'Replace : Stainless suite',
+  k5: 'Replace : LED fixtures', k6: 'Paint : Walls', k6t: 'Paint : Trim and doors', k7: 'Replace : LVP', k8: 'Replace : Prehung doors',
+  l1: 'Replace : LVP', l2: 'Paint : Walls', l3: 'Replace : Fan with light', l4: 'Install : Faux wood blinds', l5: 'Replace : Hardwired combos',
+  p1: 'Replace : 48″ double vanity', p2: 'Replace : Wall and floor tile', p3: 'Replace : Comfort-height toilet', p4: 'Replace : 80 CFM fan', p5: 'Replace : Privacy knobs',
+  b1: 'Replace : 30″ vanity', b2: 'Replace : Toilet', b3: 'Replace : Exhaust fan', b4: 'Paint : Walls and trim',
+  r1: 'Replace : LVP', r2: 'Paint : Walls', r3: 'Add : Fan with light', r4: 'Install : Wire closet kit',
+  e1: 'Replace : LVP', e2: 'Paint : Walls', e3: 'Install : Faux wood blinds'
+};
+NEEDS.forEach(n => { n.opt = OPT[n.id] || ''; });
+/* A task can have more than one option, each shopped on its own. An option row
+   names its task with of:, and takes the task's name, room and description. */
+NEEDS.forEach(n => { if(n.of){ const t = NEEDS.find(x => x.id === n.of); n.task = t.task; n.room = t.room; n.desc = t.desc; } });
 
 /* Notes on the job, by need (and a few for the whole room). */
 const NOTES = {

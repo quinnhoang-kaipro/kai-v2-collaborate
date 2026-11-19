@@ -944,6 +944,27 @@ body.dragging .board,body.dragging .grid{pointer-events:none}
 .nb-hd h3{font-family:var(--display);font-size:19px;font-weight:700;letter-spacing:-.01em}
 .nb-hd h3 button:hover{text-decoration:underline;text-underline-offset:4px}
 .nb-hd .sub{font-size:13px;color:var(--t2)}
+/* The option leads each section; the task is the label above it, with its contractor and description under. */
+.nb-kick{flex-basis:100%;display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:-5px}
+.nb-tk{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.nb-tk em{font-style:normal;color:var(--t3)}
+.nb-tk em::before{content:'·';margin:0 7px}
+.nb-task{flex-basis:100%;order:9;display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:2px 0 0;font-size:13px;line-height:1.45;color:var(--t2)}
+.nb-task dt{line-height:18.85px}
+.nb-task dd{margin:0;max-width:96ch}
+.nb-task dd:first-of-type{color:var(--ink);font-weight:500}
+/* A task with several options: the task once, then each option under a lighter rule. */
+.nb-grp{margin-top:30px;scroll-margin-top:14px}
+.nb-ghd{display:flex;flex-wrap:wrap;padding-bottom:10px;border-bottom:2px solid var(--ink)}
+.nb-ghd .nb-kick{margin-bottom:4px}
+.nb-grp > .nb{margin-top:20px}
+.nb-hd-o{border-bottom-width:1px}
+/* The shelf of one option: its task's other options, one click away. */
+.sh-opts{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:10px}
+.sh-opts .k{margin-right:6px}
+.sh-opt{font:inherit;font-size:12.5px;font-weight:500;padding:5px 10px;border:1px solid var(--stroke);background:var(--white);color:var(--ink);cursor:pointer}
+.sh-opt:hover{border-color:var(--ink)}
+.sh-opt.on{background:var(--ink);border-color:var(--ink);color:var(--white)}
 .nb-hd-r{margin-left:auto;align-self:center;display:flex;align-items:center;gap:12px}
 .nb-amt{font-size:13px;color:var(--t2);white-space:nowrap}
 .nb-hd .nb-amt .tip{left:auto;right:0}
