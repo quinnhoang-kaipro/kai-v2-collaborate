@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop Gantt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ideal.css">
+</head>
+<body>
+
+<nav class="demo" id="demoNav" aria-label="Concept screens">
+  <span class="k">Shop Gantt</span>
+  <button type="button" data-act="screen" data-v="pickup">Pickup on the phone</button>
+  <button type="button" data-act="screen" data-v="notes">Design notes</button>
+  <span class="sp"></span>
+  <button type="button" data-act="reset">Reset demo</button>
+</nav>
+
+<header class="bar">
+  <span class="logo" aria-label="Kai">Kai</span>
+  <span class="addr"><b>3484 South Main Street</b><i>Wilmington, NC 28401</i></span>
+  <nav class="tabs" aria-label="Job">
+    <span class="tw" data-tab="overview"><button type="button" class="tl" data-act="kwtab" data-page="overview" draggable="true" title="Overview on its own · tick the box to show it side by side">Overview</button><button type="button" class="tck" data-act="tcheck" data-page="overview" role="checkbox" aria-checked="false" aria-label="Show Overview side by side" title="Tick to show Overview side by side (two at most)"><span class="tck-box" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2.5 6.2 5 8.6l4.5-5"/></svg></span></button></span>
+    <span class="tw" data-tab="scope"><button type="button" class="tl" data-act="kwtab" data-page="scope" draggable="true" title="Scope on its own · tick the box to show it side by side">Scope</button><button type="button" class="tck" data-act="tcheck" data-page="scope" role="checkbox" aria-checked="false" aria-label="Show Scope side by side" title="Tick to show Scope side by side (two at most)"><span class="tck-box" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2.5 6.2 5 8.6l4.5-5"/></svg></span></button></span>
+    <span class="tw" data-tab="shop"><button type="button" class="tl" data-act="screen" data-v="shop" data-shop="1">Shop</button><button type="button" class="tck" data-act="tcheck" data-page="shop" role="checkbox" aria-checked="false" aria-label="Show Shop side by side" title="Tick to show Shop side by side (two at most)"><span class="tck-box" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2.5 6.2 5 8.6l4.5-5"/></svg></span></button></span>
+    <span class="tw" data-tab="media"><button type="button" class="tl" data-act="kwtab" data-page="media" draggable="true" title="Media on its own · tick the box to show it side by side">Media</button><button type="button" class="tck" data-act="tcheck" data-page="media" role="checkbox" aria-checked="false" aria-label="Show Media side by side" title="Tick to show Media side by side (two at most)"><span class="tck-box" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2.5 6.2 5 8.6l4.5-5"/></svg></span></button></span>
+    <span class="tw" data-tab="floorplan"><button type="button" class="tl" data-act="kwtab" data-page="floorplan" draggable="true" title="Floorplan on its own · tick the box to show it side by side">Floorplan</button><button type="button" class="tck" data-act="tcheck" data-page="floorplan" role="checkbox" aria-checked="false" aria-label="Show Floorplan side by side" title="Tick to show Floorplan side by side (two at most)"><span class="tck-box" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2.5 6.2 5 8.6l4.5-5"/></svg></span></button></span>
+    <span class="tw" data-tab="documents"><button type="button" class="tl" data-act="kwtab" data-page="documents" draggable="true" title="Documents on its own · tick the box to show it side by side">Documents</button><button type="button" class="tck" data-act="tcheck" data-page="documents" role="checkbox" aria-checked="false" aria-label="Show Documents side by side" title="Tick to show Documents side by side (two at most)"><span class="tck-box" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2.5 6.2 5 8.6l4.5-5"/></svg></span></button></span>
+  </nav>
+  <span class="sp"></span>
+  
+  <span class="turn">Your turn</span>
+  <button type="button" class="cartbtn" id="cartBtn" data-act="screen" data-v="review"></button>
+  <span class="me" title="M. Abbott · Job manager">MA</span>
+</header>
+
+<main id="shop" class="screen shop">
+  <aside id="list" class="list" aria-label="Scope: all, labor or materials"></aside>
+  <section id="work" class="work" aria-label="Shelf"></section>
+</main>
+<main id="review" class="screen review" hidden></main>
+<!-- Overview, Scope and Documents: the real KaiWeb pages, framed with this bar. -->
+<main id="kw" class="screen kw" hidden><iframe id="kwFrame" title="KaiWeb page"></iframe><div class="kw-loading" id="kwLoading">Loading…</div></main>
+<main id="pickup" class="screen pickup" hidden></main>
+
+<main id="notes" class="screen notes" hidden>
+<article class="doc">
+  <span class="eyebrow">Shop with Kai · design notes · concept, not a spec</span>
+  <h1>Shop for the job, not for products.</h1>
+  <p class="lede">If we weren't held to the shopping list, cart and Shop tab we have now, this is what I'd build. It's for renovation experts who run hundreds of properties as a team. They know exactly what a job needs, and they shouldn't have to become online shoppers to buy it. Kai should do the shopping work. They should do the judging.</p>
+
+  <h2><span class="n">01</span>Who we're designing for</h2>
+  <div class="cards2">
+    <div class="dcard"><span class="k">Experts, not shoppers</span><b>They know what a rental kitchen needs better than any catalog.</b><p>What slows them down is everything around the choice: finding the product, doing the box math, checking stock, remembering what the owner said. The product should take that work away and leave the judgment to them.</p></div>
+    <div class="dcard"><span class="k">Not tech-savvy</span><b>Plain words, big targets, one obvious next step.</b><p>No icon-only buttons, no hidden gestures, no jargon. Status is always spelled out in words, not just a color. Mistakes can be undone instead of guarded with "are you sure?" dialogs.</p></div>
+    <div class="dcard"><span class="k">A team that takes turns</span><b>Scoping and shopping alternate, one person at a time.</b><p>A field agent scopes in one turn, purchasing shops in the next, and the manager reviews and orders in another. Whoever takes the turn has to pick up where the last person stopped, without redoing anything.</p></div>
+    <div class="dcard"><span class="k">Hundreds of properties</span><b>Most of what they buy, they've bought before.</b><p>The same white shaker cabinet, the same LVP and the same paint, job after job. The ideal is a list that arrives mostly filled in from team standards, so shopping means handling the exceptions.</p></div>
+  </div>
+
+  <h2><span class="n">02</span>What gets in the way today</h2>
+  <ul class="b">
+    <li><b>You can't see the shelf.</b> A product type shows one row of four products, with arrows to see the rest. Comparing 12 floors means paging and remembering.</li>
+    <li><b>The same product is chosen over and over.</b> LVP for four rooms is four separate choices, and they can quietly drift apart. In the demo data, Bedroom 2 has a different floor from the rest of the house.</li>
+    <li><b>The context lives somewhere else.</b> The task description, notes and photos are on the Scope tab. Mood board and floor plan open in a side panel that squeezes the page.</li>
+    <li><b>Quantities are in the wrong units.</b> The scope says 185 SF, but the store sells boxes of 23.6 SF. The user does that math, and gets it wrong.</li>
+    <li><b>Problems surface late.</b> The cart is a list of items. You only find a missing pick when it's already a problem, and a substitution means a phone call.</li>
+    <li><b>An empty shelf stops the job.</b> Any substitute product is a change order, so a crew lead at the Pro desk has to call the office and wait.</li>
+    <li><b>Hand-offs lose the thread.</b> When the turn passes from scoping to shopping, the reasons behind a choice (the owner's note, the measurement) stay behind on the Scope tab.</li>
+  </ul>
+
+  <h2><span class="n">03</span>Principles</h2>
+  <div class="cards3">
+    <div class="dcard"><span class="k">1</span><b>Shop for needs, not products</b><p>The list is what the property needs. A product is an answer to a need, and a need stays a need until it's installed.</p></div>
+    <div class="dcard"><span class="k">2</span><b>Context travels with you</b><p>The task, quantity, photos, notes and look sit above every shelf. Media (the mood board and site photos), the floor plan, notes or a page open as one side panel next to the shelf, on the left or the right.</p></div>
+    <div class="dcard"><span class="k">3</span><b>See the whole room, and the whole shelf</b><p>The room view stacks every item with the room's picks side by side, for scanning and checking the look. The shelf shows one item's every product in a full grid, for deciding. No carousels either way.</p></div>
+    <div class="dcard"><span class="k">4</span><b>Buy units, not math</b><p>Kai turns SF into boxes and walls into gallons, using each product's own pack size. Prices show both per unit and for the whole job.</p></div>
+    <div class="dcard"><span class="k">5</span><b>Substitution is decided up front</b><p>The team sets once what happens when something is out of stock (replace with any similar item). Anyone can change it for one item, from the shelf or the cart, without being asked every time.</p></div>
+    <div class="dcard"><span class="k">6</span><b>Choose once, everywhere</b><p>The same product across rooms is one choice and one order line, with a flag when rooms drift apart.</p></div>
+    <div class="dcard"><span class="k">7</span><b>Check before, not after</b><p>Review & order is a readiness check: missing picks, items over their allowance, and what happens if something's out. Each one has a one-click fix.</p></div>
+    <div class="dcard"><span class="k">8</span><b>Built for turns</b><p>One person has the job at a time. Picks, substitutions and notes stay with the job, so whoever takes the turn next starts where the last person stopped.</p></div>
+    <div class="dcard"><span class="k">9</span><b>Spending is welcome</b><p>Allowances are a reference, not a cap. Kai shows the room to upgrade and never nags anyone to go cheaper.</p></div>
+  </div>
+
+  <h2><span class="n">04</span>The journey</h2>
+  <p>Six steps, from an approved scope to products on site. Kai does most of the work in steps 2 and 5. People spend their time on 3 and 4.</p>
+  <div class="journey">
+    <div><i>1</i><b>Plan</b><p>The scope sets the needs: what, where, how much (from the floor plan).</p><span class="who">T. Oyelaran · field agent</span></div>
+    <div><i>2</i><b>Prefill</b><p>Kai fills the list from team standards, for this mood board and in stock nearby.</p><span class="who">Kai</span></div>
+    <div><i>3</i><b>Shop</b><p>Handle the exceptions: the doors nobody chose, a shower tile and a fan, all with full context and the whole shelf.</p><span class="who">S. Patel · M. Abbott</span></div>
+    <div><i>4</i><b>Review</b><p>A readiness check with one-click fixes, then one order per supplier, pickup or delivery.</p><span class="who">M. Abbott · manager</span></div>
+    <div><i>5</i><b>Order</b><p>One button places every order, with POs, the payment account and who receives it.</p><span class="who">Kai</span></div>
+    <div><i>6</i><b>Pick up &amp; swap</b><p>The crew gets the pickup list in aisle order. An empty shelf becomes a swap, not a phone call.</p><span class="who">J. Ruiz · crew lead</span></div>
+  </div>
+
+  <h2><span class="n">05</span>Pages and how people move between them</h2>
+  <p>There are three places you go: <b>Shop</b>, <b>Review &amp; order</b> and <b>Pickup</b>. Shop has two levels. The <b>room view</b> stacks every item in a room, or every room, for scanning and checking the look. The <b>shelf</b> shows one item in full when you're deciding. Everything else opens on top of them, so you never lose your place. Product detail is a modal over the page. Media (the mood board and site photos), floor plan and notes go on a reference board. One opens at a time, as a side panel on the left or the right of the shelf, or in a full view next to the product you're judging.</p>
+  <div class="map">
+    <svg viewBox="0 0 920 440" role="img" aria-label="Page map">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#1A1A1A"/></marker></defs>
+      <g font-family="Hanken Grotesk, sans-serif" font-size="12.5" fill="#1A1A1A">
+        <text x="20" y="18" font-family="Space Mono, monospace" font-size="10" font-weight="700" fill="#8a8470" letter-spacing="1">WAYS IN</text>
+        <g><rect x="20" y="28" width="200" height="54" fill="#fff" stroke="#DDD6C8"/><text x="32" y="50" font-weight="700">Overview</text><text x="32" y="68" fill="#5C5750">"Shopping: 26 of 29 chosen"</text></g>
+        <g><rect x="240" y="28" width="200" height="54" fill="#fff" stroke="#DDD6C8"/><text x="252" y="50" font-weight="700">Scope task</text><text x="252" y="68" fill="#5C5750">"Shop for this task"</text></g>
+        <g><rect x="460" y="28" width="200" height="54" fill="#fff" stroke="#DDD6C8"/><text x="472" y="50" font-weight="700">Notification</text><text x="472" y="68" fill="#5C5750">"Tile out at #1863 — swap?"</text></g>
+        <g><rect x="680" y="28" width="220" height="54" fill="#fff" stroke="#DDD6C8"/><text x="692" y="50" font-weight="700">Review &amp; order button</text><text x="692" y="68" fill="#5C5750">always in the dark bar</text></g>
+        <path d="M120 82v44M340 82v44" stroke="#1A1A1A" marker-end="url(#ah)"/><path d="M560 82c0 60-30 260-60 236" stroke="#1A1A1A" fill="none" stroke-dasharray="4 3" marker-end="url(#ah)"/><path d="M790 82v44" stroke="#1A1A1A" marker-end="url(#ah)"/>
+        <rect x="20" y="130" width="560" height="160" fill="#FDFDEA" stroke="#1A1A1A" stroke-width="1.5"/>
+        <text x="32" y="152" font-family="Space Mono, monospace" font-size="10" font-weight="700" letter-spacing="1">SHOP</text>
+        <rect x="236" y="140" width="110" height="24" fill="#fff" stroke="#1A1A1A" stroke-dasharray="3 3"/><text x="246" y="156" font-size="11">Product detail</text>
+        <rect x="32" y="172" width="180" height="104" fill="#fff" stroke="#DDD6C8"/><text x="44" y="194" font-weight="700">Shopping list</text><text x="44" y="214" fill="#5C5750">By room · By product</text><text x="44" y="232" fill="#5C5750">Needs product · Needs review</text><text x="44" y="250" fill="#5C5750">No backup</text>
+        <rect x="224" y="172" width="212" height="104" fill="#fff" stroke="#DDD6C8"/><text x="236" y="194" font-weight="700">Room view ⇄ Shelf</text><text x="236" y="214" fill="#5C5750">room: items stacked + its look</text><text x="236" y="232" fill="#5C5750">shelf: one item, the full grid</text><text x="236" y="250" fill="#5C5750">pick + substitution on both</text>
+        <rect x="448" y="172" width="120" height="104" fill="#fff" stroke="#DDD6C8"/><text x="460" y="194" font-weight="700">References</text><text x="460" y="214" fill="#5C5750">media · floor plan</text><text x="460" y="232" fill="#5C5750">notes · side by side</text>
+        <path d="M212 224h12M436 224h12" stroke="#1A1A1A" marker-end="url(#ah)"/>
+        <path d="M580 210h40" stroke="#1A1A1A" marker-end="url(#ah)"/>
+        <rect x="620" y="130" width="280" height="160" fill="#fff" stroke="#1A1A1A" stroke-width="1.5"/>
+        <text x="632" y="152" font-family="Space Mono, monospace" font-size="10" font-weight="700" letter-spacing="1">REVIEW &amp; ORDER</text>
+        <text x="632" y="182" font-weight="700">1 Before you order</text><text x="648" y="200" fill="#5C5750">checks + one-click fixes</text>
+        <text x="632" y="224" font-weight="700">2 Orders by supplier</text><text x="648" y="242" fill="#5C5750">pickup or delivery, by arrival</text>
+        <text x="632" y="266" font-weight="700">3 Pay &amp; approve</text><text x="760" y="266" fill="#5C5750">→ Place orders</text>
+        <path d="M760 290v30" stroke="#1A1A1A" marker-end="url(#ah)"/>
+        <rect x="620" y="324" width="280" height="96" fill="#fff" stroke="#DDD6C8"/><text x="632" y="346" font-weight="700">Orders placed</text><text x="632" y="366" fill="#5C5750">tracked on the job's Documents</text><text x="632" y="384" fill="#5C5750">pickup list sent to the crew</text>
+        <path d="M620 372h-60" stroke="#1A1A1A" marker-end="url(#ah)"/>
+        <rect x="300" y="324" width="260" height="96" fill="#fff" stroke="#DDD6C8"/><text x="312" y="346" font-weight="700">Pickup (phone)</text><text x="312" y="366" fill="#5C5750">aisle order · boxes, gallons</text><text x="312" y="384" fill="#5C5750">✓ as it goes on the cart</text>
+        <path d="M300 372h-40" stroke="#1A1A1A" marker-end="url(#ah)"/>
+        <rect x="20" y="324" width="240" height="96" fill="#fff" stroke="#DDD6C8"/><text x="32" y="346" font-weight="700">Swap</text><text x="32" y="366" fill="#2E9048">inside the rules → no change order</text><text x="32" y="384" fill="#9E6B2F">outside → asks, keeps going</text>
+        <path d="M140 324v-30" stroke="#1A1A1A" stroke-dasharray="4 3" marker-end="url(#ah)"/><text x="148" y="310" font-size="11" fill="#5C5750">the job record updates</text>
+      </g>
+    </svg>
+  </div>
+  <table class="tbl">
+    <tr><th>From</th><th>To</th><th>How, and why</th></tr>
+    <tr><td>Scope task</td><td class="was">Shop · that need</td><td>"Shop for this task" opens the shelf already set to that need, with the same task context on top. Scoping and shopping are one motion.</td></tr>
+    <tr><td>Room name in the list</td><td class="was">Room view</td><td>Every item in that room, stacked: your pick, what happens if it's out, and the next 3 best, with the room's picks side by side at the top. "All" at the top of the list gives the whole job as one scroll.</td></tr>
+    <tr><td>"View all" on a room-view row</td><td class="was">Shelf</td><td>The full grid for that one item, with a search. The room crumb brings you back to the same item in the room, not to the top.</td></tr>
+    <tr><td>Shopping list row</td><td class="was">Shelf</td><td>The list stays on the left as a map of the job. A row always opens that item's full shelf, every option at once, and stays clearly marked as the one you're on.</td></tr>
+    <tr><td>A need used in several rooms</td><td class="was">Product-type shelf</td><td>"Shop all 4 rooms together" opens one shelf for the product type, with a row per room. You choose once and uncheck a room to make it different.</td></tr>
+    <tr><td>Context band</td><td class="was">Reference board</td><td>Each tile adds that reference to the board, and tapping a photo opens that photo large. The board stays open as you move down the list, so you set it up once and every shelf shows that need's photos, plan and look.</td></tr>
+    <tr><td>Card</td><td class="was">Product detail</td><td>A modal over the page, so the shelf stays where it was: the pictures on the left (‹ › to step through), and on the right the price for this task, details, delivery or pickup, every store's price, what happens if it's out, why it fits and what the team says, with Add pinned at the foot. A pager under it ("1 of 8 cabinets") steps through the rest of the shelf without closing.</td></tr>
+    <tr><td>Anywhere</td><td class="was">Review &amp; order</td><td>One button in the dark bar. It's a page, not a dropdown, because reviewing is a different job from browsing.</td></tr>
+    <tr><td>Review check</td><td class="was">Shelf</td><td>"Choose now" goes straight to the first thing left to choose, with the list filtered to those items.</td></tr>
+    <tr><td>Placed order</td><td class="was">Pickup on the phone</td><td>The crew lead gets a link by text. The job's Documents keep the orders and POs.</td></tr>
+    <tr><td>Swap at the store</td><td class="was">Back to the job</td><td>The pick, the order line and the activity log all update. The manager gets a note. Nobody re-enters anything.</td></tr>
+  </table>
+
+  <h2><span class="n">06</span>Screen by screen: today → ideal</h2>
+  <table class="tbl">
+    <tr><th>Touch point</th><th>Today</th><th>Ideal</th></tr>
+    <tr><td>By task (Shop Gantt)</td><td class="was">Review &amp; order as a list of orders.</td><td>Orders land in a few drops (a pickup, a delivery, a ship-to-store day), so those are the columns and the job's rooms and tasks are the rows. Each product photo sits under the drop it comes in. A drop's header lines are named in the first column (Expected receipt, Fulfillment, Supplier, Buyer, Order lines), and hovering a drop spells them out. Each task then has its Expected receipt (when its last item is in hand) and its Need-by date as two columns, a Status (On time, Late · 3 days, or Not sourced) and a Price: the task's part of its order line, before tax. Hovering a product photo shows it large with its full name, SKU, quantity, unit price, price, fulfillment and availability. Rooms (or contractors) show date ranges, add up their prices and roll up: "1 late · 1 not sourced". A late task offers the store that gets it there in time. List brings back the PO-style orders. No install schedule: only the store's dates.</td></tr>
+    <tr><td>Review &amp; order</td><td class="was">One order per supplier; every line showed its out-of-stock rule.</td><td>One order per supplier and buyer (Buyer: FloorWorks · Bill to: FloorWorks's account, until it's submitted), tagged Original scope or Change Order 1. Each line lists its tasks (room › task · amount · contractor), each opening in Scope, and its Needed by date; late lines are flagged and counted in Before you order. The out-of-stock rule shows only where a line has its own; Change appears on hover.</td></tr>
+    <tr><td>Left panel</td><td class="was">Changed with the tab: the scope on Scope, a shopping list on Shop.</td><td>One panel on every tab: KaiWeb's scope navigator, as in Shop with Kai · Layout, over the same tasks. All (rooms → tasks, total cost), Labor (crew → tasks, labor cost), Materials (department → product type → tasks, materials cost). Clicking Shop flips it to Materials; leaving Shop puts back what you had, unless you picked a view while there. On Overview and Documents, KaiWeb's own panel is hidden and a task opens in Scope.</td></tr>
+    <tr><td>Shopping list</td><td class="was">A list of products, with "35 of 37 filled".</td><td>A list of needs with a status for each: Needs product · Needs review (over its allowance) · chosen · ordered · swapped. Amounts show materials, labor and allowance on hover. Group by room or by product. Filters for "Needs product" and "Needs review".</td></tr>
+    <tr><td>Shopping page</td><td class="was">Every shelf stacked, each one row of 4 with arrows.</td><td>Room view: every item stacked, with your pick large, what happens if it's out, and every other product that fits in a carousel beside it ("1–3 of 7", arrows or a swipe), so you never leave the room. Add from the carousel; the pick has its quantity stepper and what happens if it's out. The room's picks sit together in one strip at the top. Site photos and the mood board are in Media: tick it in the top bar to see it beside the shelf.</td></tr>
+    <tr><td>Product type</td><td class="was">One row of 4 with arrows.</td><td>The whole shelf as a grid, split into "High match" and "Lower match" (the same tags as the store cards in KaiWeb), where each lower match says why. A search across the shelf.</td></tr>
+    <tr><td>Product card</td><td class="was">Price, name, one stock line.</td><td>Price per unit, plus "Buy 8 boxes · $1,624" for this job. Real stock at the nearest store. Tags for mood board match and size fit. One button: Add, which turns into a quantity stepper (a bin at one takes it off). What happens if it's out of stock lives in the product detail.</td></tr>
+    <tr><td>Task context</td><td class="was">On the Scope tab or in a side panel.</td><td>Above every shelf, a strip with the task, how much and where that number came from, and the latest note. The site photos and the mood board are in Media, beside the shelf.</td></tr>
+    <tr><td>Media / Floorplan</td><td class="was">A side panel that squeezes the page.</td><td>Full tabs in the top bar, as in KaiWeb, so either can take the whole page. Beside the shelf they are references: every tab has a checkbox: tick two to see them side by side (two at most), always in the same order: Scope · Shop · Documents · Overview · Media · Floorplan, from the context band, or by dragging the tab onto the page. Clicking a tab’s name shows it on its own. Two panes at most, in a fixed order (each tab’s checkbox): Media (the mood board and the site photos in one viewer, one big with the rest as a strip), the plan with the quantity math through to boxes, notes, or a whole page. Opening another replaces it; nothing stacks. Dragging its edge makes it wider. <b>Full view</b> lays it across the page with the product you're judging in its own column. A page works the same way (or drag a top-bar tab onto the page) to put Scope, Documents or Overview beside the shelf. Scope beside is the one for scope-and-shop turns: the task you're shopping for is highlighted with its description, and clicking another task moves the shelf to it.</td></tr>
+    <tr><td>Cart</td><td class="was">A dropdown list and a cart page.</td><td>Review & order: a readiness check, one order per supplier, items from several rooms combined into one line, pickup or delivery dates, then pay & approve.</td></tr>
+    <tr><td>Substitution</td><td class="was">A change order every time.</td><td>An "If this item is out of stock" setting, like grocery delivery apps: choose a replacement now, replace with any similar item (the team's setting), require my approval, or don't replace. Set once for the team, changeable per item from the shelf, the product sheet or Review &amp; order. A chosen substitute is a pre-approved substitution, and a similar item inside the team’s rules needs no change order; outside them, the crew asks with one tap and keeps working.</td></tr>
+  </table>
+
+  <h2><span class="n">07</span>Change orders without stopping the job</h2>
+  <p>The core idea: <b>approve the intent, not just the SKU.</b> A scope line approves "white 3×6 matte subway tile, about $1,040, for the kitchen backsplash", plus the product we'd like and what to do if it's out. A swap at the store that stays inside that intent isn't a change to the job, so it shouldn't need a change order.</p>
+  <div class="cards3">
+    <div class="dcard"><span class="k">Rule 1</span><b>Chosen substitutes</b><p>"Choose a replacement now" picks up to two in advance, approved along with the product. Swapping to one is always OK: it’s a pre-approved substitution.</p></div>
+    <div class="dcard"><span class="k">Rule 2</span><b>Any similar item</b><p>The team's setting: same kind of product, on the mood board, within 10% or $150 of the line (the team sets the numbers). OK, logged with the reason.</p></div>
+    <div class="dcard"><span class="k">Rule 3</span><b>Everything else asks</b><p>The manager gets a one-tap request and the crew keeps picking up. If approved, Kai writes it into the next change order. Nobody types it twice.</p></div>
+  </div>
+  <p>The same rules cover other everyday surprises: a supplier that can't deliver in time (move the same product to another store, which is no change at all), a discontinued SKU, or a damaged box. Every swap leaves a record of who, when, why and what changed, so trusting the crew doesn't cost you visibility.</p>
+  <p class="quote">The question the crew lead asks at the Pro desk should never be "who do I call?" It should be "which of these two?"</p>
+
+  <h2><span class="n">08</span>Working in turns</h2>
+  <ul class="b">
+    <li><b>One person at a time:</b> you take the turn to shop, the same way you take it to scope. "Your turn" in the bar says the job is yours. Nobody else is editing while you have it, so there's nothing live to watch.</li>
+    <li><b>Nothing is lost between turns:</b> picks, substitutions, notes and quantities stay with the job. The next person sees what's chosen, what's left to choose, and why, from the notes on each item.</li>
+    <li><b>Scope flows into shopping:</b> if a quantity changes in a scoping turn (Countertops 38 → 42 SF), the pick stays and the order simply buys the new amount.</li>
+    <li><b>Ordering follows the approval rule:</b> placing orders spends money, so the job manager takes the turn to approve orders over $10,000.</li>
+    <li><b>The store doesn't need the turn:</b> the crew lead's pickup list is a texted link. Swaps inside the rules are logged on the job. A swap outside them is a request to the manager.</li>
+    <li><b>Notes where the decision is:</b> the notes on a shelf are the notes for that item. "Order one extra box for the hallway transition" is right there when you choose the floor.</li>
+  </ul>
+
+  <h2><span class="n">09</span>Across hundreds of properties</h2>
+  <ul class="b">
+    <li><b>Team standards prefill the list.</b> When a scope is approved, every need that has a team standard arrives already chosen and in stock near the job. In the demo, 26 of 29 needs came pre-chosen.</li>
+    <li><b>Kai learns from swaps.</b> If a substitute keeps being used, Kai suggests making it the standard. If a store keeps running out, Kai suggests buying from another store or getting delivery.</li>
+    <li><b>Later: combine jobs.</b> Three properties buying Shaw Paragon from the same Home Depot this week could share one pickup and one bulk price.</li>
+  </ul>
+
+  <h2><span class="n">10</span>The same product on more than one shelf</h2>
+  <p>This is the open question we kept coming back to. The answer here is a <b>By product</b> view: one shelf per product type, with a row per room. You choose once for every checked room, and uncheck a room to give it its own product. If rooms drift apart, the shelf flags it with "2 different products" and offers "Use it everywhere". In Review & order, the same product from several rooms is <b>one order line</b> with the rooms listed. The box rounding happens once instead of per room, which is where the "Combined across rooms" line in the summary comes from. Size-sensitive products (vanities) apply only to the rooms they fit, and the shelf says which room still needs its own.</p>
+
+  <h2><span class="n">11</span>What I'd build first</h2>
+  <div class="cards3">
+    <div class="dcard"><span class="k">Phase 1 · fits KaiWeb today</span><b>See the shelf, with its context</b><p>Full-grid shelves. The context band. Purchase units (boxes and gallons). The By-product view with mismatch flags. The readiness check in Review & order. None of this needs a new back end.</p></div>
+    <div class="dcard"><span class="k">Phase 2</span><b>Substitution and the crew</b><p>A team substitution setting, changeable per item. Swap rules in team settings. The pickup list on the phone with swaps. Swaps logged in Activity and flowing into change orders.</p></div>
+    <div class="dcard"><span class="k">Phase 3</span><b>The list fills itself</b><p>Team standards prefill from the template. Live store stock (Home Depot Pro and Lowe's Pro). Combining orders across jobs.</p></div>
+  </div>
+
+  <h2><span class="n">12</span>How we'd know it works</h2>
+  <ul class="b">
+    <li>Time from scope approved to all orders placed (target: same day for a standard turn).</li>
+    <li>Share of needs that arrive pre-chosen and get ordered unchanged.</li>
+    <li>Change orders caused by substitutions (target: near zero).</li>
+    <li>Pickups finished without a call to the office.</li>
+  </ul>
+
+  <h2><span class="n">13</span>Questions for you</h2>
+  <ul class="b">
+    <li>A swap request from the store: does the manager have to take the turn to approve it, or can it be approved without the turn so the crew isn't kept waiting?</li>
+    <li>Should Shop open on the first room, on "All", or straight on the next thing left to choose? The concept opens on the Kitchen.</li>
+    <li>Who sets the swap rule (10% or $150): the team template, each job, or both, the way allowances work?</li>
+    <li>Are chosen substitutes approved explicitly (the manager sees them in the scope document), or implied by the team's substitution setting?</li>
+    <li>Should "Needs review" also flag rooms or departments over their allowance, or only tasks?</li>
+    <li>Which supplier accounts and stock feeds can we really get? That decides how live "in stock at #1863" can be.</li>
+    <li>Does the crew lead get a Kai login, or is the pickup list a texted link?</li>
+  </ul>
+
+  <h2><span class="n">14</span>Try the prototype</h2>
+  <ul class="b">
+    <li><b>Shop</b> opens on the <b>Kitchen</b>, every item stacked with the room's picks together at the top. Choose the interior doors right in their row and let Kai pick a backup.</li>
+    <li>Page through the Kitchen flooring carousel, then click <b>View all</b> for the full shelf. Open a card, then tick <b>Floorplan</b> in the top bar to see it beside the shelf, untick <b>Shop</b> and tick <b>Media</b> to see the two references together. Media and Floorplan are also full tabs in the top bar; drag either onto the shelf to see it beside. The <b>Kitchen</b> crumb takes you back to the same spot.</li>
+    <li><b>Overview</b>, <b>Scope</b> and <b>Documents</b> in the top bar open the real KaiWeb pages under this bar, so you can move between scoping and shopping the way the product will.</li>
+    <li>Tick <b>Scope</b> in the top bar (or drag it onto the page): it always opens on the left of the shelf. Click tasks in the Scope pane to move the shelf; try Documents and Overview too.</li>
+    <li>Click <b>Bedroom 2</b> in the list: its floor is off the mood board, and the row offers to match the other rooms. Try <b>All</b> with the <b>Needs product</b> filter.</li>
+    <li>Click <b>Shop all 4 rooms together</b>, then <b>Use … everywhere</b> to fix Bedroom 2.</li>
+    <li>Filter the list to <b>Needs product</b>: the doors, the shower tile and the bathroom fan are what's left for this turn.</li>
+    <li>Go to <b>Review &amp; order</b>. Choose what's left, change what happens if one line is out (<b>Change</b> on any line), then place the orders.</li>
+    <li>On <b>Pickup</b>, tap <b>Swap it</b> on the tile. Try a chosen substitute, and try one that needs approval. On the shelf, <b>Change</b> under "If it's out of stock" opens the same setting.</li>
+  </ul>
+  <button type="button" class="try" data-act="screen" data-v="shop">Start in Shop →</button>
+</article>
+</main>
+
+<div id="toast" aria-live="polite"></div>
+
+<script src="ideal-data.js"></script>
+<script src="ideal-art.js"></script>
+<script src="ideal-app.js"></script>
+</body>
+</html>
