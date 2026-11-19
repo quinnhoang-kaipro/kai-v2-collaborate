@@ -146,7 +146,14 @@ const S = {
 };
 
 /* ── Helpers: needs, quantities, stock ── */
-const need = id => NEEDS.find(n => n.id === id);
+const need = id => NEEDS.find(n => n.id === id) || NEEDS.flatMap(n => n.more || []).find(x => x.id === id);
+/* A task can hold several products ("adding adds"): the first is n.pick; the rest sit on n.more as
+   need-like entries with their own product, amount, store, pickup/delivery and out-of-stock rule.
+   They count in the task's total and allowance and each becomes its own line in Review & order. */
+const withMore = n => [n, ...(n.more || [])];
+const hostOf = n => n && n.xof ? need(n.xof) : n;
+function mkMore(n, sku, qty){ return {id: `${n.id}~${sku}`, xof: n.id, of: n.of || n.id, cat: n.cat, room: n.room, task: n.task, opt: n.opt, desc: n.desc, fit: n.fit, src: n.src,
+  pick: sku, qty, planQty: n.planQty, backups: [], sub: null, subNote: ''}; }
 const selNeeds = () => S.sel.kind === 'need' ? [need(S.sel.id)] : S.sel.kind === 'room' ? NEEDS.filter(n => S.sel.room === 'all' || n.room === S.sel.room) : NEEDS.filter(n => n.cat === S.sel.cat);
 const exclSet = cat => S.excl[cat] || (S.excl[cat] = new Set());
 const inclNeeds = () => S.sel.kind === 'need' ? selNeeds() : selNeeds().filter(n => !exclSet(n.cat).has(n.id));
@@ -191,9 +198,14 @@ function stepperHtml(n, cls){
 }
 function removePick(ns){
   ns = ns.filter(n => n.pick); if(!ns.length) return;
-  const before = ns.map(n => [n, n.pick, n.qty]), nm = CATALOG[ns[0].pick].name.split(/,|\(/)[0].trim();
-  ns.forEach(n => { n.pick = null; n.qty = n.planQty; });
-  toast(`Removed ${esc(nm)}${ns.length > 1 ? ` from ${ns.length} tasks` : ''}.`, () => { before.forEach(([n, pk, q]) => { n.pick = pk; n.qty = q; }); render(); });
+  const nm = CATALOG[ns[0].pick].name.split(/,|\(/)[0].trim();
+  const snap = [...new Set(ns.map(hostOf))].map(h => [h, h.pick, h.qty, (h.more || []).slice(), S.offer[h.id]]);
+  ns.forEach(n => {
+    if(n.xof){ const h = need(n.xof); h.more = (h.more || []).filter(x => x !== n); return; }
+    if(n.more && n.more.length){ const x = n.more.shift(); n.pick = x.pick; n.qty = x.qty; if(S.offer[x.id]) S.offer[n.id] = S.offer[x.id]; else delete S.offer[n.id]; return; }
+    n.pick = null; n.qty = n.planQty;
+  });
+  toast(`Removed ${esc(nm)}${ns.length > 1 ? ` from ${ns.length} tasks` : ''}.`, () => { snap.forEach(([h, pk, q, more, of]) => { h.pick = pk; h.qty = q; h.more = more; if(of) S.offer[h.id] = of; else delete S.offer[h.id]; }); render(); });
   render();
 }
 const stockWord = (p, n) => p.pack > 1 ? plural(p.packName, n) : unitWord(p.cat, n);
@@ -417,11 +429,14 @@ function renderList(){
       <span class="nv-pills"><span class="nv-st${st === 'In progress' ? ' ip' : ''}">${st === 'In progress' ? '◆' : '◇'} ${st}</span>${tg ? `<span class="nv-tag">${tg}</span>` : ''}${pv !== 'labor' && os.some(x => !x.pick) ? '<span class="nv-tag warn">Needs product</span>' : ''}</span></button>`;
   };
   const head = (k, o, name, n, sum, act, extra) => `<div class="nv-gh${extra || ''}">${car(k, o)}<button type="button" class="nv-gn" ${act}><b>${name}</b><i>${cnt(n, 'task')}</i></button><span class="nv-gamt num">${amt(sum)}</span></div>`;
-  let body = '', sum;
+  // The first group in each view starts open all the way down (Kitchen's tasks; Appliances › Appliance suite's
+  // tasks), so the panel never opens as a wall of folded headers. It's only opened, not selected; folding it sticks.
+  let body = '', sum, lead = true;
   if(pv === 'all'){
     ROOMS.forEach((r, ri) => {
       const all = NEEDS.filter(n => n.room === r.id), ns = all.filter(pass); if(!ns.length) return;
-      const roomOn = S.sel.kind === 'room' && S.sel.room === r.id, o = isOpen('r:' + r.id, ns, roomOn || (q && true));
+      const fst = lead; lead = false;
+      const roomOn = S.sel.kind === 'room' && S.sel.room === r.id, o = isOpen('r:' + r.id, ns, fst || roomOn || (q && true));
       body += `<section class="nv-grp${o ? '' : ' shut'}">${head('r:' + r.id, o, esc(r.name), taskCount(all), all.reduce((a, n) => a + taskCost(n), 0), `data-act="sel-room" data-room="${r.id}" title="Every ${esc(r.name)} task together"`, roomOn ? ' on' : '')}
         ${o ? `<button type="button" class="nv-new" data-act="inert">+ New task</button>${firstPerTask(ns).map(n => task(n)).join('')}` : ''}</section>`;
     });
@@ -430,7 +445,8 @@ function renderList(){
     const crews = [...new Set(NEEDS.map(crew))].sort((a, b) => (a === 'Unassigned') - (b === 'Unassigned'));
     crews.forEach(c => {
       const all = NEEDS.filter(n => crew(n) === c), ns = all.filter(pass); if(!ns.length) return;
-      const o = isOpen('l:' + c, ns, !!q);
+      const fst = lead; lead = false;
+      const o = isOpen('l:' + c, ns, fst || !!q);
       body += `<section class="nv-grp${o ? '' : ' shut'}">${head('l:' + c, o, esc(c), taskCount(all), all.reduce((a, n) => a + (LABOR[n.id] || 0), 0), `data-act="nv-tog" data-k="l:${esc(c)}" data-o="${o ? 1 : 0}"`)}
         ${o ? firstPerTask(ns).map(n => task(n, true)).join('') : ''}</section>`;
     });
@@ -439,10 +455,11 @@ function renderList(){
     const depts = [...new Set(NEEDS.map(n => DEPT[n.cat]))].sort();
     depts.forEach(d => {
       const all = NEEDS.filter(n => DEPT[n.cat] === d), ns = all.filter(pass); if(!ns.length) return;
-      const typeOn = S.sel.kind === 'type' && DEPT[S.sel.cat] === d, o = isOpen('d:' + d, ns, typeOn || !!q);
+      const fst = lead; lead = false;
+      const typeOn = S.sel.kind === 'type' && DEPT[S.sel.cat] === d, o = isOpen('d:' + d, ns, fst || typeOn || !!q);
       let inner = '';
-      if(o) CAT_ORDER.filter(c => DEPT[c] === d && ns.some(n => n.cat === c)).forEach(c => {
-        const cn = ns.filter(n => n.cat === c), cAll = all.filter(n => n.cat === c), on = S.sel.kind === 'type' && S.sel.cat === c, co = isOpen('c:' + c, cn, on || !!q);
+      if(o) CAT_ORDER.filter(c => DEPT[c] === d && ns.some(n => n.cat === c)).forEach((c, ci) => {
+        const cn = ns.filter(n => n.cat === c), cAll = all.filter(n => n.cat === c), on = S.sel.kind === 'type' && S.sel.cat === c, co = isOpen('c:' + c, cn, (fst && ci === 0) || on || !!q);
         inner += `<div class="nv-sh${on ? ' on' : ''}" data-act="sel-type" data-cat="${c}">${car('c:' + c, co)}<button type="button" class="nv-gn" data-act="sel-type" data-cat="${c}" title="${taskCount(cAll) > 1 ? `Shop ${esc(CAT_INFO[c].label.toLowerCase())} for these ${taskCount(cAll)} tasks at once` : `Shop ${esc(CAT_INFO[c].label.toLowerCase())}`}"><b>${esc(CAT_INFO[c].label)}</b><i>${cnt(taskCount(cAll), 'task')}</i></button><span class="nv-gamt num">${amt(cAll.reduce((a, n) => a + needTotal(n), 0))}</span></div>
           ${co ? firstPerTask(cn).map(n => task(n, true, c)).join('') : ''}`;
       });
@@ -581,10 +598,10 @@ function pickHtml(needs){
    the full shelf. "All" stacks the whole list, like a long scroll. */
 // Every other product that fits a room row, best matches first: its carousel, and the modal's pager.
 function roomAlts(n){
-  return BY_CAT[n.cat].filter(c => c.sku !== n.pick && fitsNeed(c, n) && sold(c))
+  return BY_CAT[n.cat].filter(c => c.sku !== n.pick && !(n.more || []).some(x => x.pick === c.sku) && fitsNeed(c, n) && sold(c))
     .sort((a, b) => ((b.mood ? 1 : 0) - (a.mood ? 1 : 0)) || (score(b, [n]) - score(a, [n])));
 }
-function needTotal(n){ const p = n.pick && CATALOG[n.pick]; return p ? buy(p, n.qty, offerOf(n, p)).total : 0; }
+function needTotal(n){ const p = n.pick && CATALOG[n.pick]; return (p ? buy(p, n.qty, offerOf(n, p)).total : 0) + (n.more || []).reduce((a, x) => a + needTotal(x), 0); }
 /* The room's own site photos, one at a time, in the slot left of the mood
    board: what's there now beside the look it's going to. ‹ › step through them
    (round and round); the photo opens in Media. Remembered per room. */
@@ -605,9 +622,9 @@ const lookMoodHtml = () => `<button type="button" class="look-mood" data-act="re
 function lookHtml(ns){
   // Shop MVP: Media sits beside the shelf, so the room's strip is just its picks.
   return `<div class="look look-only">
-    <div class="look-items"><span class="k">All selected products</span><div class="look-row">${ns.map(n => {
+    <div class="look-items"><span class="k">All selected products</span><div class="look-row">${ns.flatMap(n => n.pick ? withMore(n) : [n]).map(n => {
       const p = n.pick && CATALOG[n.pick];
-      return `<button type="button" class="lk${p ? '' : ' empty'}" data-act="room-jump" data-id="${n.id}" title="${esc(taskLabel(n))}${p ? ' — ' + esc(p.name) : ''}">
+      return `<button type="button" class="lk${p ? '' : ' empty'}" data-act="room-jump" data-id="${n.xof || n.id}" title="${esc(taskLabel(n))}${p ? ' — ' + esc(p.name) : ''}">
         <span class="im">${p ? `<img src="${ART.product(p)}" alt="">` : '+'}</span><span class="c">${esc(CAT_INFO[n.cat].label)}</span>
         <span class="nm">${p ? esc(p.name.split(/,|\(/)[0]) : 'Needs product'}</span></button>`;
     }).join('')}</div></div></div>`;
@@ -636,6 +653,21 @@ function taskBlocks(ns){
 const taskFactsHtml = n => `<dl class="nb-task">
   <dt class="k">Contractor</dt><dd>${esc(installerOf(n))}</dd>
   ${n.desc ? `<dt class="k">Description</dt><dd>${esc(n.desc)}</dd>` : ''}</dl>`;
+/* Room view, the products beside a pick: one Quick add button, which names the amount Kai worked out
+   when you hover it. The product's modal (click its photo or name) is the full add. ALT_Q holds a draft amount. */
+const ALT_Q = {};
+let NB_EDIT = null;
+/* Quick add picks what makes sense: the store the task's first product comes from, when it sells this
+   one too (else the job's first store that does), and the same pickup or delivery as that product. */
+function prefOffer(p, n){ const h = n && n.pick && CATALOG[n.pick], hs = h && offerOf(n, h).sup; return (hs && p.offers.find(o => o.sup === hs && supOk(o.sup))) || firstOffer(p); }
+const howOf = (sup, sku, n) => (S.lineFul[`${sup}|${sku}`] || S.ordFul[`${sup}|${buyerOf(n)}`] || S.ful[sup]) === 'pickup' ? 'pickup' : 'delivery';   // the pick card row whose choices are open: {id, k: 'sup' | 'how'}
+const altLnHtml = (b, d, has) => `<b class="num">${money(b.total)}</b>${has && Math.abs(d) >= 1 ? ` <span>${d > 0 ? `${money0(d)} more` : `${money0(-d)} less`}</span>` : ''}`;
+// After Add, the pick card it landed in lights up (and comes into view), so the add reads as done.
+function flashPick(id){
+  const el = document.querySelector(`.nb-pick[data-pk="${id}"]`); if(!el) return;
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  const r = el.getBoundingClientRect(); if(r.top < 90 || r.bottom > innerHeight) el.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+}
 function needBlock(n, inTask){
   const p = n.pick && CATALOG[n.pick], all = BY_CAT[n.cat].filter(sold).length, pt = needTotal(n);
   // Every other product that fits, best matches first, in a carousel: no leaving the room.
@@ -648,32 +680,44 @@ function needBlock(n, inTask){
   const notes = [];
   if(n.swap) notes.push(`<div class="nb-note ok">${IC.swap}<span><b>Swapped at pickup</b> · ${esc(CATALOG[n.swap.from].name.split(/,|\(/)[0])} was out → ${esc(n.swap.how)} · ${n.swap.co ? 'in the next change order' : n.swap.pre ? 'pre-approved substitution' : 'no change order'}</span></div>`);
   if(isOver(n)) notes.push(`<div class="nb-note warn"><span>!</span><span><b>Needs review</b> · ${money0(overBy(n))} over the ${money0(n.allow)} allowance</span></div>`);
-  let pick = '';
-  if(p){
-    const o = offerOf(n, p), b = buy(p, n.qty, o), av = avail(p, n.qty, o), bks = n.backups.map(sk => CATALOG[sk]);
-    pick = `<div class="nb-pick" draggable="true" data-drag="${p.sku}"><div class="im" data-act="detail" data-sku="${p.sku}" data-id="${n.id}"><img src="${ART.product(p)}" alt="${esc(p.name)}">${isTpl(p.sku, [n]) ? '<span class="tag acc">Template pick</span>' : ''}</div>
+  // One card per product on the task: the first, then any added beside it.
+  const pickOf = x => {
+    const p = CATALOG[x.pick];
+    const o = offerOf(x, p), b = buy(p, x.qty, o), av = avail(p, x.qty, o), bks = x.backups.map(sk => CATALOG[sk]);
+    // Once it's added: which store, pickup or delivery, and what happens if it's out, each changeable here.
+    const offs = p.offers.filter(x => supOk(x.sup)), lk = `${o.sup}|${p.sku}`, base = S.ordFul[`${o.sup}|${buyerOf(x)}`] || S.ful[o.sup];
+    const how = (S.lineFul[lk] || base) === 'pickup' ? 'pickup' : 'delivery', sp = SUPPLIERS[o.sup];
+    // Plain text of what's chosen; clicking it opens the choices in place, and choosing closes them.
+    const ed = k => NB_EDIT && NB_EDIT.id === x.id && NB_EDIT.k === k;
+    const val = (k, t) => `<button type="button" class="nb-val" data-act="nb-edit" data-id="${x.id}" data-k="${k}" title="Change">${t}</button>`;
+    const supTxt = `${esc(sp.name)} <i>${money(o.price)} / ${perUnit(p)}</i>`, howTxt = how === 'pickup' ? `Pickup <i>${esc(sp.store)}</i>` : `Delivery <i>to ${esc(shortAddr(S.src.addr))}</i>`;
+    const supRow = offs.length < 2 ? `<span class="nb-val">${supTxt}</span>` : !ed('sup') ? val('sup', supTxt) : `<div class="seg nb-seg" role="group" aria-label="Buy from">${offs.map(of => `<button type="button" class="${of.sup === o.sup ? 'on' : ''}" data-act="nb-sup" data-id="${x.id}" data-sup="${of.sup}" aria-pressed="${of.sup === o.sup}">${esc(SUPPLIERS[of.sup].name)}<i>${money(of.price)}</i></button>`).join('')}</div>`;
+    const howRow = S.src.mode === 'both' && !ed('how') ? val('how', howTxt) : S.src.mode === 'both' ? `<div class="seg nb-seg" role="group" aria-label="Pickup or delivery"><button type="button" class="${how === 'pickup' ? 'on' : ''}" data-act="nb-ful" data-id="${x.id}" data-v="pickup" aria-pressed="${how === 'pickup'}">Pickup</button><button type="button" class="${how === 'delivery' ? 'on' : ''}" data-act="nb-ful" data-id="${x.id}" data-v="delivery" aria-pressed="${how === 'delivery'}">Delivery</button></div><small>${how === 'pickup' ? esc(sp.store) : `to ${esc(shortAddr(S.src.addr))}`}</small>`
+      : `<span>${S.src.mode === 'pickup' ? `Pickup · ${esc(sp.store)}` : `Delivery to ${esc(shortAddr(S.src.addr))}`}</span>`;
+    return `<div class="nb-pick${x.xof ? ' more' : ''}" data-pk="${x.id}" draggable="true" data-drag="${p.sku}"><div class="im" data-act="detail" data-sku="${p.sku}" data-id="${x.xof || x.id}"><img src="${ART.product(p)}" alt="${esc(p.name)}">${isTpl(p.sku, [x]) ? '<span class="tag acc">Template pick</span>' : ''}</div>
       <div class="tx"><span class="brand">${esc(p.brand)} · ${esc(SUPPLIERS[o.sup].name)}</span>
-        <b class="nm" data-act="detail" data-sku="${p.sku}" data-id="${n.id}">${esc(p.name)}</b>
+        <b class="nm" data-act="detail" data-sku="${p.sku}" data-id="${x.xof || x.id}">${esc(p.name)}</b>
         <span class="ln"><b class="num">${money(b.total)}</b> · ${b.label} at ${money(o.price)} / ${perUnit(p)}</span>
         <span class="avail"><span class="dot ${av.cls}"></span><span>${av.short}</span></span>
-        <div class="nb-pick-acts">${stepperHtml(n, 'mini')}<button type="button" class="nb-rm" data-act="remove" data-sku="${p.sku}" data-ids="${n.id}" title="Take ${esc(p.name.split(/,|\(/)[0].trim())} off the list">${TRASH}<span>Remove</span></button></div>
-        <div class="pb"><span class="k">If it's out of stock</span>${subLineHtml([n])}</div></div></div>`;
-  }
+        <div class="nb-pick-acts">${stepperHtml(x, 'mini')}<button type="button" class="nb-rm" data-act="remove" data-sku="${p.sku}" data-ids="${x.id}" title="Take ${esc(p.name.split(/,|\(/)[0].trim())} off the list">${TRASH}<span>Remove</span></button></div>
+        <dl class="nb-opts"><div><dt>Buy from</dt><dd>${supRow}</dd></div><div><dt>Get it</dt><dd>${howRow}</dd></div><div><dt>If it's out</dt><dd><button type="button" class="nb-val" data-act="sub-open" data-ids="${x.id}" title="Change">${subLabel([x]).html}</button></dd></div></dl></div></div>`;
+  };
+  const pick = p ? `<div class="nb-picks">${withMore(n).filter(x => x.pick).map(pickOf).join('')}</div>` : '';
   const alt = c => {
-    const o = firstOffer(c), b = buy(c, n.qty, o), av = avail(c, n.qty, o), bk = n.backups.includes(c.sku);
+    const o = prefOffer(c, n), kD = ALT_Q[n.id + '|' + c.sku], b = kD ? buy(c, qtyForCount(c, kD), o) : buy(c, n.qty, o), av = avail(c, n.qty, o), bk = n.backups.includes(c.sku);
     const tag = isTpl(c.sku, [n]) ? '<span class="tag acc">Template pick</span>' : c.std ? '<span class="tag ink">Team standard</span>' : !c.mood ? '<span class="tag warn">Lower match</span>' : '<span class="tag ok">High match</span>';
-    const d = b.total - pt;
+    const d = b.total - (p ? buy(p, n.qty, offerOf(n, p)).total : 0);   // against the first product, not the task's sum
     return `<article class="nb-alt" draggable="true" data-drag="${c.sku}"><div class="im" data-act="detail" data-sku="${c.sku}" data-id="${n.id}"><img src="${ART.product(c)}" alt="" loading="lazy">${tag}</div>
       <span class="nm" data-act="detail" data-sku="${c.sku}" data-id="${n.id}" title="${esc(c.name)}">${esc(c.name)}</span>
-      <span class="ln"><b class="num">${money(b.total)}</b>${p && Math.abs(d) >= 1 ? ` <span>${d > 0 ? `${money0(d)} more` : `${money0(-d)} less`}</span>` : ''}</span>
+      <span class="ln">${altLnHtml(b, d, !!p)}</span>
       <span class="avail"><span class="dot ${av.cls}"></span><span>${av.short}</span></span>
-      <span class="acts"><button type="button" class="btn ${p ? 'ghost' : 'pri'} sm" data-act="choose" data-sku="${c.sku}" data-id="${n.id}" title="${p ? `Add it in place of ${esc(p.name.split(/,|\(/)[0])}` : 'Add to the list'}">Add</button></span></article>`;
+      <span class="acts"><button type="button" class="btn ${p ? 'ghost' : 'pri'} sm qa" data-act="choose" data-sku="${c.sku}" data-id="${n.id}"${kD ? ` data-k="${kD}"` : ''} title="${p ? 'Add it to this task, beside what it has' : 'Add to the list'} · ${b.label}. Click the product for every option."><span class="qa-d">Quick add</span><span class="qa-h">Quick add – ${b.label}</span></button></span></article>`;
   };
   return `<section class="nb" data-need="${n.id}">
     <header class="nb-hd${inTask ? ' nb-hd-o' : ''}">${inTask ? '' : taskKickHtml(n)}<h3><button type="button" data-act="sel-need" data-id="${n.id}">${esc(n.opt || n.task)}</button></h3><span class="sub">${qtyText(n.cat, n.qty)}${n.fit ? ` · ${n.fit}″ opening` : ''}</span>${st || !inTask ? `<span class="nb-hd-r">${st}${inTask ? '' : amt}</span>` : ''}
       ${inTask ? '' : taskFactsHtml(n)}</header>
     ${notes.length ? `<div class="nb-notes">${notes.join('')}</div>` : ''}
-    <div class="nb-bd${p ? '' : ' none'}">${pick}
+    <div class="nb-bd${p ? '' : ' none'}${withMore(n).filter(x => x.pick).length > 1 ? ` np${Math.min(3, withMore(n).filter(x => x.pick).length)}` : ''}">${pick}
       <div class="rcar" data-car="${n.id}"><div class="rcar-track" role="list">${alts.map(alt).join('')}</div>
         <div class="rcar-ft"><button type="button" class="link" data-act="sel-need" data-id="${n.id}">View all ${all} →</button>
           <span class="rcar-n" aria-live="polite"></span>
@@ -1023,10 +1067,10 @@ function boardHtml(needs){
   const body = {media: secMedia, plan: secPlan, notes: secNotes, product: secProduct};
   const sec = (t, span) => `<section class="bsec bsec-${t}${S.ref.flash === t ? ' flash' : ''}" data-sec="${t}"${span ? ` style="grid-column:span ${span}"` : ''}><header><b>${REF_LABEL[t]}</b><em>${meta[t]}</em></header><div class="bsec-bd">${body[t](needs)}</div></section>`;
   /* A pane is titled with its tab's name, as plain text; the checkboxes in the
-     bar open and close it, so there's no close button here. */
+     bar open and close it, and so does the × beside Full view. */
   const r0 = open[0], solo = tabRefOn(), nNotes = notesFor(needs).length;
   const sub = r0 === 'notes' ? `${nNotes} ${nNotes === 1 ? 'note' : 'notes'}` : meta[r0];
-  const hd = `<h2 class="pane-t">${REF_LABEL[r0]}</h2>${sub ? `<span class="pane-m">${sub}</span>` : ''}<span class="sp"></span>${S.ref.full ? (solo ? '' : '<button type="button" class="btn" data-act="ref-full">← Back to products</button>') : '<button type="button" class="lnk" data-act="ref-full">⤢ Full view</button>'}`;
+  const hd = `<h2 class="pane-t">${REF_LABEL[r0]}</h2>${sub ? `<span class="pane-m">${sub}</span>` : ''}<span class="sp"></span>${S.ref.full ? (solo ? '' : '<button type="button" class="btn" data-act="ref-full">← Back to products</button>') : '<button type="button" class="lnk" data-act="ref-full">⤢ Full view</button>'}${solo ? '' : '<button type="button" class="x" data-act="ref-close" aria-label="Close" title="Close">×</button>'}`;
   const plain = t => `<section class="bsec bsec-solo bsec-${t}${S.ref.flash === t ? ' flash' : ''}" data-sec="${t}"><div class="bsec-bd">${body[t](needs)}</div></section>`;
   return `<aside class="board${S.ref.full ? ' full' : ''}" aria-label="${REF_LABEL[r0]}">${S.ref.full ? '' : '<div class="board-grip" data-grip title="Drag to make it wider or narrower"></div>'}
     <div class="board-hd">${hd}</div>
@@ -1099,7 +1143,7 @@ function pageBoardHtml(needs){
   const solo = tabPageOn();
   const body = solo ? scopePageHtml(needs) : p === 'scope' ? pgScope(needs) : p === 'documents' ? pgDocs() : pgOverview();
   const hd = `<h2 class="pane-t">${nm}</h2>${solo ? `<span class="pane-m">Scope V3 · approved · ${esc(JOB.stage)}</span>` : ''}
-    <span class="sp"></span>${solo ? '' : S.ref.full ? '<button type="button" class="btn" data-act="ref-full">← Back to products</button>' : '<button type="button" class="lnk" data-act="ref-full">⤢ Full view</button>'}`;
+    <span class="sp"></span>${solo ? '' : (S.ref.full ? '<button type="button" class="btn" data-act="ref-full">← Back to products</button>' : '<button type="button" class="lnk" data-act="ref-full">⤢ Full view</button>') + '<button type="button" class="x" data-act="pg-close" aria-label="Close" title="Close">×</button>'}`;
   return `<aside class="board is-page${S.ref.full ? ' full' : ''}" aria-label="${nm}, beside the shelf">${S.ref.full ? '' : '<div class="board-grip" data-grip title="Drag to make it wider or narrower"></div>'}
     <div class="board-hd">${hd}</div><div class="board-pg pg-${p}">${body}</div></aside>`;
 }
@@ -1475,7 +1519,7 @@ const buyerCode = b => b === ORG ? '' : '-' + b.replace(/[^A-Z]/g, '').slice(0, 
 function orderLines(){
   const map = new Map();
   // A line swapped at pickup stays on its order as ordered, with the swap noted.
-  NEEDS.filter(n => n.pick).forEach(n => {
+  NEEDS.flatMap(withMore).filter(n => n.pick).forEach(n => {
     const p = CATALOG[n.swap ? n.swap.from : n.pick], o = offerOf(n, p), key = o.sup + '|' + p.sku;
     if(!map.has(key)) map.set(key, {key, p, o, sup: o.sup, buyer: buyerOf(n), needs: []});
     map.get(key).needs.push(n);
@@ -1526,7 +1570,7 @@ function orderCard(ord, lines){
   // The tasks a line is for, each with its room, amount and installer, each opening in Scope. Long lists fold to two.
   const tasks = L => {
     const open = S.rvMore.has(L.key), many = L.needs.length > 3, show = many && !open ? L.needs.slice(0, 2) : L.needs;
-    return `<span class="ots">${show.map(n => `<button type="button" class="ot" data-act="rv-task" data-id="${n.id}" title="Open ${esc(n.task)} in Scope"><u>${esc(ROOM[n.room].name)} › ${esc(taskLabel(n))}</u><span>${qtyText(n.cat, n.qty)}</span><span>${esc(installerOf(n))}</span></button>`).join('')}${many ? `<button type="button" class="ot-more" data-act="rv-more" data-key="${L.key}">${open ? 'Show fewer' : `+${L.needs.length - 2} more`}</button>` : ''}</span>`;
+    return `<span class="ots">${show.map(n => `<button type="button" class="ot" data-act="rv-task" data-id="${n.xof || n.id}" title="Open ${esc(n.task)} in Scope"><u>${esc(ROOM[n.room].name)} › ${esc(taskLabel(n))}</u><span>${qtyText(n.cat, n.qty)}</span><span>${esc(installerOf(n))}</span></button>`).join('')}${many ? `<button type="button" class="ot-more" data-act="rv-more" data-key="${L.key}">${open ? 'Show fewer' : `+${L.needs.length - 2} more`}</button>` : ''}</span>`;
   };
   // The out-of-stock rule shows only where a line has its own; the team's is the default and needs no word.
   const own = L => L.needs.some(n => n.sub);
@@ -1645,7 +1689,7 @@ function dropsHtml(lines){
       st = `<span class="dx-st ${late ? 'late' : 'ok'}"><b>${late ? '!' : '✓'}</b><span>${late ? `Late · ${cnt(days, 'day')}` : 'On time'}</span></span>${alt ? `<button type="button" class="btn sm" data-act="gt-switch" data-key="${L.key}" data-sup="${alt.o.sup}" title="${esc(SUPPLIERS[alt.o.sup].name)} has ${alt.o.stock} in stock: expected receipt ${inHand(alt.arrive)}">Switch to ${esc(SUPPLIERS[alt.o.sup].name)}</button>` : ''}`;
     }
     return `<div class="dx-row dx-task${late ? ' is-late' : ''}${L ? '' : ' is-todo'}"${L ? ` data-key="${L.key}"` : ''}>
-      <div class="dx-l"><button type="button" class="ot" data-act="rv-task" data-id="${n.id}" title="Open ${esc(n.task)} in Scope"><u>${label}</u></button><span class="dx-sub">${sub}</span></div>${cells}<div class="dx-d${late ? ' late' : ''}">${L ? day(L.arrive) : '<span class="dx-na">—</span>'}</div><div class="dx-d">${day(nd)}</div><div class="dx-r">${st}</div><div class="dx-p">${L ? money(share(L, n)) : '<span class="dx-na">—</span>'}</div></div>`;
+      <div class="dx-l"><button type="button" class="ot" data-act="rv-task" data-id="${n.xof || n.id}" title="Open ${esc(n.task)} in Scope"><u>${label}</u></button><span class="dx-sub">${sub}</span></div>${cells}<div class="dx-d${late ? ' late' : ''}">${L ? day(L.arrive) : '<span class="dx-na">—</span>'}</div><div class="dx-d">${day(nd)}</div><div class="dx-r">${st}</div><div class="dx-p">${L ? money(share(L, n)) : '<span class="dx-na">—</span>'}</div></div>`;
   };
   const groupRow = (key, name, ns) => {
     const ls = ns.map(n => lineOf.get(n.id)).filter(Boolean), shut = S.dxShut.has(key);
@@ -1838,6 +1882,7 @@ function roomJump(id){
   b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash');
 }
 function choose(sku, forId, count){
+  if(forId){ const h = hostOf(need(forId)); if(h && h.pick && h.pick !== sku){ addMore(h, sku, count); return; } }   // adding adds, it doesn't swap
   const p = CATALOG[sku], single = !!forId || S.sel.kind === 'need';
   const tgt = (forId ? [need(forId)] : single ? selNeeds() : inclNeeds()).filter(n => fitsNeed(p, n));
   const skipped = (single ? [] : inclNeeds()).filter(n => !fitsNeed(p, n));
@@ -1850,6 +1895,19 @@ function choose(sku, forId, count){
   toast(`Added ${short(p)}${single ? (was ? ` in place of ${short(was)}` : '') : ` to ${tgt.map(n => esc(ROOM[n.room].name)).join(', ')}`}.${skipped.length ? ` ${skipped.map(n => esc(ROOM[n.room].name)).join(', ')} needs a ${skipped[0].fit}″ one — add it on its own.` : ''}`,
     () => { before.forEach(([n, pk, bk, q, of]) => { n.pick = pk; n.backups = bk; n.qty = q; if(of) S.offer[n.id] = of; else delete S.offer[n.id]; }); render(); });
   render();
+  if(forId){ delete ALT_Q[forId + '|' + sku]; flashPick(forId); }
+}
+function addMore(n, sku, count){
+  const p = CATALOG[sku], had = (n.more || []).find(x => x.pick === sku);
+  S.detail = null; S.dQty = null;
+  if(had){ toast(`${esc(p.name.split(/,|\(/)[0].trim())} is already on ${esc(ROOM[n.room].name)} › ${esc(taskLabel(n))}.`); S.dSup = null; render(); flashPick(had.id); return; }
+  const x = mkMore(n, sku, count ? qtyForCount(p, count) : n.qty), sup = S.dSup || prefOffer(p, n).sup;
+  S.offer[x.id] = sup; S.dSup = null;
+  const hp = CATALOG[n.pick], want = howOf(offerOf(n, hp).sup, hp.sku, n), lk = `${sup}|${sku}`, hadLk = S.lineFul[lk];
+  if(howOf(sup, sku, x) !== want) S.lineFul[lk] = want;
+  n.more = (n.more || []).concat(x); delete ALT_Q[n.id + '|' + sku];
+  toast(`Added ${esc(p.name.split(/,|\(/)[0].trim())} to ${esc(ROOM[n.room].name)} › ${esc(taskLabel(n))} · ${esc(SUPPLIERS[sup].name)}, ${want}.`, () => { n.more = n.more.filter(y => y !== x); delete S.offer[x.id]; if(hadLk) S.lineFul[lk] = hadLk; else delete S.lineFul[lk]; render(); });
+  render(); flashPick(x.id);
 }
 function toggleBackup(sku, forId){
   const tgt = forId ? [need(forId)] : S.sel.kind === 'need' ? selNeeds() : inclNeeds();
@@ -1952,6 +2010,17 @@ document.addEventListener('click', e => {
       toast(`Updated ${esc(p.name.split(/,|\(/)[0].trim())} to ${buy(p, n.qty, offerOf(n, p)).label}.`, () => { n.qty = q0; render(); });
       render(); break; }
     case 'pd-ful': setFul(t.dataset.sup, t.dataset.v); renderWork(); break;
+    case 'nb-edit': NB_EDIT = NB_EDIT && NB_EDIT.id === id && NB_EDIT.k === t.dataset.k ? null : {id, k: t.dataset.k}; renderWork(); break;
+    case 'nb-sup': { const n = need(id), p = CATALOG[n.pick]; if(!p) break; S.offer[n.id] = t.dataset.sup; NB_EDIT = null;
+      toast(`Buying ${esc(p.name.split(/,|\(/)[0].trim())} from ${esc(SUPPLIERS[t.dataset.sup].name)}.`); render(); break; }
+    case 'nb-ful': { const n = need(id), p = CATALOG[n.pick]; if(!p) break;   // the same override the order's line uses in Review
+      const o = offerOf(n, p), k = `${o.sup}|${p.sku}`, base = (S.ordFul[`${o.sup}|${buyerOf(n)}`] || S.ful[o.sup]) === 'pickup' ? 'pickup' : 'delivery';
+      if(t.dataset.v === base) delete S.lineFul[k]; else S.lineFul[k] = t.dataset.v; NB_EDIT = null; render(); break; }
+    case 'alt-qty': { const n = need(id), c = CATALOG[sku], o = prefOffer(c, n), kk = id + '|' + sku;   // a draft count, drawn in place so the carousel stays put
+      const k = Math.max(1, (ALT_Q[kk] || buy(c, n.qty, o).n) + +t.dataset.d); ALT_Q[kk] = k;
+      const card = t.closest('.nb-alt'), b = buy(c, qtyForCount(c, k), o);
+      card.querySelector('.alt-stp .stp-n b').textContent = b.label; card.querySelector('.alt-stp [data-d="-1"]').disabled = k <= 1;
+      const p0 = n.pick && CATALOG[n.pick]; card.querySelector('.ln').innerHTML = altLnHtml(b, b.total - (p0 ? buy(p0, n.qty, offerOf(n, p0)).total : 0), !!p0); card.querySelector('[data-act="choose"]').dataset.k = k; break; }
     case 'pd-sup': {   // the store: a pick switches at once; otherwise it rides along with Add
       const p = CATALOG[S.detail]; if(!p) break;
       const single = S.sel.kind === 'need' || !!S.detailFor, n0 = S.detailFor ? need(S.detailFor) : selNeeds()[0];
@@ -1980,6 +2049,7 @@ document.addEventListener('click', e => {
       renderWork(); break;
     }
     case 'ref-close': S.ref.open = []; S.ref.full = false; renderWork(); break;
+    case 'pg-close': besideClose(); break;   // a page opened beside the shelf (Scope, Documents, Overview)
     case 'ack': S.ack.add(t.dataset.k); render(); break;
     case 'match': { const n = need(id), was = n.pick; n.pick = sku; toast(`${esc(ROOM[n.room].name)} now matches the other rooms.`, () => { n.pick = was; render(); }); render(); break; }
     case 'match-all': { const ns = selNeeds(), was = ns.map(n => [n, n.pick]); ns.forEach(n => { if(fitsNeed(CATALOG[sku], n)) n.pick = sku; }); toast(`All ${ns.length} tasks use ${esc(CATALOG[sku].name)} now.`, () => { was.forEach(([n, p]) => { n.pick = p; }); render(); }); render(); break; }

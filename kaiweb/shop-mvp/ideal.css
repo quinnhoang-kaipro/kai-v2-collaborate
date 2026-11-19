@@ -349,7 +349,7 @@ i.team{font-style:normal;margin-left:7px;padding:1px 6px;font-family:var(--mono)
 .card .badges{position:absolute;left:10px;top:10px;display:flex;flex-direction:column;align-items:flex-start;gap:4px}
 .card .bd{padding:12px 14px 14px;display:flex;flex-direction:column;gap:7px;flex:1}
 .card .brand{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t3)}
-.card .nm{font-size:14.5px;font-weight:600;line-height:1.3;cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:38px}
+.card .nm{font-size:14.5px;font-weight:600;line-height:1.3;cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .card .nm:hover{text-decoration:underline;text-underline-offset:3px}
 .card .price{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
 .card .price b{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-.01em}
@@ -1449,3 +1449,49 @@ body.is-dragging #list [data-drop].is-over{outline:3px solid var(--ink);outline-
 .nv-tn.nv-tn2{flex-direction:column;align-items:flex-start;gap:2px;white-space:normal}
 .nv-tn2 .nv-ln{max-width:100%;min-width:0;display:flex;align-items:center;gap:5px;white-space:nowrap}
 .nv-tn2 .nv-sub{max-width:100%;font-size:12.5px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Room view: hover a product beside the pick for a quantity stepper beside Add; after Add the pick card lights up
+   and shows where it's bought, pickup or delivery, and what happens if it's out, each changeable in place. */
+.nb-alt .nm{min-height:0}
+.nb-alt .alt-stp{display:none;flex:1.5;width:auto}
+.nb-alt:hover .alt-stp,.nb-alt:focus-within .alt-stp{display:flex}
+.nb-alt .alt-stp button:disabled{opacity:.35;cursor:default;background:none}
+.nb-alt .alt-stp .stp-n{font-size:12px}
+.nb-pick.flash{animation:flash 1.2s ease-out}
+.nb-opts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 12px;align-items:center;margin-top:6px;padding-top:10px;border-top:1px solid var(--stroke)}
+.nb-opts>div{display:contents}
+.nb-opts dt{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);white-space:nowrap}
+.nb-opts dd{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;min-width:0;font-size:12.5px;color:var(--ink)}
+.nb-opts dd small{font-size:11.5px;color:var(--t3)}
+.nb-seg{flex-wrap:wrap}
+.nb-seg button{height:26px;padding:0 9px;font-size:12px;display:inline-flex;align-items:center;gap:6px}
+.nb-seg button i{font-style:normal;font-size:11px;color:var(--t3);font-weight:400}
+.nb-opts .sub-ln{font-size:12.5px;text-align:left}
+
+/* A task's products sit side by side in a row, the first then any added; the products to choose from
+   take what's left (two of them beside two picks, one beside three). */
+.nb-picks{display:flex;gap:12px;min-width:0}
+.nb-picks .nb-pick{flex:1 1 0;min-width:0}
+.nb-bd.np2{grid-template-columns:minmax(0,2.9fr) minmax(0,2fr)}
+.nb-bd.np2 .rcar{--per:2}
+.nb-bd.np3{grid-template-columns:minmax(0,4.35fr) minmax(0,1fr)}
+.nb-bd.np3 .rcar{--per:1}
+@container shelf (max-width:1080px){
+  .nb-bd.np2,.nb-bd.np3{grid-template-columns:minmax(0,1fr)}
+  .nb-bd.np2 .rcar,.nb-bd.np3 .rcar{--per:3}
+  .nb-picks .nb-pick{display:flex;flex-direction:column}
+  .nb-picks .nb-pick .im{aspect-ratio:16/9;min-height:0}
+}
+@container shelf (max-width:720px){ .nb-picks{flex-wrap:wrap} .nb-picks .nb-pick{flex-basis:100%} }
+.nb-pick.more{border-width:1.5px}
+
+/* Room view: one full-width Quick add per product; hovering it names the amount it adds. */
+.nb-alt .acts .qa{flex:1;width:100%}
+.nb-alt .qa .qa-h{display:none}
+.nb-alt:hover .qa .qa-d,.nb-alt .qa:focus-visible .qa-d{display:none}
+.nb-alt:hover .qa .qa-h,.nb-alt .qa:focus-visible .qa-h{display:inline}
+
+/* Pick card: Buy from, Get it and If it's out read as plain text of what's chosen; click one to change it. */
+.nb-val{display:inline;padding:0;font-size:12.5px;color:var(--ink);text-align:left;line-height:1.45}
+.nb-val i{font-style:normal;color:var(--t3);margin-left:4px}
+button.nb-val:hover{text-decoration:underline;text-decoration-color:var(--t3);text-underline-offset:3px}
