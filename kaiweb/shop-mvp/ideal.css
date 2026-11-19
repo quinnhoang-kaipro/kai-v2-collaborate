@@ -216,6 +216,7 @@ button.grp-hd:hover .go{display:inline}
 .shelf-hd{padding:10px 32px 0;display:flex;align-items:flex-start;gap:24px}
 .shelf-hd.no-crumbs{padding-top:24px}
 .shelf-hd h2{font-family:var(--display);font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.h2-for{font-weight:500;color:var(--t2)}   /* "Shopping for" leads the title, quieter than what follows */
 .shelf-sub{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:8px;font-size:13.5px;color:var(--t2)}
 .shelf-sub b{color:var(--ink);font-weight:600}
 .shelf-sub .sep{color:var(--stroke)}
@@ -965,8 +966,12 @@ body.dragging .board,body.dragging .grid{pointer-events:none}
 .sh-opt{font:inherit;font-size:12.5px;font-weight:500;padding:5px 10px;border:1px solid var(--stroke);background:var(--white);color:var(--ink);cursor:pointer}
 .sh-opt:hover{border-color:var(--ink)}
 .sh-opt.on{background:var(--ink);border-color:var(--ink);color:var(--white)}
-.nb-hd-r{margin-left:auto;align-self:center;display:flex;align-items:center;gap:12px}
+.nb-hd-r{margin-left:auto;display:flex;align-items:baseline;gap:12px}
+.nb-hd-r .tag{align-self:center}
 .nb-amt{font-size:13px;color:var(--t2);white-space:nowrap}
+/* The task's total against its allowance sits on the option's line, as large as the option. */
+.nb-hd .nb-amt .alw,.nb-ghd .nb-amt .alw{font-family:var(--display);font-size:19px;font-weight:700;letter-spacing:-.01em;color:var(--ink);font-variant-numeric:tabular-nums;margin-left:4px}
+.nb-hd .nb-amt .alw.is-over::before,.nb-ghd .nb-amt .alw.is-over::before{width:8px;height:8px;vertical-align:3px}
 .nb-hd .nb-amt .tip{left:auto;right:0}
 .nb-notes{display:flex;flex-direction:column;gap:6px;margin-top:10px}
 .nb-note{display:flex;align-items:center;gap:9px;padding:8px 12px;font-size:12.5px;line-height:1.4}
@@ -1370,3 +1375,77 @@ button.pdm-sup:hover{background:var(--sunken-lift)}
 .nv-set .nv-task .nv-tn b{font-weight:500}
 .nv-set .nv-task .nv-amt{color:var(--t2)}
 .nv-all.on,.nv-gh.on,.nv-task.on,.nv-set .nv-task.on{box-shadow:none}
+
+/* A product-type row in the panel opens that type for all its tasks at once: the whole row is the button. */
+.nv-sh{cursor:pointer}
+.nv-sh:not(.on):hover{background:#F1ECDD}
+
+/* ── Dragging a product onto the list (from the Shopping List wireframe) ──
+   Product cards can be picked up; while one is dragged, the tasks it fits are
+   outlined (dashed), the one under the pointer is solid and lit, the rest dim. */
+[data-drag]{cursor:grab}
+[data-drag]:active{cursor:grabbing}
+body.is-dragging #list .nv-task,body.is-dragging #list .nv-gh,body.is-dragging #list .nv-sh,body.is-dragging #list .nv-new,body.is-dragging #list .nv-all{opacity:.4}
+body.is-dragging #list [data-drop]{opacity:1;outline:2px dashed var(--ink);outline-offset:-4px}
+body.is-dragging #list [data-drop].is-over{outline:3px solid var(--ink);outline-offset:-3px;background:var(--accent)}
+/* A task with two options the product fits: one chip per option to drop on. */
+.nv-dz{grid-column:1 / -1;order:9;display:flex;flex-wrap:wrap;gap:6px}
+.nv-dzo{font-size:12px;font-weight:600;padding:4px 10px;border:1.5px dashed var(--ink);background:var(--white)}
+.nv-dzo.is-over{border-style:solid;background:var(--accent)}
+
+/* After a drop: the other tasks that need the product, to add it to as well.
+   The list to tick on the left; the task in focus on the right, to judge it by. */
+.dq-wrap{position:fixed;inset:0;z-index:160;background:rgba(26,26,26,.42);display:flex;align-items:center;justify-content:center;padding:28px;animation:fadeIn .15s ease-out}
+.dq{width:min(1140px,100%);height:min(780px,calc(100vh - 56px));display:grid;grid-template-columns:minmax(360px,440px) minmax(0,1fr);grid-template-rows:minmax(0,1fr);background:var(--white);box-shadow:0 24px 64px rgba(0,0,0,.25);outline:none}
+.dq-main{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--stroke)}
+.dq-hd{padding:22px 24px 16px}
+.dq-done{display:block;margin-bottom:12px;font-size:13px;line-height:1.45;color:var(--success)}
+.dq-done b{color:var(--ink);font-weight:600}
+.dq-hd h2{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+.dq-lh{display:flex;justify-content:space-between;align-items:center;padding:10px 24px;border-top:1px solid var(--stroke);font-size:12.5px;color:var(--t2)}
+.dq-list{flex:1;min-height:0;overflow:auto;border-top:1px solid rgba(0,0,0,.06)}
+.dq-row{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:12px;align-items:start;padding:13px 20px 13px 24px;border-bottom:1px solid rgba(0,0,0,.06);cursor:pointer;outline:none}
+.dq-row:hover{background:var(--sunken-lift)}
+.dq-row.is-focus{background:#FAF7C4;box-shadow:inset 3px 0 0 var(--ink)}
+.dq-row:focus-visible{box-shadow:inset 3px 0 0 var(--ink),inset 0 0 0 2px var(--ink)}
+.dq-row input{width:16px;height:16px;margin:2px 0 0;accent-color:var(--ink);cursor:pointer}
+.dq-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dq-t b{font-size:14px;font-weight:600}
+.dq-t > span{font-size:12.5px;color:var(--t2)}
+.dq-t .dq-now{margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+.dq-now i{margin-right:6px;font-family:var(--mono);font-size:10px;font-style:normal;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.dq-none{font-style:normal;color:var(--warn);font-weight:600}
+.dq-amt{display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-size:14px;white-space:nowrap}
+.dq-amt span{font-size:12px;color:var(--t2)}
+/* The task in focus */
+.dq-side{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:22px 26px 30px;background:var(--app-bg)}   /* the whole side scrolls: heading, photos and facts */
+.dq-side-hd h3{margin-top:4px;font-family:var(--display);font-size:24px;font-weight:700;letter-spacing:-.01em;line-height:1.15}
+.dq-opt{display:block;margin-top:2px;font-size:15px;font-weight:600}
+.dq-ph{position:relative;margin-top:16px;aspect-ratio:3 / 2;background:var(--sunken);overflow:hidden}
+.dq-ph img{width:100%;height:100%;object-fit:cover;display:block}
+.dq-ph-cap{position:absolute;left:10px;bottom:10px;display:flex;gap:8px;align-items:baseline;max-width:calc(100% - 90px);padding:5px 9px;background:var(--white);font-size:12px;color:var(--t2)}
+.dq-ph-cap b{color:var(--ink);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dq-ph-n{position:absolute;right:10px;bottom:10px;padding:3px 8px;background:var(--white);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em}
+.dq-ths{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.dq-ths button{width:72px;height:48px;padding:0;border:1px solid var(--stroke);background:var(--sunken);overflow:hidden;opacity:.75}
+.dq-ths button:hover{opacity:1}
+.dq-ths button.on{opacity:1;border:2px solid var(--ink)}
+.dq-ths img{width:100%;height:100%;object-fit:cover;display:block}
+.dq-facts{display:grid;grid-template-columns:max-content 1fr;gap:8px 16px;margin-top:18px;font-size:13.5px;line-height:1.5}
+.dq-facts dt{line-height:20.25px}
+.dq-facts dd{margin:0}
+.dq-facts dd.dq-notes{display:flex;flex-direction:column;gap:8px}
+.dq-selp{display:flex;align-items:center;gap:10px;min-width:0}
+.dq-selp img{flex:none;width:44px;height:44px;object-fit:cover;background:var(--sunken)}
+.dq-selp > span{display:flex;flex-direction:column;min-width:0;line-height:1.35}
+.dq-selp b{font-weight:600}
+.dq-selp > span > span{font-size:12.5px;color:var(--t2)}
+.dq-nonote{color:var(--t3)}
+/* The buttons sit under the list they act on. */
+.dq-ft{display:flex;gap:10px;padding:14px 20px 16px 24px;border-top:1px solid var(--stroke)}
+.dq-ft .btn{flex:1;justify-content:center}
+@media (max-width:860px){ .dq{grid-template-columns:1fr} .dq-side{display:none} .dq-main{border-right:0} }
+/* Under a product type, a task row reads like All and Labor, with its option as a grey line under it. */
+.nv-tn.nv-tn2{flex-direction:column;align-items:flex-start;gap:2px;white-space:normal}
+.nv-tn2 .nv-ln{max-width:100%;min-width:0;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.nv-tn2 .nv-sub{max-width:100%;font-size:12.5px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

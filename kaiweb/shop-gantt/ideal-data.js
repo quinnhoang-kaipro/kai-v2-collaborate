@@ -317,6 +317,7 @@ const NEEDS = [
   {id: 'l3', room: 'living',  cat: 'ceilingfan',task: 'Ceiling fan', qty: 1, src: '1 fan box, center of ceiling', pick: 'HU-DEMP', backups: [], desc: 'Replace the light with a 52″ fan with an LED light kit.'},
   {id: 'l4', room: 'living',  cat: 'blinds',    task: 'Blinds', qty: 3, src: '3 front windows, 35″ wide', pick: 'BA-2FW', backups: [], desc: 'Install 2″ white faux wood blinds, inside mount.'},
   {id: 'l5', room: 'living',  cat: 'detector',  task: 'Smoke + CO detectors', qty: 2, src: '2 locations per code', pick: 'FA-SCO5', backups: [], desc: 'Replace with hardwired smoke + CO combos.'},
+  {id: 'l6', room: 'living',  cat: 'lighting',  task: 'Entry light', qty: 1, src: 'Ceiling box by the front door (photo, Mar 2)', pick: 'HB-13LED', backups: [], desc: 'Replace the entry light with an LED flush mount in brushed nickel, to match the kitchen.'},
   {id: 'p1', room: 'pbath',   cat: 'vanity',    task: 'Double vanity replacement', qty: 1, fit: 48, src: '48″ opening (photo, Mar 2)', pick: 'HD-SON48', backups: ['OV-ED48'], allow: 2000,
    desc: 'Remove the vanity and top. Install a 48″ double vanity with integrated top; new supply lines and P-traps.'},
   {id: 'p2', room: 'pbath',   cat: 'shower',    task: 'Shower wall and floor tile', qty: 96, src: 'Shower 60″ × 32″ × 7′ walls + floor, +10% waste', pick: null, backups: [],
@@ -324,17 +325,27 @@ const NEEDS = [
   {id: 'p3', room: 'pbath',   cat: 'toilet',    task: 'Toilet', qty: 1, src: '1 toilet, 12″ rough-in', pick: 'K-CIM', backups: [], desc: 'Replace the toilet with a comfort-height elongated model.'},
   {id: 'p4', room: 'pbath',   cat: 'exhaust',   task: 'Exhaust fan', qty: 1, src: '1 fan, existing duct', pick: 'PA-WG80', backups: [], desc: 'Replace the exhaust fan with an 80 CFM humidity-sensing fan.'},
   {id: 'p5', room: 'pbath',   cat: 'hardware',  task: 'Door hardware', qty: 2, src: '2 doors: bath and closet', pick: 'KW-TYLO', backups: [], desc: 'Replace door knobs with satin nickel privacy knobs.'},
+  {id: 'p6', room: 'pbath',   cat: 'tile',      task: 'Vanity backsplash', qty: 8, src: 'Wall behind the 48″ vanity, 18″ high, +10% waste', pick: null, backups: [], desc: 'Tile a backsplash behind the new double vanity, from the top to 18″ up.'},
   {id: 'b1', room: 'bath',    cat: 'vanity',    task: 'Vanity', qty: 1, fit: 30, src: '30″ opening (photo, Mar 2)', pick: 'OV-ED30', backups: [], desc: 'Replace the vanity with a 30″ vanity and integrated top.'},
   {id: 'b2', room: 'bath',    cat: 'toilet',    task: 'Toilet', qty: 1, src: '1 toilet, 12″ rough-in', pick: 'K-CIM', backups: [], desc: 'Replace the toilet.'},
   {id: 'b3', room: 'bath',    cat: 'exhaust',   task: 'Exhaust fan', qty: 1, src: '1 fan, existing duct', pick: 'PA-WG80', backups: [], desc: 'Replace the exhaust fan.'},
   {id: 'b4', room: 'bath',    cat: 'paint',     task: 'Paint', qty: 1, src: 'Walls: 180 SF, 2 coats ≈ 1 gallon', pick: 'SW-7029', backups: [], desc: 'Paint walls Agreeable Gray, semi-gloss trim.'},
+  {id: 'b5', room: 'bath',    cat: 'lighting',  task: 'Ceiling light', qty: 1, src: '1 ceiling box over the door', pick: null, backups: [], desc: 'Replace the bare-bulb fixture with a damp-rated LED flush mount.'},
+  {id: 'b6', room: 'bath',    cat: 'door',      task: 'Bathroom door', qty: 1, src: '1 opening, 30″', pick: null, backups: [], desc: 'Replace the bathroom door with a prehung shaker door to match the rest of the house.'},
+  {id: 'b7', room: 'bath',    cat: 'tile',      task: 'Vanity backsplash', qty: 5, src: 'Wall behind the 30″ vanity, 18″ high, +10% waste', pick: 'AO-BW', backups: [], desc: 'Tile a 4-course backsplash behind the new vanity.'},
+  {id: 'b8', room: 'bath',    cat: 'hardware',  task: 'Door hardware', qty: 1, src: '1 door: bath', pick: null, backups: [], desc: 'Replace the bath door knob with a satin nickel privacy knob.'},
   {id: 'r1', room: 'pbed',    cat: 'floor',     task: 'Flooring', qty: 231, src: 'Floor plan: 15′ × 14′ = 210 SF, +10% waste', pick: 'SH-PAR', backups: ['SH-PST'], desc: 'Remove carpet. Install LVP to match the rest of the house.'},
   {id: 'r2', room: 'pbed',    cat: 'paint',     task: 'Paint', qty: 3, src: 'Walls: 520 SF, 2 coats ≈ 3 gallons', pick: 'SW-7029', backups: [], desc: 'Paint walls Agreeable Gray.'},
   {id: 'r3', room: 'pbed',    cat: 'ceilingfan',task: 'Ceiling fan', qty: 1, src: 'New fan box needed (photo, Mar 9)', pick: null, backups: [], desc: 'Add a fan-rated box and install a 52″ ceiling fan with light.'},
   {id: 'r4', room: 'pbed',    cat: 'storage',   task: 'Closet system', qty: 1, src: 'Closet 6′ wide', pick: 'CM-ST58', backups: [], desc: 'Install a wire closet kit, one hang rod and shelf, one double-hang section.'},
+  {id: 'r5', room: 'pbed',    cat: 'door',      task: 'Bedroom and closet doors', qty: 2, src: '2 openings: bedroom 32″, closet 30″', pick: 'MS-2PS', backups: [], desc: 'Replace the bedroom and closet doors with prehung 2-panel shaker doors.'},
+  {id: 'r6', room: 'pbed',    cat: 'hardware',  task: 'Door hardware', qty: 2, src: '2 doors: bedroom and closet', pick: 'KW-TYLO', backups: [], desc: 'Replace both knobs with satin nickel privacy knobs.'},
   {id: 'e1', room: 'bed2',    cat: 'floor',     task: 'Flooring', qty: 145, src: 'Floor plan: 11′ × 12′ = 132 SF, +10% waste', pick: 'LP-STO', backups: [], desc: 'Remove carpet. Install LVP.'},
   {id: 'e2', room: 'bed2',    cat: 'paint',     task: 'Paint', qty: 2, src: 'Walls: 400 SF, 2 coats ≈ 2 gallons', pick: 'SW-7029', backups: [], desc: 'Paint walls Agreeable Gray.'},
-  {id: 'e3', room: 'bed2',    cat: 'blinds',    task: 'Blinds', qty: 2, src: '2 windows, 35″ wide', pick: 'BA-2FW', backups: [], desc: 'Install 2″ white faux wood blinds.'}
+  {id: 'e3', room: 'bed2',    cat: 'blinds',    task: 'Blinds', qty: 2, src: '2 windows, 35″ wide', pick: 'BA-2FW', backups: [], desc: 'Install 2″ white faux wood blinds.'},
+  {id: 'e4', room: 'bed2',    cat: 'lighting',  task: 'Ceiling light', qty: 1, src: '1 ceiling box, center of the room', pick: 'CE-11CS', backups: [], desc: 'Replace the glass dome light with an LED flush mount.'},
+  {id: 'e5', room: 'bed2',    cat: 'door',      task: 'Bedroom door', qty: 1, src: '1 opening, 30″', pick: 'RB-6P', backups: [], desc: 'Replace the damaged hollow-core door. The jamb is sound.'},
+  {id: 'e6', room: 'bed2',    cat: 'hardware',  task: 'Door hardware', qty: 1, src: '1 door: bedroom', pick: 'DF-BRDY', backups: [], desc: 'Replace the door knob with a satin nickel privacy knob.'},
 ];
 /* Each task's chosen option, named as Scope names it ("Replace : LVP"): what the
    products on the shelf are for. */
@@ -345,7 +356,10 @@ const OPT = {
   p1: 'Replace : 48″ double vanity', p2: 'Replace : Wall and floor tile', p3: 'Replace : Comfort-height toilet', p4: 'Replace : 80 CFM fan', p5: 'Replace : Privacy knobs',
   b1: 'Replace : 30″ vanity', b2: 'Replace : Toilet', b3: 'Replace : Exhaust fan', b4: 'Paint : Walls and trim',
   r1: 'Replace : LVP', r2: 'Paint : Walls', r3: 'Add : Fan with light', r4: 'Install : Wire closet kit',
-  e1: 'Replace : LVP', e2: 'Paint : Walls', e3: 'Install : Faux wood blinds'
+  e1: 'Replace : LVP', e2: 'Paint : Walls', e3: 'Install : Faux wood blinds',
+  l6: 'Replace : LED flush mount', p6: 'Add : Subway tile backsplash', b5: 'Replace : Damp-rated flush mount', b6: 'Replace : Prehung door',
+  b7: 'Add : Subway tile backsplash', b8: 'Replace : Privacy knob', r5: 'Replace : Prehung doors', r6: 'Replace : Privacy knobs',
+  e4: 'Replace : LED flush mount', e5: 'Replace : Prehung door', e6: 'Replace : Privacy knob'
 };
 NEEDS.forEach(n => { n.opt = OPT[n.id] || ''; });
 /* A task can have more than one option, each shopped on its own. An option row
@@ -358,6 +372,10 @@ const NOTES = {
   k3: [['SP', 'Rittenhouse is our default. If #1863 is short, MSI Whisper White is the same look.', 'Nov 12']],
   k7: [['JR', 'Hallway seam is at the kitchen door — order one extra box for the transition.', 'Nov 10']],
   k8: [['TO', 'Pantry and laundry are 30″. Both closets are 32″.', 'Mar 9']],
+  b5: [['SP', 'No exhaust fan in here, so the light has to be damp-rated.', 'Mar 9']],
+  b7: [['TO', 'Owner asked for the bath backsplash to match the kitchen tile.', 'Nov 12']],
+  e5: [['TO', 'Door was kicked in at move-out. Jamb is fine, so a slab alone would also work.', 'Mar 2']],
+  r5: [['JR', 'Closet opening is out of square by about 1/4″. Prehung handles it.', 'Nov 14']],
   l1: [['TO', 'Match the hallway LVP from the 2024 turn (Shaw Paragon, Aluminum).', 'Mar 2']],
   p2: [['SP', '12×24 on the walls means fewer cuts on the 60″ wall.', 'Nov 16']],
   e1: [['SP', 'Bedroom 2 was quoted with LifeProof before we standardized on Paragon.', 'Nov 3']],
