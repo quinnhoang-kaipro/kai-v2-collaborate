@@ -1546,3 +1546,41 @@ body.is-dragging #list [data-drop].is-over{outline:3px solid var(--ink);outline-
 .nb-val{display:inline;padding:0;font-size:12.5px;color:var(--ink);text-align:left;line-height:1.45}
 .nb-val i{font-style:normal;color:var(--t3);margin-left:4px}
 button.nb-val:hover{text-decoration:underline;text-decoration-color:var(--t3);text-underline-offset:3px}
+
+/* After a drop: a light banner, not a box. It says what was added (with Undo) and, when other tasks
+   use the same kind of product, offers it to them: Add to all, or Review. Left alone, it fades. */
+#dropBn{position:fixed;left:50%;top:calc(var(--demo) + var(--bar) + 14px);transform:translateX(-50%);z-index:91;width:max-content;max-width:min(860px,calc(100vw - 32px));transition:opacity .4s,transform .4s;animation:dbnIn .28s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes dbnIn{from{opacity:0;transform:translate(-50%,-14px)}to{opacity:1;transform:translate(-50%,0)}}
+#dropBn.out{opacity:0;transform:translate(-50%,-10px);pointer-events:none}
+.dbn{display:flex;align-items:center;gap:16px;padding:12px 10px 12px 14px;background:var(--accent);border:1.5px solid var(--ink);box-shadow:0 14px 34px rgba(26,26,26,.22),0 2px 0 var(--ink);font-size:14px;color:var(--ink)}
+.dbn-ic{width:28px;height:28px;flex:none;display:grid;place-items:center;border-radius:50%;background:var(--ink);color:var(--accent);font-size:14px;font-weight:700}
+.dbn-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.dbn-done{color:var(--ink)}
+.dbn-done b{font-weight:700}
+.dbn-done button{margin-left:10px;font-size:13px;font-weight:600;color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.dbn-done button:hover{text-decoration-thickness:2px}
+.dbn-more{color:rgba(26,26,26,.72);font-size:13.5px}
+.dbn-acts{display:flex;align-items:center;gap:8px;flex:none}
+.dbn-acts button{height:34px;padding:0 14px;font-size:13.5px;font-weight:600;white-space:nowrap;border:1.5px solid var(--ink)}
+.dbn-acts .dbn-all{background:var(--ink);color:var(--white)}
+.dbn-acts .dbn-all:hover{background:#000}
+.dbn-acts .dbn-rv{background:transparent;color:var(--ink)}
+.dbn-acts .dbn-rv:hover{background:rgba(26,26,26,.08)}
+.dbn-x{width:30px;height:30px;flex:none;display:grid;place-items:center;font-size:18px;color:var(--ink)}
+.dbn-x:hover{background:rgba(26,26,26,.1)}
+@media (max-width:760px){.dbn{flex-wrap:wrap}.dbn-acts{order:3;width:100%;padding-left:44px}}
+
+/* Context strip: measurements are the room's real sizes; quantity is its own, adjustable */
+.ctx-facts{grid-template-columns:1.4fr 1fr 1fr 1fr}
+.look.look-only .ctx-facts{grid-template-columns:1.3fr 1fr 1fr 1fr}
+.cf .cm-m{font-size:14px;font-weight:600;color:var(--ink);line-height:1.3}
+.cf .cm-r{font-size:12.5px;color:var(--t2);line-height:1.4}
+.cq-step{display:inline-flex;align-items:stretch;height:32px;border:1px solid var(--stroke);background:var(--white);align-self:flex-start}
+.cq-step button{width:30px;display:grid;place-items:center;font-size:16px;color:var(--ink)}
+.cq-step button:hover{background:var(--sunken)}
+.cq-in{width:54px;border:0;border-left:1px solid var(--stroke);text-align:right;font:600 14px var(--body);color:var(--ink);background:transparent;padding:0 4px;-moz-appearance:textfield}
+.cq-in::-webkit-outer-spin-button,.cq-in::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.cq-u{display:flex;align-items:center;padding:0 8px 0 4px;font-size:13px;color:var(--t2);border-right:1px solid var(--stroke)}
+.cf .k em .cq-reset{font-size:11.5px;color:var(--ink);text-decoration:underline;text-decoration-color:var(--stroke);text-underline-offset:3px}
+.cf .k em .cq-reset:hover{text-decoration-color:var(--ink)}
+@media (max-width:900px){.ctx-facts,.look.look-only .ctx-facts{grid-template-columns:1fr 1fr}}

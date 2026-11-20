@@ -507,7 +507,7 @@ function headHtml(needs){
   if(single){
     const r = ROOM[n0.room], p = n0.pick && CATALOG[n0.pick];
     const tot = p ? buy(p, n0.qty, offerOf(n0, p)).total : 0;
-    sub = `<b>${qtyText(cat, n0.qty)}</b><span class="sep">|</span><span>${esc(r.name)}</span>${n0.allow ? `<span class="sep">|</span><span>Task ${needAmtHtml(n0, `${money0(taskCost(n0))} / ${money0(n0.allow)}`)}</span>${isOver(n0) ? ` <span class="tag warn">Needs review</span>` : p && taskCost(n0) < n0.allow * .92 ? ` <span class="tag ok">Room to upgrade · ${money0(n0.allow - taskCost(n0))}</span>` : ''}` : '<span class="sep">|</span><span class="na">Allowance N/A</span>'}`;
+    sub = `<b>${qtyText(cat, n0.qty)}</b><span class="sep">|</span><span>For ${esc(r.name)} › ${esc(taskLabel(n0))}</span>${n0.allow ? `<span class="sep">|</span><span>Task ${needAmtHtml(n0, `${money0(taskCost(n0))} / ${money0(n0.allow)}`)}</span>${isOver(n0) ? ` <span class="tag warn">Needs review</span>` : ''}` : '<span class="sep">|</span><span class="na">Allowance N/A</span>'}`;
   } else {
     const q = needs.reduce((a, n) => a + n.qty, 0);
     sub = `<b>${qtyText(cat, q)}</b><span class="sep">|</span><span>${(rs => `${needs.length} ${needs.length === 1 ? 'task' : 'tasks'} in ${rs.map(esc).join(', ')}`)([...new Set(needs.map(n => ROOM[n.room].name))])}</span>`;
@@ -555,6 +555,19 @@ function bannersHtml(needs){
    (‹ › through them), the mood board, then what the task is, its measurement
    (opens the floor plan beside the shelf), and the latest note, where the room shows its
    picks. A product across rooms shows every room's photos and where it goes. */
+/* Measurements are the room's real sizes and what the task covers; the quantity to buy
+   (with its coats or waste) is its own thing the shopper can change. */
+function measOf(n){
+  let s = (n.src || '').replace(/^Floor plan:\s*/, '');
+  let calc = '';
+  const m = s.match(/,\s*(\d+ coats?.*|\+\d+% waste.*)$/);
+  if(m){ calc = m[1].replace(/^\+/, 'Plus '); s = s.slice(0, m.index); }
+  return {meas: s.trim(), calc: calc ? calc.charAt(0).toUpperCase() + calc.slice(1) : ''};
+}
+const roomDims = (rid, short) => { const r = ROOM[rid]; if(!r) return ''; const a = r.w * r.h;
+  return short ? `${r.w}′ × ${r.h}′` : `${esc(r.name)} · ${r.w}′ × ${r.h}′ · ${a.toLocaleString()} SF floor`; };
+const cqStep = cat => CAT_INFO[cat].unit === 'SF' ? 10 : 1;
+function cqSet(n, v){ if(!n) return; v = Math.max(0, Math.round(+v || 0)); if(v === n.qty) return; n.qty = v; render(); }
 function ctxHtml(needs){
   const n0 = needs[0], single = S.sel.kind === 'need';
   const rooms = [...new Set(needs.map(n => n.room))];
@@ -567,7 +580,12 @@ function ctxHtml(needs){
       <div class="cf"><span class="k">${single ? 'The task' : 'Where it goes'}<em>${single ? esc(installerOf(n0)) : ''}</em></span>
         ${single ? `<p>${esc(n0.desc)}</p>` : `<p>${needs.map(n => `${esc(whereTask(n))} — ${qtyText(n.cat, n.qty)}`).join('<br>')}</p>`}</div>
       <button type="button" class="cf" data-act="ref-add" data-tab="plan" title="Open the floor plan beside the shelf"><span class="k">Measurements${curPanes().includes('floorplan') ? '' : '<em class="cf-go">Open floorplan</em>'}</span>
-        <span class="ctx-qty">${q.toLocaleString()}<small>${unitWord(n0.cat, q)}</small></span></button>
+        ${single ? `${measOf(n0).meas ? `<b class="cm-m">${esc(measOf(n0).meas)}</b>` : ''}<span class="cm-r">${roomDims(n0.room)}</span>`
+          : `<span class="cm-r">${rooms.map(r => `${esc(ROOM[r].name)} ${roomDims(r, true)}`).join('<br>')}</span>`}</button>
+      <div class="cf cq"><span class="k">Quantity${single && n0.qty !== n0.planQty ? `<em><button type="button" class="cq-reset" data-act="cq-reset" data-id="${n0.id}">Reset to ${qtyText(n0.cat, n0.planQty)}</button></em>` : ''}</span>
+        ${single ? `<span class="cq-step"><button type="button" data-act="cq" data-id="${n0.id}" data-d="-1" aria-label="Less">−</button><input class="cq-in" type="number" min="0" step="${cqStep(n0.cat)}" value="${n0.qty}" data-id="${n0.id}" aria-label="Quantity"><span class="cq-u">${unitWord(n0.cat, n0.qty)}</span><button type="button" data-act="cq" data-id="${n0.id}" data-d="1" aria-label="More">+</button></span>
+          <span class="cm-r">${measOf(n0).calc ? esc(measOf(n0).calc) : 'Change it if you need more or less'}</span>`
+          : `<span class="ctx-qty">${q.toLocaleString()}<small>${unitWord(n0.cat, q)}</small></span><span class="cm-r">Across ${needs.length} ${needs.length === 1 ? 'task' : 'tasks'}</span>`}</div>
       <button type="button" class="cf" data-act="ref-add" data-tab="notes" title="Open the notes"><span class="k">Notes<em>${notes.length}</em></span>
         ${last ? `<span class="ctx-note"><span class="av sm" style="background:${TEAM[last.who].tone}">${last.who}</span><p>${esc(last.text)}</p></span>` : '<p class="cf-none">No notes yet. Add one for the team.</p>'}</button>
     </div>
@@ -1269,17 +1287,57 @@ document.addEventListener('drop', e => {
   dragStop();
   if(z) dropOn(sku, z.dataset.drop.split(','));
 });
-// The product goes on the task dropped on, in place of what it had. If other
-// tasks also need it, a box asks which of them get it too; one toast covers
-// everything that changed, and Undo puts it all back.
+// The product goes on the task dropped on, like any add: a task with nothing gets it, a task with
+// another product gets it beside that one. If other tasks use the same kind of product, a light
+// banner offers it to them ("Add to all", or "Review" for the box), and fades if it's left alone.
+function giveAll(sku, ns){
+  const p = CATALOG[sku], snap = ns.map(n => [n, n.pick, n.backups.slice(), (n.more || []).slice(), n.qty]);
+  ns.forEach(n => {
+    if(!n.pick){ n.pick = sku; n.backups = n.backups.filter(s => s !== sku); return; }
+    if(n.pick === sku || (n.more || []).some(x => x.pick === sku)) return;
+    const x = mkMore(n, sku, n.qty); S.offer[x.id] = prefOffer(p, n).sup; n.more = (n.more || []).concat(x);
+  });
+  return () => snap.forEach(([n, pk, bk, more, q]) => { n.pick = pk; n.backups = bk; n.more = more; n.qty = q; });
+}
+const hasSku = (n, sku) => n.pick === sku || (n.more || []).some(x => x.pick === sku);
 function dropOn(sku, ids){
-  const p = CATALOG[sku], tgt = ids.map(need).filter(n => n && n.cat === p.cat && fitsNeed(p, n));
-  if(!tgt.length) return;
-  const before = tgt.map(n => [n, n.pick, n.backups.slice()]);
-  const was = tgt.length === 1 && tgt[0].pick && tgt[0].pick !== sku ? CATALOG[tgt[0].pick] : null;
-  tgt.forEach(n => { n.backups = n.backups.filter(s => s !== sku); n.pick = sku; });
+  const p = CATALOG[sku], n = ids.map(need).find(n => n && n.cat === p.cat && fitsNeed(p, n));
+  if(!n) return;
+  const undo = giveAll(sku, [n]);
   render();
-  if(!dropAsk(sku, tgt[0], before, was)) dropToast(p, tgt, before, was);
+  const others = NEEDS.filter(m => m.id !== n.id && m.cat === p.cat && fitsNeed(p, m) && !hasSku(m, sku)).map(m => m.id);
+  dropBanner({sku, first: n, undo, ids: others});
+}
+let DB = null, DB_T = null;
+const dbName = p => esc(p.name.split(/,|\(/)[0].trim());
+function dropBanner(o){
+  DB = o;
+  let host = document.getElementById('dropBn');
+  if(!o){ if(host) host.remove(); clearTimeout(DB_T); return; }
+  if(!host){
+    host = document.createElement('div'); host.id = 'dropBn'; document.body.appendChild(host);
+    host.addEventListener('click', dbClick);
+    host.addEventListener('mouseenter', () => { clearTimeout(DB_T); host.classList.remove('out'); });
+    host.addEventListener('mouseleave', () => dbFade(4000));
+  }
+  const p = CATALOG[o.sku], n = o.first, k = o.ids.length, nm = dbName(p);
+  host.innerHTML = `<div class="dbn" role="status"><span class="dbn-ic" aria-hidden="true">✓</span>
+    <div class="dbn-tx"><span class="dbn-done">Added <b>${nm}</b> to ${esc(ROOM[n.room].name)} › ${esc(taskLabel(n))}<button type="button" data-db="undo">Undo</button></span>
+      ${k ? `<span class="dbn-more">${esc(CAT_INFO[p.cat].label)} is also used in ${k} other ${k === 1 ? 'task' : 'tasks'}</span>` : ''}</div>
+    ${k ? `<div class="dbn-acts"><button type="button" class="dbn-all" data-db="all">Add to ${k === 1 ? 'it too' : `all ${k}`}</button><button type="button" class="dbn-rv" data-db="review">Review</button></div>` : ''}
+    <button type="button" class="dbn-x" data-db="x" aria-label="Dismiss">×</button></div>`;
+  host.classList.remove('out');
+  dbFade(k ? 9000 : 5000);
+}
+function dbFade(ms){ clearTimeout(DB_T); DB_T = setTimeout(() => { const h = document.getElementById('dropBn'); if(!h) return; h.classList.add('out'); DB_T = setTimeout(() => dropBanner(null), 450); }, ms); }
+function dbClick(e){
+  const t = e.target.closest('[data-db]'); if(!t || !DB) return;
+  const o = DB, a = t.dataset.db, p = CATALOG[o.sku];
+  dropBanner(null);
+  if(a === 'undo'){ o.undo(); render(); return; }
+  if(a === 'review'){ dropAsk(o.sku, o.first); return; }
+  if(a === 'all'){ const ns = o.ids.map(need).filter(Boolean), u = giveAll(o.sku, ns); render();
+    toast(`Added ${dbName(p)} to ${ns.length} more ${ns.length === 1 ? 'task' : 'tasks'}.`, () => { u(); render(); }); }
 }
 const shortName = x => esc(x.name.split('(')[0].trim());   // keeps the colour: Paragon Mix Plus LVP, Stonewash 9×59
 function dropToast(p, tgt, before, was){
@@ -1294,12 +1352,12 @@ function dropToast(p, tgt, before, was){
    work is, measurements, notes, what it has now against this product), so each
    one can be judged before it gets the same product. Nothing is ticked to begin
    with; the drop filled one task, the rest is yours to choose. */
-let DQ = null;   // {sku, first, before, was, ids, sel, focus, ph}
-function dropAsk(sku, first, before, was){
+let DQ = null;   // {sku, first, ids, sel, focus, ph}
+function dropAsk(sku, first){
   const p = CATALOG[sku];
-  const ids = NEEDS.filter(n => n.id !== first.id && n.cat === p.cat && fitsNeed(p, n) && n.pick !== sku).map(n => n.id);
+  const ids = NEEDS.filter(n => n.id !== first.id && n.cat === p.cat && fitsNeed(p, n) && !hasSku(n, sku)).map(n => n.id);
   if(!ids.length) return false;
-  DQ = {sku, first, before, was, ids, sel: new Set(), focus: ids[0], ph: {}};
+  DQ = {sku, first, ids, sel: new Set(), focus: ids[0], ph: {}};
   drawDropAsk();
   return true;
 }
@@ -1404,11 +1462,11 @@ function dqKey(e){
 }
 function dropAskDone(add){
   if(!DQ) return;
-  const {sku, first, before, was} = DQ, more = add ? DQ.ids.filter(id => DQ.sel.has(id)).map(need) : [];
-  more.forEach(n => { before.push([n, n.pick, n.backups.slice()]); n.backups = n.backups.filter(s => s !== sku); n.pick = sku; });
+  const {sku, ids, sel} = DQ, more = add ? ids.filter(id => sel.has(id)).map(need) : [];
   DQ = null; drawDropAsk();
-  if(more.length) render();
-  dropToast(CATALOG[sku], [first, ...more], before, was);
+  if(!more.length) return;
+  const u = giveAll(sku, more); render();
+  toast(`Added ${dbName(CATALOG[sku])} to ${more.length} more ${more.length === 1 ? 'task' : 'tasks'}.`, () => { u(); render(); });
 }
 document.addEventListener('keydown', e => { if(e.key === 'Escape' && DQ) dropAskDone(false); });
 document.addEventListener('click', e => { if(S.fltOpen && !e.target.closest('.list-hd .af')){ S.fltOpen = false; renderList(); } });
@@ -1844,6 +1902,8 @@ document.addEventListener('click', e => {
     case 'sel-type': if(t.closest('.nv-sh') && S.sel.kind === 'type' && S.sel.cat === t.dataset.cat){ nvFlip('c:' + t.dataset.cat); break; }   // a second click on the open type's row folds it
       S.ack.add('rep' + t.dataset.cat); S.pvShut.delete('c:' + t.dataset.cat); if(S.group !== 'product') S.group = 'product'; select({kind: 'type', cat: t.dataset.cat}); break;   // and open its tasks in the list
     case 'choose': choose(sku, id, t.dataset.k ? +t.dataset.k : null); break;
+    case 'cq': { const n = need(id); if(n) cqSet(n, n.qty + (+t.dataset.d) * cqStep(n.cat)); break; }
+    case 'cq-reset': { const n = need(id); if(n) cqSet(n, n.planQty); break; }
     case 'qty': { const n = need(id), p = n && CATALOG[n.pick]; if(!p) break;
       const k = buy(p, n.qty, offerOf(n, p)).n + (+t.dataset.d);
       if(k < 1) removePick([n]); else { setCount(n, p, k); render(); } break; }
@@ -1986,6 +2046,7 @@ document.addEventListener('change', e => {
   const t = e.target;
   if(t.matches('select[data-act="sort"]')){ S.sort = t.value; renderWork(); }
   if(t.matches('input[data-src]')) srcSet(t);
+  if(t.matches('.cq-in')) cqSet(need(t.dataset.id), t.value);
 });
 document.addEventListener('input', e => {
   if(e.target.id === 'q'){ S.q = e.target.value; renderGridOnly(); }
