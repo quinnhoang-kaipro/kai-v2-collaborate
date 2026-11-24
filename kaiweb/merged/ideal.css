@@ -2257,10 +2257,6 @@ button.tg-lab:hover .tg-name b{text-decoration:underline;text-underline-offset:3
 /* Handoff, beside Review order in the dark bar */
 .bar .hobtn{height:40px;display:inline-flex;align-items:center;gap:10px;padding:0 14px;border:1px solid rgba(255,255,255,.35);color:#fff;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-right:12px;white-space:nowrap}
 .bar .hobtn:hover{border-color:#fff;background:rgba(255,255,255,.06)}
-.bar .turn.theirs{background:none;color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
-.sm.ho .ho-sub{margin:8px 0 14px;font-size:13.5px;line-height:1.45;color:var(--t2)}
-.ho-av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--ink)}
-.sm.ho .sm-opt{grid-template-columns:32px minmax(0,1fr) 22px}
 
 /* Shelf cards: Add is a text button above Replace. It keeps its room when hidden,
    so Replace never moves or changes size on hover. */
@@ -2269,3 +2265,206 @@ button.tg-lab:hover .tg-name b{text-decoration:underline;text-underline-offset:3
 .nb-alt .acts .qa-add:hover{background:none;color:var(--ink);text-decoration-thickness:2px}
 .nb-alt:hover .acts .qa-add,.nb-alt:focus-within .acts .qa-add{display:inline-flex;visibility:visible}
 .nb-alt .acts:has(.qa-add) .qa{flex:none;width:100%}
+
+/* Shop: an item that gets there after its task needs it */
+.nb-pick .avail.late{color:#C2412D}
+.nb-pick .avail.late b{font-weight:700}
+
+/* Top right: Review order is the yellow one and doesn't change when you're on it;
+   Your turn is a stroked tag, quieter than the button. */
+.bar .cartbtn,.bar .cartbtn.on{background:var(--accent);border-color:var(--accent);color:var(--ink)}
+.bar .cartbtn:hover{background:var(--accent-deep);border-color:var(--accent-deep)}
+.bar .turn{background:none;color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+
+/* Where it goes: the product type's tasks, no checkboxes */
+.split-row.wig{grid-template-columns:170px 150px minmax(0,1fr) 100px}
+/* The task window, product first */
+.dq-prod{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.dq-prod img{width:48px;height:48px;object-fit:cover;border:1px solid var(--stroke);flex:none}
+.dq-prod b{display:block;font-size:14px;font-weight:600}
+.dq-prod span span{font-size:12.5px;color:var(--t2)}
+.dq-sub{margin-top:6px;font-size:13px;line-height:1.45;color:var(--t2)}
+.dq-row.off{cursor:default}
+.dq-row.off .dq-t > b,.dq-row.off .dq-t > span{opacity:.55}
+.dq-row.off input{opacity:.4}
+.dq-why{font-size:12px;color:var(--t3);text-align:right;max-width:150px}
+.dq-ft:has(.btn + .btn){display:flex;gap:10px}
+.dq-ft:has(.btn + .btn) .btn{flex:1}
+
+/* Task first: the task is the heading, its option and amount the line beside it */
+.nb-hd .nb-opt{color:var(--ink);font-weight:500}
+.nb-ghd{align-items:baseline;gap:12px}
+.nb-ghd h3{font-family:var(--display);font-size:19px;font-weight:700;letter-spacing:-.01em}
+.nb-ghd h3 button:hover{text-decoration:underline;text-underline-offset:4px}
+.nb-ghd .sub{font-size:13px;color:var(--t2)}
+.nb-ghd > .nb-task{flex-basis:100%}
+.nb-hd-o h3{font-size:16px}
+
+/* One task, in the task window */
+.dq.tk .dq-hd h2{font-size:26px}
+.tk-k{display:block;margin-bottom:6px;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.tk-body{padding:4px 24px 20px;overflow-y:auto}
+.tk-sk{display:block;margin:10px 0 4px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.tk-opt{padding:6px 0;border-bottom:1px solid rgba(0,0,0,.06)}
+.tk-on{display:block;margin:6px 0 2px;font-size:13px;font-weight:600;color:var(--ink)}
+.tk-p{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 0}
+.tk-p.none{display:block}
+.tk-p img{width:48px;height:48px;object-fit:cover;border:1px solid var(--stroke)}
+.tk-p b{display:block;font-size:13.5px;font-weight:600}
+.tk-p span span{font-size:12.5px;color:var(--t2)}
+.tk-p > .num{font-size:14px}
+.tk-sum{margin:14px 0 0;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+.tk-sum div{display:flex;justify-content:space-between;gap:12px}
+.tk-sum dt{color:var(--t2)}
+.tk-sum dd{margin:0}
+.tk-sum .tot{padding-top:8px;border-top:1px solid var(--stroke);font-weight:700}
+.tk-sum .tot dt{color:var(--ink)}
+.tk-sum .tot span{font-weight:400;color:var(--t2)}
+.tk-sum .flag dd{color:#C2412D}
+
+/* Task rows: the cost, what it's compared with, and the allowance it would pass */
+.dq-amt{white-space:normal;text-align:right;max-width:210px}
+.dq-amt b{white-space:nowrap}
+.dq-over{grid-column:2 / -1;margin-top:-4px;font-size:12.5px;font-weight:600;color:#C2412D}
+.dq-over-i{color:#C2412D;font-weight:600}
+
+/* Dragging a product: the whole left panel is the drop zone. One task is the
+   target, with a label; the rest dims further. */
+body.is-dragging #list{box-shadow:inset 0 0 0 2px var(--ink)}
+body.is-dragging #list .nv-task,body.is-dragging #list .nv-gh,body.is-dragging #list .nv-sh,body.is-dragging #list .nv-new,body.is-dragging #list .nv-all,body.is-dragging #list .list-hd{opacity:.22}
+body.is-dragging #list [data-drop]{opacity:.55;outline:1.5px dashed var(--ink)}
+body.is-dragging #list [data-drop].is-over{opacity:1;outline:3px solid var(--ink);outline-offset:-3px;background:var(--accent)}
+body.is-dragging #list{position:relative}
+#dropHint{position:absolute;left:14px;right:14px;bottom:16px;z-index:5;display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 14px;background:var(--ink);color:#fff;text-align:center;box-shadow:0 10px 26px rgba(26,26,26,.3);pointer-events:none;animation:hintUp .2s ease-out}
+@keyframes hintUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+#dropHint b{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+#dropHint span{font-size:13px;color:rgba(255,255,255,.85)}
+
+/* The drop banner: bottom centre, bigger, so it's easy to see and reach */
+#dropBn{top:auto;bottom:28px;max-width:min(940px,calc(100vw - 32px));animation:dbnUp .28s cubic-bezier(.2,.9,.3,1.2)}
+#dropBn.out{transform:translate(-50%,12px)}
+@keyframes dbnUp{from{opacity:0;transform:translate(-50%,16px)}to{opacity:1;transform:translate(-50%,0)}}
+#dropBn .dbn{gap:20px;padding:18px 16px 18px 20px;font-size:16px;border-width:2px;box-shadow:0 22px 50px rgba(26,26,26,.28),0 3px 0 var(--ink)}
+#dropBn .dbn-ic{width:36px;height:36px;font-size:17px}
+#dropBn .dbn-more{font-size:14.5px}
+#dropBn .dbn-done button{font-size:14.5px}
+#dropBn .dbn-acts button{height:44px;padding:0 20px;font-size:15px}
+#dropBn .dbn-x{width:36px;height:36px;font-size:21px}
+
+/* Order all for one date, beside its heading */
+.pr-hrow{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}
+.pr-hrow .pr-h{margin-bottom:0 !important}
+.pr-all{flex:none;height:40px;padding:0 18px}
+
+/* Grid, in Big bars' palette: square boxes framed in ink, a blueprint hatch for
+   time to order, paper for on its way, lime for the buffer, signal red for late,
+   ink for the day it arrives. Mono caps throughout. */
+.tg.st-grid .gc{color:var(--ink);letter-spacing:.16em}
+.tg.st-grid .gc:not(:empty),.tg.st-grid .gc.win,.tg.st-grid .gc.go,.tg.st-grid .gc.hold,.tg.st-grid .gc.buf,.tg.st-grid .gc.late,.tg.st-grid .gc.need{box-shadow:inset 0 0 0 1px rgba(26,26,26,.16)}   /* hairline frames, not boxes */
+.tg.st-grid .gc.win{background:repeating-linear-gradient(-45deg,rgba(46,90,135,.22) 0 1px,transparent 1px 7px),#FAF8F3;color:#2E5A87}
+.tg.st-grid .gc.ord{background:#2E5A87;color:#FAF8F3}
+.tg.st-grid .gc.go{background:var(--paper-3);color:var(--ink)}
+.tg.st-grid .gc.go svg{color:var(--ink)}
+.tg.st-grid .gc.hold{background:#FAF8F3}
+.tg.st-grid .gc.buf{background:#FDFF86}
+.tg.st-grid .gc.sp{background:#F4F1EA}
+.tg.st-grid .gc.late{background:#E84E2F;color:#fff}
+.tg.st-grid .gc.arr{background:var(--ink);color:#FDFF86}
+.tg.st-grid .gc-arr{background:var(--ink);color:#FDFF86}
+.tg.st-grid .gc.need{background:#FDFF86}
+.tg.st-grid .gc.need.late{background:#E84E2F}
+.tg.st-grid .gc.need.late::after{box-shadow:inset 0 0 0 3px #E84E2F}
+.tg.st-grid .gc.need b{border-radius:0}
+.tg.st-grid .gc.need.late b{background:#E84E2F}
+.tg.st-grid .gc:not(.need)[data-pop]:hover,.tg.st-grid .gc.need:hover::before{box-shadow:inset 0 0 0 2.5px var(--ink)}
+
+/* Track orders */
+.rv-top:has(.trk-go),.trk .rv-top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px}
+.trk-go{flex:none}
+.trk-demo{flex:none;display:flex;align-items:center;gap:8px;padding:6px 8px 6px 12px;border:1px dashed rgba(26,26,26,.35);font-size:12.5px;color:var(--t2)}
+.trk-demo span{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.trk-demo b{min-width:96px;text-align:center;color:var(--ink);font-weight:600}
+.trk-demo button{width:28px;height:28px;border:1px solid var(--stroke);background:var(--white);font-size:15px}
+.trk-demo button:disabled{opacity:.35}
+.trk-chips{display:flex;flex-wrap:wrap;gap:10px;margin:22px 32px 0}
+.trk-c{display:flex;align-items:baseline;gap:8px;padding:10px 16px;background:var(--white);border:1px solid var(--ink)}
+.trk-c b{font-family:var(--display);font-size:22px;font-weight:700}
+.trk-c span{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.trk-c.zero{border-color:var(--stroke)}
+.trk-c.zero b{color:var(--t3)}
+.trk-c.bad{background:#E84E2F;border-color:#E84E2F}
+.trk-c.bad b,.trk-c.bad span{color:#fff}
+.trk-h{margin-bottom:12px}
+.trk-box{background:var(--white);border:1px solid var(--stroke)}
+.trk-r{display:grid;grid-template-columns:36px minmax(0,1.5fr) minmax(0,1fr) minmax(0,1.3fr) minmax(0,1.2fr) 110px;gap:16px;align-items:center;padding:14px 18px;border-top:1px solid rgba(0,0,0,.06);font-size:13.5px}
+.trk-r.trk-hd{border-top:0;background:var(--sunken-lift);padding-top:10px;padding-bottom:10px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.trk-r.late{box-shadow:inset 3px 0 0 #E84E2F}
+.trk-r .mono{width:32px;height:32px;display:grid;place-items:center;font-family:var(--mono);font-size:10px;font-weight:700}
+.trk-w,.trk-po,.trk-st,.trk-it{display:flex;flex-direction:column;gap:3px;min-width:0}
+.trk-w b,.trk-po b{font-weight:600}
+.trk-w > span,.trk-po > span,.trk-st > span:last-child,.trk-it > span{font-size:12.5px;color:var(--t2)}
+.trk-it{flex-direction:row;align-items:center;gap:10px}
+.trk-none{color:var(--t3) !important}
+.trk-pill{align-self:flex-start;padding:3px 8px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--ink)}
+.trk-pill.ink{background:#FAF8F3;color:var(--ink)}
+.trk-pill.go{background:var(--paper-3);color:var(--ink)}
+.trk-pill.ok{background:#FDFF86;color:var(--ink)}
+.trk-a{text-align:right}
+.trk .bad{color:#C2412D}
+.trk .ok{color:var(--ink)}
+/* the tracking grid: days after today are planned, so they're lighter; today is outlined */
+.tg.st-grid .gc.fut{opacity:.45}
+.tg.st-grid .gc.tdy{box-shadow:inset 0 0 0 2px var(--ink)}
+.tg.st-grid .gc .gc-ck{font-size:14px;line-height:1;font-weight:700}
+
+/* Track orders in the top bar, and on an ordered item in Shop */
+.bar .trkbtn[hidden]{display:none}
+.nb-pick .avail.ordered{display:flex;align-items:center;gap:6px;padding:0;text-align:left;font:inherit;color:var(--ink)}
+.nb-pick .avail.ordered u{text-underline-offset:2px}
+.nb-pick .avail.ordered:hover u{text-decoration-thickness:2px}
+
+/* Floor plan, filtered to Needs product: a red count on each room, a list below */
+.pl-rm.pl-todo{cursor:pointer}
+.pl-rm.pl-todo:hover .pl-bg{fill:#FDFF86}
+.pl-rm.pl-none text{opacity:.5}
+.pt-list{margin-top:12px;background:var(--white);border:1px solid var(--stroke)}
+.pt-hd{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--stroke)}
+.pt-hd b{font-size:14px;font-weight:700}
+.pt-hd span{font-size:12.5px;color:var(--t2)}
+.pt-room + .pt-room{border-top:1px solid var(--stroke)}
+.pt-rh{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:10px 16px 4px}
+.pt-rh b{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.pt-rh span{font-size:12px;color:#C2412D}
+.pt-t{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 16px;text-align:left}
+.pt-t:hover{background:var(--sunken-lift)}
+.pt-t b{display:block;font-size:13.5px;font-weight:600}
+.pt-t span span{font-size:12.5px;color:var(--t2)}
+.pt-go{flex:none;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink)}
+
+/* Shop: each task row carries its product thumbnail, or a red X when it needs one */
+.nv-task.has-th{grid-template-columns:minmax(0,1fr) auto 38px}
+.nv-task.has-th .nv-pills{grid-column:1 / 3}
+.nv-th{grid-column:3;grid-row:1 / span 2;align-self:center;position:relative;width:38px;height:38px;display:grid;place-items:center;background:var(--white);border:1px solid var(--stroke);overflow:hidden}
+.nv-th img{width:100%;height:100%;object-fit:cover;display:block}
+.nv-th b{position:absolute;right:0;bottom:0;padding:0 3px;background:var(--ink);color:#fff;font-family:var(--mono);font-size:8.5px;font-weight:700;line-height:13px}
+.nv-th.none{border:1.5px solid #E84E2F;background:#FDF0ED}
+.nv-th.none svg{width:22px;height:22px;fill:none;stroke:#E84E2F;stroke-width:2;stroke-linecap:square}
+
+/* A narrower shelf (a panel open beside it) keeps the chosen product at the same
+   size: its card stays beside the other options, which show two at a time, rather
+   than stretching across the whole shelf. Only a very narrow shelf stacks, and then
+   the card keeps its width. */
+@container shelf (max-width:1080px){
+  .nb-bd{grid-template-columns:minmax(230px,1.15fr) minmax(0,2fr)}
+  .nb-bd.none{grid-template-columns:minmax(0,1fr)}
+  .rcar{--per:2}
+  .nb-bd.none .rcar{--per:3}
+  .nb-pick{display:flex;flex-direction:column}
+  .nb-pick .im{aspect-ratio:16/9;min-height:0}
+  .nb-picks .nb-pick{max-width:none}
+}
+@container shelf (max-width:600px){
+  .nb-bd{grid-template-columns:minmax(0,1fr)}
+  .nb-pick,.nb-picks{max-width:340px}
+  .rcar,.nb-bd.none .rcar{--per:2}
+}

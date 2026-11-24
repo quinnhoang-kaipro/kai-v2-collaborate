@@ -756,4 +756,13 @@
   };
   if(qs.get('tab')) go(qs.get('tab'));
   window.addEventListener('message', e => { const d = e.data || {}; if(d.type === 'kw-embed-tab' && d.page) go(d.page); });
+  /* ?nopanel=1: the framing page shows its own task list, so this page's scope
+     panel (and its drag handle and edge) stays hidden. Done from inside KaiWeb,
+     so it works even when the framing page can't reach in (opened as a file). */
+  if(qs.get('nopanel') === '1'){
+    const hide = () => { const f = document.getElementById('iframe'), d = f && f.contentDocument;
+      if(f && !f.dataset.np){ f.dataset.np = '1'; f.addEventListener('load', hide); }
+      if(d && d.head && !d.getElementById('kw-no-panel')){ const st = d.createElement('style'); st.id = 'kw-no-panel'; st.textContent = '.body > .sidebar, .body > #handle, #pgEdge { display: none !important; }'; d.head.appendChild(st); } };
+    hide(); setInterval(hide, 400);
+  }
 })();
