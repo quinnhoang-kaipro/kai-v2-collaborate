@@ -1667,11 +1667,13 @@ function beforeOrderHtml(){
    it, then Place order (present tense: Buyer, Bill to). Sent: placed with the
    supplier, and it can't be cancelled — Print, Export, Share only. */
 const poId = k => 'PO-' + String([...k].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % 90000000 + 10000000);
-function poDocHtml(k){
-  const r = groupsOf(orderLines()).flatMap(g => g.rows).find(x => x.k === k); if(!r){ S.po = null; return ''; }
-  const s = SUPPLIERS[r.sup], id = poId(k), arr = new Date(Math.max(...r.lines.map(L => +L.arrive)));
+const poRow = k => groupsOf(orderLines()).flatMap(g => g.rows).find(x => x.k === k);
+const poTotal = r => r.lines.reduce((a, L) => a + L.b.total, 0);
+/* One sheet: a strip saying whether it's a draft (with its own Place order) or
+   placed, then the PO itself. */
+function poSheetHtml(r){
+  const k = r.k, s = SUPPLIERS[r.sup], id = poId(k), arr = new Date(Math.max(...r.lines.map(L => +L.arrive))), total = poTotal(r);
   const ship = r.kind === 'delivery' ? `Ship to: ${esc(JOB.street)}, ${esc(JOB.city)}` : `Deliver to store: ${esc(s.name)}, ${esc(s.store)}`;
-  const total = r.lines.reduce((a, L) => a + L.b.total, 0), i = S.poList.indexOf(k), n = S.poList.length;
   const fact = (fk, v) => `<div class="po-f"><span class="po-fk">${fk}</span><span class="po-fv">${v}</span></div>`;
   const unit = p => perUnit(p) === 'each' ? '' : ` <i>/ ${esc(perUnit(p))}</i>`;
   const line = L => `<div class="po-line">
@@ -1680,25 +1682,14 @@ function poDocHtml(k){
       <span class="po-q">${esc(L.b.label)}</span>
       <span class="po-u">${money(L.o.price)}${unit(L.p)}</span>
       <span class="po-a">${money(L.b.total)}</span></div>`;
-  const draft = S.poDraft.has(k), drafts = S.poList.filter(x => S.poDraft.has(x));
+  const draft = S.poDraft.has(k);
   const billTo = r.buyer === ORG ? 'Kai Pro account, Net 30' : esc(r.buyer), who = esc(r.buyer === ORG ? ORG_ACCT : r.buyer);
-  const ic = (d) => `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
-  return `<div class="po-wrap">
-    <div class="po-bar">
-      <nav class="po-crumb"><button type="button" data-act="po-close">Orders</button><span aria-hidden="true">›</span><b>${draft ? 'Draft purchase order' : 'Purchase order'} · ${esc(s.name)}</b></nav>
-      ${n > 1 ? `<div class="po-pager"><button type="button" data-act="po-step" data-d="-1" ${i <= 0 ? 'disabled' : ''} aria-label="Previous order">‹</button><span>${i + 1} of ${n}</span><button type="button" data-act="po-step" data-d="1" ${i >= n - 1 ? 'disabled' : ''} aria-label="Next order">›</button></div>` : ''}
-      <div class="po-acts">
-        <button type="button" class="po-btn" data-act="po-print">${ic('<path d="M4.5 6V2.5h7V6M4.5 11.5h-2v-5h11v5h-2M4.5 9.5h7v4h-7z"/>')}Print</button>
-        <button type="button" class="po-btn" data-act="po-export" data-id="${id}">${ic('<path d="M8 2.5v8M4.8 7.5 8 10.7l3.2-3.2M3 13.5h10"/>')}Export</button>
-        ${draft ? `${drafts.length > 1 ? `<button type="button" class="po-btn" data-act="po-place-all">Place all ${drafts.length} · ${money(drafts.reduce((a, x) => { const q = groupsOf(orderLines()).flatMap(g => g.rows).find(y => y.k === x); return a + (q ? q.lines.reduce((b, L) => b + L.b.total, 0) : 0); }, 0))}</button>` : ''}<button type="button" class="po-btn go" data-act="po-place">Place order</button>`
-          : `<button type="button" class="po-btn ink" data-act="po-share">${ic('<path d="M14.5 1.5 7 9M14.5 1.5 10 14.5 7 9 1.5 6z"/>')}Share</button>`}
-      </div></div>
-    <div class="po-mat">
-      ${draft ? `<div class="po-confirm"><div><b>This is a draft. Nothing is sent yet.</b><span>Check the items, quantities and where it goes. Once you place the order it goes to ${esc(s.name)} and can’t be cancelled.</span></div><button type="button" class="po-btn go lg" data-act="po-place">Place order · ${money(total)}</button></div>`
-        : `<div class="po-confirm sent"><div><b>✓ Placed with ${esc(s.name)} · ${TODAY.toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}</b><span>A placed order can’t be cancelled. To change something, order it again or talk to ${esc(s.name)}.</span></div></div>`}
-      <article class="po-sheet${draft ? ' is-draft' : ''}">${draft ? '<span class="po-wm" aria-hidden="true">Draft</span>' : ''}
+  return `<section class="po-one" data-po="${esc(k)}">
+    ${draft ? `<div class="po-strip"><span><b>Draft</b> · nothing sent to ${esc(s.name)} yet</span><button type="button" class="po-btn go" data-act="po-place" data-k="${esc(k)}">Place order · ${money(total)}</button></div>`
+      : `<div class="po-strip sent"><span><b>✓ Placed with ${esc(s.name)} · ${TODAY.toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}</b> · a placed order can’t be cancelled</span></div>`}
+    <article class="po-sheet${draft ? ' is-draft' : ''}">${draft ? '<span class="po-wm" aria-hidden="true">Draft</span>' : ''}
       <header class="po-hd">
-        <div class="po-hd-l"><span class="po-k">Purchase order</span><h1>${esc(r.buyer === ORG ? ORG_ACCT : r.buyer)}</h1><span class="po-ship">${ship}</span><span class="po-ship">${draft ? `Buyer: ${who} · Bill to: ${billTo}` : `Bought by ${who} · Billed to ${billTo}`}</span></div>
+        <div class="po-hd-l"><span class="po-k">Purchase order</span><h1>${who}</h1><span class="po-ship">${ship}</span><span class="po-ship">${draft ? `Buyer: ${who} · Bill to: ${billTo}` : `Bought by ${who} · Billed to ${billTo}`}</span></div>
         <div class="po-facts">
           ${fact('Status', draft ? '<span class="po-pill draft">Draft</span>' : '<span class="po-pill">Sent</span>')}
           ${fact('Source', `From ${esc(orderSrc(r.sup))}`)}
@@ -1713,7 +1704,49 @@ function poDocHtml(k){
         ${r.lines.map(line).join('')}
         <div class="po-line po-foot"><span class="po-th"></span><span class="po-nm"><b>Order total</b></span><span class="po-q"></span><span class="po-u"></span><span class="po-a">${money(total)}</span></div>
       </div>
-    </article></div></div>`;
+    </article></section>`;
+}
+/* All the orders on one page: a contents list on the left (sticky; it jumps to
+   each PO and marks the one you're reading), the sheets stacked on the right. */
+function poJump(k, now){
+  const el = $('#rvScroll'), sec = el && [...el.querySelectorAll('.po-one[data-po]')].find(x => x.dataset.po === k); if(!sec) return;
+  const bar = el.querySelector('.po-bar'), top = el.scrollTop + sec.getBoundingClientRect().top - el.getBoundingClientRect().top - (bar ? bar.offsetHeight : 0) - 16;
+  el.scrollTo({top, behavior: now ? 'auto' : 'smooth'});
+}
+// the contents list marks the PO you're reading
+function poSpy(){
+  const el = $('#rvScroll'); if(!el || !el.querySelector('.po-toc')) return;
+  const bar = el.querySelector('.po-bar'), line = el.getBoundingClientRect().top + (bar ? bar.offsetHeight : 0) + 120;
+  let cur = null; el.querySelectorAll('.po-one[data-po]').forEach(x => { if(x.getBoundingClientRect().top <= line) cur = x.dataset.po; });
+  if(!cur) cur = el.querySelector('.po-one[data-po]')?.dataset.po;
+  if(el.scrollTop + el.clientHeight >= el.scrollHeight - 4){ const all = el.querySelectorAll('.po-one[data-po]'); cur = all[all.length - 1].dataset.po; }
+  el.querySelectorAll('.po-ti').forEach(b => b.classList.toggle('on', b.dataset.k === cur));
+}
+document.addEventListener('scroll', e => { if(e.target && e.target.id === 'rvScroll') poSpy(); }, true);
+function poDocHtml(){
+  const R = S.poList.map(poRow).filter(Boolean); if(!R.length){ S.po = null; return ''; }
+  const drafts = R.filter(r => S.poDraft.has(r.k)), n = R.length, sum = rs => money(rs.reduce((a, r) => a + poTotal(r), 0));
+  const ic = (d) => `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const name = drafts.length ? (n === 1 ? 'Draft purchase order' : 'Draft purchase orders') : (n === 1 ? 'Purchase order' : 'Purchase orders');
+  const place = drafts.length > 1 ? `<button type="button" class="po-btn go" data-act="po-place-all">Place all ${drafts.length} · ${sum(drafts)}</button>`
+    : drafts.length ? `<button type="button" class="po-btn go" data-act="po-place" data-k="${esc(drafts[0].k)}">Place order · ${sum(drafts)}</button>` : '';
+  const toc = n < 2 ? '' : `<nav class="po-toc" aria-label="Purchase orders"><span class="po-k">${n} purchase orders</span>
+    ${R.map((r, i) => { const s = SUPPLIERS[r.sup], d = S.poDraft.has(r.k);
+      return `<button type="button" class="po-ti${r.k === S.po ? ' on' : ''}" data-act="po-jump" data-k="${esc(r.k)}"><i>${String(i + 1).padStart(2, '0')}</i><span><b>${esc(s.name)}</b><em>${KIND[r.kind]}${r.buyer !== ORG ? ` · ${esc(r.buyer)}` : ''}</em></span><span class="po-ti-r"><b>${money0(poTotal(r))}</b><em class="${d ? 'dr' : 'ok'}">${d ? 'Draft' : '✓ Placed'}</em></span></button>`; }).join('')}
+    <div class="po-toc-tot"><span>Total</span><b>${sum(R)}</b></div></nav>`;
+  return `<div class="po-wrap">
+    <div class="po-bar">
+      <nav class="po-crumb"><button type="button" data-act="po-close">Orders</button><span aria-hidden="true">›</span><b>${name} · ${n === 1 ? esc(SUPPLIERS[R[0].sup].name) : n}</b></nav>
+      <div class="po-acts">
+        <button type="button" class="po-btn" data-act="po-print">${ic('<path d="M4.5 6V2.5h7V6M4.5 11.5h-2v-5h11v5h-2M4.5 9.5h7v4h-7z"/>')}Print</button>
+        <button type="button" class="po-btn" data-act="po-export" data-id="${n === 1 ? poId(R[0].k) : 'POs-' + JOB.id}">${ic('<path d="M8 2.5v8M4.8 7.5 8 10.7l3.2-3.2M3 13.5h10"/>')}Export</button>
+        ${place || `<button type="button" class="po-btn ink" data-act="po-share">${ic('<path d="M14.5 1.5 7 9M14.5 1.5 10 14.5 7 9 1.5 6z"/>')}Share</button>`}
+      </div></div>
+    <div class="po-mat"><div class="po-layout${toc ? '' : ' solo'}">${toc}
+      <div class="po-sheets">
+        ${drafts.length ? `<div class="po-confirm"><div><b>${drafts.length === 1 ? 'This is a draft' : `${drafts.length} drafts`}. Nothing is sent yet.</b><span>Check the items, quantities and where each one goes. Once an order is placed it goes to the supplier and can’t be cancelled.</span></div>${place.replace('class="po-btn go"', 'class="po-btn go lg"')}</div>` : ''}
+        ${R.map(poSheetHtml).join('')}
+      </div></div></div></div>`;
 }
 /* An order, laid out like the purchase order it becomes (the PO document in
    Shop with Kai · Layout): who it's from and for, its facts on the right, then
@@ -2186,7 +2219,8 @@ function renderReview(){
       <button type="button" class="rb-tot" title="Hover for the breakdown"><span class="k">Order amount</span><b class="num">${money(total + tax)}</b><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.5 6 4l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       ${S.placed ? `<button class="btn ink lg" data-act="screen" data-v="pickup">Open the pickup list</button>` : (() => { const n = groupsOf(lines).flatMap(g => g.rows).filter(r => r.kind !== 'store' && !S.rvDone.has(r.k)).length; return n ? `<button class="btn pri lg" data-act="place">Order all ${n} now</button>` : '<button class="btn pri lg" disabled>Everything ordered</button>'; })()}
     </div></div>`;
-  if(S.po){ const doc = poDocHtml(S.po); if(doc){ el.innerHTML = doc; reviewSpy(); return; } }
+  host.classList.toggle('po-focus', !!S.po);   // the purchase order is a focused page: no left panel
+  if(S.po){ const doc = poDocHtml(); if(doc){ el.innerHTML = doc; poSpy(); return; } host.classList.remove('po-focus'); }
   el.innerHTML = `<div class="rv">
     <div class="rv-top"><div><button class="link" data-act="screen" data-v="shop">← Back to shopping</button><h1 style="margin-top:10px">${S.placed ? 'Orders' : 'Review & order'}</h1>
       <p>${esc(JOB.street)} · ${lines.length} lines from ${NEEDS.filter(n => n.pick).length} items · ${sups.length} orders</p></div>
@@ -2534,16 +2568,16 @@ document.addEventListener('click', e => {
       else { S.poDraft = new Set([k]); S.po = k; S.poList = [k]; }   // Order now: the draft PO, to check and place
       renderReview(); if(S.po) $('#rvScroll').scrollTop = 0; } break;
     // the purchase order document
-    case 'po-open': S.po = t.dataset.k; S.poList = groupsOf(orderLines()).flatMap(g => g.rows).filter(r => r.kind !== 'store' && isDone(r.k, false)).map(r => r.k); renderReview(); $('#rvScroll').scrollTop = 0; break;
-    case 'po-close': S.po = null; S.poDraft.clear(); renderReview(); break;   // leaving a draft: nothing was sent
-    case 'po-step': { const i = S.poList.indexOf(S.po) + (+t.dataset.d); if(S.poList[i]){ S.po = S.poList[i]; renderReview(); $('#rvScroll').scrollTop = 0; } break; }
+    case 'po-open': S.po = t.dataset.k; S.poList = groupsOf(orderLines()).flatMap(g => g.rows).filter(r => r.kind !== 'store' && isDone(r.k, false)).map(r => r.k); renderReview(); poJump(S.po, true); break;
+    case 'po-close': S.po = null; S.poDraft.clear(); renderReview(); break;   // leaving drafts: nothing was sent
+    case 'po-jump': S.po = t.dataset.k; poJump(S.po); break;
     case 'po-place': case 'po-place-all': {   // Place order: sent to the supplier, and it can't be cancelled after this
-      const ks = a === 'po-place-all' ? S.poList.filter(k => S.poDraft.has(k)) : [S.po];
+      const ks = a === 'po-place-all' ? S.poList.filter(k => S.poDraft.has(k)) : [t.dataset.k];
       ks.forEach(k => { S.poDraft.delete(k); S.rvDone.add(k); });
       const all = groupsOf(orderLines()).flatMap(g => g.rows).filter(r => r.kind !== 'store').every(r => S.rvDone.has(r.k));
       if(all) S.placed = true;
       toast(ks.length > 1 ? `${ks.length} orders placed.${all ? ' Pickup list sent to J. Ruiz.' : ''}` : `Order placed with ${esc(SUPPLIERS[ks[0].split('|')[0]].name)}.${all ? ' Pickup list sent to J. Ruiz.' : ''}`);
-      renderReview(); $('#rvScroll').scrollTop = 0; break; }
+      const el = $('#rvScroll'), top = el.scrollTop; renderReview(); el.scrollTop = top; break; }
     case 'po-print': window.print(); break;
     case 'po-export': toast(`Downloaded ${t.dataset.id}.pdf`); break;
     case 'po-share': toast('Link to this purchase order copied.'); break;

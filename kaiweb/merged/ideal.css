@@ -2208,3 +2208,34 @@ button.tg-lab:hover .tg-name b{text-decoration:underline;text-underline-offset:3
 .po-sheet{position:relative;overflow:hidden}
 .po-wm{position:absolute;top:44%;left:50%;transform:translate(-50%,-50%) rotate(-24deg);font-family:var(--display);font-size:150px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(26,26,26,.045);pointer-events:none;white-space:nowrap}
 .po-ship + .po-ship{font-size:13px;color:var(--t3)}
+/* the purchase order (draft or placed) is a focused page: the left panel steps aside */
+.screen.review.po-focus:not([hidden]){grid-template-columns:minmax(0,1fr)}
+.screen.review.po-focus > #list{display:none}
+/* All POs on one page: contents on the left, sheets stacked on the right (Nov 24) */
+.po-layout{display:grid;grid-template-columns:250px minmax(0,980px);gap:36px;justify-content:center;align-items:start}
+.po-layout.solo{grid-template-columns:minmax(0,980px)}
+.po-sheets{display:flex;flex-direction:column;gap:56px;min-width:0}
+.po-sheets .po-confirm{margin:0;max-width:none}
+.po-toc{position:sticky;top:84px;display:flex;flex-direction:column;background:var(--white);border:1px solid var(--ink)}
+.po-toc > .po-k{padding:12px 14px 10px;border-bottom:1px solid var(--ink)}
+.po-ti{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:start;padding:12px 14px;text-align:left;border-bottom:1px solid var(--stroke);background:var(--white)}
+.po-ti:hover{background:var(--sunken-lift)}
+.po-ti.on{background:#FDFDD6;box-shadow:inset 3px 0 0 var(--ink)}
+.po-ti > i{font-style:normal;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;color:var(--t3);padding-top:2px}
+.po-ti span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.po-ti b{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.po-ti em{font-style:normal;font-size:11.5px;color:var(--t2)}
+.po-ti-r{align-items:flex-end;text-align:right}
+.po-ti-r b{font-variant-numeric:tabular-nums}
+.po-ti-r em{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.po-ti-r em.dr{color:var(--t3)}
+.po-ti-r em.ok{color:var(--success)}
+.po-toc-tot{display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t2)}
+.po-toc-tot b{font-family:var(--body);font-size:14px;letter-spacing:0;text-transform:none;color:var(--ink);font-variant-numeric:tabular-nums}
+.po-one{display:flex;flex-direction:column;gap:0}
+.po-one .po-sheet{max-width:none;margin:0}
+.po-strip{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 14px 10px 18px;background:var(--white);border:1px solid var(--stroke);border-bottom:0;font-size:13px;color:var(--t2)}
+.po-strip b{color:var(--ink)}
+.po-strip.sent{background:var(--success-fill);border-color:var(--success);color:var(--t2)}
+.po-strip.sent b{color:var(--success)}
+@media (max-width:1100px){ .po-layout{grid-template-columns:minmax(0,1fr)} .po-toc{position:static} }
