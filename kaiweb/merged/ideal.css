@@ -2097,3 +2097,100 @@ button.tg-lab:hover .tg-name b{text-decoration:underline;text-underline-offset:3
 .gc.go svg{color:#6B4A1E}
 .gc.ord em,.gc.go em,.gc.arr em{font-size:8px;letter-spacing:.1em}
 .tg .tg-hd{grid-template-rows:auto}
+
+/* ── Big bars, architectural (Nov 24) ──
+   Back to the Project Review timeline: square corners, a 1px ink frame,
+   ink rules between parts, flat fills, mono caps. Blueprint hatch for the
+   time to order, beige for the trip, lime for the buffer, signal red for late. */
+.tg.st-fat .tg-bar,.tg.st-fat .tg-late{height:48px;margin-top:-24px;border-radius:0;gap:0}
+.tg.st-fat .tg-bar{border:1px solid var(--ink)}
+.tg.st-fat .tg-bar:has(.sg) .sg{border:0;border-right:1px solid var(--ink);font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);gap:8px;padding:0 9px}
+.tg.st-fat .tg-bar:has(.sg) .sg:last-child{border-right:0}
+.tg.st-fat .tg-bar:has(.sg.win) .sg.win{background:repeating-linear-gradient(-45deg,rgba(46,90,135,.16) 0 1px,transparent 1px 7px),#FAF8F3;color:#2E5A87;border-right-color:var(--ink);justify-content:flex-start}
+.tg.st-fat .tg-bar:has(.sg) .sg.go{background:var(--paper-3);justify-content:flex-start}
+.tg.st-fat .tg-bar:has(.sg) .sg.hold{background:#FAF8F3}
+.tg.st-fat .tg-bar:has(.sg) .sg.buf{background:#FDFF86;justify-content:center}
+.tg.st-fat .sg.go i svg,.tg.st-fat .sg.win i svg{width:14px;height:14px}
+.tg.st-fat .sg.win i .ic2,.tg.st-fat .sg.win i .ic2 em{color:#2E5A87}
+.tg.st-fat .tg-bar:has(.sg) .sg:hover{box-shadow:inset 0 0 0 2px var(--ink)}
+/* late: signal red, framed in ink, square end */
+.tg.st-fat .tg-late{background:#E84E2F;color:#fff;border:1px solid var(--ink);border-left:0;border-radius:0;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+.tg.st-fat .tg-pin{border-radius:0;border:1px solid var(--ink);background:#E84E2F;width:16px;height:22px;margin:-11px 0 0 -8px}
+/* photos: square, ink frame */
+.tg.st-fat .tg-pk{border-radius:0;border:1px solid var(--ink);box-shadow:none;width:48px;height:48px;margin:-24px 0 0 -24px}
+.tg.st-fat .tg-pk.late{border:2px solid #E84E2F;box-shadow:none}
+.tg.st-fat .tg-pk:hover{box-shadow:0 0 0 1px var(--ink)}
+.tg.st-fat .tg-pk b{top:0;right:0;border-radius:0}
+/* arrival flag: an ink tag with a hairline down through the bar */
+.tg.st-fat .tg-arr{height:18px;margin-top:-41px;padding:0 7px 0 5px;border-radius:0;background:var(--ink);color:#FAF8F3;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase}
+.tg.st-fat .tg-arr::after{width:1px;height:46px;background:var(--ink)}
+.tg.st-fat .tg-arr.late{background:#E84E2F}
+.tg.st-fat .tg-arr.late::after{background:#E84E2F}
+.tg.st-fat .tgp.done .tg-bar{opacity:.5}
+/* the flag row in Before you order: a quiet tan mark on the left, no alarm */
+.pay-row.flag{box-shadow:inset 3px 0 0 var(--hair, #BFB8A6)}
+
+/* ── Purchase order (after Order), after the kaiweb Documents PO (Nov 24) ──
+   A bar with the breadcrumb and Cancel · Print · Export · Share; a light
+   yellow drafting mat with a grid; one white sheet. */
+.po-wrap{min-height:100%;display:flex;flex-direction:column;background:#FDFDD6}
+.po-bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:18px;padding:12px 24px;background:var(--app-bg);border-bottom:1px solid var(--stroke)}
+.po-crumb{display:flex;align-items:center;gap:12px;min-width:0;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+.po-crumb button{font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.po-crumb span{color:var(--t3)}
+.po-crumb b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.po-pager{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--t2)}
+.po-pager button{width:28px;height:28px;border:1px solid var(--stroke);background:var(--white);font-size:15px;line-height:1;color:var(--ink)}
+.po-pager button:hover:not(:disabled){border-color:var(--ink)}
+.po-pager button:disabled{opacity:.35}
+.po-acts{margin-left:auto;display:flex;gap:10px}
+.po-btn{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;border:1px solid var(--stroke);background:var(--white);font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);white-space:nowrap}
+.po-btn svg{width:14px;height:14px}
+.po-btn:hover{border-color:var(--ink)}
+.po-btn.bad{color:#C2412D;border-color:#C2412D}
+.po-btn.bad:hover{background:#FBEDEA}
+.po-btn.ink{background:var(--ink);border-color:var(--ink);color:#fff}
+.po-btn.ink:hover{background:#000}
+.po-mat{flex:1;padding:48px 32px 80px;background-color:#FDFDD6;background-image:linear-gradient(rgba(26,26,26,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(26,26,26,.05) 1px,transparent 1px);background-size:24px 24px}
+.po-sheet{max-width:980px;margin:0 auto;padding:64px 72px 72px;background:var(--white);box-shadow:0 1px 2px rgba(26,26,26,.08),0 10px 30px rgba(26,26,26,.08)}
+.po-hd{display:flex;flex-wrap:wrap;justify-content:space-between;gap:28px;padding-bottom:26px;border-bottom:1px solid var(--stroke)}
+.po-hd-l{display:flex;flex-direction:column;gap:6px;min-width:0}
+.po-k,.po-fk{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3)}
+.po-hd h1{margin:0;font-family:var(--display);font-size:30px;font-weight:700;letter-spacing:-.015em;line-height:1.05;color:var(--ink)}
+.po-ship{font-size:14px;color:var(--t2)}
+.po-facts{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:14px 40px}
+.po-f{display:flex;flex-direction:column;gap:5px}
+.po-fv{font-size:14px;color:var(--ink)}
+.po-pill{display:inline-block;padding:2px 10px;border:1px solid var(--ink);border-radius:999px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.po-id{font-family:var(--mono);font-size:12px;letter-spacing:.02em}
+.po-note{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:10px 24px;padding:18px 0;border-bottom:1px solid var(--stroke)}
+.po-note p{margin:0;font-size:13.5px;color:var(--t2)}
+.po-note p b{color:var(--ink)}
+.po-link{font-size:13.5px;color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--midtone)}
+.po-link:hover{text-decoration-color:var(--ink)}
+.po-tbl{margin-top:26px;--po-cols:56px minmax(0,1fr) 96px 120px 120px}
+.po-line{display:grid;grid-template-columns:var(--po-cols);gap:18px;align-items:center;padding:14px 0;border-bottom:1px solid var(--stroke)}
+.po-hdr{padding:0 0 10px;border-bottom:0}
+.po-hdr > span{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.po-th{width:56px;height:56px;display:grid;place-items:center;background:var(--sunken);border:1px solid var(--stroke);overflow:hidden}
+.po-th img{width:100%;height:100%;object-fit:cover}
+.po-hdr .po-th,.po-foot .po-th{background:none;border:0;height:auto}
+.po-nm{display:flex;flex-direction:column;gap:4px;min-width:0}
+.po-nm b{font-size:14px;font-weight:700;color:var(--ink)}
+.po-nm i{font-style:normal;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--t3);line-height:1.5}
+.po-nm u{text-underline-offset:3px;text-decoration-color:var(--midtone);color:var(--t2)}
+.po-q,.po-u,.po-a{text-align:right;font-size:13.5px;font-variant-numeric:tabular-nums}
+.po-q{color:var(--t2)} .po-u{color:var(--ink)} .po-u i{font-style:normal;color:var(--t3)}
+.po-a{font-weight:700;color:var(--ink)}
+.po-hdr .po-q,.po-hdr .po-u,.po-hdr .po-a{font-size:9px;font-weight:700;color:var(--t3)}
+.po-band{display:grid;grid-template-columns:var(--po-cols);gap:18px;align-items:baseline;margin:0 -18px;padding:12px 18px;background:var(--sunken);font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.po-band > span{grid-column:2}
+.po-band > b{grid-column:-2;text-align:right;font-family:var(--body);font-size:14px;letter-spacing:0;text-transform:none;color:var(--ink)}
+.po-foot{border-bottom:0;border-top:1px solid var(--ink);margin-top:-1px;padding-top:16px}
+.po-foot .po-nm b{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.po-foot .po-a{font-size:17px}
+.po-line:has(+ .po-foot){border-bottom:0}
+/* the order row after it's sent: one button that opens its PO */
+.pr-act .btn.po-view{border-color:var(--success);color:var(--success);background:var(--success-fill);gap:6px;font-size:12.5px}
+.pr-act .btn.po-view:hover{border-color:var(--ink);color:var(--ink)}
+@media print{ .po-bar{display:none} .po-mat{background:none;padding:0} .po-sheet{box-shadow:none} }

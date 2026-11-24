@@ -23,20 +23,21 @@ const IC = {
 
 /* ── Substitution ────────────────────────────────────────────────────
    What happens when a product is out of stock is a team setting, set once
-   for the organization (here: replace with any similar item), so nobody is
+   for the organization (here: only products within the template), so nobody is
    asked every time. Anyone can change it for one item: from the shelf, the
    product sheet or Review & order, in the "If this item is out of stock"
    dialog. "Choose a replacement now" keeps up to two chosen substitutes. */
-const SUB_TEAM = 'similar';
+const SUB_TEAM = 'template';
 const SUB_IC = {
   choose: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.5"/><path d="m6.6 10.2 2.3 2.3 4.6-4.9"/></svg>',
+  template: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2.5" width="12" height="15"/><path d="M7 6.5h6M7 10h6M7 13.5h3.5"/></svg>',
   similar: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 8A6 6 0 0 0 5 5.6L3.5 7.2"/><path d="M3.5 3.5v3.7h3.7"/><path d="M4.5 12A6 6 0 0 0 15 14.4l1.5-1.6"/><path d="M16.5 16.5v-3.7h-3.7"/></svg>',
   approval: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 13.5V9a4.5 4.5 0 0 1 9 0v4.5l1.5 1.5H4z"/><path d="M8.5 17.5h3"/></svg>',
   none: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4.5 4 8l3.5 3.5"/><path d="M4 8h7.5a4.5 4.5 0 0 1 0 9H8"/></svg>'
 };
 const SUB_OPTS = {
   choose: {t: 'Choose a replacement now', s: 'Approve it in advance. The crew swaps to it on the spot as a pre-approved substitution.', short: 'Chosen substitute'},
-  similar: {t: 'Replace with any similar item', s: 'Same kind, on the mood board, within 10% or $150. No change order; you’ll see what was swapped.', short: 'Any similar item'},
+  template: {t: 'Only products within the template', s: 'Swap only to a product the job’s template already uses for this kind of item. No change order; you’ll see what was swapped. Anything else asks you first.', short: 'Within the template'},
   approval: {t: 'Require my approval to replace', s: 'The crew asks you from the store. Approved swaps go into the next change order; if you don’t reply, it’s left off.', short: 'Ask me first'},
   none: {t: 'Don’t replace', s: 'If it’s out, it’s left off this pickup and stays on your list.', short: 'Don’t replace'}
 };
@@ -92,7 +93,7 @@ function renderSub(){
     <button type="button" class="sm-back" data-act="sub-close" aria-label="Back">←</button>
     <h3>If this item is out of stock</h3>
     ${p ? `<div class="sm-item"><img src="${ART.product(p)}" alt=""><div><b>${esc(p.name)}</b><span>${b.label} · ${money(b.total)} · ${ns.length > 1 ? `${ns.length} tasks` : esc(ROOM[n0.room].name)}</span></div></div>` : ''}
-    <div class="sm-opts" role="radiogroup">${['choose', 'similar', 'approval', 'none'].map(opt).join('')}</div>
+    <div class="sm-opts" role="radiogroup">${['choose', 'template', 'approval', 'none'].map(opt).join('')}</div>
     <label class="sm-note"><b>Add note</b><input id="subNote" type="text" value="${esc(dr.note)}" placeholder="e.g. Same color family, nothing darker" autocomplete="off"></label>
     <div class="sm-ft"><button type="button" class="btn ink block" data-act="sub-save">Save</button>
       <p>Your team's setting is “${SUB_OPTS[SUB_TEAM].t.toLowerCase()}”. This changes it for this ${ns.length > 1 ? 'line' : 'item'} only.</p></div>
@@ -133,6 +134,8 @@ const S = {
   ordFul: {},               // 'sup|buyer' → an order's own pickup / delivery
   rvOpen: null,            // Merged: purchase rows opened to show their items (null = the first one)
   rvDone: new Set(),
+  rvCancel: new Set(),      // orders cancelled from their PO
+  po: null, poList: [],     // the purchase order open after Order (and the ones you can page through)
   tlCon: new Set(),         // Merged Timeline: contractors picked in the filter (none = all)
   tlMeth: new Set(),        // Merged Timeline: ways of getting it picked in the filter (store | pickup | delivery)          // Merged Timeline: weeks opened inside a big purchase
   fixKeep: new Set(),       // Merged: fixes you chose to keep as is        // Merged: purchases marked bought / ordered
@@ -1637,24 +1640,73 @@ function orderLines(){
     return L;
   });
 }
-/* Before you order: the team's substitution policy first (information), then
-   one line per thing worth a look, each "Label: count", what it is, and where
-   to go. None of them stop you from submitting, and the heading says so. */
-function checksHtml(lines){
-  const todo = NEEDS.filter(n => !n.pick), late = lines.filter(L => L.late);
+/* Before you order (merged with Payment): one table after the orders, right
+   above "Order all" — how it's paid, the PO numbers, who receives it, the one
+   substitution rule, then anything Kai flagged (over allowance is a flag, not a
+   stop). */
+function beforeOrderHtml(){
   const over = NEEDS.filter(isOver), overRooms = ROOMS.filter(r => roomCost(r.id).over);
-  const cnt = (k, w) => `${k} ${w}${k === 1 ? '' : 's'}`, short = p => esc(p.name.split(/,|\(/)[0].trim());
-  const md = d => d.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
-  const row = (kind, label, count, detail, act) => `<div class="bo-row ${kind}"><span class="bo-ic">${kind === 'info' ? '↻' : kind === 'ok' ? '✓' : '!'}</span>
-    <span class="bo-t"><b>${label}${count ? ':' : ''}</b>${count ? ` ${count}` : ''}</span><span class="bo-d">${detail}</span><span class="bo-a">${act || ''}</span></div>`;
-  const btn = (act, t, attrs) => `<button class="btn sm" data-act="${act}"${attrs || ''}>${t}</button>`;
-  const rows = [row('info', 'Substitution policy', '', 'Only products within template are pre-approved')];
-  if(false && late.length) rows.push(row('warn', 'Arrives late', cnt(late.length, 'item'), late.map(L => `${short(L.p)}: arrives ${md(L.arrive)}, needed ${md(L.need)}`).join(' · '), btn('rv-view', 'View', ` data-key="${late[0].key}"`)));
-  if(over.length || overRooms.length) rows.push(row('warn', 'Over allowance', [over.length ? cnt(over.length, 'task') : '', overRooms.length ? cnt(overRooms.length, 'department') : ''].filter(Boolean).join(', '),
-    over.map(n => `${esc(n.task)} ${money0(overBy(n))} over`).concat(overRooms.map(r => `${esc(r.name)} ${money0(roomCost(r.id).over)} over`)).join(' · '), btn('fix-review', 'Review')));
-  if(false && todo.length) rows.push(row('warn', 'Missing products', cnt(todo.length, 'task'), todo.map(n => esc(taskLabel(n))).join(', '), btn('fix-todo', 'Choose now')));
-  if(rows.length === 1) rows.push(row('ok', 'All clear', '', 'Nothing else to check'));
-  return `<div class="checks bo">${rows.join('')}</div>`;
+  const cnt = (k, w) => `${k} ${w}${k === 1 ? '' : 's'}`;
+  const row = (k, body, act, cls) => `<div class="pay-row${cls ? ' ' + cls : ''}"><span class="k">${k}</span><span>${body}</span>${act || '<span></span>'}</div>`;
+  const rows = [
+    row('Pay with', '<b style="color:var(--ink)">Kai Pro account</b> · Net 30 · billed to Main St Renovation', '<button class="link">Change</button>'),
+    row('PO numbers', 'Added to each order automatically, so invoices match the job'),
+    row('Receives it', `<b style="color:var(--ink)">${TEAM.JR.name}</b> · ${esc(TEAM.JR.role)} — pickup lists, delivery texts, swap requests`, '<button class="link">Change</button>'),
+    row('Substitutions', 'Only products within the template are pre-approved. Anything else asks you first.', '<button class="link" data-act="screen" data-v="pickup">See how</button>')];
+  if(over.length || overRooms.length) rows.push(row('Over allowance',
+    `<b style="color:var(--ink)">${[over.length ? cnt(over.length, 'task') : '', overRooms.length ? cnt(overRooms.length, 'department') : ''].filter(Boolean).join(', ')}</b> · ${over.map(n => `${esc(n.task)} ${money0(overBy(n))} over`).concat(overRooms.map(r => `${esc(r.name)} ${money0(roomCost(r.id).over)} over`)).join(' · ')}`,
+    '<button class="link" data-act="fix-review">Review</button>', 'flag'));
+  return `<section class="rv-sec"><h2>Before you order <span>Kai checked the list · nothing here stops you from ordering</span></h2><div class="pay">${rows.join('')}</div></section>`;
+}
+/* ── Purchase order ──
+   What you see after Order: the PO itself, as the job's Documents tab shows it
+   (Purchase order · supplier). A yellow drafting mat, one white sheet: who it's
+   for, where it goes, four facts, then the items banded by supplier with the
+   total. Cancel, Print, Export and Share sit in the bar; with several orders
+   sent at once, arrows step through them. */
+const poId = k => 'PO-' + String([...k].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % 90000000 + 10000000);
+function poDocHtml(k){
+  const r = groupsOf(orderLines()).flatMap(g => g.rows).find(x => x.k === k); if(!r){ S.po = null; return ''; }
+  const s = SUPPLIERS[r.sup], id = poId(k), arr = new Date(Math.max(...r.lines.map(L => +L.arrive)));
+  const ship = r.kind === 'delivery' ? `Ship to: ${esc(JOB.street)}, ${esc(JOB.city)}` : `Deliver to store: ${esc(s.name)}, ${esc(s.store)}`;
+  const total = r.lines.reduce((a, L) => a + L.b.total, 0), i = S.poList.indexOf(k), n = S.poList.length;
+  const fact = (fk, v) => `<div class="po-f"><span class="po-fk">${fk}</span><span class="po-fv">${v}</span></div>`;
+  const unit = p => perUnit(p) === 'each' ? '' : ` <i>/ ${esc(perUnit(p))}</i>`;
+  const line = L => `<div class="po-line">
+      <span class="po-th"><img src="${ART.product(L.p)}" alt=""></span>
+      <span class="po-nm"><b>${esc(L.p.name)}</b><i>SKU ${esc(L.p.sku)} · For ${L.needs.map(m => `<u>${esc(ROOM[m.room].name)} › ${esc(taskLabel(m))}</u>`).join(', ')}</i></span>
+      <span class="po-q">${esc(L.b.label)}</span>
+      <span class="po-u">${money(L.o.price)}${unit(L.p)}</span>
+      <span class="po-a">${money(L.b.total)}</span></div>`;
+  const ic = (d) => `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  return `<div class="po-wrap">
+    <div class="po-bar">
+      <nav class="po-crumb"><button type="button" data-act="po-close">Orders</button><span aria-hidden="true">›</span><b>Purchase order · ${esc(s.name)}</b></nav>
+      ${n > 1 ? `<div class="po-pager"><button type="button" data-act="po-step" data-d="-1" ${i <= 0 ? 'disabled' : ''} aria-label="Previous order">‹</button><span>${i + 1} of ${n}</span><button type="button" data-act="po-step" data-d="1" ${i >= n - 1 ? 'disabled' : ''} aria-label="Next order">›</button></div>` : ''}
+      <div class="po-acts">
+        <button type="button" class="po-btn bad" data-act="po-cancel">${ic('<circle cx="8" cy="8" r="5.5"/><path d="M4.2 11.8l7.6-7.6"/>')}Cancel order</button>
+        <button type="button" class="po-btn" data-act="po-print">${ic('<path d="M4.5 6V2.5h7V6M4.5 11.5h-2v-5h11v5h-2M4.5 9.5h7v4h-7z"/>')}Print</button>
+        <button type="button" class="po-btn" data-act="po-export" data-id="${id}">${ic('<path d="M8 2.5v8M4.8 7.5 8 10.7l3.2-3.2M3 13.5h10"/>')}Export</button>
+        <button type="button" class="po-btn ink" data-act="po-share">${ic('<path d="M14.5 1.5 7 9M14.5 1.5 10 14.5 7 9 1.5 6z"/>')}Share</button>
+      </div></div>
+    <div class="po-mat"><article class="po-sheet">
+      <header class="po-hd">
+        <div class="po-hd-l"><span class="po-k">Purchase order</span><h1>${esc(r.buyer === ORG ? ORG_ACCT : r.buyer)}</h1><span class="po-ship">${ship}</span></div>
+        <div class="po-facts">
+          ${fact('Status', '<span class="po-pill">Sent</span>')}
+          ${fact('Source', `From ${esc(orderSrc(r.sup))}`)}
+          ${fact('Prepared', TODAY.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}))}
+          ${fact(r.kind === 'delivery' ? 'Delivery' : 'At the store', wmd(arr))}
+          ${fact('Document ID', `<span class="po-id">${id}</span>`)}
+        </div></header>
+      <div class="po-note"><p><b>Materials only.</b> Labor for these tasks is paid to the contractor.</p><button type="button" class="po-link" data-act="po-close">Part of the job at ${esc(JOB.street)} ›</button></div>
+      <div class="po-tbl">
+        <div class="po-line po-hdr"><span class="po-th"></span><span class="po-nm">Item</span><span class="po-q">Qty</span><span class="po-u">Unit price</span><span class="po-a">Amount</span></div>
+        <div class="po-band"><span>${esc(s.name)} · ${KIND[r.kind]}</span><b>${money(total)}</b></div>
+        ${r.lines.map(line).join('')}
+        <div class="po-line po-foot"><span class="po-th"></span><span class="po-nm"><b>Order total</b></span><span class="po-q"></span><span class="po-u"></span><span class="po-a">${money(total)}</span></div>
+      </div>
+    </article></div></div>`;
 }
 /* An order, laid out like the purchase order it becomes (the PO document in
    Shop with Kai · Layout): who it's from and for, its facts on the right, then
@@ -1910,7 +1962,7 @@ function timelineHtml(lines){
       segs = (r.store ? '' : trip(go, tripTxt)) + (!r.late && r.need > go ? sg('hold', bufA - go) + sg('buf', r.need - bufA, say(r.need - bufA, 64, 'Buffer')) : '');
       end = r.late ? Math.max(go, r.need) : Math.max(go, r.need);
     }
-    const done = S.rvDone.has(r.pk) || (S.placed && !r.store);
+    const done = isDone(r.pk, r.store);
     /* Grid: one box per day, filled by what's happening that day — time to
        order (blue), the order or store day itself (deep blue), on its way
        (peach), waiting on site, buffer (green), needed (yellow, with the photo),
@@ -1986,6 +2038,7 @@ function timelineHtml(lines){
    delivery), when they get it, the items — and opens to a table of the tasks
    it covers. In stock at the store = buy in store, same day; otherwise it's
    ordered and ships. */
+const isDone = (k, store) => !S.rvCancel.has(k) && (S.rvDone.has(k) || (S.placed && !store));
 const kindOf = L => L.pickup ? (L.o.stock >= L.b.n ? 'store' : 'pickup') : 'delivery';
 const KIND = {store: 'In store', pickup: 'Deliver to store', delivery: 'Delivery'};   // the three words used everywhere
 const byWhen = L => { const lead = kindOf(L) === 'store' ? 0 : dayN(L.arrive); return Math.max(1, dayN(L.need) - BUFFER - lead); };   // 1 = tomorrow (or already late)
@@ -2014,7 +2067,7 @@ function datesHtml(lines){
   const items = r => r.lines.flatMap(L => L.needs.filter(conOk).map(n => ({n, L})));
   const head = '<div class="pr-cols"><span></span><span>Who</span><span>Does what</span><span>Gets it</span><span>Items</span><span></span></div>';
   const row = r => {
-    const s = SUPPLIERS[r.sup], open = S.rvOpen.has(r.k), done = S.rvDone.has(r.k) || (S.placed && r.kind !== 'store');
+    const s = SUPPLIERS[r.sup], open = S.rvOpen.has(r.k), done = isDone(r.k, r.kind === 'store');
     const its = items(r), tot = S.tlCon.size ? its.reduce((a, {n, L}) => a + buy(L.p, n.qty, L.o).total, 0) : r.lines.reduce((a, L) => a + L.b.total, 0), late = r.lines.filter(L => L.late).length, arr = r.lines[0].arrive;
     const gets = r.kind === 'store' ? '<b>Same day</b>' : `<b>${wmd(arr)}</b><i>${r.kind === 'delivery' ? 'At the job' : 'At the store'}</i>`;   // "Does what" already says In store / Delivery / Deliver to store
     const who = r.buyer === ORG ? `<span class="pr-tag">You</span><b>${esc(ORG)}</b>` : `<span class="pr-tag">Contractor</span><b>${esc(r.buyer)}</b>`;
@@ -2032,7 +2085,7 @@ function datesHtml(lines){
         <span class="pr-do"><span class="mono" style="background:${s.tone}">${s.mono}</span><span><b>${KIND[r.kind]}</b><i>${esc(s.name)} · ${esc(s.store.split(' · ')[0])} · ${s.mi} mi</i></span></span>
         <span class="pr-gets">${gets}${late ? `<em>${late === 1 ? '1 item arrives' : `${late} items arrive`} after it’s needed</em>` : ''}</span>
         <span class="pr-its">${thumbs(r.lines)}<i>${its.length} ${its.length === 1 ? 'item' : 'items'} · ${money(tot)}</i></span>
-        <span class="pr-act"><button type="button" class="btn${done ? ' ok' : ''}" data-act="pr-done" data-k="${r.k}">${act}</button></span>
+        <span class="pr-act">${done && r.kind !== 'store' ? `<button type="button" class="btn po-view" data-act="po-open" data-k="${r.k}" title="Open the purchase order"><span class="ok-dot">✓</span> Ordered · View PO</button>` : `<button type="button" class="btn${done ? ' ok' : ''}" data-act="pr-done" data-k="${r.k}">${act}</button>`}</span>
       </div>${table}</div>`;
   };
   const shown = G.map(g => ({b: g.b, rows: g.rows.filter(r => !S.tlMeth.size || S.tlMeth.has(r.kind)).map(r => ({...r, lines: r.lines.filter(L => L.needs.some(conOk))})).filter(r => r.lines.length)}));
@@ -2126,6 +2179,7 @@ function renderReview(){
       <button type="button" class="rb-tot" title="Hover for the breakdown"><span class="k">Order amount</span><b class="num">${money(total + tax)}</b><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.5 6 4l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       ${S.placed ? `<button class="btn ink lg" data-act="screen" data-v="pickup">Open the pickup list</button>` : (() => { const n = groupsOf(lines).flatMap(g => g.rows).filter(r => r.kind !== 'store' && !S.rvDone.has(r.k)).length; return n ? `<button class="btn pri lg" data-act="place">Order all ${n} now</button>` : '<button class="btn pri lg" disabled>Everything ordered</button>'; })()}
     </div></div>`;
+  if(S.po){ const doc = poDocHtml(S.po); if(doc){ el.innerHTML = doc; reviewSpy(); return; } }
   el.innerHTML = `<div class="rv">
     <div class="rv-top"><div><button class="link" data-act="screen" data-v="shop">← Back to shopping</button><h1 style="margin-top:10px">${S.placed ? 'Orders' : 'Review & order'}</h1>
       <p>${esc(JOB.street)} · ${lines.length} lines from ${NEEDS.filter(n => n.pick).length} items · ${sups.length} orders</p></div>
@@ -2134,15 +2188,9 @@ function renderReview(){
     ${S.placed ? '' : fixesHtml(lines)}
     ${S.placed ? `<div class="placed"><span class="ic">✓</span><div><b>${sups.length} orders submitted</b><p>Pickups are ready tomorrow at 7 AM. ${TEAM.JR.name} has the pickup list; S. Patel and T. Oyelaran were told. Swaps at the store follow your swap rules.</p></div><button class="btn ink" data-act="screen" data-v="pickup">See the pickup list</button></div>` : ''}
     <div>
-      ${S.placed ? '' : `<section class="rv-sec"><h2>Before you order <span>Kai checked the list · none of these stop you from submitting</span></h2>${checksHtml(lines)}</section>`}
       ${datesHtml(lines)}<section class="rv-sec">
         <p class="rv-fine">${S.placed ? 'Orders and POs are on the job’s Documents tab.' : `One order and PO per supplier and buyer.${todo ? ` ${todo} that ${todo === 1 ? 'needs' : 'need'} a product will follow later.` : ''}`} Anything chosen later goes on a new order. Submitted orders are never edited.</p></section>
-      <section class="rv-sec"><h2>Payment</h2><div class="pay">
-        <div class="pay-row"><span class="k">Pay with</span><span><b style="color:var(--ink)">Kai Pro account</b> · Net 30 · billed to Main St Renovation</span><button class="link">Change</button></div>
-        <div class="pay-row"><span class="k">PO numbers</span><span>Added to each order automatically, so invoices match the job</span><span></span></div>
-        <div class="pay-row"><span class="k">Receives it</span><span><b style="color:var(--ink)">${TEAM.JR.name}</b> · ${esc(TEAM.JR.role)} — pickup lists, delivery texts, swap requests</span><button class="link">Change</button></div>
-        <div class="pay-row"><span class="k">Substitutions</span><span>Your team’s setting: <b style="color:var(--ink)">replace with any similar item</b> within 10% or $150 of the line, with <b style="color:var(--success)">no change order</b>. Anything else asks you first.</span><button class="link" data-act="screen" data-v="pickup">See how</button></div>
-      </div></section>
+      ${S.placed ? '' : beforeOrderHtml()}
     </div>
     </div>${bar}`;
   el.scrollTop = keep;
@@ -2168,21 +2216,22 @@ function reviewSpy(){
 document.addEventListener('scroll', e => { if(e.target && e.target.id === 'rvScroll') reviewSpy(); }, true);
 
 /* ═════════════ PICKUP (phone) ═════════════ */
-const SWAP_PCT = .10, SWAP_MIN = 150;
+// "Within the template": a product the job's template already uses for that kind of item
+const inTemplate = c => Object.values(TEMPLATE_PICK).includes(c.sku);
 function pickupLines(){
   return orderLines().filter(L => L.sup === 'hd' && L.pickup).sort((a, b) => a.o.aisle.localeCompare(b.o.aisle, undefined, {numeric: true}));
 }
 function swapOptions(L){
-  const base = L.b.total, limit = Math.max(base * SWAP_PCT, SWAP_MIN);
+  const base = L.b.total;
   const ids = new Set(L.backups), mode = subMode(L.needs[0]);
   const cands = BY_CAT[L.p.cat].filter(c => c.sku !== L.p.sku && c.offers.some(o => o.sup === 'hd' && o.stock >= buy(c, L.qty, o).n));
   const out = cands.map(c => {
     const o = c.offers.find(x => x.sup === 'hd'), b = buy(c, L.qty, o), delta = b.total - base;
-    const backup = ids.has(c.sku), like = c.mood && delta <= limit;
-    const ok = mode === 'choose' ? backup : mode === 'similar' ? (backup || like) : false;
+    const backup = ids.has(c.sku), tpl = inTemplate(c);
+    const ok = mode === 'choose' ? backup : mode === 'template' ? (backup || tpl) : false;
     return {c, o, b, delta, ok, backup,
       why: backup ? `Chosen substitute · ${delta > 0 ? `+${money0(delta)}` : 'same or less'}` : mode === 'approval' ? 'This item is set to ask first'
-        : mode === 'choose' ? 'Not one of the chosen substitutes' : like ? `Similar item · ${delta > 0 ? `+${money0(delta)}` : 'same or less'}, inside your ${money0(limit)} swap limit` : !c.mood ? 'Different look — off the mood board' : `+${money0(delta)}, over the ${money0(limit)} swap limit`};
+        : mode === 'choose' ? 'Not one of the chosen substitutes' : tpl ? `Within the template · ${delta > 0 ? `+${money0(delta)}` : 'same or less'}` : 'Not in the template — asks the manager'};
   }).sort((a, b) => (b.backup - a.backup) || (b.ok - a.ok) || (Math.abs(a.delta) - Math.abs(b.delta)));   // closest match first, not cheapest
   // A few that just work, then the closest ones that would need the manager.
   if(mode === 'approval') return out.slice(0, 4);   // every option asks, so show a few more
@@ -2220,13 +2269,13 @@ function renderPickup(){
       <p>${TEAM.JR.name}, the crew lead, picks up the Home Depot order. The list comes in aisle order, with each item's quantity in boxes and gallons. When the backsplash tile isn't on the shelf, the swap happens right there. Kai only asks for approval when the swap really changes the job.</p>
       <div class="pk-steps">
         <div><i>1</i><span><b>The list comes in aisle order</b><span>Quantities are in what you carry: boxes, gallons, pieces. Tap ✓ as each goes on the cart.</span></span></div>
-        <div><i>2</i><span><b>Out of stock? Tap “Swap it”</b><span>Kai shows what's on this store's shelf right now, following the item's substitution setting: chosen substitutes first, then similar items.</span></span></div>
+        <div><i>2</i><span><b>Out of stock? Tap “Swap it”</b><span>Kai shows what's on this store's shelf right now, following the item's substitution setting: chosen substitutes first, then products within the template.</span></span></div>
         <div><i>3</i><span><b>Inside the rules, it just happens</b><span>The job record updates, the swap is logged with the reason, and the manager is told. No phone call.</span></span></div>
         <div><i>4</i><span><b>Outside the rules, it asks — without stopping</b><span>${TEAM[ME].name} gets one tap to approve; the crew keeps picking up the rest.</span></span></div>
       </div>
       <div class="rulebox"><h3>Substitution (set once for the team, changeable per item)</h3><ol>
         <li><b>Chosen substitutes</b> — picked for the item in advance (“Choose a replacement now”). Always OK: a pre-approved substitution.</li>
-        <li><b>Any similar item</b> — the team's setting: same kind of product, on the mood board, and within <b>10% or $150</b> of the line. OK, and logged.</li>
+        <li><b>Within the template</b> — the team's setting: another product the job's template already uses for this kind of item. OK, and logged.</li>
         <li><b>Anything else</b> asks the job manager. If it's approved, Kai writes it into the next change order. Nobody types it twice.</li></ol></div>
       <p style="margin-top:16px;font-size:13px;color:var(--t2)">Try it: tap <b>Swap it</b> on the tile in the phone.</p>
     </div>
@@ -2474,7 +2523,16 @@ document.addEventListener('click', e => {
     case 'jump-grp': { if(!$('#grp-' + t.dataset.i) && (S.tlCon.size || S.tlMeth.size)){ S.tlCon.clear(); S.tlMeth.clear(); renderReview(); }
       const el = $('#rvScroll'), g = $('#grp-' + t.dataset.i); if(g) el.scrollTo({top: el.scrollTop + g.getBoundingClientRect().top - el.getBoundingClientRect().top - 12, behavior: 'smooth'}); break; }
     case 'pr-tog': if(e.target.closest('[data-act="pr-done"]')) break; { const k = t.dataset.k; if(S.rvOpen.has(k)) S.rvOpen.delete(k); else S.rvOpen.add(k); renderReview(); } break;
-    case 'pr-done': { const k = t.dataset.k, store = k.split('|')[1] === 'store'; if(S.rvDone.has(k)) S.rvDone.delete(k); else { S.rvDone.add(k); toast(store ? 'Marked as bought.' : 'Order sent.'); } renderReview(); } break;
+    case 'pr-done': { const k = t.dataset.k, store = k.split('|')[1] === 'store'; if(S.rvDone.has(k)) S.rvDone.delete(k); else { S.rvDone.add(k); S.rvCancel.delete(k); toast(store ? 'Marked as bought.' : 'Order sent.'); if(!store){ S.po = k; S.poList = [k]; } } renderReview(); if(S.po) $('#rvScroll').scrollTop = 0; } break;
+    // the purchase order document
+    case 'po-open': S.po = t.dataset.k; S.poList = groupsOf(orderLines()).flatMap(g => g.rows).filter(r => r.kind !== 'store' && isDone(r.k, false)).map(r => r.k); renderReview(); $('#rvScroll').scrollTop = 0; break;
+    case 'po-close': S.po = null; renderReview(); break;
+    case 'po-step': { const i = S.poList.indexOf(S.po) + (+t.dataset.d); if(S.poList[i]){ S.po = S.poList[i]; renderReview(); $('#rvScroll').scrollTop = 0; } break; }
+    case 'po-cancel': { const k = S.po; S.rvCancel.add(k); S.rvDone.delete(k); S.poList = S.poList.filter(x => x !== k); S.po = null; renderReview();
+      toast('Order cancelled. It’s back on the list to order.', () => { S.rvCancel.delete(k); S.rvDone.add(k); renderReview(); }); break; }
+    case 'po-print': window.print(); break;
+    case 'po-export': toast(`Downloaded ${t.dataset.id}.pdf`); break;
+    case 'po-share': toast('Link to this purchase order copied.'); break;
     case 'rv-edit': go('shop'); select({kind: 'need', id}); break;
     case 'fix-backups': { const k = autoBackups(NEEDS.filter(n => n.pick && !n.backups.length)); toast(`Kai added backups to ${k} items — same look, close in price, in stock nearby. Change any of them on the shelf.`); render(); break; }
     case 'fix-review': { S.filter = 'changed'; const n = NEEDS.find(isOver), r = ROOMS.find(x => roomCost(x.id).over);
@@ -2482,7 +2540,7 @@ document.addEventListener('click', e => {
     case 'cost-book': toast('Would open this in the Cost Book (page not built yet).'); break;
     case 'fix-todo': { S.filter = 'todo'; const n = NEEDS.find(x => !x.pick); if(S.screen === 'review') go('shop'); select({kind: 'need', id: n.id}); break; }
     case 'fix-off': { const n = need(id), maj = majorityPick(NEEDS.filter(m => m.cat === n.cat && m.id !== id)); if(maj){ n.pick = maj; toast(`${esc(ROOM[n.room].name)} now uses ${esc(CATALOG[maj].name)}, like the other rooms.`); render(); } break; }
-    case 'place': groupsOf(orderLines()).flatMap(g => g.rows).filter(r => r.kind !== 'store').forEach(r => S.rvDone.add(r.k)); S.placed = true; toast('Orders submitted. Pickup list sent to J. Ruiz.'); render(); $('#rvScroll').scrollTop = 0; break;
+    case 'place': { const ks = groupsOf(orderLines()).flatMap(g => g.rows).filter(r => r.kind !== 'store').map(r => r.k); ks.forEach(k => { S.rvDone.add(k); S.rvCancel.delete(k); }); S.placed = true; S.poList = ks; S.po = ks[0] || null; toast(`${ks.length} orders submitted. Pickup list sent to J. Ruiz.`); render(); $('#rvScroll').scrollTop = 0; break; }
     case 'got': { if(S.pk.got.has(sku)) S.pk.got.delete(sku); else S.pk.got.add(sku); renderPickup(); break; }
     case 'swap-open': S.pk.sheet = sku; S.pk.toast = ''; renderPickup(); break;
     case 'swap-close': S.pk.sheet = null; renderPickup(); break;
