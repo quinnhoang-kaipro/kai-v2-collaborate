@@ -15,6 +15,7 @@ const same = (a, b) => a.toDateString() === b.toDateString();
 const rel = d => same(d, TODAY) ? 'today' : same(d, TOMORROW) ? 'tomorrow' : wmd(d);
 const plural = (w, n) => n === 1 || /^[A-Z]+$/.test(w) ? w : /x$/.test(w) ? w + 'es' : /[^aeiou]y$/.test(w) ? w.slice(0, -1) + 'ies' : w + 's';
 const IC = {
+  handoff: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10h12.5M11.5 6l4 4-4 4"/><path d="M3 4.5v11"/></svg>',
   cart: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M2.5 3.5h2.2l2 9.5h8.6l1.7-6.6H5.6"/><circle cx="8" cy="16.2" r="1.1" fill="currentColor"/><circle cx="14.3" cy="16.2" r="1.1" fill="currentColor"/></svg>',
   search: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.8"/><path d="M10.6 10.6 14 14"/></svg>',
   stack: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="4"/><rect x="3" y="9" width="14" height="4"/><rect x="3" y="15" width="14" height="2.5"/></svg>',
@@ -134,6 +135,7 @@ const S = {
   ordFul: {},               // 'sup|buyer' → an order's own pickup / delivery
   rvOpen: null,            // Merged: purchase rows opened to show their items (null = the first one)
   rvDone: new Set(),
+  turn: ME, ho: null,       // whose turn the job is; ho = the hand-off dialog while it's open {to, note}
   po: null, poList: [],     // the purchase order open after Order (and the ones you can page through)
   poDraft: new Set(),       // orders shown as a draft PO, waiting for Place order
   tlCon: new Set(),         // Merged Timeline: contractors picked in the filter (none = all)
@@ -253,6 +255,25 @@ function toast(msg, undo){
   clearTimeout(toastT); toastT = setTimeout(() => { el.innerHTML = ''; toast.undo = null; }, undo ? 6000 : 3800);
 }
 
+/* ── Hand off: pass the turn to someone on the team, with a note. One person
+   has the job at a time, so this is a baton, not a share. ── */
+function renderHo(){
+  let host = $('#hoAsk');
+  if(!S.ho){ if(host) host.innerHTML = ''; return; }
+  if(!host){ host = document.createElement('div'); host.id = 'hoAsk'; document.body.appendChild(host); }
+  const d = S.ho, who = Object.keys(TEAM).filter(k => k !== ME);
+  host.innerHTML = `<div class="sm-wrap" data-act="ho-close"><div class="sm ho" role="dialog" aria-modal="true" aria-label="Hand off the job" data-stop="1">
+    <button type="button" class="sm-back" data-act="ho-close" aria-label="Close">←</button>
+    <h3>Hand off the job</h3>
+    <p class="ho-sub">${esc(JOB.street)} goes to them. You can still look, and take the turn back any time.</p>
+    <div class="sm-opts" role="radiogroup">${who.map(k => { const m = TEAM[k], on = d.to === k;
+      return `<button type="button" class="sm-opt${on ? ' on' : ''}" role="radio" aria-checked="${on}" data-act="ho-pick" data-v="${k}">
+        <span class="ho-av" style="background:${m.tone}">${k}</span><span class="sm-t"><b>${esc(m.name)}</b><span>${esc(m.role)}</span></span><span class="sm-radio" aria-hidden="true"></span></button>`; }).join('')}</div>
+    <label class="sm-note"><b>Add note</b><input id="hoNote" type="text" value="${esc(d.note)}" placeholder="e.g. Kitchen is picked. Please check the bath lights." autocomplete="off"></label>
+    <div class="sm-ft"><button type="button" class="btn ink block" data-act="ho-send"${d.to ? '' : ' disabled'}>${d.to ? `Hand off to ${esc(TEAM[d.to].name)}` : 'Choose who gets it'}</button></div>
+  </div></div>`;
+}
+
 /* ── Bar ── */
 function renderBar(){
   $('#demoNav').querySelectorAll('[data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === S.screen));
@@ -272,8 +293,15 @@ function renderBar(){
   });
   const cb = $('#cartBtn');
   cb.classList.toggle('on', S.screen === 'review');
-  cb.innerHTML = `${IC.cart}<span>${S.placed ? 'Orders' : 'Review & order'}</span>`;
-  cb.title = S.placed ? 'Orders' : 'Review & order';
+  cb.innerHTML = `${IC.cart}<span>${S.placed ? 'Orders' : 'Review order'}</span>`;
+  cb.title = S.placed ? 'Orders' : 'Review order';
+  // The turn: yours until you hand it off. After that, the pill names who has it and you can take it back.
+  const mine = S.turn === ME, hb = $('#hoBtn'), pill = $('.bar .turn');
+  hb.textContent = mine ? 'Handoff' : 'Take the turn';
+  hb.dataset.act = mine ? 'ho-open' : 'ho-take';
+  hb.title = mine ? 'Hand the job to someone on the team' : `Take the turn back from ${TEAM[S.turn].name}`;
+  pill.textContent = mine ? 'Your turn' : `${TEAM[S.turn].name}'s turn`;
+  pill.classList.toggle('theirs', !mine);
   fitTabs();
 }
 /* The tabs sit over the page's text and mustn't run into the buttons on the
@@ -1685,7 +1713,7 @@ function poSheetHtml(r){
   const draft = S.poDraft.has(k);
   const billTo = r.buyer === ORG ? 'Kai Pro account, Net 30' : esc(r.buyer), who = esc(r.buyer === ORG ? ORG_ACCT : r.buyer);
   return `<section class="po-one" data-po="${esc(k)}">
-    ${draft ? `<div class="po-strip"><span><b>Draft</b> · nothing sent to ${esc(s.name)} yet</span><button type="button" class="po-btn go" data-act="po-place" data-k="${esc(k)}">Place order · ${money(total)}</button></div>`
+    ${draft ? `<div class="po-strip"><span><b>Draft</b> · nothing sent to ${esc(s.name)} yet</span></div>`
       : `<div class="po-strip sent"><span><b>✓ Placed with ${esc(s.name)} · ${TODAY.toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}</b> · a placed order can’t be cancelled</span></div>`}
     <article class="po-sheet${draft ? ' is-draft' : ''}">${draft ? '<span class="po-wm" aria-hidden="true">Draft</span>' : ''}
       <header class="po-hd">
@@ -1723,6 +1751,13 @@ function poSpy(){
   el.querySelectorAll('.po-ti').forEach(b => b.classList.toggle('on', b.dataset.k === cur));
 }
 document.addEventListener('scroll', e => { if(e.target && e.target.id === 'rvScroll') poSpy(); }, true);
+/* On the purchase-order page the dark bar keeps only the logo and the address;
+   the page's own bar (Orders › Draft purchase orders, Print, Export, Place) moves up into it. */
+function poTop(pb){
+  const top = $('#poTop'), hb = top && top.closest('.bar'); if(!top) return;
+  hb.classList.toggle('po-mode', !!pb);
+  if(pb) top.replaceChildren(pb); else top.replaceChildren();
+}
 function poDocHtml(){
   const R = S.poList.map(poRow).filter(Boolean); if(!R.length){ S.po = null; return ''; }
   const drafts = R.filter(r => S.poDraft.has(r.k)), n = R.length, sum = rs => money(rs.reduce((a, r) => a + poTotal(r), 0));
@@ -1744,7 +1779,6 @@ function poDocHtml(){
       </div></div>
     <div class="po-mat"><div class="po-layout${toc ? '' : ' solo'}">${toc}
       <div class="po-sheets">
-        ${drafts.length ? `<div class="po-confirm"><div><b>${drafts.length === 1 ? 'This is a draft' : `${drafts.length} drafts`}. Nothing is sent yet.</b><span>Check the items, quantities and where each one goes. Once an order is placed it goes to the supplier and can’t be cancelled.</span></div>${place.replace('class="po-btn go"', 'class="po-btn go lg"')}</div>` : ''}
         ${R.map(poSheetHtml).join('')}
       </div></div></div></div>`;
 }
@@ -2220,7 +2254,8 @@ function renderReview(){
       ${S.placed ? `<button class="btn ink lg" data-act="screen" data-v="pickup">Open the pickup list</button>` : (() => { const n = groupsOf(lines).flatMap(g => g.rows).filter(r => r.kind !== 'store' && !S.rvDone.has(r.k)).length; return n ? `<button class="btn pri lg" data-act="place">Order all ${n} now</button>` : '<button class="btn pri lg" disabled>Everything ordered</button>'; })()}
     </div></div>`;
   host.classList.toggle('po-focus', !!S.po);   // the purchase order is a focused page: no left panel
-  if(S.po){ const doc = poDocHtml(); if(doc){ el.innerHTML = doc; poSpy(); return; } host.classList.remove('po-focus'); }
+  if(S.po){ const doc = poDocHtml(); if(doc){ el.innerHTML = doc; poTop(el.querySelector('.po-bar')); poSpy(); return; } host.classList.remove('po-focus'); }
+  poTop(null);
   el.innerHTML = `<div class="rv">
     <div class="rv-top"><div><button class="link" data-act="screen" data-v="shop">← Back to shopping</button><h1 style="margin-top:10px">${S.placed ? 'Orders' : 'Review & order'}</h1>
       <p>${esc(JOB.street)} · ${lines.length} lines from ${NEEDS.filter(n => n.pick).length} items · ${sups.length} orders</p></div>
@@ -2569,6 +2604,11 @@ document.addEventListener('click', e => {
       renderReview(); if(S.po) $('#rvScroll').scrollTop = 0; } break;
     // the purchase order document
     case 'po-open': S.po = t.dataset.k; S.poList = groupsOf(orderLines()).flatMap(g => g.rows).filter(r => r.kind !== 'store' && isDone(r.k, false)).map(r => r.k); renderReview(); poJump(S.po, true); break;
+    case 'ho-open': S.ho = {to: null, note: ''}; renderHo(); break;
+    case 'ho-close': S.ho = null; renderHo(); break;
+    case 'ho-pick': S.ho.note = ($('#hoNote') || {}).value || ''; S.ho.to = t.dataset.v; renderHo(); break;
+    case 'ho-send': { const to = S.ho && S.ho.to; if(!to) break; S.turn = to; S.ho = null; renderHo(); renderBar(); toast(`Handed off to ${esc(TEAM[to].name)}. They've been told.`, () => { S.turn = ME; renderBar(); }); break; }
+    case 'ho-take': { const from = S.turn; S.turn = ME; renderBar(); toast(`You have the turn. ${esc(TEAM[from].name)} was told.`); break; }
     case 'po-close': S.po = null; S.poDraft.clear(); renderReview(); break;   // leaving drafts: nothing was sent
     case 'po-jump': S.po = t.dataset.k; poJump(S.po); break;
     case 'po-place': case 'po-place-all': {   // Place order: sent to the supplier, and it can't be cancelled after this
@@ -2676,6 +2716,7 @@ function render(reset){
   if(S.screen === 'shop'){ renderList(); renderWork(reset); }
   if(S.screen === 'review'){ renderList(); renderReview(); }
   if(S.screen === 'pickup') renderPickup();
+  if(S.screen !== 'review') poTop(null);
   if(S.screen !== 'shop') renderDetail();
 }
 /* Placeholder task allowances. Only a few tasks had one set; now every task

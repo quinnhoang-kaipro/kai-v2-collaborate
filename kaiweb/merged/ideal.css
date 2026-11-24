@@ -2216,7 +2216,7 @@ button.tg-lab:hover .tg-name b{text-decoration:underline;text-underline-offset:3
 .po-layout.solo{grid-template-columns:minmax(0,980px)}
 .po-sheets{display:flex;flex-direction:column;gap:56px;min-width:0}
 .po-sheets .po-confirm{margin:0;max-width:none}
-.po-toc{position:sticky;top:84px;display:flex;flex-direction:column;background:var(--white);border:1px solid var(--ink)}
+.po-toc{position:sticky;top:16px;display:flex;flex-direction:column;background:var(--white);border:1px solid var(--ink)}
 .po-toc > .po-k{padding:12px 14px 10px;border-bottom:1px solid var(--ink)}
 .po-ti{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:start;padding:12px 14px;text-align:left;border-bottom:1px solid var(--stroke);background:var(--white)}
 .po-ti:hover{background:var(--sunken-lift)}
@@ -2239,3 +2239,33 @@ button.tg-lab:hover .tg-name b{text-decoration:underline;text-underline-offset:3
 .po-strip.sent{background:var(--success-fill);border-color:var(--success);color:var(--t2)}
 .po-strip.sent b{color:var(--success)}
 @media (max-width:1100px){ .po-layout{grid-template-columns:minmax(0,1fr)} .po-toc{position:static} }
+
+/* Purchase-order page: the dark bar keeps the logo and address; the PO bar sits in it. */
+.bar .po-top{display:none}
+.bar.po-mode .tabs,.bar.po-mode .sp,.bar.po-mode .turn,.bar.po-mode .cartbtn,.bar.po-mode .hobtn,.bar.po-mode .me{display:none}
+.bar.po-mode .po-top{display:flex;flex:1;min-width:0;align-self:stretch;align-items:center}
+.bar .po-bar{position:static;flex:1;min-width:0;height:100%;padding:0 0 0 22px;background:none;border:0;border-left:1px solid rgba(255,255,255,.18)}
+.bar .po-crumb,.bar .po-crumb button{color:#fff}
+.bar .po-crumb span{color:rgba(255,255,255,.45)}
+.bar .po-btn{height:36px;background:none;border-color:rgba(255,255,255,.35);color:#fff}
+.bar .po-btn:hover{border-color:#fff;background:rgba(255,255,255,.06)}
+.bar .po-btn.go{background:var(--accent);border-color:var(--accent);color:var(--ink)}
+.bar .po-btn.go:hover{background:var(--accent-deep);border-color:var(--accent-deep)}
+.bar .po-btn.ink{background:#fff;border-color:#fff;color:var(--ink)}
+@media print{ .bar.po-mode{display:none} }
+
+/* Handoff, beside Review order in the dark bar */
+.bar .hobtn{height:40px;display:inline-flex;align-items:center;gap:10px;padding:0 14px;border:1px solid rgba(255,255,255,.35);color:#fff;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-right:12px;white-space:nowrap}
+.bar .hobtn:hover{border-color:#fff;background:rgba(255,255,255,.06)}
+.bar .turn.theirs{background:none;color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.sm.ho .ho-sub{margin:8px 0 14px;font-size:13.5px;line-height:1.45;color:var(--t2)}
+.ho-av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--ink)}
+.sm.ho .sm-opt{grid-template-columns:32px minmax(0,1fr) 22px}
+
+/* Shelf cards: Add is a text button above Replace. It keeps its room when hidden,
+   so Replace never moves or changes size on hover. */
+.nb-alt .acts:has(.qa-add){flex-direction:column;align-items:stretch;gap:4px}
+.nb-alt .acts .qa-add{order:-1;display:inline-flex;visibility:hidden;align-self:center;min-width:0;height:24px;padding:0 6px;border:0;background:none;box-shadow:none;text-decoration:underline;text-underline-offset:3px}
+.nb-alt .acts .qa-add:hover{background:none;color:var(--ink);text-decoration-thickness:2px}
+.nb-alt:hover .acts .qa-add,.nb-alt:focus-within .acts .qa-add{display:inline-flex;visibility:visible}
+.nb-alt .acts:has(.qa-add) .qa{flex:none;width:100%}
