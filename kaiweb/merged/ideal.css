@@ -2194,3 +2194,17 @@ button.tg-lab:hover .tg-name b{text-decoration:underline;text-underline-offset:3
 .pr-act .btn.po-view{border-color:var(--success);color:var(--success);background:var(--success-fill);gap:6px;font-size:12.5px}
 .pr-act .btn.po-view:hover{border-color:var(--ink);color:var(--ink)}
 @media print{ .po-bar{display:none} .po-mat{background:none;padding:0} .po-sheet{box-shadow:none} }
+/* PO: draft first, then placed (Nov 24) */
+.po-btn.go{background:var(--accent);border-color:var(--ink);color:var(--ink)}
+.po-btn.go:hover{background:var(--accent-deep)}
+.po-btn.lg{height:44px;padding:0 20px;font-size:11.5px}
+.po-confirm{max-width:980px;margin:0 auto 18px;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px 20px;background:var(--white);border:1px solid var(--ink)}
+.po-confirm > div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.po-confirm b{font-size:14.5px;color:var(--ink)}
+.po-confirm span{font-size:13px;color:var(--t2)}
+.po-confirm.sent{border-color:var(--success);background:var(--success-fill)}
+.po-confirm.sent b{color:var(--success)}
+.po-pill.draft{border-style:dashed;color:var(--t2)}
+.po-sheet{position:relative;overflow:hidden}
+.po-wm{position:absolute;top:44%;left:50%;transform:translate(-50%,-50%) rotate(-24deg);font-family:var(--display);font-size:150px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(26,26,26,.045);pointer-events:none;white-space:nowrap}
+.po-ship + .po-ship{font-size:13px;color:var(--t3)}
