@@ -137,7 +137,8 @@ const S = {
   rvDone: new Set(),
   po: null, poList: [],     // the purchase order open after Order (and the ones you can page through)
   poDraft: new Set(),       // orders shown as a draft PO, waiting for Place order
-  planRoom: null,           // the floor plan, filtered to Needs product: the room whose list shows
+  planRoom: null, todoOpen: false, tkOpen: new Set(), tkShut: new Set(),   // tkOpen/tkShut: which shelves are open on a room or department page   // todoOpen: Shop's bar, the Still to pick list
+            // the floor plan, filtered to Needs product: the room whose list shows
   track: false, trackDay: 0,  // Track orders: the grid for what's been ordered or bought; trackDay moves 'today' for the demo
   tlCon: new Set(),         // Merged Timeline: contractors picked in the filter (none = all)
   tlMeth: new Set(),        // Merged Timeline: ways of getting it picked in the filter (store | pickup | delivery)          // Merged Timeline: weeks opened inside a big purchase
@@ -202,10 +203,12 @@ const qtyForCount = (p, k) => p.pack > 1 ? Math.round(k * p.pack * 10) / 10 : k;
 function setCount(n, p, k){ n.qty = qtyForCount(p, k); }
 function stepperHtml(n, cls){
   const p = CATALOG[n.pick], b = buy(p, n.qty, offerOf(n, p)), last = b.n <= 1;
-  return `<div class="stp${cls ? ' ' + cls : ''}" role="group" aria-label="Quantity of ${esc(p.name)}">
+  // The number sits in the stepper; its unit (detectors, boxes, LF) sits beside it
+  const unit = b.label.replace(/^[\d,.]+\s*/, '');
+  return `<span class="stp-w${cls ? ' ' + cls : ''}"><div class="stp${cls ? ' ' + cls : ''}" role="group" aria-label="Quantity of ${esc(p.name)}, in ${esc(unit)}">
     <button type="button" data-act="qty" data-id="${n.id}" data-d="-1" aria-label="${last ? 'Remove' : 'One less'}" title="${last ? 'Remove from the list' : 'One less'}">${last ? TRASH : '−'}</button>
-    <span class="stp-n"><b>${b.label}</b></span>
-    <button type="button" data-act="qty" data-id="${n.id}" data-d="1" aria-label="One more" title="One more">+</button></div>`;
+    <span class="stp-n"><b>${b.n.toLocaleString()}</b></span>
+    <button type="button" data-act="qty" data-id="${n.id}" data-d="1" aria-label="One more" title="One more">+</button></div><span class="stp-u">${esc(unit)}</span></span>`;
 }
 function removePick(ns){
   ns = ns.filter(n => n.pick); if(!ns.length) return;
@@ -425,7 +428,8 @@ function renderList(){
   const dFit = n => !!dp && n.cat === dp.cat && fitsNeed(dp, n);
   const dIds = ns => firstPerTask(ns.filter(dFit)).map(n => n.id);
   const dAttr = ids => dp && ids.length ? ` data-drop="${ids.join(',')}"` : '';
-  const isOpen = (k, ns, dflt) => (dp && ns.some(dFit)) || S.pvOpen.has(k) || (!S.pvShut.has(k) && (dflt || ns.some(n => n.id === selId)));
+  const shopAll = S.screen === 'shop' && !tabPageOn();   // Shop: every group starts open, so every task shows; folding one still sticks
+  const isOpen = (k, ns, dflt) => (dp && ns.some(dFit)) || S.pvOpen.has(k) || (!S.pvShut.has(k) && (shopAll || dflt || ns.some(n => n.id === selId)));
   const car = (k, o) => `<span class="nv-car${o ? ' o' : ''}" data-act="nv-tog" data-k="${esc(k)}" data-o="${o ? 1 : 0}" role="button" aria-label="${o ? 'Collapse' : 'Expand'}" title="Expand / collapse"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
   /* One row per task. Under a product type (Materials) the row covers only that
      type's options: a Cabinets task's knobs sit under Door hardware, not Cabinets. */
@@ -679,11 +683,51 @@ function taskAmtHtml(os){
   const mat = os.reduce((a, n) => a + needTotal(n), 0), lab = LABOR[t.id] || 0;
   return `<span class="nb-amt">Task <span class="alw has-tip${mat + lab - t.allow > .5 ? ' is-over' : ''}" tabindex="0" role="link" data-act="cost-book">${money0(mat + lab)} / ${money0(t.allow)}${tipHtml(allowRows(mat, lab, t.allow, 'Task allowance'))}</span></span>`;
 }
+/* Shelves on a room or department page, after Shane's wireframe: each task is a
+   card. Its header says what it is (CABINETS · SHAKER CABINETS, then Kitchen ·
+   Replace · Shaker cabinets · 14 LF), who selects, buys and does the work, and its
+   materials against the allowance. Tasks that need a product or a review open on
+   their own; the rest stay shut to one line, and open with a click. */
+const TEMPLATE_NAME = 'Default Flow';   // the job's template, as Overview names it
+const verbObj = n => { const [v, o] = (n.opt || '').split(' : '); return o ? `${esc(v)} · ${esc(o)}` : esc(n.opt || n.task); };
+// On a room's page the room is in the header, so the task titles leave it out
+const rmPre = n => S.sel.kind === 'room' ? '' : `${esc(ROOM[n.room].name)} · `;
+const tkMat = t => optsOf(t).reduce((a, o) => a + needTotal(o), 0);
+// days a task's product gets there after the task needs it (0 when on time)
+const lateOf = n => { const L = orderLines().find(L => L.needs.includes(n)); return L && L.arrive > neededBy(n) ? Math.round((+L.arrive - +neededBy(n)) / 864e5) : 0; };
+const tkNeeds = t => optsOf(t).some(o => !o.pick || lateOf(o) > 0) || isOver(optsOf(t).find(o => !o.of) || t);   // needs a product, a review, or arrives late
+function tkIsOpen(t){
+  const k = tkOf(t);
+  if(S.tkShut.has(k)) return false;
+  if(S.tkOpen.has(k)) return true;
+  if(tkNeeds(t)){ S.tkOpen.add(k); return true; }   // remembered, so it stays open after you pick
+  return false;
+}
+function tkAllowHtml(t){
+  const a = (optsOf(t).find(o => !o.of) || t).allow, m = tkMat(t);
+  return a ? `<span class="tag box">Allowance</span><span class="nb-mat${m - a > .5 ? ' over' : ''}">Material <b class="num">${money0(m)}</b> of ${money0(a)}</span>` : '<span class="nb-mat na">Allowance N/A</span>';
+}
+const tkWho = t => `<div class="nb-who">Selected by <b>${esc(ORG)}</b> · Purchased by <b>${esc(buyerOf(t))}</b> · Performed by <b>${esc(installerOf(t))}</b></div>`;
+const tkCar = (t, open) => `<button type="button" class="nb-car${open ? ' o' : ''}" data-act="tk-tog" data-id="${t.id}" aria-label="${open ? 'Close' : 'Open'} this task" aria-expanded="${open}"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6l-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+function tkShutHtml(t){
+  const os = optsOf(t), ps = [...new Set(os.flatMap(withMore).map(x => x.pick).filter(Boolean))].map(k => CATALOG[k]);
+  // the chosen product's photo leads the row, a little larger; its name sits with the money on the right
+  return `<section class="nb nb-shut" data-need="${t.id}"><header class="nb-hd2 nb-shut-hd" data-act="tk-tog" data-id="${t.id}">
+    <span class="nb-sth">${ps.length ? `<img src="${ART.product(ps[0])}" alt="">${ps.length > 1 ? `<b>+${ps.length - 1}</b>` : ''}` : ''}</span>
+    <span class="nb-stx"><span class="nb-k">${esc(t.task)} · ${os.length > 1 ? `${os.length} options` : esc(optShort(t))}</span>
+      <h3>${rmPre(t)}${os.length > 1 ? esc(t.task) : verbObj(t)}<span class="q"> · ${os.length > 1 ? os.map(o => qtyText(o.cat, o.qty)).join(' + ') : qtyText(t.cat, t.qty)}</span></h3></span>
+    <span class="nb-hd-r">${ps.length ? `<span class="nb-chosen">${esc(shortName(ps[0]))}${ps.length > 1 ? ` +${ps.length - 1}` : ''}</span>` : ''}${tkAllowHtml(t)}</span>${tkCar(t, false)}</header></section>`;
+}
 function taskBlocks(ns){
   return firstPerTask(ns).map(t => {
+    if(!tkIsOpen(t)) return tkShutHtml(t);
     if(!multiOpt(t)) return needBlock(t);
     const os = optsOf(t), shown = ns.filter(n => tkOf(n) === tkOf(t));
-    return `<div class="nb-grp" data-task="${tkOf(t)}"><header class="nb-ghd"><h3 class="nb-tt"><button type="button" data-act="task-open" data-id="${t.id}" title="See this task">${esc(t.task)}</button></h3><span class="sub">${os.length} options</span><span class="nb-hd-r">${taskAmtHtml(os)}</span>${taskFactsHtml(t)}</header>
+    return `<div class="nb-grp" data-task="${tkOf(t)}"><header class="nb-hd2" data-act="tk-tog" data-id="${t.id}">
+      <span class="nb-k">${esc(t.task)} · ${os.length} options</span>
+      <div class="nb-row"><h3><button type="button" data-act="task-open" data-id="${t.id}" title="See this task">${rmPre(t)}${esc(t.task)}</button></h3>
+        <span class="nb-hd-r">${os.some(o => !o.pick) ? '<span class="tag warn">Needs product</span>' : isOver(t) ? '<span class="tag warn">Needs review</span>' : ''}${tkAllowHtml(t)}</span>${tkCar(t, true)}</div>
+      ${tkWho(t)}</header>
       ${shown.map(n => needBlock(n, true)).join('')}</div>`;
   }).join('');
 }
@@ -710,13 +754,13 @@ function needBlock(n, inTask){
   // Every other product that fits, best matches first, in a carousel: no leaving the room.
   const alts = roomAlts(n);
   const st = !p ? '<span class="tag warn">Needs product</span>'
-    : n.swap ? '<span class="tag ok">Swapped at pickup</span>' : isOver(n) ? '<span class="tag warn">Needs review</span>' : '';
+    : n.swap ? '<span class="tag ok">Swapped at pickup</span>' : isOver(n) ? '<span class="tag warn">Needs review</span>' : lateOf(n) ? `<span class="tag err">Arrives ${daysTxt(lateOf(n))} late</span>` : '';
   /* The task's cost against its allowance takes the header's right end, where
      a "Chosen" tag used to sit: a pick is already plain from the card below. */
   const amt = n.allow ? `<span class="nb-amt">Task ${needAmtHtml(n, `${money0(taskCost(n))} / ${money0(n.allow)}`)}</span>` : '<span class="nb-amt na">Allowance N/A</span>';
   const notes = [];
   if(n.swap) notes.push(`<div class="nb-note ok">${IC.swap}<span><b>Swapped at pickup</b> · ${esc(CATALOG[n.swap.from].name.split(/,|\(/)[0])} was out → ${esc(n.swap.how)} · ${n.swap.co ? 'in the next change order' : n.swap.pre ? 'pre-approved substitution' : 'no change order'}</span></div>`);
-  if(isOver(n)) notes.push(`<div class="nb-note warn"><span>!</span><span><b>Needs review</b> · ${money0(overBy(n))} over the ${money0(n.allow)} allowance</span></div>`);
+  if(isOver(n)) notes.push(`<div class="nb-note warn"><span>!</span><span><b>Needs review</b> · materials ${money0(tkMat(n))}${LABOR[n.id] ? ` + labor ${money0(LABOR[n.id])}` : ''} is ${money0(overBy(n))} over the ${money0(n.allow)} allowance</span></div>`);
   // One card per product on the task: the first, then any added beside it.
   const pickOf = x => {
     const p = CATALOG[x.pick];
@@ -732,7 +776,7 @@ function needBlock(n, inTask){
     const supRow = offs.length < 2 ? `<span class="nb-val">${supTxt}</span>` : !ed('sup') ? val('sup', supTxt) : `<div class="seg nb-seg" role="group" aria-label="Buy from">${offs.map(of => `<button type="button" class="${of.sup === o.sup ? 'on' : ''}" data-act="nb-sup" data-id="${x.id}" data-sup="${of.sup}" aria-pressed="${of.sup === o.sup}">${esc(SUPPLIERS[of.sup].name)}<i>${money(of.price)}</i></button>`).join('')}</div>`;
     const howRow = S.src.mode === 'both' && !ed('how') ? val('how', howTxt) : S.src.mode === 'both' ? `<div class="seg nb-seg" role="group" aria-label="How it gets there"><button type="button" class="${how === 'pickup' ? 'on' : ''}" data-act="nb-ful" data-id="${x.id}" data-v="pickup" aria-pressed="${how === 'pickup'}">${stTxt}</button><button type="button" class="${how === 'delivery' ? 'on' : ''}" data-act="nb-ful" data-id="${x.id}" data-v="delivery" aria-pressed="${how === 'delivery'}">Delivery</button></div><small>${how === 'pickup' ? esc(sp.store) : `to ${esc(shortAddr(S.src.addr))}`}</small>`
       : `<span>${S.src.mode === 'pickup' ? `${stTxt} · ${esc(sp.store)}` : `Delivery to ${esc(shortAddr(S.src.addr))}`}</span>`;
-    return `<div class="nb-pick${x.xof ? ' more' : ''}" data-pk="${x.id}" draggable="true" data-drag="${p.sku}"><div class="im" data-act="detail" data-sku="${p.sku}" data-id="${x.xof || x.id}"><img src="${ART.product(p)}" alt="${esc(p.name)}">${isTpl(p.sku, [x]) ? '<span class="tag acc">Template pick</span>' : ''}</div>
+    return `<div class="nb-pick${x.xof ? ' more' : ''}" data-pk="${x.id}" draggable="true" data-drag="${p.sku}"><div class="im" data-act="detail" data-sku="${p.sku}" data-id="${x.xof || x.id}"><img src="${ART.product(p)}" alt="${esc(p.name)}"><span class="nb-tags"><span class="tag ink">Selected</span>${isTpl(p.sku, [x]) ? '<span class="tag acc">Template pick</span>' : ''}</span></div>
       <div class="tx"><span class="brand">${esc(p.brand)} · ${esc(SUPPLIERS[o.sup].name)}</span>
         <b class="nm" data-act="detail" data-sku="${p.sku}" data-id="${x.xof || x.id}">${esc(p.name)}</b>
         <span class="ln"><b class="num">${money(b.total)}</b> · ${b.label} at ${money(o.price)} / ${perUnit(p)}</span>
@@ -748,7 +792,8 @@ function needBlock(n, inTask){
   const pick = p ? `<div class="nb-picks">${withMore(n).filter(x => x.pick).map(pickOf).join('')}</div>` : '';
   const alt = c => {
     const o = prefOffer(c, n), kD = ALT_Q[n.id + '|' + c.sku], b = kD ? buy(c, qtyForCount(c, kD), o) : buy(c, n.qty, o), av = avail(c, n.qty, o), bk = n.backups.includes(c.sku);
-    const tag = isTpl(c.sku, [n]) ? '<span class="tag acc">Template pick</span>' : c.std ? '<span class="tag ink">Team standard</span>' : !c.mood ? '<span class="tag warn">Lower match</span>' : '<span class="tag ok">High match</span>';
+    const tA = (n.of ? need(n.of) : n), aw = (optsOf(tA).find(o => !o.of) || tA).allow, fitsA = aw && tkMat(tA) - needTotal(n) + b.total <= aw;
+    const tag = isTpl(c.sku, [n]) ? '<span class="tag acc">Template pick</span>' : fitsA ? '<span class="tag box">Fits allowance</span>' : c.std ? '<span class="tag ink">Team standard</span>' : '';
     const d = b.total - (p ? buy(p, n.qty, offerOf(n, p)).total : 0);   // against the first product, not the task's sum
     return `<article class="nb-alt" draggable="true" data-drag="${c.sku}"><div class="im" data-act="detail" data-sku="${c.sku}" data-id="${n.id}"><img src="${ART.product(c)}" alt="" loading="lazy">${tag}</div>
       <span class="nm" data-act="detail" data-sku="${c.sku}" data-id="${n.id}" title="${esc(c.name)}">${esc(c.name)}</span>
@@ -757,14 +802,27 @@ function needBlock(n, inTask){
       <span class="acts"><button type="button" class="btn ${p ? 'ghost' : 'pri'} sm qa" data-act="choose" data-sku="${c.sku}" data-id="${n.id}"${kD ? ` data-k="${kD}"` : ''}${p ? ' data-rep="1"' : ''} title="${p ? `Use it instead of ${esc(p.name)}` : 'Add to the list'} · ${b.label}. Click the product for every option."><span class="qa-d">${p ? 'Select' : 'Quick add'}</span><span class="qa-h">${p ? 'Select' : 'Quick add'} – ${b.label}</span></button>${p ? `<button type="button" class="btn ghost sm qa-add" data-act="detail" data-sku="${c.sku}" data-id="${n.id}" title="Add it to this task, beside ${esc(p.name)}. Opens the product.">Add</button>` : ''}</span></article>`;
   };
   return `<section class="nb" data-need="${n.id}">
-    <header class="nb-hd${inTask ? ' nb-hd-o' : ''}"><h3${inTask ? '' : ' class="nb-tt"'}><button type="button" data-act="task-open" data-id="${n.id}" title="See this task">${esc(inTask ? (n.opt || n.task) : n.task)}</button></h3><span class="sub">${!inTask && n.opt ? `<span class="nb-opt">${esc(n.opt)}</span> · ` : ''}${qtyText(n.cat, n.qty)}${n.fit ? ` · ${n.fit}″ opening` : ''}</span>${st || !inTask ? `<span class="nb-hd-r">${st}${inTask ? '' : amt}</span>` : ''}
-      ${inTask ? '' : taskFactsHtml(n)}</header>
+    ${inTask ? `<header class="nb-hd nb-hd-o"><h3><button type="button" data-act="task-open" data-id="${n.id}" title="See this task">${verbObj(n)}</button></h3><span class="sub">${qtyText(n.cat, n.qty)}${n.fit ? ` · ${n.fit}″ opening` : ''}</span>${st ? `<span class="nb-hd-r">${st}</span>` : ''}</header>`
+      : `<header class="nb-hd2" data-act="tk-tog" data-id="${n.id}"><span class="nb-k">${esc(n.task)} · ${esc(optShort(n))}</span>
+      <div class="nb-row"><h3><button type="button" data-act="task-open" data-id="${n.id}" title="See this task">${rmPre(n)}${verbObj(n)}</button><span class="q"> · ${qtyText(n.cat, n.qty)}${n.fit ? ` · ${n.fit}″ opening` : ''}</span></h3>
+        <span class="nb-hd-r">${st}${tkAllowHtml(n)}</span>${tkCar(n, true)}</div>${tkWho(n)}</header>`}
+    ${(() => { /* where the choices come from, and how many fit this task and its allowance */
+      const t = n.of ? need(n.of) : n, a = (optsOf(t).find(o => !o.of) || t).allow, rest = tkMat(t) - needTotal(n);
+      const all = BY_CAT[n.cat].filter(c => sold(c) && fitsNeed(c, n)), k = all.filter(c => !a || rest + buy(c, n.qty, prefOffer(c, n)).total <= a).length;
+      return `<div class="nb-src">${a ? `<b>${k} of ${all.length}</b> products keep materials within the ${money0(a)} allowance` : `${all.length} products`} · from the ${esc(TEMPLATE_NAME)} template</div>`; })()}
     ${notes.length ? `<div class="nb-notes">${notes.join('')}</div>` : ''}
     <div class="nb-bd${p ? '' : ' none'}${withMore(n).filter(x => x.pick).length > 1 ? ` np${Math.min(3, withMore(n).filter(x => x.pick).length)}` : ''}">${pick}
       <div class="rcar" data-car="${n.id}"><div class="rcar-track" role="list">${alts.map(alt).join('')}</div>
         <div class="rcar-ft"><button type="button" class="link" data-act="sel-need" data-id="${n.id}">View all ${all} →</button>
           <span class="rcar-n" aria-live="polite"></span>
           <button type="button" class="rcar-b" data-act="car" data-d="-1" aria-label="Previous products">‹</button><button type="button" class="rcar-b" data-act="car" data-d="1" aria-label="Next products">›</button></div></div></div>
+    ${(() => { /* the same product for other tasks: how many it fits, and which it doesn't */
+      if(!p) return '';
+      const others = NEEDS.filter(m => m.cat === n.cat && tkOf(m) !== tkOf(n)), fit = others.filter(m => fitsNeed(p, m) && !hasSku(m, p.sku)), no = others.filter(m => !fitsNeed(p, m));
+      if(!fit.length && !no.length) return '';
+      return `<div class="nb-ft"><b>${fit.length ? `Same product, ${fit.length} more ${fit.length === 1 ? 'task fits' : 'tasks fit'}` : 'Same product won’t fit the other tasks'}</b>
+        ${fit.length ? `<button type="button" class="btn ink sm" data-act="apply-more" data-sku="${p.sku}" data-id="${n.id}">Apply to ${fit.length}</button>` : ''}
+        ${no.length ? `<span class="nb-nofit">${no.map(m => `${esc(ROOM[m.room].name)}: ${p.size ? `${p.size}″ won’t fit the ${m.fit}″ opening → choose a ${m.fit}″ one` : 'won’t fit'}`).join(' · ')}</span>` : ''}</div>`; })()}
   </section>`;
 }
 function deptHtml(){
@@ -781,7 +839,7 @@ function deptHtml(){
     return `<div class="rm" data-cat="${c}"><div class="rm-hd"><h3>${esc(CAT_INFO[c].label)}</h3><span>${all.filter(n => n.pick).length} of ${all.length} chosen · ${money(all.reduce((a, n) => a + needTotal(n), 0))}</span>${all.length > 1 ? `<button type="button" class="link" data-act="sel-type" data-cat="${c}">Choose once for all ${all.length}</button>` : ''}</div>${taskBlocks(ns)}</div>`; };
   const depts = [...new Set(NEEDS.map(n => DEPT[n.cat]))].sort(), nx = depts[depts.indexOf(d) + 1];
   const foot = `<div class="rm-foot">${nx ? `<button type="button" class="btn" data-act="sel-dept" data-dept="${esc(nx)}">Next: ${esc(nx)} →</button>` : `<button type="button" class="btn pri" data-act="screen" data-v="review">Review order →</button>`}<button type="button" class="link" data-act="sel-room" data-room="all">All</button></div>`;
-  return `${head}<div class="roomv">${lookHtml(scope)}${cats.map(sec).join('') || `<div class="nb-empty">Nothing in ${esc(d)} matches “${fl}”. <button class="link" data-act="filter" data-v="all">Show everything</button></div>`}${foot}</div>`;
+  return `${head}<div class="roomv">${cats.map(sec).join('') || `<div class="nb-empty">Nothing in ${esc(d)} matches “${fl}”. <button class="link" data-act="filter" data-v="all">Show everything</button></div>`}${foot}</div>`;
 }
 function roomHtml(){
   if(S.sel.kind === 'dept') return deptHtml();
@@ -791,13 +849,13 @@ function roomHtml(){
   const fl = {todo: 'Needs product', changed: 'Needs review'}[S.filter];
   const sub = `<b>${scope.length} items</b><span class="sep">|</span><span>${chosen} chosen</span>${isAll ? `<span class="sep">|</span><span>${rooms.length} rooms</span>` : ''}<span class="sep">|</span><span>${money(total)}</span>`;
   const head = `${isAll ? '' : `<div class="crumbs"><button data-act="sel-room" data-room="all" title="Every item, room by room">All</button><span>›</span><span class="cur">${esc(ROOM[rid].name)}</span></div>`}
-    <div class="shelf-hd${isAll ? ' no-crumbs' : ''}"><div><h2>${shopFor(isAll ? 'every room' : esc(ROOM[rid].name))}</h2><div class="shelf-sub">${sub}</div></div></div>
+    <div class="shelf-hd${isAll ? ' no-crumbs' : ' rm-stick'}"><div><h2>${shopFor(isAll ? 'every room' : esc(ROOM[rid].name))}</h2><div class="shelf-sub">${sub}</div></div></div>
     ${fl ? bannerHtml('info', IC.search, `Showing ${fl} only`, `${shown.length} of ${scope.length} items`, '<button class="btn" data-act="filter" data-v="all">Show everything</button>') : ''}`;
   const roomSec = r => {
     const all = NEEDS.filter(n => n.room === r.id), ns = all.filter(listFilter);
     if(!ns.length) return isAll ? '' : `<div class="nb-empty">Nothing in ${esc(r.name)} matches “${fl}”. <button class="link" data-act="filter" data-v="all">Show everything</button></div>`;
     return `<div class="rm" data-room="${r.id}">${isAll ? `<div class="rm-hd"><h3>${esc(r.name)}</h3><span>${all.filter(n => n.pick).length} of ${all.length} chosen · ${money(all.reduce((a, n) => a + needTotal(n), 0))}</span><button type="button" class="link" data-act="sel-room" data-room="${r.id}">Just this room</button></div>` : ''}
-      ${lookHtml(all)}${taskBlocks(ns)}</div>`;
+      ${taskBlocks(ns)}</div>`;   /* no "All selected products" strip: the shelves below already show each pick */
   };
   let foot = '';
   if(!isAll){
@@ -1467,8 +1525,8 @@ let DQ = null;   // {sku, first, ids, sel, focus, ph, mode, off}
 /* The same window, product first: from a product type's shelf, every task that
    needs this type, all ticked. Tasks that already have it, or that it doesn't
    fit, stay in the list, greyed, with the reason. */
-function pickAsk(sku){
-  const p = CATALOG[sku], ns = selNeeds().filter(n => n.cat === p.cat), off = {};
+function pickAsk(sku, scope){
+  const p = CATALOG[sku], ns = (scope || selNeeds()).filter(n => n.cat === p.cat), off = {};
   ns.forEach(n => { if(hasSku(n, sku)) off[n.id] = 'Already has it'; else if(!fitsNeed(p, n)) off[n.id] = `Doesn’t fit the ${n.fit}″ opening`; });
   const ids = ns.map(n => n.id), ok = ids.filter(id => !off[id]);
   DQ = {sku, first: null, ids, sel: new Set(ok), focus: ok[0] || ids[0], ph: {}, mode: 'pick', off};
@@ -1661,6 +1719,29 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape' && DQ) dropAsk
 document.addEventListener('click', e => { if(S.fltOpen && !e.target.closest('.list-hd .af')){ S.fltOpen = false; renderList(); } });
 document.addEventListener('click', e => { if(S.src.open && !e.target.closest('.src')){ S.src.open = false; renderWork(); } });
 document.addEventListener('keydown', e => { if(e.key === 'Escape' && S.fltOpen){ S.fltOpen = false; renderList(); } });
+/* Shop's sticky bar, like Review order's: how far along the picking is (a
+   progress bar for the job, and for the room you're in), a shortcut to what still
+   needs a product, and the way on to Review order. */
+function shopBarHtml(){
+  const all = NEEDS, got = all.filter(n => n.pick).length, pct = Math.round(got / all.length * 100);
+  const todo = firstPerTask(all.filter(n => !n.pick)), rid = S.sel.kind === 'room' && S.sel.room !== 'all' ? S.sel.room : null;
+  const rs = rid && all.filter(n => n.room === rid), rGot = rs ? rs.filter(n => n.pick).length : 0;
+  const total = all.reduce((a, n) => a + needTotal(n), 0);
+  const list = !S.todoOpen ? '' : `<div class="sb-pop" role="dialog" aria-label="Still to pick">
+      <div class="sb-pop-hd"><b>Still to pick</b><span>${todo.length} ${todo.length === 1 ? 'task' : 'tasks'}</span></div>
+      <div class="sb-pop-list">${ROOMS.filter(r => todo.some(n => n.room === r.id)).map(r => `<div class="sb-pr"><span class="sb-prn">${esc(r.name)}</span>${todo.filter(n => n.room === r.id).map(n => `<button type="button" class="sb-pt" data-act="sb-go" data-id="${n.id}"><span><b>${esc(taskLabel(n))}</b><span>${esc(n.opt || CAT_INFO[n.cat].label)} · ${qtyText(n.cat, n.qty)}</span></span><i>Shop →</i></button>`).join('')}</div>`).join('')}</div>
+      <div class="sb-pop-ft"><button type="button" class="link" data-act="sb-filter">${S.filter === 'todo' ? 'Show everything in the list' : 'Show only these in the list'}</button></div></div>`;
+  return `<div class="shop-bar">${list}<div class="sb-in">
+    <div class="sb-prog"><div class="sb-pt1"><b>${got} of ${all.length}</b> items have a product${rs ? `<span class="sb-room">${esc(ROOM[rid].name)} ${rGot} of ${rs.length}</span>` : ''}</div>
+      <div class="sb-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div></div>
+    <span class="sb-pct num">${pct}%</span>
+    ${todo.length ? `<button type="button" class="sb-todo${S.todoOpen ? ' on' : ''}" data-act="sb-todo" aria-expanded="${!!S.todoOpen}"><i class="sb-x" aria-hidden="true"></i>${todo.length} still to pick<svg viewBox="0 0 12 12" aria-hidden="true"><path d="${S.todoOpen ? 'M2.5 4.5L6 8l3.5-3.5' : 'M2.5 7.5L6 4l3.5 3.5'}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : '<span class="sb-done">✓ Every task has a product</span>'}
+    <span class="sb-sp"></span>
+    <span class="sb-tot"><span class="k">Materials</span><b class="num">${money(total)}</b></span>
+    <button type="button" class="btn pri lg" data-act="screen" data-v="review">Review order →</button>
+  </div></div>`;
+}
+document.addEventListener('click', e => { if(S.todoOpen && !e.target.closest('.shop-bar')){ S.todoOpen = false; if(S.screen === 'shop') renderWork(); } });
 function renderWork(resetScroll){
   const el = $('#work'), main = el.querySelector('.work-main'), keep = resetScroll ? 0 : (main ? main.scrollTop : 0);
   const needs = selNeeds();
@@ -1673,7 +1754,7 @@ function renderWork(resetScroll){
   const body = stackSel() ? roomHtml(needs)
     : `${headHtml(needs)}${bannersHtml(needs)}${ctxHtml(needs)}${pickHtml(needs)}${toolsHtml(needs)}<div class="grid" id="grid">${gridHtml(needs)}</div>`;
   const ps = curPanes(), shopT = ps.length === 2 && ps.includes('shop') ? `<div class="pane-hd shelf-t"><h2 class="pane-t">Shop</h2>${srcHtml()}</div>` : S.ref.full || S.pair ? '' : `<div class="src-pin">${srcHtml()}</div>`;
-  el.innerHTML = `<div class="work-main">${shopT}${body}</div>
+  el.innerHTML = `<div class="work-main">${shopT}${body}${shopBarHtml()}</div>
     ${boardHtml(tabRefOn() ? NEEDS : needs)}`;
   renderDetail(S.detailFor ? [need(S.detailFor)] : needs);
   el.querySelector('.work-main').scrollTop = keep;
@@ -2202,7 +2283,7 @@ function timelineHtml(lines, trk){
         ${thumbs}`;
     return `<div class="tgp${done && !trk ? ' done' : ''}"><div class="tg-row${r.late ? ' late' : ''}" data-act="rv-view" data-keys="${r.lines.map(L => L.key).join(',')}" title="Show ${n === 1 ? 'this item' : 'these items'} in the orders below">
       <div class="tg-lab">
-        <span class="tg-stage"><span class="mono" style="background:${s.tone}">${s.mono}</span>${esc(s.name)}${r.buyer !== ORG ? ` · for ${esc(r.buyer)}` : ''}</span>
+        <span class="tg-stage tg-who" title="${r.store ? 'Buys it' : 'Orders it'}"><span class="tg-tag">${r.buyer === ORG ? 'You' : 'Contractor'}</span>${esc(r.buyer)}</span>
         <span class="tg-name"><b>${nm}</b><span class="num">${money0(r.amt)}</span></span>
         <span class="tg-meta">${meta}</span></div>
       <div class="tg-track">${track}</div></div></div>`;
@@ -2540,6 +2621,7 @@ function renderPickup(){
 /* ═════════════ Actions ═════════════ */
 function select(sel){
   const from = S.sel;
+  if(JSON.stringify(from) !== JSON.stringify(sel)){ S.tkOpen.clear(); S.tkShut.clear(); }   // a new page starts from the rule again
   S.sel = sel; S.detail = null; S.detailFor = null; S.q = ''; S.chips.clear(); S.sort = 'rec';
   if(S.screen === 'review'){ renderList(); renderReview(); return; }   // Review: the left panel picks what the timeline shows
   if(S.screen === 'kw'){ setPanes(['scope']); return; }   // Overview / Documents: the task opens in Scope
@@ -2807,6 +2889,11 @@ document.addEventListener('click', e => {
     case 'trk-close': S.track = false; render(); $('#rvScroll').scrollTop = 0; break;
     case 'trk-day': S.trackDay = Math.max(0, S.trackDay + (+t.dataset.d)); renderReview(); break;
     case 'plan-room': { const r = t.dataset.room || null; S.planRoom = S.planRoom === r ? null : r; select({kind: 'room', room: S.planRoom || 'all'}); break; }   // Needs product on the floor plan: one room's list and its shelves, or every room
+    case 'sb-todo': S.todoOpen = !S.todoOpen; renderWork(); break;
+    case 'sb-go': S.todoOpen = false; select({kind: 'need', id}); break;   // a task still to pick: its shelf
+    case 'sb-filter': S.todoOpen = false; S.filter = S.filter === 'todo' ? 'all' : 'todo'; render(); break;
+    case 'tk-tog': { const n = need(id), k = n && tkOf(n); if(!k) break; if(tkIsOpen(n)){ S.tkOpen.delete(k); S.tkShut.add(k); } else { S.tkShut.delete(k); S.tkOpen.add(k); } renderWork(); break; }
+    case 'apply-more': { const n = need(id); pickAsk(sku, NEEDS.filter(m => m.cat === n.cat && tkOf(m) !== tkOf(n))); break; }   // the same product for the other tasks, in the task window
     case 'place-grp': { const ks = t.dataset.ks.split(','); S.poDraft = new Set(ks); S.poList = ks; S.po = ks[0]; render(); $('#rvScroll').scrollTop = 0; break; }   // one date's orders, as draft POs
     case 'place': { const ks = groupsOf(orderLines()).flatMap(g => g.rows).filter(r => r.kind !== 'store' && !S.rvDone.has(r.k)).map(r => r.k); S.poDraft = new Set(ks); S.poList = ks; S.po = ks[0] || null; render(); $('#rvScroll').scrollTop = 0; break; }   // Order all: a draft PO for each, to check and place
     case 'got': { if(S.pk.got.has(sku)) S.pk.got.delete(sku); else S.pk.got.add(sku); renderPickup(); break; }

@@ -2468,3 +2468,137 @@ body.is-dragging #list{position:relative}
   .nb-pick,.nb-picks{max-width:340px}
   .rcar,.nb-bd.none .rcar{--per:2}
 }
+
+/* Option cards end right after their button instead of stretching to the chosen
+   product's height, so there's no empty band above Select. */
+.rcar-track{align-items:flex-start}
+.nb-alt .acts{margin-top:6px}
+.rcar-track{flex:none}
+.nb-pick .im{aspect-ratio:16/7}
+.nb-picks .nb-pick .im{aspect-ratio:16/7}
+@container shelf (max-width:1080px){ .nb-pick .im,.nb-picks .nb-pick .im{aspect-ratio:16/8} }
+
+/* Timeline rows say who's ordering (as the orders table does), not the store */
+.tg-who{gap:7px}
+.tg-who .tg-tag{padding:1px 5px;background:var(--paper-3);color:var(--ink);font-size:7.5px;letter-spacing:.14em}
+
+/* No divider under a task's heading: the heading and its shelf read as one block */
+.nb-hd,.nb-ghd,.nb-hd-o{border-bottom:0;padding-bottom:2px}
+
+/* Shop's sticky bar: progress, what's still to pick, on to Review order */
+.shop-bar{position:sticky;bottom:0;z-index:8;margin-top:28px;background:var(--white);border-top:1px solid var(--ink);box-shadow:0 -6px 20px rgba(26,26,26,.07)}
+.sb-in{display:flex;align-items:center;gap:18px;padding:12px 32px}
+.sb-prog{flex:0 1 380px;min-width:180px;display:flex;flex-direction:column;gap:7px}
+.sb-pt1{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;font-size:13px;color:var(--t2)}
+.sb-pt1 b{color:var(--ink);font-weight:700}
+.sb-room{margin-left:auto;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.sb-track{height:8px;background:var(--paper-3);border:1px solid var(--ink);overflow:hidden}
+.sb-track span{display:block;height:100%;background:var(--ink);transition:width .3s ease}
+.sb-pct{font-family:var(--display);font-size:22px;font-weight:700}
+.sb-todo{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 12px;border:1.5px solid #E84E2F;background:#FDF0ED;color:#B3261E;font-size:13px;font-weight:600;white-space:nowrap}
+.sb-todo:hover,.sb-todo.on{background:#FBE0DA}
+.sb-todo svg{width:12px;height:12px}
+.sb-x{width:14px;height:14px;position:relative}
+.sb-x::before,.sb-x::after{content:'';position:absolute;left:6px;top:0;width:2px;height:14px;background:#E84E2F;transform:rotate(45deg)}
+.sb-x::after{transform:rotate(-45deg)}
+.sb-done{font-size:13px;font-weight:600;color:var(--success)}
+.sb-sp{flex:1}
+.sb-tot{display:flex;align-items:baseline;gap:10px;white-space:nowrap}
+.sb-tot .k{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.sb-tot b{font-family:var(--display);font-size:20px;font-weight:700}
+.shop-bar .btn.lg{flex:none}
+.sb-pop{position:absolute;left:32px;bottom:calc(100% + 8px);width:min(440px,calc(100% - 64px));max-height:min(420px,60vh);display:flex;flex-direction:column;background:var(--white);border:1px solid var(--ink);box-shadow:0 18px 44px rgba(26,26,26,.2)}
+.sb-pop-hd{display:flex;align-items:baseline;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--stroke)}
+.sb-pop-hd b{font-size:14px;font-weight:700}
+.sb-pop-hd span{font-size:12.5px;color:#C2412D}
+.sb-pop-list{overflow-y:auto}
+.sb-pr + .sb-pr{border-top:1px solid var(--stroke)}
+.sb-prn{display:block;padding:10px 16px 2px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.sb-pt{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 16px;text-align:left}
+.sb-pt:hover{background:var(--sunken-lift)}
+.sb-pt b{display:block;font-size:13.5px;font-weight:600}
+.sb-pt span span{font-size:12.5px;color:var(--t2)}
+.sb-pt i{flex:none;font-style:normal;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.sb-pop-ft{padding:10px 16px;border-top:1px solid var(--stroke);font-size:13px}
+@container shelf (max-width:900px){ .sb-tot{display:none} .sb-in{padding:10px 22px;gap:12px} .sb-pct{font-size:18px} }
+@container shelf (max-width:620px){ .sb-pct{display:none} .shop-bar .btn.lg{min-width:0;padding:0 14px} }
+
+/* Quantity stepper: the number inside, the unit beside it */
+.stp-w{display:inline-flex;align-items:center;gap:8px;flex:1;min-width:0}
+.stp-w .stp{flex:none;width:132px}
+.stp-w.mini,.stp-w.line{flex:none}
+.stp-w .stp.mini{width:108px}
+.stp-w .stp.line{width:108px}
+.stp-u{font-size:13px;color:var(--t2);white-space:nowrap}
+.split-row.wig{grid-template-columns:170px 200px minmax(0,1fr) 100px}
+
+/* ── Shelves as task cards (after Shane's wireframe) ── */
+.tag.box{background:var(--white);color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.roomv .nb,.roomv .nb-grp{margin-top:18px;padding:18px 20px 20px;background:var(--white);border:1px solid var(--stroke)}
+.roomv .nb.nb-shut{padding:14px 20px}
+.roomv .nb-grp > .nb{margin-top:16px;padding:16px 0 0;border:0;border-top:1px solid var(--stroke);background:none}
+.nb-hd2{display:flex;flex-direction:column;gap:4px;cursor:pointer}
+.nb-k{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.nb-row{display:flex;align-items:center;gap:12px;min-width:0}
+.nb-row h3{flex:1;min-width:0;font-family:var(--display);font-size:19px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.nb-row h3 button{font:inherit;letter-spacing:inherit;text-align:left}
+.nb-row h3 button:hover{text-decoration:underline;text-underline-offset:4px}
+.nb-row h3 .q{font-family:var(--body);font-size:13.5px;font-weight:500;letter-spacing:0;color:var(--t2)}
+.nb-hd2 .nb-hd-r{flex:none;display:flex;align-items:center;gap:10px;margin-left:auto}
+.nb-mat{font-size:13.5px;color:var(--t2);white-space:nowrap}
+.nb-mat b{font-size:15px;color:var(--ink)}
+.nb-mat.over b{color:#C2412D}
+.nb-mat.na{color:var(--t3)}
+.nb-car{flex:none;width:28px;height:28px;display:grid;place-items:center;color:var(--t2)}
+.nb-car svg{width:13px;height:13px;transition:transform .15s}
+.nb-car.o svg{transform:rotate(90deg)}
+.nb-car:hover{color:var(--ink);background:var(--sunken-lift)}
+.nb-who{font-size:13px;color:var(--t2)}
+.nb-who b{color:var(--ink);font-weight:600}
+.nb-shut .nb-row h3{font-size:16px;color:var(--t2)}
+.nb-shut .nb-hd2:hover .nb-row h3{color:var(--ink)}
+.nb-chosen{display:inline-flex;align-items:center;gap:8px;max-width:260px;font-size:13px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nb-chosen img{width:26px;height:26px;object-fit:cover;border:1px solid var(--stroke);flex:none}
+.nb-src{margin-top:12px;padding:9px 14px;border:1px dashed rgba(26,26,26,.45);font-size:13px;color:var(--t2)}
+.nb-src b{color:var(--ink);font-weight:600}
+.nb-ft{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;margin-top:14px;padding-top:14px;border-top:1px solid var(--stroke);font-size:13.5px}
+.nb-ft > b{font-weight:700}
+.nb-nofit{flex:1 1 260px;font-size:12.5px;color:var(--t2)}
+.nb-pick .im .nb-tags{position:absolute;left:8px;top:8px;display:flex;gap:4px}
+.nb-pick .im .nb-tags .tag{position:static}
+.roomv .nb-notes{margin-top:10px}
+/* Shut task: photo on the left, a little larger */
+.nb-shut-hd{flex-direction:row;align-items:center;gap:14px}
+.nb-sth{position:relative;flex:none;width:52px;height:52px;background:var(--sunken);border:1px solid var(--stroke);overflow:hidden}
+.nb-sth img{width:100%;height:100%;object-fit:cover;display:block}
+.nb-sth b{position:absolute;right:0;bottom:0;padding:0 3px;background:var(--ink);color:#fff;font-family:var(--mono);font-size:9px;font-weight:700;line-height:14px}
+.nb-stx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.nb-stx h3{font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:-.01em;color:var(--t2)}
+.nb-shut-hd:hover .nb-stx h3{color:var(--ink)}
+.nb-stx h3 .q{font-family:var(--body);font-size:13px;font-weight:500;letter-spacing:0;color:var(--t2)}
+.roomv .nb.nb-shut{padding:12px 16px 12px 12px}
+
+/* The room you're in stays at the top while you scroll its shelves: the page
+   header on one room's page; each room's header on the every-room page, handing
+   over to the next room as its shelves arrive. Same for a department's types. */
+.shelf-hd.rm-stick{position:sticky;top:0;z-index:6;background:var(--app-bg);padding-bottom:12px;box-shadow:0 1px 0 var(--stroke)}
+.roomv .rm-hd{position:sticky;top:0;z-index:6;background:var(--app-bg);padding:14px 0 12px;margin:0 -2px;box-shadow:0 1px 0 var(--stroke)}
+
+/* Compact task rows: no white card around each task, hairlines between them,
+   less padding everywhere, the template line as plain text */
+.roomv .nb,.roomv .nb-grp{margin-top:0;padding:14px 0 16px;background:none;border:0;border-top:1px solid var(--stroke)}
+.roomv .rm-hd + .nb,.roomv .rm-hd + .nb-grp{border-top:0}
+.roomv .nb.nb-shut{padding:8px 0}
+.roomv .nb-grp > .nb{margin-top:10px;padding:10px 0 0;border-top:1px dashed var(--stroke)}
+.nb-hd2{gap:2px}
+.nb-row h3{font-size:17px}
+.nb-who{font-size:12.5px}
+.nb-src{margin-top:2px;padding:0;border:0;font-size:12.5px;color:var(--t2)}
+.nb-src b{font-weight:700}
+.roomv .nb-notes{margin-top:8px}
+.roomv .nb-note{padding:6px 12px;font-size:12.5px}
+.roomv .nb-bd{margin-top:10px}
+.nb-ft{margin-top:8px;padding-top:0;border-top:0;font-size:13px}
+.nb-sth{width:44px;height:44px}
+.nb-stx h3{font-size:15px}
+.roomv .nb-alt .im{aspect-ratio:16/10}
