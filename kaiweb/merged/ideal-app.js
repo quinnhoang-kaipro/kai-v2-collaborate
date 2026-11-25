@@ -137,7 +137,7 @@ const S = {
   rvDone: new Set(),
   po: null, poList: [],     // the purchase order open after Order (and the ones you can page through)
   poDraft: new Set(),       // orders shown as a draft PO, waiting for Place order
-  planRoom: null, todoOpen: false, tkOpen: new Set(), tkShut: new Set(),   // tkOpen/tkShut: which shelves are open on a room or department page   // todoOpen: Shop's bar, the Still to pick list
+  planRoom: null, todoOpen: false, tkOpen: new Set(), tkShut: new Set(), tkRank: new Map(),   // tkOpen/tkShut: which shelves are open on a room or department page   // todoOpen: Shop's bar, the Still to pick list
             // the floor plan, filtered to Needs product: the room whose list shows
   track: false, trackDay: 0,  // Track orders: the grid for what's been ordered or bought; trackDay moves 'today' for the demo
   tlCon: new Set(),         // Merged Timeline: contractors picked in the filter (none = all)
@@ -316,6 +316,9 @@ const tkOf = n => n.of || n.id;
 const optsOf = n => NEEDS.filter(x => tkOf(x) === tkOf(n));
 const multiOpt = n => optsOf(n).length > 1;
 const taskCount = ns => new Set(ns.map(tkOf)).size;
+/* Stores show as their logo where we have one, else their name */
+const supLogo = (k, cls) => { const s = SUPPLIERS[k]; return s.logo ? `<img class="sup-logo${cls ? ' ' + cls : ''}" src="${s.logo}" alt="${esc(s.name)}" title="${esc(s.name)}">` : esc(s.name); };
+const monoHtml = s => s.logo ? `<span class="mono has-logo"><img src="${s.logo}" alt="${esc(s.name)}" title="${esc(s.name)}"></span>` : `<span class="mono" style="background:${s.tone}">${s.mono}</span>`;
 const firstPerTask = ns => ns.filter((n, i) => ns.findIndex(x => tkOf(x) === tkOf(n)) === i);
 const optShort = n => (n.opt || n.task).split(' : ').pop();
 // Where a line goes: the room, plus the option when its task has more than one.
@@ -691,7 +694,7 @@ function taskAmtHtml(os){
 const TEMPLATE_NAME = 'Default Flow';   // the job's template, as Overview names it
 const verbObj = n => { const [v, o] = (n.opt || '').split(' : '); return o ? `${esc(v)} · ${esc(o)}` : esc(n.opt || n.task); };
 // On a room's page the room is in the header, so the task titles leave it out
-const rmPre = n => S.sel.kind === 'room' ? '' : `${esc(ROOM[n.room].name)} · `;
+const rmPre = n => S.sel.kind === 'room' && !(S.sel.room === 'all' && S.pv === 'materials') ? '' : `${esc(ROOM[n.room].name)} · `;
 const tkMat = t => optsOf(t).reduce((a, o) => a + needTotal(o), 0);
 // days a task's product gets there after the task needs it (0 when on time)
 const lateOf = n => { const L = orderLines().find(L => L.needs.includes(n)); return L && L.arrive > neededBy(n) ? Math.round((+L.arrive - +neededBy(n)) / 864e5) : 0; };
@@ -705,7 +708,7 @@ function tkIsOpen(t){
 }
 function tkAllowHtml(t){
   const a = (optsOf(t).find(o => !o.of) || t).allow, m = tkMat(t);
-  return a ? `<span class="tag box">Allowance</span><span class="nb-mat${m - a > .5 ? ' over' : ''}">Material <b class="num">${money0(m)}</b> of ${money0(a)}</span>` : '<span class="nb-mat na">Allowance N/A</span>';
+  return a ? `<span class="nb-mat${m - a > .5 ? ' over' : ''}">Material allowance: <b class="num">${money0(m)}</b> of ${money0(a)}</span>` : '<span class="nb-mat na">Material allowance: N/A</span>';
 }
 const tkWho = t => `<div class="nb-who">Selected by <b>${esc(ORG)}</b> · Purchased by <b>${esc(buyerOf(t))}</b> · Performed by <b>${esc(installerOf(t))}</b></div>`;
 const tkCar = (t, open) => `<button type="button" class="nb-car${open ? ' o' : ''}" data-act="tk-tog" data-id="${t.id}" aria-label="${open ? 'Close' : 'Open'} this task" aria-expanded="${open}"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6l-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
@@ -718,8 +721,18 @@ function tkShutHtml(t){
       <h3>${rmPre(t)}${os.length > 1 ? esc(t.task) : verbObj(t)}<span class="q"> · ${os.length > 1 ? os.map(o => qtyText(o.cat, o.qty)).join(' + ') : qtyText(t.cat, t.qty)}</span></h3></span>
     <span class="nb-hd-r">${ps.length ? `<span class="nb-chosen">${esc(shortName(ps[0]))}${ps.length > 1 ? ` +${ps.length - 1}` : ''}</span>` : ''}${tkAllowHtml(t)}</span>${tkCar(t, false)}</header></section>`;
 }
+/* Order on the page: tasks that need a product, then those that need a review (or arrive
+   late), then the ones that are fine. Within each, the left panel's order (department,
+   product type, task). The tiers are fixed when the page opens, so a task you just
+   picked for doesn't jump away; they refresh on the next page. */
+const tkTier = t => optsOf(t).some(o => !o.pick) ? 0 : tkNeeds(t) ? 1 : 2;
+let LEFT_IX = null;
+const leftIx = n => { if(!LEFT_IX){ LEFT_IX = new Map(); let i = 0;
+  [...new Set(NEEDS.map(m => DEPT[m.cat]))].sort().forEach(d => CAT_ORDER.filter(c => DEPT[c] === d).forEach(c => NEEDS.filter(m => m.cat === c).forEach(m => LEFT_IX.set(m.id, i++)))); }
+  return LEFT_IX.has(n.id) ? LEFT_IX.get(n.id) : 1e6; };
+function tkRank(t){ const k = tkOf(t); if(!S.tkRank.has(k)) S.tkRank.set(k, tkTier(t)); return S.tkRank.get(k); }
 function taskBlocks(ns){
-  return firstPerTask(ns).map(t => {
+  return firstPerTask(ns).sort((a, b) => tkRank(a) - tkRank(b) || leftIx(a) - leftIx(b)).map(t => {
     if(!tkIsOpen(t)) return tkShutHtml(t);
     if(!multiOpt(t)) return needBlock(t);
     const os = optsOf(t), shown = ns.filter(n => tkOf(n) === tkOf(t));
@@ -771,13 +784,13 @@ function needBlock(n, inTask){
     // Plain text of what's chosen; clicking it opens the choices in place, and choosing closes them.
     const ed = k => NB_EDIT && NB_EDIT.id === x.id && NB_EDIT.k === k;
     const val = (k, t) => `<button type="button" class="nb-val" data-act="nb-edit" data-id="${x.id}" data-k="${k}" title="Change">${t}</button>`;
-    const supTxt = `${esc(sp.name)} <i>${money(o.price)} / ${perUnit(p)}</i>`, inSt = o.stock >= b.n, stTxt = inSt ? 'In store' : 'Deliver to store',
+    const supTxt = `${supLogo(o.sup)} <i>${money(o.price)} / ${perUnit(p)}</i>`, inSt = o.stock >= b.n, stTxt = inSt ? 'In store' : 'Deliver to store',
       howTxt = how === 'pickup' ? `${stTxt} <i>${esc(sp.store)}</i>` : `Delivery <i>to ${esc(shortAddr(S.src.addr))}</i>`;
-    const supRow = offs.length < 2 ? `<span class="nb-val">${supTxt}</span>` : !ed('sup') ? val('sup', supTxt) : `<div class="seg nb-seg" role="group" aria-label="Buy from">${offs.map(of => `<button type="button" class="${of.sup === o.sup ? 'on' : ''}" data-act="nb-sup" data-id="${x.id}" data-sup="${of.sup}" aria-pressed="${of.sup === o.sup}">${esc(SUPPLIERS[of.sup].name)}<i>${money(of.price)}</i></button>`).join('')}</div>`;
+    const supRow = offs.length < 2 ? `<span class="nb-val">${supTxt}</span>` : !ed('sup') ? val('sup', supTxt) : `<div class="seg nb-seg" role="group" aria-label="Buy from">${offs.map(of => `<button type="button" class="${of.sup === o.sup ? 'on' : ''}" data-act="nb-sup" data-id="${x.id}" data-sup="${of.sup}" aria-pressed="${of.sup === o.sup}">${supLogo(of.sup)}<i>${money(of.price)}</i></button>`).join('')}</div>`;
     const howRow = S.src.mode === 'both' && !ed('how') ? val('how', howTxt) : S.src.mode === 'both' ? `<div class="seg nb-seg" role="group" aria-label="How it gets there"><button type="button" class="${how === 'pickup' ? 'on' : ''}" data-act="nb-ful" data-id="${x.id}" data-v="pickup" aria-pressed="${how === 'pickup'}">${stTxt}</button><button type="button" class="${how === 'delivery' ? 'on' : ''}" data-act="nb-ful" data-id="${x.id}" data-v="delivery" aria-pressed="${how === 'delivery'}">Delivery</button></div><small>${how === 'pickup' ? esc(sp.store) : `to ${esc(shortAddr(S.src.addr))}`}</small>`
       : `<span>${S.src.mode === 'pickup' ? `${stTxt} · ${esc(sp.store)}` : `Delivery to ${esc(shortAddr(S.src.addr))}`}</span>`;
     return `<div class="nb-pick${x.xof ? ' more' : ''}" data-pk="${x.id}" draggable="true" data-drag="${p.sku}"><div class="im" data-act="detail" data-sku="${p.sku}" data-id="${x.xof || x.id}"><img src="${ART.product(p)}" alt="${esc(p.name)}"><span class="nb-tags"><span class="tag ink">Selected</span>${isTpl(p.sku, [x]) ? '<span class="tag acc">Template pick</span>' : ''}</span></div>
-      <div class="tx"><span class="brand">${esc(p.brand)} · ${esc(SUPPLIERS[o.sup].name)}</span>
+      <div class="tx"><span class="brand">${esc(p.brand)} · ${supLogo(o.sup)}</span>
         <b class="nm" data-act="detail" data-sku="${p.sku}" data-id="${x.xof || x.id}">${esc(p.name)}</b>
         <span class="ln"><b class="num">${money(b.total)}</b> · ${b.label} at ${money(o.price)} / ${perUnit(p)}</span>
         ${(() => { const OL = orderLines(), L = OL.find(L => L.needs.includes(x)), late = L ? Math.round((+L.arrive - +neededBy(x)) / 864e5) : 0;
@@ -793,29 +806,26 @@ function needBlock(n, inTask){
   const alt = c => {
     const o = prefOffer(c, n), kD = ALT_Q[n.id + '|' + c.sku], b = kD ? buy(c, qtyForCount(c, kD), o) : buy(c, n.qty, o), av = avail(c, n.qty, o), bk = n.backups.includes(c.sku);
     const tA = (n.of ? need(n.of) : n), aw = (optsOf(tA).find(o => !o.of) || tA).allow, fitsA = aw && tkMat(tA) - needTotal(n) + b.total <= aw;
-    const tag = isTpl(c.sku, [n]) ? '<span class="tag acc">Template pick</span>' : fitsA ? '<span class="tag box">Fits allowance</span>' : c.std ? '<span class="tag ink">Team standard</span>' : '';
+    const tag = isTpl(c.sku, [n]) ? '<span class="tag acc">Template pick</span>' : fitsA ? '<span class="tag box">In allowance</span>' : c.std ? '<span class="tag ink">Team standard</span>' : '';
     const d = b.total - (p ? buy(p, n.qty, offerOf(n, p)).total : 0);   // against the first product, not the task's sum
-    return `<article class="nb-alt" draggable="true" data-drag="${c.sku}"><div class="im" data-act="detail" data-sku="${c.sku}" data-id="${n.id}"><img src="${ART.product(c)}" alt="" loading="lazy">${tag}</div>
+    return `<article class="nb-alt" draggable="true" data-drag="${c.sku}" data-act="detail" data-sku="${c.sku}" data-id="${n.id}"><div class="im" data-act="detail" data-sku="${c.sku}" data-id="${n.id}"><img src="${ART.product(c)}" alt="" loading="lazy">${tag}</div>
       <span class="nm" data-act="detail" data-sku="${c.sku}" data-id="${n.id}" title="${esc(c.name)}">${esc(c.name)}</span>
       <span class="ln">${altLnHtml(b, d, !!p)}</span>
       <span class="avail"><span class="dot ${av.cls}"></span><span>${av.short}</span></span>
       <span class="acts"><button type="button" class="btn ${p ? 'ghost' : 'pri'} sm qa" data-act="choose" data-sku="${c.sku}" data-id="${n.id}"${kD ? ` data-k="${kD}"` : ''}${p ? ' data-rep="1"' : ''} title="${p ? `Use it instead of ${esc(p.name)}` : 'Add to the list'} · ${b.label}. Click the product for every option."><span class="qa-d">${p ? 'Select' : 'Quick add'}</span><span class="qa-h">${p ? 'Select' : 'Quick add'} – ${b.label}</span></button>${p ? `<button type="button" class="btn ghost sm qa-add" data-act="detail" data-sku="${c.sku}" data-id="${n.id}" title="Add it to this task, beside ${esc(p.name)}. Opens the product.">Add</button>` : ''}</span></article>`;
   };
+  /* the carousel's paging sits up in the header, under the allowance, to save a row */
+  const pager = `<div class="rcar-ft" data-act="none"><button type="button" class="link" data-act="sel-need" data-id="${n.id}">View all ${all} →</button>
+    <span class="rcar-n" aria-live="polite"></span>
+    <button type="button" class="rcar-b" data-act="car" data-d="-1" aria-label="Previous products">‹</button><button type="button" class="rcar-b" data-act="car" data-d="1" aria-label="Next products">›</button></div>`;
   return `<section class="nb" data-need="${n.id}">
-    ${inTask ? `<header class="nb-hd nb-hd-o"><h3><button type="button" data-act="task-open" data-id="${n.id}" title="See this task">${verbObj(n)}</button></h3><span class="sub">${qtyText(n.cat, n.qty)}${n.fit ? ` · ${n.fit}″ opening` : ''}</span>${st ? `<span class="nb-hd-r">${st}</span>` : ''}</header>`
+    ${inTask ? `<header class="nb-hd nb-hd-o"><h3><button type="button" data-act="task-open" data-id="${n.id}" title="See this task">${verbObj(n)}</button></h3><span class="sub">${qtyText(n.cat, n.qty)}${n.fit ? ` · ${n.fit}″ opening` : ''}</span>${st ? `<span class="nb-hd-r">${st}</span>` : ''}</header><div class="nb-row2">${pager}</div>`
       : `<header class="nb-hd2" data-act="tk-tog" data-id="${n.id}"><span class="nb-k">${esc(n.task)} · ${esc(optShort(n))}</span>
       <div class="nb-row"><h3><button type="button" data-act="task-open" data-id="${n.id}" title="See this task">${rmPre(n)}${verbObj(n)}</button><span class="q"> · ${qtyText(n.cat, n.qty)}${n.fit ? ` · ${n.fit}″ opening` : ''}</span></h3>
-        <span class="nb-hd-r">${st}${tkAllowHtml(n)}</span>${tkCar(n, true)}</div>${tkWho(n)}</header>`}
-    ${(() => { /* where the choices come from, and how many fit this task and its allowance */
-      const t = n.of ? need(n.of) : n, a = (optsOf(t).find(o => !o.of) || t).allow, rest = tkMat(t) - needTotal(n);
-      const all = BY_CAT[n.cat].filter(c => sold(c) && fitsNeed(c, n)), k = all.filter(c => !a || rest + buy(c, n.qty, prefOffer(c, n)).total <= a).length;
-      return `<div class="nb-src">${a ? `<b>${k} of ${all.length}</b> products keep materials within the ${money0(a)} allowance` : `${all.length} products`} · from the ${esc(TEMPLATE_NAME)} template</div>`; })()}
+        <span class="nb-hd-r">${st}${tkAllowHtml(n)}</span>${tkCar(n, true)}</div><div class="nb-row2">${tkWho(n)}${pager}</div></header>`}
     ${notes.length ? `<div class="nb-notes">${notes.join('')}</div>` : ''}
     <div class="nb-bd${p ? '' : ' none'}${withMore(n).filter(x => x.pick).length > 1 ? ` np${Math.min(3, withMore(n).filter(x => x.pick).length)}` : ''}">${pick}
-      <div class="rcar" data-car="${n.id}"><div class="rcar-track" role="list">${alts.map(alt).join('')}</div>
-        <div class="rcar-ft"><button type="button" class="link" data-act="sel-need" data-id="${n.id}">View all ${all} →</button>
-          <span class="rcar-n" aria-live="polite"></span>
-          <button type="button" class="rcar-b" data-act="car" data-d="-1" aria-label="Previous products">‹</button><button type="button" class="rcar-b" data-act="car" data-d="1" aria-label="Next products">›</button></div></div></div>
+      <div class="rcar" data-car="${n.id}"><div class="rcar-track" role="list">${alts.map(alt).join('')}</div></div></div>
     ${(() => { /* the same product for other tasks: how many it fits, and which it doesn't */
       if(!p) return '';
       const others = NEEDS.filter(m => m.cat === n.cat && tkOf(m) !== tkOf(n)), fit = others.filter(m => fitsNeed(p, m) && !hasSku(m, p.sku)), no = others.filter(m => !fitsNeed(p, m));
@@ -843,6 +853,7 @@ function deptHtml(){
 }
 function roomHtml(){
   if(S.sel.kind === 'dept') return deptHtml();
+  if(S.sel.room === 'all' && S.pv === 'materials') return allTypesHtml();
   const rid = S.sel.room, isAll = rid === 'all', rooms = isAll ? ROOMS : [ROOM[rid]];
   const scope = NEEDS.filter(n => isAll || n.room === rid), shown = scope.filter(listFilter);
   const chosen = scope.filter(n => n.pick).length, total = scope.reduce((a, n) => a + needTotal(n), 0);
@@ -863,6 +874,22 @@ function roomHtml(){
     foot = `<div class="rm-foot">${nx ? `<button type="button" class="btn" data-act="sel-room" data-room="${nx.id}">Next room: ${esc(nx.name)} →</button>` : `<button type="button" class="btn pri" data-act="screen" data-v="review">Review &amp; order →</button>`}<button type="button" class="link" data-act="sel-room" data-room="all">All</button></div>`;
   }
   return `${head}<div class="roomv">${rooms.map(roomSec).join('')}${foot}</div>`;
+}
+/* "All materials" in the left panel: every item, one section per department like the list beside it */
+function allTypesHtml(){
+  const scope = NEEDS, shown = scope.filter(listFilter), depts = [...new Set(NEEDS.map(n => DEPT[n.cat]))].sort();
+  const cats = CAT_ORDER.filter(c => scope.some(n => n.cat === c));
+  const chosen = scope.filter(n => n.pick).length, total = scope.reduce((a, n) => a + needTotal(n), 0);
+  const fl = {todo: 'Needs product', changed: 'Needs review'}[S.filter];
+  const sub = `<b>${scope.length} items</b><span class="sep">|</span><span>${chosen} chosen</span><span class="sep">|</span><span>${cats.length} product types</span><span class="sep">|</span><span>${money(total)}</span>`;
+  const head = `<div class="shelf-hd no-crumbs"><div><h2>${shopFor('all product types')}</h2><div class="shelf-sub">${sub}</div></div></div>
+    ${fl ? bannerHtml('info', IC.search, `Showing ${fl} only`, `${shown.length} of ${scope.length} items`, '<button class="btn" data-act="filter" data-v="all">Show everything</button>') : ''}`;
+  const sec = d => {
+    const all = scope.filter(n => DEPT[n.cat] === d), ns = all.filter(listFilter); if(!ns.length) return '';
+    const ord = CAT_ORDER.filter(c => DEPT[c] === d).flatMap(c => ns.filter(n => n.cat === c));
+    return `<div class="rm" data-dept="${esc(d)}"><div class="rm-hd"><h3>${esc(d)}</h3><span>${all.filter(n => n.pick).length} of ${all.length} chosen · ${money(all.reduce((a, n) => a + needTotal(n), 0))}</span><button type="button" class="link" data-act="sel-dept" data-dept="${esc(d)}">Just ${esc(d.toLowerCase())}</button></div>${taskBlocks(ord)}</div>`;
+  };
+  return `${head}<div class="roomv">${depts.map(sec).join('') || `<div class="nb-empty">Nothing matches “${fl}”. <button class="link" data-act="filter" data-v="all">Show everything</button></div>`}</div>`;
 }
 function shelfProducts(needs){
   const cat = needs[0].cat, q = needs.reduce((a, n) => a + n.qty, 0);
@@ -903,7 +930,7 @@ function cardHtml(p, needs, i){
   return `<article class="card${isPick ? ' is-pick' : ''}${bkI >= 0 ? ' is-backup' : ''}${!av.ok ? ' is-out' : ''}" draggable="true" data-drag="${p.sku}">
     <div class="img" data-act="detail" data-sku="${p.sku}"><img src="${ART.product(p)}" alt="${esc(p.name)}" loading="lazy"><span class="badges">${badges}</span></div>
     <div class="bd">
-      <span class="brand">${esc(p.brand)} · ${esc(SUPPLIERS[o.sup].name)}</span>
+      <span class="brand">${esc(p.brand)} · ${supLogo(o.sup)}</span>
       <span class="nm" data-act="detail" data-sku="${p.sku}">${esc(p.name)}</span>
       <span class="price"><b class="num">${money(o.price)}</b><span>/ ${perUnit(p)}</span></span>
       <span class="forjob">Buy <strong>${b.label}</strong>${b.sub ? ` (${b.sub})` : ''} · <strong class="num">${money(b.total)}</strong>${single ? '' : ' for all'}</span>
@@ -1148,15 +1175,16 @@ function secPlan(needs){
   }).join('');
   const placed = {};
   needs.forEach(n => [n.pick, ...(n.more || []).map(x => x.pick)].filter(sku => sku && CATALOG[sku]).forEach(sku => { (placed[n.room] = placed[n.room] || []).includes(sku) || placed[n.room].push(sku); }));
-  /* Filtered to Needs product: each room shows how many tasks still need one; click a
-     room for its list (click again for every room). Each task opens its shelf. */
-  if(S.filter === 'todo'){
+  /* Beside the shelf (or filtered to Needs product): each room shows how many tasks still
+     need one; click a room for its list (click again for every room). Each task opens its
+     shelf. The full Floorplan tab keeps the placed products. */
+  if(S.filter === 'todo' || !tabRefOn()){
     const todo = firstPerTask(NEEDS.filter(n => !n.pick)), cnt = {}; todo.forEach(n => { cnt[n.room] = (cnt[n.room] || 0) + 1; });
     const rs = S.planRoom ? ROOMS.filter(r => r.id === S.planRoom) : ROOMS.filter(r => cnt[r.id]);
     const list = rs.map(r => { const ts = todo.filter(n => n.room === r.id);
       return `<div class="pt-room"><div class="pt-rh"><b>${esc(r.name)}</b><span>${ts.length ? `${ts.length} ${ts.length === 1 ? 'task needs' : 'tasks need'} a product` : 'Every task has a product'}</span></div>
         ${ts.map(n => `<button type="button" class="pt-t" data-act="sel-need" data-id="${n.id}"><span><b>${esc(taskLabel(n))}</b><span>${esc(n.opt || CAT_INFO[n.cat].label)} · ${qtyText(n.cat, n.qty)}</span></span><span class="pt-go">Shop →</span></button>`).join('')}</div>`; }).join('');
-    return `<div class="plan">${planSvg(S.planRoom ? [S.planRoom] : [], placed, cnt)}<span class="plan-hint">${S.planRoom ? '<button type="button" class="link" data-act="plan-room" data-room="">Show every room</button>' : 'Click a room to see what it still needs'}</span></div>
+    return `<div class="plan">${planSvg(S.planRoom ? [S.planRoom] : [], null, cnt)}<span class="plan-hint">${S.planRoom ? '<button type="button" class="link" data-act="plan-room" data-room="">Show every room</button>' : 'Click a room to see what it still needs'}</span></div>
       <div class="pt-list"><div class="pt-hd"><b>Needs product</b><span>${todo.length} ${todo.length === 1 ? 'task' : 'tasks'} · ${Object.keys(cnt).length} rooms</span></div>${list || '<p class="sub">Every task has a product.</p>'}</div>`;
   }
   return `<div class="plan">${planSvg(rooms, placed)}<span class="plan-hint">Drag a product onto a room to add it there</span></div>
@@ -1189,7 +1217,7 @@ function secProduct(needs){
   const isPick = k > 0 && tgt.filter(n => fitsNeed(p, n)).every(n => n.pick === p.sku);
   return `<div class="bq-ths">${L.map(x => `<button type="button" class="${x === cur ? 'on' : ''}" data-act="ref-prod" data-sku="${x.sku}" title="${esc(CATALOG[x.sku].name)}"><img src="${ART.product(CATALOG[x.sku])}" alt=""><span>${esc(x.tag)}</span></button>`).join('')}</div>
     <div class="bq-view"><img src="${ART.product(p)}" alt="${esc(p.name)}"></div>
-    <div class="bq-tx"><span class="brand">${esc(p.brand)} · ${esc(SUPPLIERS[o.sup].name)}</span><b>${esc(p.name)}</b>
+    <div class="bq-tx"><span class="brand">${esc(p.brand)} · ${supLogo(o.sup)}</span><b>${esc(p.name)}</b>
       <span class="price"><b class="num">${money(o.price)}</b> / ${perUnit(p)} · buy <strong>${b.label}</strong> · <strong class="num">${money(b.total)}</strong></span>
       <span class="fit">${p.mood && (single ? fitsNeed(p, n0) : needs.some(n => fitsNeed(p, n))) ? '<span class="tag ok">High match</span>' : '<span class="tag warn">Lower match</span>'}${single && n0.fit ? (fitsNeed(p, n0) ? `<span class="tag ok">Fits ${n0.fit}″ opening</span>` : `<span class="tag err">${p.size}″ — opening is ${n0.fit}″</span>`) : ''}</span>
       <span class="avail"><span class="dot ${av.cls}"></span><span>${av.html}</span></span>
@@ -1297,7 +1325,7 @@ function scopePageHtml(needs){
       <section class="scp-c scp-wide"><span class="k">The task<em>${esc(installerOf(n))}</em></span><p>${esc(n.desc || '')}</p></section>
       <section class="scp-c"><span class="k">Measurements</span><p><b>${qtyText(n.cat, n.planQty)}</b>${n.src ? ` · ${esc(n.src)}` : ''}</p>${n.fit ? `<p>Opening ${n.fit}″ wide</p>` : ''}</section>
       <section class="scp-c"><span class="k">Labor<em>${esc(installerOf(n))}</em></span><b class="scp-amt num">${lab ? money(lab) : 'Not priced yet'}</b></section>
-      <section class="scp-c"><span class="k">Materials</span>${p ? `<div class="scp-pick"><img src="${ART.product(p)}" alt=""><span class="tx"><span class="brand">${esc(p.brand)} · ${esc(SUPPLIERS[o.sup].name)}</span><b>${esc(p.name)}</b><span>${b.label} · <b class="num">${money(b.total)}</b></span></span></div>` : '<p class="todo">No product chosen yet</p>'}
+      <section class="scp-c"><span class="k">Materials</span>${p ? `<div class="scp-pick"><img src="${ART.product(p)}" alt=""><span class="tx"><span class="brand">${esc(p.brand)} · ${supLogo(o.sup)}</span><b>${esc(p.name)}</b><span>${b.label} · <b class="num">${money(b.total)}</b></span></span></div>` : '<p class="todo">No product chosen yet</p>'}
         <button type="button" class="btn ${p ? '' : 'pri '}sm" data-act="shop-task" data-id="${n.id}">${p ? 'Change in Shop →' : 'Choose in Shop →'}</button></section>
       <section class="scp-c"><span class="k">Notes<em>${notes.length}</em></span>${notes.length ? notes.slice(-2).map(x => `<span class="ctx-note"><span class="av sm" style="background:${TEAM[x.who].tone}">${x.who}</span><p>${esc(x.text)}</p></span>`).join('') : '<p class="cf-none">No notes yet.</p>'}</section>
     </div></div>`;
@@ -1473,9 +1501,16 @@ function dropOn(sku, ids){
   const p = CATALOG[sku], n = ids.map(need).find(n => n && n.cat === p.cat && fitsNeed(p, n));
   if(!n) return;
   const undo = giveAll(sku, [n]);
-  render();
-  const others = NEEDS.filter(m => m.id !== n.id && m.cat === p.cat && fitsNeed(p, m) && !hasSku(m, sku)).map(m => m.id);
-  dropBanner({sku, first: n, undo, ids: others});
+  /* No pop-up offering it to other tasks: the task opens in the main panel, where its
+     footer always says "Same product, N more tasks fit · Apply to N". If the task isn't
+     on the page you're on, its room opens. */
+  S.tkShut.delete(tkOf(n)); S.tkOpen.add(tkOf(n));
+  if(S.screen === 'shop' && !selNeeds().some(m => tkOf(m) === tkOf(n))){ select({kind: 'room', room: n.room}); S.tkOpen.add(tkOf(n)); render(); }
+  else render();
+  toast(`Added ${shortName(p)} to ${esc(ROOM[n.room].name)} › ${esc(taskLabel(n))}.`, () => { undo(); render(); });
+  const sec = document.querySelector(`.nb[data-need="${n.id}"], .nb-grp[data-task="${tkOf(n)}"]`);
+  if(sec) sec.scrollIntoView({block: 'start', behavior: 'smooth'});
+  flashPick(n.id);
 }
 let DB = null, DB_T = null;
 const dbName = p => esc(p.name.split(/,|\(/)[0].trim());
@@ -1813,10 +1848,11 @@ function carGeo(c){
 function carSync(c){
   const {tr, per, step, total} = carGeo(c);
   const first = Math.min(total, Math.round(tr.scrollLeft / step) + 1), last = Math.min(total, first + per - 1);
-  c.querySelector('.rcar-n').textContent = total ? `${first}–${last} of ${total}` : 'Nothing else fits';
-  const [prev, next] = c.querySelectorAll('.rcar-b');
+  const pg = c.closest('.nb')?.querySelector('.rcar-ft'); if(!pg) return;
+  pg.querySelector('.rcar-n').textContent = total ? `${first}–${last} of ${total}` : 'Nothing else fits';
+  const [prev, next] = pg.querySelectorAll('.rcar-b');
   prev.disabled = first <= 1; next.disabled = last >= total;
-  c.classList.toggle('no-pager', total <= per);
+  pg.classList.toggle('no-pager', total <= per);
 }
 document.addEventListener('scroll', e => {
   const tr = e.target.closest && e.target.closest('.rcar-track'); if(!tr) return;
@@ -2018,7 +2054,7 @@ function orderCard(ord, lines){
   return `<div class="order" id="ord-${ord.replace('|', '-').replace(/\W/g, '')}" data-ord="${ord}">
     <div class="order-hd po-hd">
       <div class="po-l"><span class="k">${S.placed ? 'Order' : 'Order · not submitted yet'}</span>
-        <h3><span class="mono" style="background:${s.tone}">${s.mono}</span>${esc(s.name)}</h3>
+        <h3>${monoHtml(s)}${esc(s.name)}</h3>
         <p>${S.placed ? 'Bought by' : 'Buyer:'} <b>${esc(buyer)}</b> · ${S.placed ? 'Billed to' : 'Bill to'}: ${buyer === ORG ? `${esc(ORG_ACCT)} account` : `${esc(buyer)}’s account`}</p>${placedTrack}</div>
       <dl class="po-meta${S.placed ? ' n3' : ''}">
         <div><dt>Status</dt><dd><span class="po-st${S.placed ? ' ok' : ''}"><i></i>${status}</span></dd></div>
@@ -2284,7 +2320,7 @@ function timelineHtml(lines, trk){
     return `<div class="tgp${done && !trk ? ' done' : ''}"><div class="tg-row${r.late ? ' late' : ''}" data-act="rv-view" data-keys="${r.lines.map(L => L.key).join(',')}" title="Show ${n === 1 ? 'this item' : 'these items'} in the orders below">
       <div class="tg-lab">
         <span class="tg-stage tg-who" title="${r.store ? 'Buys it' : 'Orders it'}"><span class="tg-tag">${r.buyer === ORG ? 'You' : 'Contractor'}</span>${esc(r.buyer)}</span>
-        <span class="tg-name"><b>${nm}</b><span class="num">${money0(r.amt)}</span></span>
+        <span class="tg-name"><span class="tg-sup">${monoHtml(s)}</span><b>${nm}</b><span class="num">${money0(r.amt)}</span></span>
         <span class="tg-meta">${meta}</span></div>
       <div class="tg-track">${track}</div></div></div>`;
   };
@@ -2335,7 +2371,7 @@ function trackHtml(lines){
   const chips = [['On its way', cnt('way')], ['At the store', cnt('ready')], ['Delivered', cnt('done')], ['Bought in store', cnt('store')]].map(([k, v]) => `<div class="trk-c${v ? '' : ' zero'}"><b class="num">${v}</b><span>${k}</span></div>`).join('');
   const thumbs = ls => { const ps = [...new Set(ls.map(L => L.p))]; return `<span class="pr-ths">${ps.slice(0, 4).map(p => `<img src="${ART.product(p)}" alt="" title="${esc(p.name)}">`).join('')}${ps.length > 4 ? `<i>+${ps.length - 4}</i>` : ''}</span>`; };
   const tr = (r, i) => { const s = SUPPLIERS[r.sup], x = says[i];
-    return `<div class="trk-r${r.late && x.g === 'way' ? ' late' : ''}"><span class="mono" style="background:${s.tone}">${s.mono}</span>
+    return `<div class="trk-r${r.late && x.g === 'way' ? ' late' : ''}">${monoHtml(s)}
       <span class="trk-w"><b>${esc(s.name)}${r.buyer !== ORG ? ` · for ${esc(r.buyer)}` : ''}</b><span>${KIND[r.kind]} · ${esc(s.store)}</span></span>
       <span class="trk-po">${r.store ? '<span class="trk-none">No PO · bought in store</span>' : `<b>${poId(r.k)}</b><span>Placed ${md(dayAt(0))}</span>`}</span>
       <span class="trk-st"><span class="trk-pill ${x.cls}">${x.pill}</span><span>${x.when}${r.late && x.g === 'way' ? ` · <span class="bad">${daysTxt(r.arrive - r.need)} late</span>` : ''}</span></span>
@@ -2403,7 +2439,7 @@ function datesHtml(lines){
       <div class="pr-row" data-act="pr-tog" data-k="${r.k}">
         <span class="pr-car" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         <span class="pr-who">${who}</span>
-        <span class="pr-do"><span class="mono" style="background:${s.tone}">${s.mono}</span><span><b>${KIND[r.kind]}</b><i>${esc(s.name)} · ${esc(s.store.split(' · ')[0])} · ${s.mi} mi</i></span></span>
+        <span class="pr-do">${monoHtml(s)}<span><b>${KIND[r.kind]}</b><i>${esc(s.name)} · ${esc(s.store.split(' · ')[0])} · ${s.mi} mi</i></span></span>
         <span class="pr-gets">${gets}${late ? `<em>${late === 1 ? '1 item arrives' : `${late} items arrive`} after it’s needed</em>` : ''}</span>
         <span class="pr-its">${thumbs(r.lines)}<i>${its.length} ${its.length === 1 ? 'item' : 'items'} · ${money(tot)}</i></span>
         <span class="pr-act">${done && r.kind !== 'store' ? `<button type="button" class="btn po-view" data-act="po-open" data-k="${r.k}" title="Open the purchase order"><span class="ok-dot">✓</span> Ordered · View PO</button>` : `<button type="button" class="btn${done ? ' ok' : ''}" data-act="pr-done" data-k="${r.k}">${act}</button>`}</span>
@@ -2621,7 +2657,7 @@ function renderPickup(){
 /* ═════════════ Actions ═════════════ */
 function select(sel){
   const from = S.sel;
-  if(JSON.stringify(from) !== JSON.stringify(sel)){ S.tkOpen.clear(); S.tkShut.clear(); }   // a new page starts from the rule again
+  if(JSON.stringify(from) !== JSON.stringify(sel)){ S.tkOpen.clear(); S.tkShut.clear(); S.tkRank.clear(); }   // a new page starts from the rule again
   S.sel = sel; S.detail = null; S.detailFor = null; S.q = ''; S.chips.clear(); S.sort = 'rec';
   if(S.screen === 'review'){ renderList(); renderReview(); return; }   // Review: the left panel picks what the timeline shows
   if(S.screen === 'kw'){ setPanes(['scope']); return; }   // Overview / Documents: the task opens in Scope
@@ -2724,7 +2760,7 @@ document.addEventListener('click', e => {
     case 'reset': location.reload(); break;
     case 'undo': if(toast.undo){ const u = toast.undo; toast.undo = null; $('#toast').innerHTML = ''; u(); } break;
     case 'group': S.group = t.dataset.v; render(); break;
-    case 'pv': S.pv = t.dataset.v; S.pvAuto = false; renderList(); break;   // picked by hand: leaving Shop keeps it
+    case 'pv': S.pv = t.dataset.v; S.pvAuto = false; if(S.sel.room === 'all') render(); else renderList(); break;   // picked by hand: leaving Shop keeps it
     case 'nv-tog': { const k = t.dataset.k; if(t.dataset.o === '1'){ S.pvOpen.delete(k); S.pvShut.add(k); } else { S.pvShut.delete(k); S.pvOpen.add(k); } renderList(); break; }
     case 'nv-find': S.pvFind = !S.pvFind; if(!S.pvFind) S.pvQ = ''; renderList(); if(S.pvFind){ const i = $('#nvQ'); if(i) i.focus(); } break;
     case 'nv-clear': S.pvQ = ''; renderList(); break;
@@ -2761,7 +2797,7 @@ document.addEventListener('click', e => {
       slot.outerHTML = lookPhHtml(rid);   // just the slot: the page doesn't move
       const b = document.querySelector(`.look-ph[data-room="${rid}"] .look-ph-b.${+t.dataset.d < 0 ? 'prev' : 'next'}`); if(b) b.focus();
       break; }
-    case 'car': { const c = t.closest('.rcar'), g = carGeo(c); g.tr.scrollBy({left: (+t.dataset.d) * g.per * g.step, behavior: 'smooth'}); break; }
+    case 'car': { const c = t.closest('.nb').querySelector('.rcar'), g = carGeo(c); g.tr.scrollBy({left: (+t.dataset.d) * g.per * g.step, behavior: 'smooth'}); break; }
     case 'dqty': { const p = CATALOG[S.detail], n = S.detailFor ? need(S.detailFor) : selNeeds()[0]; if(!p || !n) break;
       S.dQty = Math.max(1, (S.dQty || buy(p, n.qty, offerOf(n, p)).n) + (+t.dataset.d)); renderWork(); break; }
     case 'remove': removePick((t.dataset.ids || '').split(',').filter(Boolean).map(need).filter(n => n && n.pick === sku)); break;

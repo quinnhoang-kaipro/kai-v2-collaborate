@@ -22,8 +22,8 @@ const TEAM = {
 const ME = 'MA';
 
 const SUPPLIERS = {
-  hd:  {name: 'The Home Depot', store: 'Wilmington #1863', mi: 3.2, mono: 'HD', tone: '#F3D9C4'},
-  low: {name: "Lowe's",         store: 'Wilmington · Oleander Dr', mi: 4.1, mono: 'LW', tone: '#D6E2F0'},
+  hd:  {name: 'The Home Depot', store: 'Wilmington #1863', mi: 3.2, mono: 'HD', tone: '#F3D9C4', logo: 'logos/home-depot.png'},
+  low: {name: "Lowe's",         store: 'Wilmington · Oleander Dr', mi: 4.1, mono: 'LW', tone: '#D6E2F0', logo: 'logos/lowes.png'},
   fd:  {name: 'Floor & Decor',  store: 'Wilmington', mi: 6.8, mono: 'FD', tone: '#E7E1D2'},
   fer: {name: 'Ferguson',       store: 'Wilmington Showroom', mi: 5.5, mono: 'FG', tone: '#DCE7DD'}
 };

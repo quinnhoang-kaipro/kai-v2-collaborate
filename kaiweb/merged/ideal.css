@@ -2602,3 +2602,58 @@ body.is-dragging #list{position:relative}
 .nb-sth{width:44px;height:44px}
 .nb-stx h3{font-size:15px}
 .roomv .nb-alt .im{aspect-ratio:16/10}
+
+/* The chosen product's card, tightened to sit level with the options beside it */
+.roomv .nb-pick .im,.roomv .nb-picks .nb-pick .im{aspect-ratio:16/6}
+.roomv .nb-pick .tx{padding:8px 10px 10px;gap:3px}
+.roomv .nb-pick .nm{font-size:13.5px;line-height:1.25}
+.roomv .nb-pick .ln{font-size:12px}
+.roomv .nb-pick .ln b{font-size:16px}
+.roomv .nb-pick .avail{font-size:12px}
+.roomv .nb-pick-acts{margin-top:3px;gap:6px}
+.roomv .nb-pick .stp.mini{height:28px}
+.roomv .nb-pick .stp.mini button{width:28px}
+.roomv .nb-rm{height:28px;padding:0 8px;font-size:12px}
+.roomv .nb-rm svg{width:13px;height:13px}
+.roomv .nb-opts{gap:3px 10px;margin-top:5px;padding-top:6px}
+.roomv .nb-opts dt{font-size:9px}
+.roomv .nb-opts dd,.roomv .nb-val{font-size:12px;line-height:1.35}
+/* Undo notes sit above Shop's progress bar, not on it */
+body:has(#shop:not([hidden]) .shop-bar) .toast{bottom:92px}
+.nb-hd2.nb-shut-hd{gap:14px}   /* room between the photo and the text (the compact pass had squeezed it to 2px) */
+
+/* One room on its page: the sticky header already draws the line, so the first task doesn't add its own */
+.roomv .rm > .nb:first-child, .roomv .rm > .nb-grp:first-child{border-top:0}
+
+/* The carousel's paging shares the "Selected by" line, under the allowance */
+.nb-row2{display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;min-height:34px}
+.nb-row2 .nb-who{flex:1 1 auto;min-width:0}
+.nb-row2 .rcar-ft{margin-left:auto;cursor:default}
+.nb-row2 .rcar-ft .link{margin-right:8px}
+.rcar-ft.no-pager .rcar-b,.rcar-ft.no-pager .rcar-n{display:none}
+.nb-hd-o + .nb-row2{margin:2px 0 8px}
+/* The whole product card opens the product */
+.nb-alt{cursor:pointer}
+
+/* Store logos */
+.sup-logo{display:inline-block;height:16px;width:auto;vertical-align:-3px;object-fit:contain}
+.brand .sup-logo{height:15px;vertical-align:-3px}
+.nb-seg .sup-logo{height:15px;margin-right:4px}
+.mono.has-logo{background:#fff;padding:0;overflow:hidden;border:1px solid var(--stroke)}
+.mono.has-logo img{width:100%;height:100%;object-fit:contain;display:block}
+.tg-sup{flex:none;display:inline-flex;align-self:center}
+.tg-sup .mono{width:20px;height:20px;font-size:7.5px;display:grid;place-items:center;color:var(--ink)}
+/* a logo keeps its own shape: square for The Home Depot, wide for Lowe's */
+.mono.has-logo{width:auto !important;border:0;background:none}
+.mono.has-logo img{height:100%;width:auto}
+.sup-logo{height:18px}
+.brand .sup-logo{height:16px}
+.tg-sup .mono{height:22px}
+.mono.has-logo{height:auto !important;display:inline-flex;align-items:center}
+.mono.has-logo img{width:auto;height:34px;max-width:none}
+.order-hd .mono.has-logo img{height:42px}
+.sup-go .mono.has-logo img,.rv-jump-b .mono.has-logo img,.rb-o .mono.has-logo img{height:24px}
+.po-l h3 .mono.has-logo img,.trk-r .mono.has-logo img{height:32px}
+.tl-lab .mono.has-logo img{height:26px}
+.tg-stage .mono.has-logo img{height:16px}
+.tg-sup .mono.has-logo img{height:22px}
