@@ -2657,3 +2657,147 @@ body:has(#shop:not([hidden]) .shop-bar) .toast{bottom:92px}
 .tl-lab .mono.has-logo img{height:26px}
 .tg-stage .mono.has-logo img{height:16px}
 .tg-sup .mono.has-logo img{height:22px}
+
+/* Buy from + Get it share one row: [logo] · Deliver to store Wilmington #1863 */
+.nb-gi{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;min-width:0}
+.nb-gi-s{color:var(--t3)}
+.nb-gi .nb-seg{flex-basis:100%}
+.nb-gi:has(.nb-seg) .nb-gi-s{display:none}
+
+/* alternative card tags: template / team standard, plus an over-allowance flag */
+.nb-alt .im .nb-alt-tags{position:absolute;left:6px;top:6px;display:flex;gap:4px;flex-wrap:wrap}
+.nb-alt .im .nb-alt-tags .tag{position:static}
+.nb-alt .im .nb-alt-tags:empty{display:none}
+
+/* Store / delivery: a small dropdown under the value, not an inline toggle */
+.nb-dd-w{position:relative;display:inline-flex;align-items:center}
+.nb-val .nb-dd-car{width:11px;height:11px;margin-left:3px;vertical-align:-1px;color:var(--t3)}
+.nb-dd-w.open > .nb-val .nb-dd-car{transform:rotate(180deg)}
+.nb-dd{position:absolute;left:-8px;top:calc(100% + 4px);z-index:40;min-width:240px;display:flex;flex-direction:column;padding:4px;background:var(--white);border:1px solid var(--ink);box-shadow:0 10px 28px rgba(26,26,26,.16)}
+.nb-dd button{display:flex;align-items:center;gap:8px;padding:7px 8px;text-align:left;font-size:12.5px;color:var(--ink);white-space:nowrap}
+.nb-dd button:hover{background:var(--sunken)}
+.nb-dd button.on{font-weight:600}
+.nb-dd-ck{width:12px;flex:none;font-size:11px}
+.nb-dd .sup-logo{height:16px}
+.nb-dd-t{flex:none}
+.nb-dd i{font-style:normal;color:var(--t3);font-weight:400;margin-left:auto;padding-left:12px}
+.nb-pick:has(.nb-dd-w.open){overflow:visible;z-index:5;position:relative}
+
+/* ===== Compact pass: page headers on one line ===== */
+.shelf-hd.cmp{padding-top:18px}
+.shelf-hd.cmp > div{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 16px}
+.shelf-hd.cmp h2{font-size:26px}
+.shelf-hd.cmp .shelf-sub{margin-top:0;gap:6px 8px}
+.shelf-hd.cmp.rm-stick{padding-bottom:10px}
+.nb-gi{flex-wrap:nowrap}
+
+/* ===== Compact pass: Review ===== */
+.rv-top > div:first-child{display:grid;grid-template-columns:auto 1fr;align-items:baseline;column-gap:14px}
+.rv-top > div:first-child > .link{grid-column:1 / -1}
+.rv-top h1{font-size:26px;margin-top:6px !important}
+.rv-top p{margin-top:0}
+.tg-who .tg-tag{margin:0}
+.pr-grp:not(.first){margin-top:18px}
+.rv-top > div:first-child > .link{justify-self:start}
+.rb-ok{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);align-self:center;margin-right:2px}
+.rb-ords{gap:4px}
+.rb-o{height:34px;padding:0 9px;gap:6px;font-size:12.5px}
+.roomv .nb-alt .im{aspect-ratio:16/9}
+.roomv .rm + .rm{margin-top:20px}
+
+/* Delivery & stores: the choices themselves, click to change */
+.src-chip.src-sum{height:auto;min-height:34px;padding:5px 10px;gap:14px;font-weight:400;flex-wrap:wrap;row-gap:4px;max-width:100%;white-space:normal;text-align:left}
+.src-p{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.src-p + .src-p{padding-left:14px;border-left:1px solid var(--stroke)}
+.src-p > i{display:inline-flex;width:15px;height:15px;color:var(--t2)}
+.src-p > i svg{width:15px;height:15px}
+.src-p .k{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t3)}
+.src-p > b{font-weight:600}
+.src-st{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--t2)}
+.src-st + .src-st{margin-left:6px}
+.src-st b{font-weight:600;color:var(--ink)}
+.src-st .sup-logo{height:16px}
+.src-sum .af-caret{flex:none}
+.src-sum:hover .src-p > b{text-decoration:underline;text-underline-offset:3px}
+.shelf-hd.cmp{flex-wrap:wrap;align-items:center;row-gap:8px}
+.shelf-hd.cmp > .src{margin-left:auto}
+.shelf-hd.cmp{z-index:30}
+/* it's the page's own facts, so it reads as the header's second line, under the title */
+.shelf-hd.cmp > .src{flex-basis:100%;margin-left:0}
+.shelf-hd.cmp .src-pop{left:0;right:auto}
+.shelf-hd.cmp .src-chip.src-sum{border-color:transparent;background:none;padding-left:0;min-height:26px;padding-top:0;padding-bottom:0}
+.shelf-hd.cmp .src-chip.src-sum:hover,.shelf-hd.cmp .src.open .src-chip.src-sum{border-color:transparent}
+.shelf-hd.cmp .src-sum .af-caret{width:12px;height:12px}
+.src-st + .src-st{margin-left:10px}
+/* the delivery & stores line is plain text everywhere (side-by-side header, single-product pin too), no box */
+.src-chip.src-sum,.src-chip.src-sum:hover,.src.open .src-chip.src-sum{border-color:transparent;background:none;box-shadow:none}
+.src-chip.src-sum{padding-left:0;padding-right:0}
+.src-pin .src-chip.src-sum{background:var(--app-bg)}
+.shelf-t .src-pop,.src-pin .src-pop{right:0;left:auto}
+.shelf-t{flex-wrap:wrap;column-gap:16px}
+.shelf-t .src{flex:1 1 auto;min-width:0;display:flex;justify-content:flex-end}
+.shelf-t .src-chip.src-sum{justify-content:flex-end;row-gap:2px}
+
+/* Side pane title: a menu to switch between Media, Floorplan and Notes */
+.pane-sw{position:relative;display:inline-flex}
+.pane-sw-b{display:inline-flex;align-items:center;gap:6px;padding:0;background:none;border:0;cursor:pointer}
+.pane-sw-b svg{width:14px;height:14px;color:var(--t2);transition:transform .12s}
+.pane-sw.open .pane-sw-b svg{transform:rotate(180deg)}
+.pane-sw-b:hover{text-decoration:underline;text-decoration-color:var(--t3);text-underline-offset:4px}
+.pane-sw-m{position:absolute;left:-8px;top:calc(100% + 6px);z-index:80;min-width:180px;display:flex;flex-direction:column;padding:4px;background:var(--white);border:1px solid var(--ink);box-shadow:0 10px 28px rgba(26,26,26,.16)}
+.pane-sw-m button{display:flex;align-items:center;gap:8px;padding:8px 10px;font-size:13.5px;text-align:left;color:var(--ink)}
+.pane-sw-m button:hover{background:var(--sunken)}
+.pane-sw-m button.on{font-weight:600}
+.pane-sw-m .ck{width:12px;font-size:11px}
+
+/* Totals at the right edge, ending where each task's "Material allowance" ends (before its caret) */
+.shelf-hd.cmp > div:first-child{flex:1 1 100%}
+.pg-tot{margin-left:auto;display:inline-flex;align-items:baseline;gap:10px;padding-right:var(--car-gap,36px)}
+.pg-tot .k{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.pg-tot b{font-family:var(--display);font-size:26px;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
+.roomv .rm-hd{display:flex;align-items:baseline;gap:12px}
+.rm-tot{margin-left:auto;padding-right:var(--car-gap,36px);font-size:18px;font-weight:700;color:var(--ink)}
+.pg-tot{padding-right:40px} .rm-tot{padding-right:42px}
+
+/* ===== Product picks: made on request ===== */
+.pk-wrap{padding:28px 32px 120px;max-width:760px}
+.pk-card{background:var(--white);border:1px solid var(--stroke);padding:24px 26px}
+.pk-card h2{font-family:var(--display);font-size:24px;font-weight:700;letter-spacing:-.01em;margin:6px 0 8px}
+.pk-card p{font-size:13.5px;color:var(--t2);line-height:1.5;max-width:600px}
+.pk-card p b{color:var(--ink)}
+.pk-k{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.pk-k.ok{color:var(--success)}
+.pk-chk{list-style:none;margin:14px 0 18px;padding:0;display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--t2)}
+.pk-chk li{display:flex;align-items:center;gap:8px}
+.pk-chk li b{color:var(--ink);font-weight:600}
+.pk-chk li > span{width:18px;height:18px;display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+.pk-chk li.ok > span{background:var(--success-fill);color:var(--success)}
+.pk-chk li.warn > span{background:var(--warn-fill);color:var(--warn)}
+.pk-acts{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:14px}
+.pk-fine{margin-top:14px;font-size:12px !important;color:var(--t3) !important}
+.pk-bar{height:8px;background:var(--sunken);margin:16px 0 8px;overflow:hidden}
+.pk-fill{display:block;height:100%;background:var(--ink);transition:width .25s linear}
+.pk-n{font-family:var(--mono);font-size:11px !important;font-weight:700;letter-spacing:.04em;color:var(--ink) !important;margin-bottom:10px}
+.pk-spin{width:11px;height:11px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:pkSpin .8s linear infinite;flex:none}
+@keyframes pkSpin{to{transform:rotate(360deg)}}
+/* on the Scope page it's a band across the top, not a big card */
+.pk-card.pk-scope{margin:0 0 16px;padding:16px 20px;border-color:var(--ink)}
+.pk-card.pk-scope h2{font-size:19px;margin:4px 0 6px}
+.pk-card.pk-scope .pk-chk{margin:10px 0 4px}
+.pk-card.pk-ready{display:flex;align-items:center;flex-wrap:wrap;gap:6px 16px;border-color:var(--stroke)}
+.pk-card.pk-ready .pk-acts{margin:0 0 0 auto}
+.pk-ref{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--t2)}
+/* a task whose scope changed after picks */
+.tag.chg{background:#E4EAF5;color:#274472}
+.nb-note.chg{background:#EEF2F9;border-left:3px solid #4A6CA8;align-items:center}
+.nb-note.chg > span:first-child{color:#274472;font-weight:700}
+.nb-note.chg .btn,.nb-note.chg .pk-ref{margin-left:auto;flex:none}
+/* Shop's sticky bar: changes waiting for a refresh */
+.sb-pk{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid #4A6CA8;background:#EEF2F9;color:#274472;font-size:12.5px;white-space:nowrap}
+button.sb-pk:hover{background:#E1E8F4}
+.sb-pk b{font-weight:700}
+/* the Shop tab pulses while picks are being made */
+body.pk-gen .tw[data-tab="shop"] .tl::after{content:'';display:inline-block;width:7px;height:7px;margin-left:6px;border-radius:50%;background:var(--accent, #FDFF86);box-shadow:0 0 0 2px rgba(253,255,134,.35);animation:pkPulse 1.2s ease-in-out infinite;vertical-align:1px}
+@keyframes pkPulse{50%{opacity:.35}}
+body.pk-none #list .nv-all-r,body.pk-none #list .nv-gamt,body.pk-none #list .nv-amt{visibility:hidden}
+.pk-at{color:var(--t3);font-size:12.5px}
