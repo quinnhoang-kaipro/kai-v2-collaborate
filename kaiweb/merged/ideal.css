@@ -2801,3 +2801,10 @@ body.pk-gen .tw[data-tab="shop"] .tl::after{content:'';display:inline-block;widt
 @keyframes pkPulse{50%{opacity:.35}}
 body.pk-none #list .nv-all-r,body.pk-none #list .nv-gamt,body.pk-none #list .nv-amt{visibility:hidden}
 .pk-at{color:var(--t3);font-size:12.5px}
+
+/* the delivery & stores line inside the picks card, above the buttons */
+.pk-src{margin:16px 0 4px;padding:10px 0;border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke)}
+.pk-src-h{display:block;font-size:12px;color:var(--t3);margin-bottom:4px}
+.pk-src .src{display:block}
+.pk-src .src-pop{left:0;right:auto}
+.pk-card .pk-acts{margin-top:16px}

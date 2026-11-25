@@ -1825,9 +1825,10 @@ function pkCardHtml(where){
   const chk = (ok, txt) => `<li class="${ok ? 'ok' : 'warn'}"><span>${ok ? '✓' : '!'}</span>${txt}</li>`;
   if(P.st === 'none') return `<section class="pk-card${where === 'scope' ? ' pk-scope' : ''}">
       <span class="pk-k">Product picks</span>
-      <h2>${where === 'scope' ? 'Done building the scope?' : where === 'review' ? 'Nothing to order yet' : 'Kai hasn’t picked products yet'}</h2>
-      <p>${where === 'review' ? 'Orders come from Kai’s product picks, and they’re made once the scope is done.' : 'When the scope is done, Kai picks a product for every task: sized to fit, within the template, near your stores.'} It takes about ${PK_MIN} minutes; you can keep working and we’ll tell you when they’re ready.</p>
+      <h2>${where === 'scope' ? 'Done building the scope?' : where === 'review' ? 'Orders start with Kai’s picks' : 'Kai will pick a product for every task'}</h2>
+      <p>${where === 'shop' ? 'Sized to fit, within the template, from the stores below.' : where === 'review' ? 'Once the scope is done, Kai picks a product for every task, and your orders come from those.' : 'Kai picks a product for every task: sized to fit, within the template, from the stores below.'} Takes about ${PK_MIN} minutes; keep working and we’ll tell you when they’re ready.</p>
       <ul class="pk-chk">${chk(true, `<b>${T} tasks</b> across ${rooms} rooms`)}${chk(!noQty, noQty ? `<b>${noQty} ${noQty === 1 ? 'task has' : 'tasks have'} no quantity</b> · Kai can’t size those` : 'Every task has a quantity')}${chk(!noAllow, noAllow ? `<b>${noAllow} ${noAllow === 1 ? 'task has' : 'tasks have'} no allowance</b> · picked without a budget` : 'Every task has an allowance')}</ul>
+      <div class="pk-src"><span class="pk-src-h">Where Kai shops · these shape the picks</span>${srcHtml()}</div>
       <div class="pk-acts"><button type="button" class="btn pri lg" data-act="pk-start">Get product picks · about ${PK_MIN} min</button>${where === 'scope' ? '' : '<button type="button" class="btn lg" data-act="kwtab" data-page="scope">Review the scope first</button>'}</div>
       <p class="pk-fine">Picks are made from the scope as it is when you start. If it changes later, you refresh just the tasks that changed.</p></section>`;
   if(P.st === 'gen'){ const done = Math.floor(P.p * T), left = Math.max(1, Math.ceil(PK_MIN * (1 - P.p)));
@@ -1889,7 +1890,7 @@ function renderWork(resetScroll){
   { const ps0 = curPanes(); SRC_HD = picksReady() && stackSel() && !(ps0.length === 2 && ps0.includes('shop')) && !(S.ref.full || S.pair); }   // the page header carries Delivery & stores
   const body = !picksReady() && !tabPageOn() ? `<div class="pk-wrap">${pkCardHtml('shop')}</div>` : stackSel() ? roomHtml(needs)
     : `${headHtml(needs)}${bannersHtml(needs)}${ctxHtml(needs)}${pickHtml(needs)}${toolsHtml(needs)}<div class="grid" id="grid">${gridHtml(needs)}</div>`;
-  const ps = curPanes(), shopT = ps.length === 2 && ps.includes('shop') ? `<div class="pane-hd shelf-t"><h2 class="pane-t">Shop</h2>${srcHtml()}</div>` : S.ref.full || S.pair || SRC_HD ? '' : `<div class="src-pin">${srcHtml()}</div>`;
+  const ps = curPanes(), shopT = ps.length === 2 && ps.includes('shop') ? `<div class="pane-hd shelf-t"><h2 class="pane-t">Shop</h2>${srcHtml()}</div>` : S.ref.full || S.pair || SRC_HD || !picksReady() ? '' : `<div class="src-pin">${srcHtml()}</div>`;
   el.innerHTML = `<div class="work-main">${shopT}${body}${shopBarHtml()}</div>
     ${boardHtml(tabRefOn() ? NEEDS : needs)}`;
   renderDetail(S.detailFor ? [need(S.detailFor)] : needs);
